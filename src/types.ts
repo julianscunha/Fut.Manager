@@ -1,0 +1,244 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+export type UserRole = 'admin' | 'auxiliar' | 'jogador';
+
+export type UserStatus = 'pending' | 'approved' | 'rejected';
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
+}
+
+export type PlayerCategory = 'mensalista' | 'mensalista_goleiro' | 'reserva';
+
+export type PlayerStatus = 'disponivel' | 'indisponivel' | 'lesionado' | 'afastado';
+
+export type PlayerPosition = 'goleiro' | 'zagueiro' | 'lateral' | 'volante' | 'meio_campo' | 'atacante';
+
+export interface Player {
+  id: string;
+  name: string;
+  email: string;
+  photoOriginal: string;
+  playerCardUrl: string;
+  favoriteTeamId: string;
+  category: PlayerCategory;
+  status: PlayerStatus;
+  statusStartDate?: string; // ISO date YYYY-MM-DD
+  statusEndDate?: string;   // ISO date YYYY-MM-DD
+  primaryPosition: PlayerPosition;
+  secondaryPositions: PlayerPosition[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt?: string; // Soft delete
+  currentStreak?: number;
+  maxStreak?: number;
+}
+
+export interface PlayerEvaluation {
+  id: string;
+  evaluatorUserId: string;
+  targetPlayerId: string;
+  date: string; // ISO Date YYYY-MM-DD
+  ratings: Record<string, number>; // defesa, passe, finalizacao, etc.
+}
+
+export interface PlayerHistoryEntry {
+  playerId: string;
+  date: string; // YYYY-MM-DD
+  overall: number;
+}
+
+// Weights configurations as requested
+export const LINE_ATTRIBUTES = [
+  { id: 'defesa', label: 'Defesa', weight: 0.15 },
+  { id: 'passe', label: 'Passe', weight: 0.15 },
+  { id: 'finalizacao', label: 'Finalização', weight: 0.15 },
+  { id: 'velocidade', label: 'Velocidade', weight: 0.15 },
+  { id: 'posicionamento', label: 'Posicionamento', weight: 0.15 },
+  { id: 'drible', label: 'Drible', weight: 0.10 },
+  { id: 'marcacao', label: 'Marcação', weight: 0.10 },
+  { id: 'fisico', label: 'Físico', weight: 0.05 }
+];
+
+export const GOALKEEPER_ATTRIBUTES = [
+  { id: 'reflexo', label: 'Reflexo', weight: 0.35 },
+  { id: 'posicionamento', label: 'Posicionamento', weight: 0.25 },
+  { id: 'saida_gol', label: 'Saída do Gol', weight: 0.20 },
+  { id: 'reposicao', label: 'Reposição', weight: 0.20 }
+];
+
+export interface FavoriteTeam {
+  id: string;
+  name: string;
+  shieldUrl?: string;
+  colorHex?: string;
+}
+
+export const FAVORITE_TEAMS: FavoriteTeam[] = [
+  { id: 'fla', name: 'Flamengo', colorHex: '#e11d48' },
+  { id: 'pal', name: 'Palmeiras', colorHex: '#16a34a' },
+  { id: 'spa', name: 'São Paulo', colorHex: '#dc2626' },
+  { id: 'cor', name: 'Corinthians', colorHex: '#18181b' },
+  { id: 'flu', name: 'Fluminense', colorHex: '#86198f' },
+  { id: 'vas', name: 'Vasco da Gama', colorHex: '#3f3f46' },
+  { id: 'gre', name: 'Grêmio', colorHex: '#0284c7' },
+  { id: 'int', name: 'Internacional', colorHex: '#dc2626' },
+  { id: 'cam', name: 'Atlético Mineiro', colorHex: '#27272a' },
+  { id: 'cru', name: 'Cruzeiro', colorHex: '#2563eb' },
+  { id: 'san', name: 'Santos', colorHex: '#52525b' },
+  { id: 'bot', name: 'Botafogo', colorHex: '#09090b' },
+  { id: 'bah', name: 'Bahia', colorHex: '#0284c7' },
+  { id: 'for', name: 'Fortaleza', colorHex: '#dc2626' },
+  { id: 'cap', name: 'Athletico Paranaense', colorHex: '#be123c' },
+  { id: 'cori', name: 'Coritiba', colorHex: '#15803d' },
+  { id: 'spt', name: 'Sport Recife', colorHex: '#b91c1c' },
+  { id: 'vit', name: 'Vitória', colorHex: '#b91c1c' },
+  { id: 'out', name: 'Outro', colorHex: '#64748b' }
+];
+
+export const POSITION_LABELS: Record<PlayerPosition, string> = {
+  goleiro: 'Goleiro',
+  zagueiro: 'Zagueiro',
+  lateral: 'Lateral',
+  volante: 'Volante',
+  meio_campo: 'Meio Campo',
+  atacante: 'Atacante'
+};
+
+export const CATEGORY_LABELS: Record<PlayerCategory, string> = {
+  mensalista: 'Mensalista',
+  mensalista_goleiro: 'Mensalista Goleiro',
+  reserva: 'Reserva'
+};
+
+export const STATUS_LABELS: Record<PlayerStatus, string> = {
+  disponivel: 'Disponível',
+  indisponivel: 'Indisponível',
+  lesionado: 'Lesionado',
+  afastado: 'Afastado'
+};
+
+export const STATUS_COLORS: Record<PlayerStatus, string> = {
+  disponivel: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+  indisponivel: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+  lesionado: 'bg-rose-500/15 text-rose-400 border-rose-500/30',
+  afastado: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30'
+};
+
+// --- DATA TYPES FOR MATCHES, SEASONS, PRESENCE & RESERVES ---
+
+export interface Season {
+  id: string;
+  name: string;
+  year: number;
+  startDate: string; // ISO YYYY-MM-DD
+  endDate: string; // ISO YYYY-MM-DD
+  active: boolean;
+}
+
+export type MatchStatus = 'agendada' | 'confirmando' | 'encerrada' | 'cancelada';
+
+export interface Match {
+  id: string;
+  seasonId: string;
+  date: string; // ISO YYYY-MM-DD
+  time: string; // HH:MM
+  location: string;
+  durationMinutes: number;
+  status: MatchStatus;
+}
+
+export type PresenceStatus = 'confirmado' | 'nao_confirmado' | 'cancelado';
+
+export interface Presence {
+  id: string;
+  matchId: string;
+  playerId: string;
+  status: PresenceStatus;
+  confirmedAt?: string; // ISO date timestamp
+}
+
+export interface RecurrentConfig {
+  dayOfWeek: number; // 0 (Sunday) to 6 (Saturday)
+  time: string; // HH:MM
+  location: string;
+  durationMinutes: number;
+  confirmationDeadlineDaysBefore: number; // e.g. 2 days before racha
+  active: boolean;
+}
+
+export interface ReserveQueueAlert {
+  id: string;
+  matchId: string;
+  cancelledPlayerId: string;
+  suggestedReservePlayerId?: string;
+  createdAt: string;
+  cleared: boolean;
+}
+
+export interface DuoAffinity {
+  playerAId: string;
+  playerBId: string;
+  count: number;
+  winsCount: number;
+}
+
+export interface TrioAffinity {
+  playerAId: string;
+  playerBId: string;
+  playerCId: string;
+  count: number;
+  winsCount: number;
+}
+
+export interface DrawTeam {
+  name: 'Azul' | 'Vermelho' | 'Verde';
+  captainPlayerId?: string;
+  playerIds: string[];
+}
+
+export interface TeamDraw {
+  id: string;
+  matchId: string;
+  date: string; // ISO date timestamp
+  teams: DrawTeam[];
+  overallBlue: number;
+  overallRed: number;
+  overallGreen: number;
+  maxDifference: number;
+  isSharedGoalkeepers: boolean;
+  captainsConfigured: boolean;
+}
+
+export interface MatchResult {
+  id: string;
+  matchId: string;
+  seasonId: string;
+  date: string; // ISO format YYYY-MM-DD
+  winsBlue: number;
+  winsRed: number;
+  winsGreen: number;
+  champions: ('Azul' | 'Vermelho' | 'Verde')[];
+  teams: DrawTeam[]; // snapshotted teams used in the match
+  isSharedGoalkeepers: boolean;
+}
+
+export interface PlayerStats {
+  playerId: string;
+  presences: number;
+  vitorias: number;
+  aproveitamento: number; // percentage (vitorias / presences * 100)
+  currentStreak: number;
+  maxStreak: number;
+}
+
+
+

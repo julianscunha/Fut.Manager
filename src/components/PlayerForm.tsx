@@ -1,0 +1,474 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Player, PlayerPosition, PlayerCategory, PlayerStatus, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
+import { Shield, Sparkles, X, Heart, Settings, UserPlus, Save } from 'lucide-react';
+
+interface PlayerFormProps {
+  player?: Player | null; // If provided, we are editing
+  onSave: (data: Omit<Player, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onCancel: () => void;
+}
+
+export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [photoOriginal, setPhotoOriginal] = useState('');
+  const [playerCardUrl, setPlayerCardUrl] = useState('');
+  const [favoriteTeamId, setFavoriteTeamId] = useState('fla');
+  const [category, setCategory] = useState<PlayerCategory>('mensalista');
+  const [status, setStatus] = useState<PlayerStatus>('disponivel');
+  const [statusStartDate, setStatusStartDate] = useState('');
+  const [statusEndDate, setStatusEndDate] = useState('');
+  const [primaryPosition, setPrimaryPosition] = useState<PlayerPosition>('atacante');
+  const [secondaryPositions, setSecondaryPositions] = useState<PlayerPosition[]>([]);
+
+  // AWS S3 upload simulation states
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const [s3Path, setS3Path] = useState('');
+
+  // Initialize form if editing
+  useEffect(() => {
+    if (player) {
+      setName(player.name);
+      setEmail(player.email || '');
+      setPhotoOriginal(player.photoOriginal || '');
+      setPlayerCardUrl(player.playerCardUrl || '');
+      setFavoriteTeamId(player.favoriteTeamId);
+      setCategory(player.category);
+      setStatus(player.status);
+      setStatusStartDate(player.statusStartDate || '');
+      setStatusEndDate(player.statusEndDate || '');
+      setPrimaryPosition(player.primaryPosition);
+      setSecondaryPositions(player.secondaryPositions || []);
+      setS3Path(player.photoOriginal && player.photoOriginal.startsWith('http') && player.photoOriginal.includes('amazonaws.com') ? player.photoOriginal : '');
+    } else {
+      // Clear
+      setName('');
+      setEmail('');
+      setPhotoOriginal('');
+      setPlayerCardUrl('');
+      setFavoriteTeamId('fla');
+      setCategory('mensalista');
+      setStatus('disponivel');
+      setStatusStartDate('');
+      setStatusEndDate('');
+      setPrimaryPosition('atacante');
+      setSecondaryPositions([]);
+      setS3Path('');
+    }
+  }, [player]);
+
+  const handleSecondaryPositionToggle = (pos: PlayerPosition) => {
+    if (secondaryPositions.includes(pos)) {
+      setSecondaryPositions(secondaryPositions.filter((p) => p !== pos));
+    } else {
+      setSecondaryPositions([...secondaryPositions, pos]);
+    }
+  };
+
+  const handleFileChange = async (file: File) => {
+    setUploadError('');
+    
+    // Check file extension / mime type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      setUploadError('Formato inválido. Use apenas JPG, JPEG, PNG ou WEBP.');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError('Arquivo muito grande. O limite máximo é 5MB.');
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      // Read file to Base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64Data = e.target?.result as string;
+        
+        // POST to S3 Upload API
+        const res = await fetch('/api/upload-s3', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            filename: file.name,
+            fileType: file.type,
+            fileData: base64Data
+          })
+        });
+
+        if (!res.ok) {
+          throw new Error('Falha no upload para o servidor S3.');
+        }
+
+        const data = await res.json();
+        setPhotoOriginal(data.previewData); // Base64 is stored so preview always works instantly
+        setS3Path(data.s3Url); // Simulated AWS S3 URL for architectural record
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setUploadError(err.message || 'Erro ao realizar upload de imagem.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileChange(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    // Build the updated object
+    onSave({
+      name: name.trim(),
+      email: email.trim(),
+      photoOriginal,
+      playerCardUrl,
+      favoriteTeamId,
+      category,
+      status,
+      statusStartDate: (status === 'lesionado' || status === 'indisponivel') ? statusStartDate : undefined,
+      statusEndDate: (status === 'lesionado' || status === 'indisponivel') ? statusEndDate : undefined,
+      primaryPosition,
+      secondaryPositions: secondaryPositions.filter((p) => p !== primaryPosition) // Filter out if redundant
+    });
+  };
+
+  const selectedTeamDetails = FAVORITE_TEAMS.find(t => t.id === favoriteTeamId);
+
+  return (
+    <form
+      id="player-form-container"
+      onSubmit={handleSubmit}
+      className="p-5 md:p-6 rounded-xl sports-card border border-zinc-800 text-sm max-w-2xl mx-auto space-y-5"
+    >
+      <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
+        <div className="flex items-center gap-2">
+          <Settings className="w-5 h-5 text-[#22c55e]" />
+          <h2 className="font-display font-semibold text-lg text-white">
+            {player ? 'Editar Jogador' : 'Adicionar Novo Jogador'}
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="p-1 rounded-full text-zinc-400 hover:bg-zinc-800 hover:text-white cursor-pointer"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Name */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-zinc-300 font-medium">Nome Completo *</label>
+          <input
+            type="text"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ex: Fofim Magalhães"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-[#22c55e] placeholder-zinc-600 transition"
+          />
+        </div>
+
+        {/* Email */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-zinc-300 font-medium">E-mail</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Ex: fofim@racha.com"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-[#22c55e] placeholder-zinc-600 transition"
+          />
+        </div>
+
+        {/* Interactive Photo upload component directly to S3 */}
+        <div className="flex flex-col gap-1.5 md:col-span-2">
+          <label className="text-zinc-300 font-medium">Foto Original do Atleta *</label>
+          
+          {photoOriginal ? (
+            <div className="flex items-center gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-850">
+              <div className="relative w-20 h-20 rounded-full border-2 border-emerald-500 overflow-hidden bg-zinc-950 flex-shrink-0 shadow-lg">
+                <img src={photoOriginal} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+              <div className="flex-1 space-y-1 min-w-0">
+                <span className="text-[10px] font-bold text-emerald-400 block font-mono bg-emerald-550/10 px-2 py-0.5 rounded border border-emerald-500/20 w-fit">● AWS S3: PRONTO_OK</span>
+                <p className="text-[11px] text-zinc-500 truncate font-mono mt-1 select-all" title={s3Path}>
+                  {s3Path || 'https://racha-do-fofim.s3.sa-east-1.amazonaws.com/uploads/original-image.png'}
+                </p>
+                <div className="flex items-center gap-2 pt-1.5">
+                  <label className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 hover:text-emerald-400 border border-zinc-750 px-3 py-1.5 rounded-lg cursor-pointer transition font-mono font-medium flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span>Substituir Foto</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setPhotoOriginal(''); setS3Path(''); }}
+                    className="text-xs text-rose-400 hover:text-rose-350 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/10 hover:border-rose-500/35 px-3 py-1.5 rounded-lg transition font-mono font-medium"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-xl p-6 text-center transition flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                isDragging
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
+                  : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 text-zinc-400'
+              }`}
+            >
+              <input
+                type="file"
+                id="image-file-input"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+              />
+              <label htmlFor="image-file-input" className="cursor-pointer flex flex-col items-center justify-center w-full h-full py-4 select-none">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500 border-r-2 border-r-transparent mb-3" />
+                ) : (
+                  <svg className="w-10 h-10 text-zinc-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                )}
+                <p className="text-xs text-zinc-300 font-bold mb-1">
+                  Arraste e solte sua foto aqui, ou clique para navegar
+                </p>
+                <p className="text-[10px] text-zinc-500 font-mono">
+                  Upload direto para AWS S3 • JPG, JPEG, PNG ou WEBP (Max 5MB)
+                </p>
+              </label>
+            </div>
+          )}
+
+          {uploadError && (
+            <p className="text-xs text-rose-400 font-medium font-mono mt-1">⚠️ {uploadError}</p>
+          )}
+        </div>
+
+        {/* Card do Jogador (Future AI Integration Configuration structure) */}
+        <div className="flex flex-col gap-2 bg-[#091510] border border-emerald-500/10 p-4 rounded-xl md:col-span-2">
+          <label className="text-zinc-300 font-bold flex items-center gap-1.5 text-[10px] text-emerald-400 uppercase tracking-wider font-mono">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>Card do Jogador (Reserva de IA de Geração Esportiva)</span>
+          </label>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-16 h-20 rounded-lg border border-emerald-550/20 bg-emerald-950/10 flex flex-col items-center justify-center text-center p-2 text-emerald-600 flex-shrink-0 shadow-inner">
+              <svg className="w-8 h-8 opacity-40 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              <span className="text-[7px] font-mono mt-1 text-emerald-500/60 font-bold uppercase tracking-wider">AI ATLETA</span>
+            </div>
+            <div className="space-y-1 text-left flex-1 min-w-0">
+              <p className="text-xs text-zinc-300 font-bold">Processamento Futuro de Card Esportivo Dedicado</p>
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                Este atleta utilizará o time do coração {selectedTeamDetails ? `(${selectedTeamDetails.name})` : ''} para sintetizar o card final personalizado da temporada 2026. A foto original no S3 será processada automaticamente.
+              </p>
+              <input
+                id="input-player-card-url"
+                type="text"
+                placeholder="Insira uma URL direta para a imagem do Card Gerado (ou aguarde processamento automático de IA)"
+                value={playerCardUrl}
+                onChange={(e) => setPlayerCardUrl(e.target.value)}
+                className="w-full bg-zinc-90 w bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 font-mono focus:outline-none focus:border-[#22c55e]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Club Selection with accent badge color */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-zinc-300 font-medium flex items-center gap-1.5">
+            <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
+            <span>Time do Coração</span>
+          </label>
+          <div className="relative">
+            <select
+              value={favoriteTeamId}
+              onChange={(e) => setFavoriteTeamId(e.target.value)}
+              className="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-3.5 pr-10 py-2.5 text-white focus:outline-none focus:border-[#22c55e] appearance-none transition cursor-pointer"
+            >
+              {FAVORITE_TEAMS.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+            <div
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-white/10"
+              style={{ backgroundColor: selectedTeamDetails?.colorHex || '#ccc' }}
+            />
+          </div>
+        </div>
+
+        {/* Category Selector */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-zinc-300 font-medium">Categoria do Racha</label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value as PlayerCategory)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
+          >
+            <option value="mensalista">Mensalista</option>
+            <option value="mensalista_goleiro">Mensalista Goleiro</option>
+            <option value="reserva">Reserva</option>
+          </select>
+        </div>
+
+        {/* Status Selection */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-zinc-300 font-medium">Status de Disponibilidade</label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as PlayerStatus)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
+          >
+            <option value="disponivel">Disponível</option>
+            <option value="indisponivel">Indisponível (Ausente)</option>
+            <option value="lesionado">Lesionado 🩺</option>
+            <option value="afastado">Afastado / Fora temporada</option>
+          </select>
+        </div>
+
+        {/* Start / End dates for lesionado / indisponivel */}
+        {(status === 'lesionado' || status === 'indisponivel') && (
+          <div className="grid grid-cols-2 gap-3 md:col-span-1">
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-zinc-400 font-medium">Ausente de:</label>
+              <input
+                type="date"
+                required
+                value={statusStartDate}
+                onChange={(e) => setStatusStartDate(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-[#22c55e] text-xs transition"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] text-zinc-400 font-medium">Até data:</label>
+              <input
+                type="date"
+                required
+                value={statusEndDate}
+                onChange={(e) => setStatusEndDate(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-[#22c55e] text-xs transition"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Primary Position */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-zinc-300 font-medium">Posição Principal *</label>
+          <select
+            value={primaryPosition}
+            onChange={(e) => setPrimaryPosition(e.target.value as PlayerPosition)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
+          >
+            {Object.entries(POSITION_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Secondary Positions Checklist */}
+        <div className="flex flex-col gap-1.5 md:col-span-2">
+          <label className="text-zinc-300 font-medium">Posições Secundárias (Multipla escolha)</label>
+          <p className="text-[11px] text-zinc-500 mb-1">
+            Selecione outras posições em que o atleta também consegue atuar em campo.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 bg-zinc-900/40 p-3.5 rounded-lg border border-zinc-800/60">
+            {Object.entries(POSITION_LABELS).map(([key, label]) => {
+              const typedKey = key as PlayerPosition;
+              const isPrimary = primaryPosition === typedKey;
+              const isChecked = secondaryPositions.includes(typedKey);
+
+              return (
+                <label
+                  key={key}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md border text-xs transition select-none ${
+                    isPrimary
+                      ? 'opacity-40 bg-zinc-900 border-zinc-800 text-zinc-500 cursor-not-allowed'
+                      : isChecked
+                      ? 'bg-[#22c55e]/10 border-[#22c55e]/40 text-[#4ade80] cursor-pointer'
+                      : 'bg-zinc-900/60 border-zinc-800 hover:border-zinc-700/60 text-zinc-400 cursor-pointer'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    disabled={isPrimary}
+                    checked={!isPrimary && isChecked}
+                    onChange={() => handleSecondaryPositionToggle(typedKey)}
+                    className="accent-[#22c55e] rounded border-zinc-800 h-3.5 w-3.5"
+                  />
+                  <span>{label}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Buttons Footer */}
+      <div className="flex justify-end gap-3 pt-3 border-t border-zinc-900">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 border border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white rounded-lg transition cursor-pointer"
+        >
+          Cancelar
+        </button>
+        <button
+          type="submit"
+          id="btn-save-player"
+          className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/25 transition duration-150 flex items-center gap-2 cursor-pointer"
+        >
+          <Save className="w-4 h-4" />
+          <span>Salvar Atleta</span>
+        </button>
+      </div>
+    </form>
+  );
+}
