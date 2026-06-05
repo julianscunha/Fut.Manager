@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, Zap, RotateCcw, TrendingUp, ChevronDown, ChevronUp, Star, Award, History } from 'lucide-react';
-import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType } from '../types';
+import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 
 interface PlayerCardProps {
@@ -29,6 +29,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [evalModalOpen, setEvalModalOpen] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
+  const [categoryHistory, setCategoryHistory] = useState<CategoryTransition[]>([]);
 
   const team = FAVORITE_TEAMS.find((t) => t.id === player.favoriteTeamId);
 
@@ -51,6 +52,12 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         if (statsObj) {
           setRachaStats(statsObj);
         }
+      }
+
+      const transRes = await fetch(`/api/players/${player.id}/transitions`);
+      if (transRes.ok) {
+        const transData = await transRes.json();
+        setCategoryHistory(transData || []);
       }
     } catch (err) {
       console.error(err);
@@ -549,6 +556,52 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                       </div>
                     </div>
                   )}
+
+                  {/* Category transitions history log */}
+                  <div className="space-y-2 bg-[#09100d] p-3 rounded-lg border border-zinc-900 font-mono text-[11px]">
+                    <span className="block font-bold text-zinc-400 uppercase tracking-wider text-[9px] mb-1">
+                      Histórico do Atleta no Grupo
+                    </span>
+                    <div className="flex justify-between items-center text-zinc-400 pb-1.5 border-b border-zinc-900/60">
+                      <span>Categoria Atual:</span>
+                      <span className="text-emerald-400 font-bold uppercase">
+                        {CATEGORY_LABELS[player.category]}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-zinc-400 pb-1.5 border-b border-zinc-900/60 mt-1">
+                      <span>Última alteração:</span>
+                      <span className="text-zinc-200 font-medium">
+                        {categoryHistory && categoryHistory.length > 0 
+                          ? new Date(categoryHistory[0].date).toLocaleDateString('pt-BR') 
+                          : 'Original de Registro'}
+                      </span>
+                    </div>
+
+                    {categoryHistory && categoryHistory.length > 0 ? (
+                      <div className="space-y-2 pt-2 max-h-32 overflow-y-auto divide-y divide-zinc-900/50">
+                        {categoryHistory.map((tr) => (
+                          <div key={tr.id} className="pt-1.5 text-[10px] text-zinc-400 space-y-0.5">
+                            <div className="flex justify-between font-bold text-zinc-300">
+                              <span>
+                                {CATEGORY_LABELS[tr.previousCategory] || tr.previousCategory} → {CATEGORY_LABELS[tr.newCategory] || tr.newCategory}
+                              </span>
+                              <span className="text-zinc-500 font-normal">
+                                {new Date(tr.date).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-zinc-650 flex justify-between">
+                              <span>Por: {tr.responsibleName || 'Administrador'}</span>
+                              <span>{new Date(tr.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-zinc-500 italic pt-1 text-center">
+                        Sem trocas de categorias registradas para este atleta.
+                      </p>
+                    )}
+                  </div>
 
                   {/* Click to trigger evaluator modal from sheet directly */}
                   <button

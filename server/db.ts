@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult } from '../src/types';
+import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition } from '../src/types';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'database.json');
@@ -21,6 +21,10 @@ interface DatabaseSchema {
   duoAffinities: DuoAffinity[];
   trioAffinities: TrioAffinity[];
   results: MatchResult[];
+  bills: Bill[];
+  payments: PaymentRecord[];
+  competences: CompetenceConfig[];
+  categoryTransitions?: CategoryTransition[];
 }
 
 const DEFAULT_ADMINS = {
@@ -68,7 +72,9 @@ function ensureDbExists() {
         location: 'Arena Green Society (Quadra Principal)',
         durationMinutes: 120,
         confirmationDeadlineDaysBefore: 2,
-        active: true
+        active: true,
+        monthlyFee: 100,
+        chargeDateRule: 'primeiro_jogo'
       },
       reserveAlerts: [],
       players: [
@@ -175,7 +181,10 @@ function ensureDbExists() {
       draws: [],
       duoAffinities: [],
       trioAffinities: [],
-      results: []
+      results: [],
+      bills: [],
+      payments: [],
+      competences: []
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), 'utf-8');
   }
@@ -248,8 +257,40 @@ export function readDb(): DatabaseSchema {
       location: 'Arena Green Society (Quadra Principal)',
       durationMinutes: 120,
       confirmationDeadlineDaysBefore: 2,
-      active: true
+      active: true,
+      monthlyFee: 100,
+      chargeDateRule: 'primeiro_jogo',
+      maxMensalistas: 12
     };
+    updated = true;
+  } else {
+    if (db.recurrentConfig.monthlyFee === undefined) {
+      db.recurrentConfig.monthlyFee = 100;
+      updated = true;
+    }
+    if (db.recurrentConfig.chargeDateRule === undefined) {
+      db.recurrentConfig.chargeDateRule = 'primeiro_jogo';
+      updated = true;
+    }
+    if (db.recurrentConfig.maxMensalistas === undefined) {
+      db.recurrentConfig.maxMensalistas = 12;
+      updated = true;
+    }
+  }
+  if (!db.bills) {
+    db.bills = [];
+    updated = true;
+  }
+  if (!db.payments) {
+    db.payments = [];
+    updated = true;
+  }
+  if (!db.competences) {
+    db.competences = [];
+    updated = true;
+  }
+  if (!db.categoryTransitions) {
+    db.categoryTransitions = [];
     updated = true;
   }
   if (!db.reserveAlerts) {
@@ -327,11 +368,145 @@ export function readDb(): DatabaseSchema {
     return p;
   });
 
+  // Automatic monthly billing generation
+  try {
+    const billingUpdated = generateMonthlyBillingsIfNeeded(db);
+    if (billingUpdated) {
+      updated = true;
+    }
+  } catch (err) {
+    console.error('Error in automatic billing generator:', err);
+  }
+
   if (updated) {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   }
 
   return db;
+}
+
+export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
+  if (!db.recurrentConfig || !db.recurrentConfig.active) {
+    return false;
+  }
+
+  const { monthlyFee, chargeDateRule } = db.recurrentConfig;
+  if (monthlyFee === undefined || monthlyFee <= 0 || !chargeDateRule) {
+    return false;
+  }
+
+  // Get all non-cancelled matches
+  const validMatches = db.matches.filter(m => m.status !== 'cancelada');
+  if (validMatches.length === 0) {
+    return false;
+  }
+
+  // Group matches by "YYYY-MM"
+  const matchesByMonth: Record<string, typeof db.matches> = {};
+  for (const m of validMatches) {
+    const parts = m.date.split('-');
+    if (parts.length >= 2) {
+      const monthKey = `${parts[0]}-${parts[1]}`; // e.g. "2026-06"
+      if (!matchesByMonth[monthKey]) {
+        matchesByMonth[monthKey] = [];
+      }
+      matchesByMonth[monthKey].push(m);
+    }
+  }
+
+  let updated = false;
+
+  // For today calculation
+  let todayStr = '';
+  try {
+    todayStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      .split('/')
+      .map(x => x.padStart(2, '0'))
+      .reverse()
+      .join('-');
+  } catch (e) {
+    const d = new Date();
+    todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  for (const monthKey of Object.keys(matchesByMonth)) {
+    const monthMatches = matchesByMonth[monthKey];
+    // Sort matches by date and time
+    monthMatches.sort((a, b) => {
+      if (a.date !== b.date) {
+        return a.date.localeCompare(b.date);
+      }
+      return a.time.localeCompare(b.time);
+    });
+
+    const targetMatch = chargeDateRule === 'primeiro_jogo' 
+      ? monthMatches[0] 
+      : monthMatches[monthMatches.length - 1];
+
+    if (!targetMatch) continue;
+
+    const chargeMatchDate = targetMatch.date;
+    const parts = chargeMatchDate.split('-');
+    const compKey = `${parts[1]}/${parts[0]}`; // "06/2026"
+
+    // Only generate if today is on or after the target match date
+    if (todayStr >= chargeMatchDate) {
+      // Check if we already generated for this competence
+      const alreadyGenerated = db.competences.some(c => c.competence === compKey && c.generated);
+      if (!alreadyGenerated) {
+        // Find active mensalistas (category === 'mensalista' and not deleted)
+        let eligiblePlayers = db.players.filter(p => !p.deletedAt && p.category === 'mensalista');
+
+        // Prevent retroactive charges for newly-promoted players (i.e. if the charge date is before their promotion date)
+        eligiblePlayers = eligiblePlayers.filter(p => {
+          const transitions = (db.categoryTransitions || [])
+            .filter(t => t.playerId === p.id && t.newCategory === 'mensalista')
+            .sort((a, b) => a.date.localeCompare(b.date));
+          if (transitions.length > 0) {
+            const firstPromotionDateStr = transitions[0].date.split('T')[0];
+            if (chargeMatchDate < firstPromotionDateStr) {
+              return false;
+            }
+          }
+          return true;
+        });
+
+        for (const p of eligiblePlayers) {
+          const exists = db.bills.some(b => b.playerId === p.id && b.competence === compKey);
+          if (!exists) {
+            db.bills.push({
+              id: 'bill-' + p.id + '-' + compKey.replace('/', '-'),
+              playerId: p.id,
+              competence: compKey,
+              amount: monthlyFee,
+              dueDate: chargeMatchDate,
+              status: 'pendente'
+            });
+            updated = true;
+          }
+        }
+
+        // Register competence as generated
+        const compIndex = db.competences.findIndex(c => c.competence === compKey);
+        const compData: CompetenceConfig = {
+          competence: compKey,
+          monthlyFee,
+          chargeDateRule,
+          generated: true,
+          generatedDate: new Date().toISOString()
+        };
+
+        if (compIndex >= 0) {
+          db.competences[compIndex] = compData;
+        } else {
+          db.competences.push(compData);
+        }
+        updated = true;
+      }
+    }
+  }
+
+  return updated;
 }
 
 export function writeDb(db: DatabaseSchema) {

@@ -25,12 +25,14 @@ import {
   RefreshCw,
   Clock,
   Award,
-  Calendar
+  Calendar,
+  DollarSign
 } from 'lucide-react';
 import CalendarManager from './components/CalendarManager';
 import DrawManager from './components/DrawManager';
+import FinanceManager from './components/FinanceManager';
 
-type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw';
+type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -56,6 +58,7 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [mensalistaAlerts, setMensalistaAlerts] = useState<any>(null);
 
   // Save/retrieve session helper
   const handleLoginSuccess = (user: User) => {
@@ -84,10 +87,50 @@ export default function App() {
       if (!res.ok) throw new Error('Não foi possível carregar o roster de atletas.');
       const data = await res.json();
       setPlayers(data);
+      
+      // Also fetch vacancy alerts
+      await fetchMensalistaAlerts();
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro de conexão com o banco.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchMensalistaAlerts = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await fetch('/api/mensalista-alerts');
+      if (res.ok) {
+        const data = await res.json();
+        setMensalistaAlerts(data);
+      }
+    } catch (err) {
+      console.error('Falha ao sincronizar alertas de mensalistas', err);
+    }
+  };
+
+  const handleQuickPromote = async (playerId: string) => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`/api/players/${playerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: 'mensalista',
+          responsibleName: currentUser?.name || 'Administrador'
+        })
+      });
+      if (res.ok) {
+        setSuccessMsg('Atleta promovido a mensalista com sucesso!');
+        await fetchPlayers();
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || 'Erro ao promover atleta.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro de conexão.');
     }
   };
 
@@ -112,6 +155,7 @@ export default function App() {
     if (currentUser) {
       fetchPlayers();
       fetchPendingCount();
+      fetchMensalistaAlerts();
     }
   }, [currentUser, activeTab]);
 
@@ -127,7 +171,10 @@ export default function App() {
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify({
+          ...formData,
+          responsibleName: currentUser?.name || 'Administrador'
+        })
       });
 
       const data = await res.json();
@@ -294,6 +341,19 @@ export default function App() {
               <span>Ranking</span>
             </button>
 
+            <button
+              id="tab-finances"
+              onClick={() => { setActiveTab('finances'); setIsFormOpen(false); }}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'finances'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+              }`}
+            >
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>Financeiro</span>
+            </button>
+
             {isEditor && (
               <button
                 id="tab-approvals"
@@ -358,8 +418,14 @@ export default function App() {
             currentUser={currentUser}
             onNavigateToPlayers={() => setActiveTab('players')}
             onNavigateToApprovals={isEditor ? (() => setActiveTab('approvals')) : undefined}
+            onNavigateToFinances={() => setActiveTab('finances')}
             pendingApprovalsCount={pendingApprovalsCount}
           />
+        )}
+
+        {/* TAB - FINANCE DISCIPLINE */}
+        {activeTab === 'finances' && (
+          <FinanceManager currentUser={currentUser} />
         )}
 
         {/* TAB 5 - CALENDARIO, TEMPORADAS E RESERVAS */}
@@ -396,6 +462,70 @@ export default function App() {
                     </button>
                   )}
                 </div>
+
+                {/* Mensalista Vacancies Alert and Promotion suggestions card */}
+                {mensalistaAlerts && mensalistaAlerts.isBelowLimit && (
+                  <div className="bg-[#091512] border border-emerald-500/20 rounded-xl p-4 md:p-5 space-y-3.5 shadow-lg shadow-emerald-500/5 mt-2 transition animate-fadeIn">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-900/60">
+                      <div className="flex items-start gap-3">
+                        <div className="p-2 bg-[#22c55e]/10 rounded-lg text-[#22c55e] mt-0.5">
+                          <PlusCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="font-display font-bold text-sm text-white">Existe vaga disponível para um novo mensalista!</h3>
+                          <p className="text-xs text-zinc-400 mt-0.5">
+                            Existem <strong className="text-emerald-400">{mensalistaAlerts.activeCount}</strong> de no máximo <strong className="text-zinc-500">{mensalistaAlerts.maxMensalistas}</strong> mensalistas ativos. Há <strong className="text-emerald-400">{mensalistaAlerts.availableVacancies} {mensalistaAlerts.availableVacancies === 1 ? 'vaga' : 'vagas'}</strong> {mensalistaAlerts.availableVacancies === 1 ? 'disponível' : 'disponíveis'}.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-emerald-500/5 text-[10px] text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/10 font-mono font-bold self-start sm:self-center uppercase tracking-wider">
+                        Há vaga ativa
+                      </div>
+                    </div>
+
+                    {/* Suggestions list */}
+                    {mensalistaAlerts.suggestedReserves && mensalistaAlerts.suggestedReserves.length > 0 ? (
+                      <div className="space-y-2">
+                        <span className="block text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest leading-none">
+                          Sugestão de Promoção (Reservas Ativos por Presença):
+                        </span>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                          {mensalistaAlerts.suggestedReserves.slice(0, 4).map((res: any) => (
+                            <div key={res.id} className="bg-zinc-950/65 p-3 rounded-lg border border-zinc-900/60 flex items-center justify-between text-xs gap-3">
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-white truncate">{res.name}</span>
+                                  {res.status !== 'disponivel' && (
+                                    <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.25 rounded uppercase font-mono font-bold">
+                                      {res.status === 'lesionado' ? 'Lesionado' : 'Ausente'}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-3">
+                                  <span>Presenças: <strong className="text-emerald-400">{res.presences}</strong></span>
+                                  <span>Tempo: <strong className="text-zinc-400">{res.daysInGroup}d</strong></span>
+                                </div>
+                              </div>
+
+                              {isEditor && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickPromote(res.id)}
+                                  className="px-3 py-1.5 bg-[#14231b] hover:bg-emerald-600 border border-emerald-500/15 text-emerald-400 hover:text-white rounded-lg text-[10px] font-bold font-mono transition uppercase cursor-pointer"
+                                >
+                                  Promover Atleta
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] font-mono text-zinc-600 italic">Nenhum jogador da categoria "Reserva" elegível no momento.</p>
+                    )}
+                  </div>
+                )}
 
                 {/* Filter and Search Bar */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[#111815] p-3.5 rounded-xl border border-zinc-850/80">

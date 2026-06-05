@@ -12,6 +12,9 @@ interface CalendarManagerProps {
 
 export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const isAdmin = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
+
+  const todayVal = new Date();
+  const todayStr = `${todayVal.getFullYear()}-${String(todayVal.getMonth() + 1).padStart(2, '0')}-${String(todayVal.getDate()).padStart(2, '0')}`;
   
   // Tabs: 'matches' | 'recurrence' | 'reserves'
   const [activeSubTab, setActiveSubTab] = useState<'matches' | 'recurrence' | 'reserves'>('matches');
@@ -29,8 +32,14 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Bulk Delete States
+  const [isBulkDeleteMode, setIsBulkDeleteMode] = useState(false);
+  const [selectedMatchIds, setSelectedMatchIds] = useState<string[]>([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   // Results & Placar State
   const [results, setResults] = useState<any[]>([]);
+  const [showDeleteConfirmId, setShowDeleteConfirmId] = useState<string | null>(null);
   const [showResultFormId, setShowResultFormId] = useState<string | null>(null);
   const [winsBlue, setWinsBlue] = useState('0');
   const [winsRed, setWinsRed] = useState('0');
@@ -49,6 +58,7 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [newMatchTime, setNewMatchTime] = useState('20:00');
   const [newMatchLocation, setNewMatchLocation] = useState('Arena Green Society (Quadra Principal)');
   const [newMatchDuration, setNewMatchDuration] = useState('120');
+  const [newMatchDeadline, setNewMatchDeadline] = useState('2');
 
   // Form states: Recurrence Config
   const [recurDay, setRecurDay] = useState('6'); // Default to Saturday
@@ -57,6 +67,9 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [recurDuration, setRecurDuration] = useState('120');
   const [recurDeadline, setRecurDeadline] = useState('2');
   const [recurActive, setRecurActive] = useState(true);
+  const [recurMonthlyFee, setRecurMonthlyFee] = useState('100');
+  const [recurChargeDateRule, setRecurChargeDateRule] = useState('primeiro_jogo');
+  const [recurMaxMensalistas, setRecurMaxMensalistas] = useState('12');
 
   // Data Fetching
   const fetchAllData = async () => {
@@ -88,7 +101,11 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
           setRecurLocation(recurData.location);
           setRecurDuration(recurData.durationMinutes.toString());
           setRecurDeadline(recurData.confirmationDeadlineDaysBefore.toString());
+          setNewMatchDeadline(recurData.confirmationDeadlineDaysBefore.toString());
           setRecurActive(recurData.active);
+          setRecurMonthlyFee((recurData.monthlyFee ?? 100).toString());
+          setRecurChargeDateRule(recurData.chargeDateRule ?? 'primeiro_jogo');
+          setRecurMaxMensalistas((recurData.maxMensalistas ?? 12).toString());
         }
       }
 
@@ -189,6 +206,12 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
       setErrorMsg('Data e horário são obrigatórios para agendar partidas.');
       return;
     }
+
+    if (newMatchDate < todayStr) {
+      setErrorMsg('Não é permitido agendar uma rodada com data anterior ao dia atual.');
+      return;
+    }
+
     setActionLoading(true);
     setErrorMsg('');
     try {
@@ -199,7 +222,8 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
           date: newMatchDate,
           time: newMatchTime,
           location: newMatchLocation,
-          durationMinutes: newMatchDuration
+          durationMinutes: newMatchDuration,
+          confirmationDeadlineDaysBefore: newMatchDeadline ? parseInt(newMatchDeadline) : 2
         })
       });
 
@@ -326,19 +350,82 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
 
   // REMOVE MATCH
   const handleDeleteMatch = async (matchId: string) => {
-    if (!window.confirm('Atenção: deseja remover definitivamente este racha do calendário? Isto também excluirá as presenças vinculadas.')) return;
+    setErrorMsg('');
+    const match = matches.find((m) => m.id === matchId);
+    if (match) {
+      const hasHistory = match.hasPresences || match.hasDraws || match.hasResults;
+      if (hasHistory) {
+        const reasons = [];
+        if (match.hasPresences) reasons.push('respostas de presença (confirmados/recusados)');
+        if (match.hasDraws) reasons.push('times sorteados/parciais');
+        if (match.hasResults) reasons.push('placar/resultados finais gravados');
+        
+        setErrorMsg(`Não é possível excluir esta partida permanentemente pois ela já possui histórico registrado (${reasons.join(', ')}). Utilize a opção "Cancelar" para cancelar a rodada e manter as informações históricas.`);
+        return;
+      }
+    }
+
     setActionLoading(true);
     try {
       const response = await fetch(`/api/matches/${matchId}`, { method: 'DELETE' });
-      if (!response.ok) throw new Error('Erro ao excluir rodada.');
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Erro ao excluir rodada.');
+      }
 
-      triggerFeedback('Partida removida do calendário.');
+      triggerFeedback('Partida removida do calendário definitivamente.');
+      setShowDeleteConfirmId(null);
       await fetchAllData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao excluir partida.');
     } finally {
       setActionLoading(false);
     }
+  };
+
+  const handleBulkDeleteMatches = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (selectedMatchIds.length === 0) {
+      setErrorMsg('Selecione pelo menos uma partida elegível para excluir.');
+      return;
+    }
+
+    if (!showBulkDeleteConfirm) {
+      setShowBulkDeleteConfirm(true);
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const response = await fetch('/api/matches/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchIds: selectedMatchIds })
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Erro ao realizar exclusão em massa.');
+      }
+
+      setSuccessMsg(`${resData.deletedCount} partidas foram excluídas em massa com sucesso.`);
+      setSelectedMatchIds([]);
+      setIsBulkDeleteMode(false);
+      setShowBulkDeleteConfirm(false);
+      await fetchAllData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao deletar partidas em massa.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSelectAllEligible = () => {
+    const eligibleIds = matches
+      .filter((m: any) => !(m.hasPresences || m.hasDraws || m.hasResults))
+      .map((m: any) => m.id);
+    setSelectedMatchIds(eligibleIds);
   };
 
   // SAVE RECURRENCE SETUP
@@ -355,7 +442,10 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
           location: recurLocation,
           durationMinutes: recurDuration,
           confirmationDeadlineDaysBefore: recurDeadline,
-          active: recurActive
+          active: recurActive,
+          monthlyFee: parseFloat(recurMonthlyFee),
+          chargeDateRule: recurChargeDateRule,
+          maxMensalistas: parseInt(recurMaxMensalistas || '12')
         })
       });
       if (!response.ok) throw new Error('Falha ao processar configuração de recorrência.');
@@ -510,7 +600,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
       {activeSubTab === 'matches' && (
         <div className="space-y-4">
           
-          <div className="flex justify-between items-center bg-zinc-950/20 p-3 rounded-lg border border-zinc-900">
+          <div className="flex justify-between items-center bg-zinc-950/20 p-3 rounded-lg border border-zinc-900 flex-wrap gap-3">
             <div>
               <h3 className="text-sm font-bold text-white font-display uppercase">Grade de Rodadas</h3>
               <p className="text-[10px] text-zinc-500 font-mono leading-none mt-1">
@@ -519,15 +609,133 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
             </div>
 
             {isAdmin && (
-              <button
-                onClick={() => setShowMatchForm(!showMatchForm)}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Agendar Racha</span>
-              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsBulkDeleteMode(!isBulkDeleteMode);
+                    setSelectedMatchIds([]);
+                    setShowBulkDeleteConfirm(false);
+                  }}
+                  className={`font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition border ${
+                    isBulkDeleteMode 
+                      ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
+                  }`}
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isBulkDeleteMode ? 'Desativar Seleção' : 'Excluir em Massa'}</span>
+                </button>
+                <button
+                  onClick={() => setShowMatchForm(!showMatchForm)}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition inline-flex"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Agendar Racha</span>
+                </button>
+              </div>
             )}
           </div>
+
+          {/* BULK ACTIONS TOOLBAR */}
+          {isBulkDeleteMode && isAdmin && (
+            <div className="space-y-2">
+              <div className="bg-[#1c1c1e] p-3 rounded-xl border border-zinc-900 flex flex-col md:flex-row justify-between items-center gap-3 font-mono text-xs animate-slideDown">
+                <div className="text-zinc-400 text-[11px]">
+                  <span className="text-emerald-400 font-black">{selectedMatchIds.length}</span> partidas sem histórico selecionadas.
+                </div>
+                <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSelectAllEligible();
+                    }}
+                    className="flex-1 md:flex-none bg-zinc-900 hover:bg-zinc-800 text-zinc-200 font-bold px-3 py-1.5 rounded border border-zinc-850 transition text-[10px] uppercase cursor-pointer"
+                  >
+                    Selecionar Todas Elegíveis
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedMatchIds([]);
+                    }}
+                    className="flex-1 md:flex-none bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-white font-bold px-3 py-1.5 rounded border border-zinc-900 transition text-[10px] uppercase cursor-pointer"
+                  >
+                    Limpar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    disabled={selectedMatchIds.length === 0 || actionLoading}
+                    className={`flex-1 md:flex-none font-bold px-4 py-1.5 rounded text-[10px] uppercase transition cursor-pointer ${
+                      selectedMatchIds.length > 0
+                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow shadow-rose-500/10'
+                        : 'bg-zinc-850 text-zinc-600 border border-zinc-900 cursor-not-allowed'
+                    }`}
+                  >
+                    {actionLoading ? 'Processando...' : 'Remover em Massa'}
+                  </button>
+                </div>
+              </div>
+
+              {/* BEAUTIFUL GLASSMORPHISM CONFIRMATION MODAL */}
+              {showBulkDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn font-sans">
+                  <div className="bg-[#121214] border border-red-500/20 max-w-md w-full rounded-2xl p-6 space-y-4 shadow-2xl relative animate-scaleUp">
+                    <div className="flex items-start gap-4 font-sans">
+                      <div className="p-3 bg-red-500/10 rounded-full flex-shrink-0 text-red-500 border border-red-500/20">
+                        <AlertTriangle className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="text-sm font-bold font-display uppercase text-white tracking-wider">
+                          Confirmação de Segurança
+                        </h3>
+                        <p className="text-zinc-400 text-xs font-mono leading-relaxed">
+                          Você está prestes a apagar permanentemente as <span className="text-emerald-400 font-extrabold underline">{selectedMatchIds.length}</span> rodadas selecionadas.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-zinc-950/80 p-3.5 rounded-xl border border-zinc-900 max-h-36 overflow-y-auto space-y-1.5 font-mono text-[10.5px] text-zinc-400">
+                      <p className="font-bold text-zinc-500 mb-1">Partidas a serem excluídas:</p>
+                      {matches
+                        .filter(m => selectedMatchIds.includes(m.id))
+                        .map(m => (
+                          <div key={m.id} className="flex justify-between border-b border-zinc-900 pb-1 last:border-0 last:pb-0">
+                            <span className="text-zinc-300 font-bold">📅 {m.date.split('-').reverse().join('/')}</span>
+                            <span className="text-zinc-500">🕒 {m.time} ({m.location.split(' ')[0]})</span>
+                          </div>
+                        ))}
+                    </div>
+
+                    <p className="text-[10px] sm:text-[11px] text-red-400/90 font-mono italic leading-relaxed bg-red-950/20 border border-red-900/30 p-2.5 rounded-lg">
+                      ⚠️ <span className="font-bold uppercase">Atenção:</span> Esta ação é definitiva e removerá completamente estes agendamentos do racha. O histórico de presença será encerrado para estas rodadas.
+                    </p>
+
+                    <div className="flex gap-3 pt-2 font-mono text-xs font-bold">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowBulkDeleteConfirm(false);
+                        }}
+                        className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer text-center uppercase text-[10.5px] tracking-wider"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={actionLoading}
+                        onClick={handleBulkDeleteMatches}
+                        className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl border border-red-400 shadow shadow-red-500/30 transition cursor-pointer text-center uppercase text-[10.5px] tracking-wider"
+                      >
+                        {actionLoading ? 'Excluindo...' : '💥 Sim, Confirmar'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* MANUALLY SCHEDULE FORM */}
           {showMatchForm && isAdmin && (
@@ -543,6 +751,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
                   <input
                     type="date"
                     required
+                    min={todayStr}
                     value={newMatchDate}
                     onChange={(e) => setNewMatchDate(e.target.value)}
                     className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-1.5 font-mono text-xs focus:outline-none focus:border-emerald-500"
@@ -568,6 +777,17 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
                     required
                     value={newMatchLocation}
                     onChange={(e) => setNewMatchLocation(e.target.value)}
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-1.5 font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono text-zinc-500 uppercase">Prazo de Confirmação (Dias antes)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newMatchDeadline}
+                    onChange={(e) => setNewMatchDeadline(e.target.value)}
                     className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-1.5 font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
@@ -614,20 +834,45 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
             <div className="space-y-3">
               {matches.map((item: any) => {
                 const matchResult = results.find(r => r.matchId === item.id);
+                const hasHistory = item.hasPresences || item.hasDraws || item.hasResults;
+                const isSelected = selectedMatchIds.includes(item.id);
                 
                 return (
-                  <div 
-                    key={item.id} 
-                    className={`p-4 rounded-xl border ${
-                      item.status === 'confirmando' 
-                        ? 'border-amber-500/20 bg-amber-500/5' 
-                        : item.status === 'cancelada'
-                          ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
-                          : item.status === 'encerrada'
-                            ? 'border-emerald-500/10 bg-emerald-500/5'
-                            : 'border-zinc-900 bg-zinc-950/30'
-                    } transition flex flex-col space-y-4`}
-                  >
+                  <div key={item.id} className="flex gap-3 items-stretch">
+                    {isBulkDeleteMode && isAdmin && (
+                      <div className="flex flex-col justify-center items-center bg-[#09090b] px-3.5 py-4 rounded-xl border border-zinc-900 flex-shrink-0 animate-slideRight">
+                        {hasHistory ? (
+                          <div className="text-zinc-650 text-xs font-bold" title="Partidas com histórico não podem ser excluídas em massa para preservar estatísticas.">
+                            🔒
+                          </div>
+                        ) : (
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setShowBulkDeleteConfirm(false);
+                              if (isSelected) {
+                                setSelectedMatchIds(selectedMatchIds.filter(id => id !== item.id));
+                              } else {
+                                setSelectedMatchIds([...selectedMatchIds, item.id]);
+                              }
+                            }}
+                            className="w-4 h-4 cursor-pointer accent-emerald-500 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-0 focus:ring-offset-0"
+                          />
+                        )}
+                      </div>
+                    )}
+                    <div 
+                      className={`flex-1 p-4 rounded-xl border ${
+                        item.status === 'confirmando' 
+                          ? 'border-amber-500/20 bg-amber-500/5' 
+                          : item.status === 'cancelada'
+                            ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
+                            : item.status === 'encerrada'
+                              ? 'border-emerald-500/10 bg-emerald-500/5'
+                              : 'border-zinc-900 bg-zinc-950/30'
+                      } transition flex flex-col space-y-4`}
+                    >
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                       <div className="space-y-1.5 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -671,6 +916,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
                           <button
                             onClick={() => {
                               setShowResultFormId(showResultFormId === item.id ? null : item.id);
+                              setShowDeleteConfirmId(null);
                               setWinsBlue('0');
                               setWinsRed('0');
                               setWinsGreen('0');
@@ -714,9 +960,16 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
 
                         {isAdmin && (
                           <button
-                            onClick={() => handleDeleteMatch(item.id)}
-                            className="bg-zinc-950 border border-zinc-900 text-rose-500 hover:bg-rose-500/10 p-1.5 rounded-lg transition"
-                            title="Deletar partida definitivamente"
+                            onClick={() => {
+                              setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
+                              setShowResultFormId(null);
+                            }}
+                            className={`p-1.5 rounded-lg border transition ${
+                              showDeleteConfirmId === item.id
+                                ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 font-bold'
+                                : 'bg-zinc-950 border-zinc-900 text-rose-500 hover:bg-rose-500/10'
+                            }`}
+                            title="Opções de Exclusão da Partida"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -809,7 +1062,104 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
                         </button>
                       </div>
                     )}
+
+                    {/* INLINE DELETE CONFIRMATION OR EXPLANATION AREA */}
+                    {showDeleteConfirmId === item.id && (
+                      <div className="p-4 bg-[#09090b] border border-zinc-900 rounded-xl space-y-3 font-mono text-xs animate-fadeIn mt-2" id={`delete-panel-${item.id}`}>
+                        <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
+                          <span className="font-bold text-white uppercase text-[10.5px] text-rose-400 flex items-center gap-1.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                            Excluir Rodada do Calendário
+                          </span>
+                          <button 
+                            type="button" 
+                            onClick={() => setShowDeleteConfirmId(null)}
+                            className="text-zinc-500 hover:text-white"
+                          >
+                            Fechar [X]
+                          </button>
+                        </div>
+
+                        {/* CASE 1: MATCH HAS HISTORY (CANNOT BE DELETED) */}
+                        {item.hasPresences || item.hasDraws || item.hasResults ? (
+                          <div className="space-y-3">
+                            <p className="text-zinc-350 leading-relaxed text-[11px]">
+                              ⚠️ <span className="font-extrabold text-white">Não é possível excluir esta partida permanentemente</span> porque ela já possui movimentação histórica no sistema:
+                            </p>
+                            <ul className="list-disc list-inside space-y-1 text-zinc-400 pl-1 text-[11px]">
+                              {item.hasPresences && (
+                                <li>Respostas de presença ativas (<span className="text-amber-500">confirmados, recusados ou em espera</span>).</li>
+                              )}
+                              {item.hasDraws && (
+                                <li>Histórico de times ou sorteio de racha realizado.</li>
+                              )}
+                              {item.hasResults && (
+                                <li>Placar ou resultado final gravado.</li>
+                              )}
+                            </ul>
+                            
+                            <div className="p-2.5 bg-rose-500/5 border border-rose-500/10 rounded-lg text-rose-350 leading-relaxed text-[10.5px]">
+                              Para manter as estatísticas e pontuações do grupo intactas, rachas com histórico não são excluídos fisicamente. Se a partida não for realizada, cancele-a.
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                              {item.status !== 'cancelada' ? (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setShowDeleteConfirmId(null);
+                                    await handleUpdateMatchStatus(item.id, 'cancelada');
+                                  }}
+                                  className="flex-1 bg-red-950/40 hover:bg-red-900/30 border border-red-500/30 text-rose-400 py-2 px-3 rounded text-[10px] font-bold transition uppercase cursor-pointer"
+                                >
+                                  Cancelar Rodada Preservando Histórico
+                                </button>
+                              ) : (
+                                <div className="text-[10px] text-zinc-500 italic p-1">
+                                  Esta partida já foi cancelada. Seu histórico continua preservado.
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setShowDeleteConfirmId(null)}
+                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 py-2 px-3 rounded text-[10.5px] font-bold transition cursor-pointer space-x-1"
+                              >
+                                Voltar
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* CASE 2: FRESH MATCH (CAN BE DELETED) */
+                          <div className="space-y-3">
+                            <p className="text-zinc-350 leading-relaxed text-[11px]">
+                              Esta partida está vazia (sem presenças cadastradas, sorteios ou resultados) e <span className="text-emerald-400 font-bold">pode ser excluída permanentemente</span> do racha.
+                            </p>
+                            <p className="text-red-400 font-extrabold text-[10px] uppercase">
+                              ⚠️ Atenção: Esta ação é definitiva e removerá completamente este registro do banco de dados!
+                            </p>
+                            <div className="flex gap-2 pt-1 font-mono">
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMatch(item.id)}
+                                disabled={actionLoading}
+                                className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded text-[11px] uppercase transition cursor-pointer"
+                              >
+                                {actionLoading ? 'Excluindo...' : 'Sim, Excluir Definitivamente'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setShowDeleteConfirmId(null)}
+                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-4 py-2 rounded text-[11px] font-bold transition cursor-pointer"
+                              >
+                                Não, Voltar
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
+                </div>
                 );
               })}
             </div>
@@ -919,6 +1269,45 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`
                       value={recurDuration}
                       onChange={(e) => setRecurDuration(e.target.value)}
                       className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-2 font-mono text-xs focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-mono text-zinc-500 uppercase">Mensalidade (R$)</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      step="0.01"
+                      value={recurMonthlyFee}
+                      onChange={(e) => setRecurMonthlyFee(e.target.value)}
+                      className="w-full bg-[#1c1c1e] text-white border border-[#2b2b2b] rounded px-3 py-2 font-mono text-xs focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-mono text-zinc-500 uppercase">Faturamento</label>
+                    <select
+                      value={recurChargeDateRule}
+                      onChange={(e) => setRecurChargeDateRule(e.target.value)}
+                      className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-800 rounded px-2 py-2 font-mono text-xs focus:outline-none cursor-pointer"
+                    >
+                      <option value="primeiro_jogo">1º Jogo</option>
+                      <option value="ultimo_jogo">Último Jogo</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-mono text-zinc-500 uppercase">Limite Vagas</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      value={recurMaxMensalistas}
+                      onChange={(e) => setRecurMaxMensalistas(e.target.value)}
+                      className="w-full bg-[#1c1c1e] text-white border border-[#2b2b2b] rounded px-3 py-2 font-mono text-xs focus:outline-none"
                     />
                   </div>
                 </div>

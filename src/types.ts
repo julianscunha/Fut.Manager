@@ -154,6 +154,7 @@ export interface Match {
   location: string;
   durationMinutes: number;
   status: MatchStatus;
+  confirmationDeadlineDaysBefore?: number;
 }
 
 export type PresenceStatus = 'confirmado' | 'nao_confirmado' | 'cancelado';
@@ -173,6 +174,45 @@ export interface RecurrentConfig {
   durationMinutes: number;
   confirmationDeadlineDaysBefore: number; // e.g. 2 days before racha
   active: boolean;
+  monthlyFee: number; // e.g. 100
+  chargeDateRule: 'primeiro_jogo' | 'ultimo_jogo'; // billing trigger game rules
+  maxMensalistas?: number; // max quota limit for mensualistas
+}
+
+export interface CategoryTransition {
+  id: string;
+  playerId: string;
+  playerName: string;
+  previousCategory: PlayerCategory;
+  newCategory: PlayerCategory;
+  date: string; // ISO format Timestamp
+  responsibleName: string;
+}
+
+export interface Bill {
+  id: string;
+  playerId: string;
+  competence: string; // e.g. "06/2026"
+  amount: number;
+  dueDate: string; // YYYY-MM-DD
+  status: 'pendente' | 'pago';
+  paidAt?: string; // ISO date timestamp
+}
+
+export interface PaymentRecord {
+  id: string;
+  playerId: string;
+  billId: string;
+  amount: number;
+  paidAt: string; // ISO date timestamp
+}
+
+export interface CompetenceConfig {
+  competence: string; // e.g. "06/2026"
+  monthlyFee: number;
+  chargeDateRule: 'primeiro_jogo' | 'ultimo_jogo';
+  generated: boolean;
+  generatedDate?: string;
 }
 
 export interface ReserveQueueAlert {

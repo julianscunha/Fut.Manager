@@ -10,6 +10,7 @@ interface DashboardStatusProps {
   currentUser: User;
   onNavigateToPlayers: () => void;
   onNavigateToApprovals?: () => void;
+  onNavigateToFinances?: () => void;
   pendingApprovalsCount: number;
 }
 
@@ -17,8 +18,10 @@ export default function DashboardStatus({
   currentUser,
   onNavigateToPlayers,
   onNavigateToApprovals,
+  onNavigateToFinances,
   pendingApprovalsCount
 }: DashboardStatusProps) {
+  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
   const [nextMatch, setNextMatch] = useState<any>(null);
   const [presences, setPresences] = useState<any[]>([]);
   const [reserveAlerts, setReserveAlerts] = useState<any[]>([]);
@@ -28,6 +31,9 @@ export default function DashboardStatus({
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [showPresenceListDetail, setShowPresenceListDetail] = useState(false);
+
+  // Financial Stats
+  const [finData, setFinData] = useState<any>(null);
 
   // Analytical Racha States
   const [stats, setStats] = useState<any>(null);
@@ -91,6 +97,17 @@ export default function DashboardStatus({
           // The last result is the most recent
           setLatestResult(resultsData[resultsData.length - 1]);
         }
+      }
+
+      // Fetch financial details
+      try {
+        const finRes = await fetch(`/api/finances?email=${encodeURIComponent(currentUser.email)}&role=${currentUser.role}`);
+        if (finRes.ok) {
+          const finData = await finRes.json();
+          setFinData(finData);
+        }
+      } catch (err) {
+        console.error('Falha ao ler financas no dashboard:', err);
       }
     } catch (err) {
       console.error('Erro ao ler racha:', err);
@@ -171,6 +188,30 @@ export default function DashboardStatus({
       await loadDashboardData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao dispensar alerta.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleAdminTogglePresence = async (playerId: string, status: 'confirmado' | 'cancelado') => {
+    if (!nextMatch) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId, status })
+      });
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Erro ao alterar a presença.');
+      }
+      setSuccessMsg(`Presença alterada com sucesso pelo administrador!`);
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao alterar presença do jogador.');
     } finally {
       setActionLoading(false);
     }
@@ -487,11 +528,39 @@ export default function DashboardStatus({
                                 <span className={p.presenceStatus === 'confirmado' ? 'text-white font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-600 line-through' : 'text-zinc-400'}>
                                   ⚽ {p.name} {p.category === 'mensalista_goleiro' && '🧤'}
                                 </span>
-                                <span className={`text-[9px] px-1 rounded font-bold ${
-                                  p.presenceStatus === 'confirmado' ? 'text-emerald-400' : p.presenceStatus === 'cancelado' ? 'text-rose-500' : 'text-zinc-500'
-                                }`}>
-                                  {p.presenceStatus === 'confirmado' ? 'CONFIRMADO' : p.presenceStatus === 'cancelado' ? 'CANCELADO' : 'PENDENTE'}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[9.5px] px-1 rounded font-bold ${
+                                    p.presenceStatus === 'confirmado' ? 'text-emerald-400' : p.presenceStatus === 'cancelado' ? 'text-rose-500' : 'text-zinc-500'
+                                  }`}>
+                                    {p.presenceStatus === 'confirmado' ? 'CONFIRMADO' : p.presenceStatus === 'cancelado' ? 'CANCELADO' : 'PENDENTE'}
+                                  </span>
+                                  {isAdmin && (
+                                    <div className="flex gap-1">
+                                      {p.presenceStatus !== 'confirmado' && (
+                                        <button
+                                          type="button"
+                                          disabled={actionLoading}
+                                          onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
+                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
+                                          title="Aprovar participação"
+                                        >
+                                          <Check className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                      {p.presenceStatus !== 'cancelado' && (
+                                        <button
+                                          type="button"
+                                          disabled={actionLoading}
+                                          onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
+                                          className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
+                                          title="Remover / Cancelar"
+                                        >
+                                          <X className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -505,11 +574,39 @@ export default function DashboardStatus({
                                 <span className={p.presenceStatus === 'confirmado' ? 'text-[#4ade80] font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-600 line-through' : 'text-zinc-400'}>
                                   {idx + 1}. {p.name} (Reserva)
                                 </span>
-                                <span className={`text-[9px] px-1 rounded font-bold ${
-                                  p.presenceStatus === 'confirmado' ? 'text-emerald-400' : p.presenceStatus === 'cancelado' ? 'text-rose-500' : 'text-[#a78bfa]'
-                                }`}>
-                                  {p.presenceStatus === 'confirmado' ? 'CONFIRMADO' : p.presenceStatus === 'cancelado' ? 'CANCELADO' : 'ESPERANDO'}
-                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[9.5px] px-1 rounded font-bold ${
+                                    p.presenceStatus === 'confirmado' ? 'text-emerald-400' : p.presenceStatus === 'cancelado' ? 'text-rose-500' : 'text-[#a78bfa]'
+                                  }`}>
+                                    {p.presenceStatus === 'confirmado' ? 'CONFIRMADO' : p.presenceStatus === 'cancelado' ? 'CANCELADO' : 'ESPERANDO'}
+                                  </span>
+                                  {isAdmin && (
+                                    <div className="flex gap-1">
+                                      {p.presenceStatus !== 'confirmado' && (
+                                        <button
+                                          type="button"
+                                          disabled={actionLoading}
+                                          onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
+                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
+                                          title="Aprovar participação"
+                                        >
+                                          <Check className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                      {p.presenceStatus !== 'cancelado' && (
+                                        <button
+                                          type="button"
+                                          disabled={actionLoading}
+                                          onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
+                                          className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
+                                          title="Remover / Cancelar"
+                                        >
+                                          <X className="w-2.5 h-2.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -576,11 +673,73 @@ export default function DashboardStatus({
                   </div>
                 </button>
               )}
+
+              {onNavigateToFinances && (
+                <button
+                  onClick={onNavigateToFinances}
+                  className="w-full text-left bg-zinc-950/80 hover:bg-[#1a2d24] hover:text-[#4ade80] border border-zinc-900 hover:border-emerald-500/20 p-3.5 rounded-lg flex items-center justify-between text-xs text-zinc-300 group transition cursor-pointer font-sans"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow shadow-blue-500/50 animate-pulse" />
+                    <span className="font-semibold text-white group-hover:text-emerald-400">Financeiro & Mensalidades</span>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1">
+                    <span>Acessar</span>
+                    <ArrowUpRight className="w-3.5 h-3.5" />
+                  </span>
+                </button>
+              )}
             </div>
 
-            <div className="text-[10px] text-zinc-500 border-t border-zinc-900/40 pt-4 leading-relaxed font-mono">
-              📢 Sorteio de times, financeiro da mensalidade e galeria de fotos integradas serão disponibilizados nas futuras atualizações planejadas.
+            {/* Real-time Financial Overview widgets */}
+            <div className="border-t border-zinc-900/40 pt-4 space-y-3 font-mono text-[11px]">
+              {/* User personal pending sum badge indicator */}
+              <div className="flex justify-between items-center bg-zinc-950 p-2.5 rounded-lg border border-zinc-900">
+                <span className="text-zinc-500 text-[10px] uppercase font-bold">Minhas Pendências:</span>
+                {(() => {
+                  const myUserBills = finData?.bills || [];
+                  const userPendingTotal = myUserBills
+                    .filter((b: any) => b.status === 'pendente')
+                    .reduce((sum: number, b: any) => sum + b.amount, 0);
+
+                  if (userPendingTotal > 0) {
+                    return (
+                      <span className="text-[10px] font-black text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 uppercase">
+                        R$ {userPendingTotal.toFixed(2)} pendente
+                      </span>
+                    );
+                  } else {
+                    return (
+                      <span className="text-[10px] font-black text-[#4ade80] bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 uppercase">
+                        Nenhuma pendência 🎉
+                      </span>
+                    );
+                  }
+                })()}
+              </div>
+
+              {/* General Health statistics without showing debtor names */}
+              <div className="space-y-1.5 bg-zinc-900/40 p-2.5 rounded-lg border border-zinc-900/60">
+                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold block">
+                  Caixa do Grupo (Saúde Financeira)
+                </span>
+                <div className="grid grid-cols-3 gap-1 text-[10px] text-center pt-1 text-zinc-400">
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] text-zinc-500 uppercase block">Previsto</span>
+                    <span className="text-white font-bold">R$ {Math.round(finData?.health?.totalExpected || 0)}</span>
+                  </div>
+                  <div className="space-y-0.5 border-x border-zinc-900">
+                    <span className="text-[8px] text-emerald-500 uppercase block">Recebido</span>
+                    <span className="text-emerald-400 font-bold">R$ {Math.round(finData?.health?.totalReceived || 0)}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] text-amber-500 uppercase block">Aberto</span>
+                    <span className="text-amber-400 font-bold">R$ {Math.round(finData?.health?.totalPending || 0)}</span>
+                  </div>
+                </div>
+              </div>
             </div>
+
           </div>
 
         </div>

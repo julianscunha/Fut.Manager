@@ -1,7 +1,7 @@
 import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { readDb, writeDb } from './server/db';
+import { readDb, writeDb, generateMonthlyBillingsIfNeeded } from './server/db';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult } from './src/types';
@@ -274,6 +274,24 @@ async function startServer() {
 
     const existingPlayer = db.players[index];
 
+    const categoryChanged = updateData.category && updateData.category !== existingPlayer.category;
+    if (categoryChanged) {
+      const { responsibleName } = req.body as any;
+      const transition = {
+        id: 'category-transition-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
+        playerId: existingPlayer.id,
+        playerName: existingPlayer.name,
+        previousCategory: existingPlayer.category,
+        newCategory: updateData.category,
+        date: new Date().toISOString(),
+        responsibleName: responsibleName || 'Administrador'
+      };
+      if (!db.categoryTransitions) {
+        db.categoryTransitions = [];
+      }
+      db.categoryTransitions.push(transition);
+    }
+
     // Merge updates
     const updatedPlayer: Player = {
       ...existingPlayer,
@@ -328,6 +346,72 @@ async function startServer() {
     writeDb(db);
 
     return res.json({ message: 'Jogador reativado com sucesso!', player: db.players[index] });
+  });
+
+  // Buscar histórico de transição de categoria de um jogador
+  app.get('/api/players/:id/transitions', (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = readDb();
+      const transitions = (db.categoryTransitions || []).filter(t => t.playerId === id);
+      return res.json(transitions.sort((a, b) => b.date.localeCompare(a.date)));
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao buscar histórico de mudanças.' });
+    }
+  });
+
+  // Alertas e recomendações de promoção para mensalistas
+  app.get('/api/mensalista-alerts', (req, res) => {
+    try {
+      const db = readDb();
+      const maxMensalistas = db.recurrentConfig?.maxMensalistas || 12;
+      
+      // Active mensalistas are those who are not soft-deleted and whose categories are 'mensalista' or 'mensalista_goleiro'
+      const activeMensalistas = db.players.filter(p => !p.deletedAt && (p.category === 'mensalista' || p.category === 'mensalista_goleiro'));
+      const activeCount = activeMensalistas.length;
+      
+      const isBelowLimit = activeCount < maxMensalistas;
+      const availableVacancies = maxMensalistas - activeCount;
+
+      // Filter non-deleted reserves
+      const reserves = db.players.filter(p => !p.deletedAt && p.category === 'reserva');
+
+      const suggestedReserves = reserves.map(p => {
+        // Confirmed presences count
+        const presencesCount = (db.presences || []).filter(pr => pr.playerId === p.id && pr.status === 'confirmado').length;
+        
+        // Days in the group
+        const dateCreated = p.createdAt ? new Date(p.createdAt) : new Date();
+        const diffTime = Math.abs(new Date().getTime() - dateCreated.getTime());
+        const daysInGroup = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        return {
+          id: p.id,
+          name: p.name,
+          presences: presencesCount,
+          daysInGroup,
+          status: p.status,
+          createdAt: p.createdAt
+        };
+      }).sort((a, b) => {
+        // Sort by highest presences first, then by days in group (longer time in group)
+        if (b.presences !== a.presences) {
+          return b.presences - a.presences;
+        }
+        return b.daysInGroup - a.daysInGroup;
+      });
+
+      return res.json({
+        maxMensalistas,
+        activeCount,
+        isBelowLimit,
+        availableVacancies,
+        suggestedReserves
+      });
+    } catch (err) {
+      console.error('[Error fetching mensalista alerts]:', err);
+      return res.status(500).json({ error: 'Erro ao buscar alertas de mensalistas.' });
+    }
   });
 
   // Jogadores: Preparação do fluxograma futuro de Card IA
@@ -689,9 +773,14 @@ async function startServer() {
         const missingPlayersCount = Math.max(0, 15 - confirmedCount);
 
         // Deadline check
+        const matchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : deadlineDays;
         const matchDate = new Date(`${m.date}T12:00:00`);
-        const deadlineDate = new Date(matchDate.getTime() - deadlineDays * 24 * 60 * 60 * 1000);
+        const deadlineDate = new Date(matchDate.getTime() - matchDeadlineDays * 24 * 60 * 60 * 1000);
         const isDeadlineExpired = new Date() >= deadlineDate;
+
+        const hasPresences = matchPresences.some((pr) => pr.status === 'confirmado');
+        const hasDraws = (db.draws || []).some((d) => d.matchId === m.id);
+        const hasResults = (db.results || []).some((r) => r.matchId === m.id);
 
         return {
           ...m,
@@ -700,7 +789,10 @@ async function startServer() {
           hasMinimumPlayers,
           missingPlayersCount,
           isDeadlineExpired,
-          deadlineDateStr: deadlineDate.toISOString().split('T')[0]
+          deadlineDateStr: deadlineDate.toISOString().split('T')[0],
+          hasPresences,
+          hasDraws,
+          hasResults
         };
       });
 
@@ -725,9 +817,29 @@ async function startServer() {
 
   app.post('/api/matches', (req, res) => {
     try {
-      const { date, time, location, durationMinutes, status, seasonId } = req.body;
+      const { date, time, location, durationMinutes, status, seasonId, confirmationDeadlineDaysBefore } = req.body;
       if (!date || !time) {
         return res.status(400).json({ error: 'Data e Horário são obrigatórios.' });
+      }
+
+      // Check if match date is in the past relative to today (America/Sao_Paulo timezone or fallback)
+      let todayStr = '';
+      try {
+        todayStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+          .split('/')
+          .map(x => x.padStart(2, '0'))
+          .reverse()
+          .join('-');
+      } catch (e) {
+        const d = new Date();
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const r = String(d.getDate()).padStart(2, '0');
+        todayStr = `${y}-${m}-${r}`;
+      }
+
+      if (date < todayStr) {
+        return res.status(400).json({ error: 'Não é permitido agendar uma rodada com data anterior ao dia atual.' });
       }
 
       const db = readDb();
@@ -751,7 +863,8 @@ async function startServer() {
         time,
         location: location || 'Arena Green Society (Quadra Principal)',
         durationMinutes: durationMinutes ? parseInt(durationMinutes) : 120,
-        status: status || 'agendada'
+        status: status || 'agendada',
+        confirmationDeadlineDaysBefore: confirmationDeadlineDaysBefore !== undefined && confirmationDeadlineDaysBefore !== null ? parseInt(confirmationDeadlineDaysBefore) : undefined
       };
 
       db.matches.push(newMatch);
@@ -771,7 +884,7 @@ async function startServer() {
   app.put('/api/matches/:id', (req, res) => {
     try {
       const { id } = req.params;
-      const { date, time, location, durationMinutes, status } = req.body;
+      const { date, time, location, durationMinutes, status, confirmationDeadlineDaysBefore } = req.body;
 
       const db = readDb();
       const index = db.matches.findIndex((m) => m.id === id);
@@ -787,7 +900,8 @@ async function startServer() {
         time: time || db.matches[index].time,
         location: location || db.matches[index].location,
         durationMinutes: durationMinutes ? parseInt(durationMinutes) : db.matches[index].durationMinutes,
-        status: status || db.matches[index].status
+        status: status || db.matches[index].status,
+        confirmationDeadlineDaysBefore: confirmationDeadlineDaysBefore !== undefined && confirmationDeadlineDaysBefore !== null ? parseInt(confirmationDeadlineDaysBefore) : db.matches[index].confirmationDeadlineDaysBefore
       };
 
       db.matches[index] = updatedMatch;
@@ -813,10 +927,69 @@ async function startServer() {
     }
   });
 
+  app.post('/api/matches/bulk-delete', (req, res) => {
+    try {
+      const { matchIds } = req.body;
+      if (!Array.isArray(matchIds)) {
+        return res.status(400).json({ error: 'matchIds deve ser um array.' });
+      }
+
+      const db = readDb();
+      const undeletable: string[] = [];
+      const toDelete: string[] = [];
+
+      for (const id of matchIds) {
+        const hasPresences = (db.presences || []).some((p) => p.matchId === id && p.status === 'confirmado');
+        const hasDraws = (db.draws || []).some((d) => d.matchId === id);
+        const hasResults = (db.results || []).some((r) => r.matchId === id);
+
+        if (hasPresences || hasDraws || hasResults) {
+          undeletable.push(id);
+        } else {
+          toDelete.push(id);
+        }
+      }
+
+      if (toDelete.length === 0) {
+        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluída, pois possuem histórico ou são inválidas.' });
+      }
+
+      db.matches = (db.matches || []).filter((m) => !toDelete.includes(m.id));
+      db.presences = (db.presences || []).filter((p) => !toDelete.includes(p.matchId));
+      db.reserveAlerts = (db.reserveAlerts || []).filter((a) => !toDelete.includes(a.matchId));
+
+      writeDb(db);
+
+      return res.json({
+        success: true,
+        deletedCount: toDelete.length,
+        undeletableCount: undeletable.length,
+        deletedIds: toDelete
+      });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao realizar exclusão em massa.' });
+    }
+  });
+
   app.delete('/api/matches/:id', (req, res) => {
     try {
       const { id } = req.params;
       const db = readDb();
+
+      const hasPresences = (db.presences || []).some((p) => p.matchId === id && p.status === 'confirmado');
+      const hasDraws = (db.draws || []).some((d) => d.matchId === id);
+      const hasResults = (db.results || []).some((r) => r.matchId === id);
+
+      if (hasPresences || hasDraws || hasResults) {
+        const reasons = [];
+        if (hasPresences) reasons.push('presenças confirmadas/recusadas/talvez');
+        if (hasDraws) reasons.push('times sorteados/parciais');
+        if (hasResults) reasons.push('placar/resultados registrados');
+        return res.status(400).json({ 
+          error: `Esta partida possui movimentação histórica (${reasons.join(', ')}) e não pode ser excluída. Apenas a opção de 'Cancelar Partida' é permitida para preservar o histórico.` 
+        });
+      }
+
       db.matches = db.matches.filter((m) => m.id !== id);
       db.presences = db.presences.filter((p) => p.matchId !== id);
       db.reserveAlerts = db.reserveAlerts.filter((a) => a.matchId !== id);
@@ -843,7 +1016,7 @@ async function startServer() {
 
   app.post('/api/recurrent-config', (req, res) => {
     try {
-      const { dayOfWeek, time, location, durationMinutes, confirmationDeadlineDaysBefore, active } = req.body;
+      const { dayOfWeek, time, location, durationMinutes, confirmationDeadlineDaysBefore, active, monthlyFee, chargeDateRule, maxMensalistas } = req.body;
 
       const db = readDb();
       db.recurrentConfig = {
@@ -852,7 +1025,10 @@ async function startServer() {
         location: location || 'Arena Green Society (Quadra Principal)',
         durationMinutes: parseInt(durationMinutes),
         confirmationDeadlineDaysBefore: parseInt(confirmationDeadlineDaysBefore),
-        active: active !== undefined ? !!active : true
+        active: active !== undefined ? !!active : true,
+        monthlyFee: monthlyFee !== undefined ? parseFloat(monthlyFee) : (db.recurrentConfig?.monthlyFee || 100),
+        chargeDateRule: chargeDateRule || (db.recurrentConfig?.chargeDateRule || 'primeiro_jogo'),
+        maxMensalistas: maxMensalistas !== undefined ? parseInt(maxMensalistas) : (db.recurrentConfig?.maxMensalistas || 12)
       };
 
       writeDb(db);
@@ -1588,6 +1764,243 @@ async function startServer() {
       return res.json({ message: 'Reserva convocado com sucesso!' });
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao processar convocação.' });
+    }
+  });
+
+  // ==========================================
+  // --- FINANCES (FINANCEIRO API ENDPOINTS) --
+  // ==========================================
+
+  app.get('/api/finances', (req, res) => {
+    try {
+      const email = (req.query.email as string || '').toLowerCase().trim();
+      const role = req.query.role as string || 'jogador';
+
+      const db = readDb(); // readDb triggers automatic monthly billing generation!
+
+      // Compute general financial health stats (Totals - anonymous)
+      const totalExpected = db.bills.reduce((sum, b) => sum + b.amount, 0);
+      const totalReceived = db.bills.filter(b => b.status === 'pago').reduce((sum, b) => sum + b.amount, 0);
+      const totalPending = db.bills.filter(b => b.status === 'pendente').reduce((sum, b) => sum + b.amount, 0);
+
+      const health = {
+        totalExpected,
+        totalReceived,
+        totalPending
+      };
+
+      // Find players for lookup & filter inactive ones
+      const allPlayers = db.players.filter(p => !p.deletedAt);
+
+      const isAdminMode = role === 'admin' || role === 'auxiliar';
+
+      if (isAdminMode) {
+        // Admins see all bills, payments, competences, and players
+        return res.json({
+          bills: db.bills,
+          payments: db.payments,
+          competences: db.competences,
+          recurrentConfig: db.recurrentConfig,
+          health,
+          players: allPlayers
+        });
+      } else {
+        // Non-admins (normal players) can only read their own bills and payments!
+        const player = db.players.find(p => p.email.toLowerCase().trim() === email);
+        if (!player) {
+          return res.json({
+            bills: [],
+            payments: [],
+            competences: [],
+            recurrentConfig: db.recurrentConfig,
+            health,
+            players: []
+          });
+        }
+
+        // Filter bills and payments to only include this player
+        const myBills = db.bills.filter(b => b.playerId === player.id);
+        const myPayments = db.payments.filter(p => p.playerId === player.id);
+
+        return res.json({
+          bills: myBills,
+          payments: myPayments,
+          competences: [], // Hide competences structure due to privacy
+          recurrentConfig: db.recurrentConfig,
+          health,
+          players: [player] // Only return themselves
+        });
+      }
+    } catch (err) {
+      console.error('[API GET Finances]', err);
+      return res.status(500).json({ error: 'Erro ao buscar dados financeiros.' });
+    }
+  });
+
+  app.post('/api/finances/pay', (req, res) => {
+    try {
+      const { billId, email, role } = req.body;
+      if (!billId) {
+        return res.status(400).json({ error: 'Código da cobrança é obrigatório.' });
+      }
+
+      const db = readDb();
+      const billIndex = db.bills.findIndex(b => b.id === billId);
+      if (billIndex === -1) {
+        return res.status(404).json({ error: 'Cobrança não encontrada.' });
+      }
+
+      const bill = db.bills[billIndex];
+
+      // If not admin, check if the bill belongs to this player (by email)
+      const player = db.players.find(p => p.id === bill.playerId);
+      const isMyBill = player && player.email.toLowerCase().trim() === (email || '').toLowerCase().trim();
+
+      if (role !== 'admin' && role !== 'auxiliar') {
+        if (!isMyBill) {
+          return res.status(403).json({ error: 'Você só pode confirmar pagamentos das suas próprias cobranças.' });
+        }
+      }
+
+      if (bill.status === 'pago') {
+        return res.status(400).json({ error: 'Esta cobrança já está paga.' });
+      }
+
+      const nowStr = new Date().toISOString();
+      db.bills[billIndex].status = 'pago';
+      db.bills[billIndex].paidAt = nowStr;
+
+      // Add payment log
+      const payment = {
+        id: 'pay-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9),
+        playerId: bill.playerId,
+        billId: bill.id,
+        amount: bill.amount,
+        paidAt: nowStr
+      };
+      
+      db.payments.push(payment);
+
+      writeDb(db);
+      return res.json({ message: 'Pagamento confirmado com sucesso!', bill: db.bills[billIndex] });
+    } catch (err) {
+      console.error('[API POST pay]', err);
+      return res.status(500).json({ error: 'Erro ao processar confirmação de pagamento.' });
+    }
+  });
+
+  app.post('/api/finances/toggle', (req, res) => {
+    try {
+      const { billId, email, role } = req.body;
+      if (!billId) {
+        return res.status(400).json({ error: 'Código da cobrança é obrigatório.' });
+      }
+
+      const db = readDb();
+      const billIndex = db.bills.findIndex(b => b.id === billId);
+      if (billIndex === -1) {
+        return res.status(404).json({ error: 'Cobrança não encontrada.' });
+      }
+
+      const bill = db.bills[billIndex];
+      const player = db.players.find(p => p.id === bill.playerId);
+      const isMyBill = player && player.email.toLowerCase().trim() === (email || '').toLowerCase().trim();
+      const isAdmin = role === 'admin' || role === 'auxiliar';
+
+      if (!isAdmin && !isMyBill) {
+        return res.status(403).json({ error: 'Você só pode gerenciar os seus próprios débitos.' });
+      }
+
+      const newStatus = bill.status === 'pago' ? 'pendente' : 'pago';
+      const nowStr = new Date().toISOString();
+
+      db.bills[billIndex].status = newStatus;
+      if (newStatus === 'pago') {
+        db.bills[billIndex].paidAt = nowStr;
+        // Insert payment log
+        const payment = {
+          id: 'pay-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9),
+          playerId: bill.playerId,
+          billId: bill.id,
+          amount: bill.amount,
+          paidAt: nowStr
+        };
+        db.payments.push(payment);
+      } else {
+        db.bills[billIndex].paidAt = undefined;
+        // Remove payment log
+        db.payments = db.payments.filter(p => p.billId !== bill.id);
+      }
+
+      writeDb(db);
+      return res.json({ message: 'Status de cobrança alterado com sucesso!', bill: db.bills[billIndex] });
+    } catch (err) {
+      console.error('[API POST Toggle Bill]', err);
+      return res.status(500).json({ error: 'Erro ao alterar status da cobrança.' });
+    }
+  });
+
+  app.post('/api/finances/bills', (req, res) => {
+    try {
+      const { playerId, competence, amount, dueDate, status } = req.body;
+      if (!playerId || !competence || !amount || !dueDate) {
+        return res.status(400).json({ error: 'Todos os campos (Jogador, Competência, Valor e Vencimento) são obrigatórios.' });
+      }
+
+      const db = readDb();
+      const newBill = {
+        id: 'bill-manual-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5),
+        playerId,
+        competence,
+        amount: parseFloat(amount),
+        dueDate,
+        status: status || 'pendente'
+      };
+
+      db.bills.push(newBill);
+      writeDb(db);
+      return res.status(201).json({ message: 'Cobrança manual criada com sucesso!', bill: newBill });
+    } catch (err) {
+      console.error('[API POST bill manual]', err);
+      return res.status(500).json({ error: 'Erro ao criar cobrança manual.' });
+    }
+  });
+
+  app.delete('/api/finances/bills/:billId', (req, res) => {
+    try {
+      const { billId } = req.params;
+      const db = readDb();
+      const exists = db.bills.some(b => b.id === billId);
+      if (!exists) {
+        return res.status(404).json({ error: 'Cobrança não encontrada.' });
+      }
+
+      db.bills = db.bills.filter(b => b.id !== billId);
+      // Clean payments
+      db.payments = db.payments.filter(p => p.billId !== billId);
+
+      writeDb(db);
+      return res.json({ message: 'Cobrança removida com sucesso.' });
+    } catch (err) {
+      console.error('[API DELETE bill]', err);
+      return res.status(500).json({ error: 'Erro ao remover cobrança.' });
+    }
+  });
+
+  app.post('/api/finances/trigger-sync', (req, res) => {
+    try {
+      const db = readDb();
+      const beforeCount = db.bills.length;
+      generateMonthlyBillingsIfNeeded(db);
+      writeDb(db);
+      const afterCount = db.bills.length;
+      return res.json({
+        message: 'Varredura financeira completada.',
+        generatedCount: afterCount - beforeCount
+      });
+    } catch (err) {
+      console.error('[API POST trigger-sync]', err);
+      return res.status(500).json({ error: 'Erro ao sincronizar cobranças.' });
     }
   });
 
