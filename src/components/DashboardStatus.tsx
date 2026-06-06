@@ -3,7 +3,8 @@ import { User, PresenceStatus } from '../types';
 import { 
   Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check, 
   Users, Users2, Shield, Sparkles, X, ChevronDown, ChevronUp, BellRing,
-  CheckCircle2, AlertTriangle, ArrowDownAZ, VolumeX
+  CheckCircle2, AlertTriangle, ArrowDownAZ, VolumeX, Flame, Gift, Compass, Settings,
+  Baby, User as UserIcon, Share2
 } from 'lucide-react';
 
 interface DashboardStatusProps {
@@ -30,6 +31,7 @@ export default function DashboardStatus({
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [isHoveredHighlight, setIsHoveredHighlight] = useState(false);
   const [showPresenceListDetail, setShowPresenceListDetail] = useState(false);
 
   // Financial Stats
@@ -39,10 +41,66 @@ export default function DashboardStatus({
   const [stats, setStats] = useState<any>(null);
   const [latestResult, setLatestResult] = useState<any>(null);
 
+  // Active Events States
+  const [activeEvents, setActiveEvents] = useState<any[]>([]);
+  const [tempEventAdults, setTempEventAdults] = useState<Record<string, number>>({});
+  const [tempEventChildren, setTempEventChildren] = useState<Record<string, number>>({});
+  const [isSavingEventRsvp, setIsSavingEventRsvp] = useState<Record<string, boolean>>({});
+  const [highlightPost, setHighlightPost] = useState<any>(null);
+
+  // Custom confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    onConfirm: () => {}
+  });
+
+  // Confirmed event participants details states
+  const [eventParticipantsMap, setEventParticipantsMap] = useState<Record<string, any[]>>({});
+  const [loadingParticipantsMap, setLoadingParticipantsMap] = useState<Record<string, boolean>>({});
+  const [expandedParticipantsMap, setExpandedParticipantsMap] = useState<Record<string, boolean>>({});
+
   // Load next match, presences, and alerts
   const loadDashboardData = async () => {
     try {
       setErrorMsg('');
+      
+      // Fetch upcoming events
+      try {
+        const eventsRes = await fetch(`/api/events?playerId=${currentUser.id}`);
+        if (eventsRes.ok) {
+          const eventsData = await eventsRes.json();
+          // Filter to only display 'agendado' or 'confirmando' (active) events
+          const upcoming = eventsData.filter((evt: any) => evt.status === 'confirmando' || evt.status === 'agendado');
+          setActiveEvents(upcoming);
+
+          // Pre-populate interactive presence counters
+          const eaMap: Record<string, number> = {};
+          const ecMap: Record<string, number> = {};
+          upcoming.forEach((evt: any) => {
+            if (evt.myParticipant) {
+              eaMap[evt.id] = evt.myParticipant.adultsCount;
+              ecMap[evt.id] = evt.myParticipant.childrenCount;
+            } else {
+              eaMap[evt.id] = 0;
+              ecMap[evt.id] = 0;
+            }
+          });
+          setTempEventAdults(eaMap);
+          setTempEventChildren(ecMap);
+        }
+      } catch (err) {
+        console.error('Falha ao ler eventos no dashboard:', err);
+      }
+
       const matchRes = await fetch('/api/matches');
       if (!matchRes.ok) throw new Error('Falha ao listar partidas.');
       const matches = await matchRes.json();
@@ -109,6 +167,18 @@ export default function DashboardStatus({
       } catch (err) {
         console.error('Falha ao ler financas no dashboard:', err);
       }
+
+      // Fetch Mural Highlight
+      try {
+        const muralRes = await fetch('/api/mural/posts');
+        if (muralRes.ok) {
+          const muralPosts = await muralRes.json();
+          const hl = muralPosts.find((p: any) => p.isHighlighted);
+          setHighlightPost(hl || null);
+        }
+      } catch (err) {
+        console.error('Falha ao ler destaque do mural:', err);
+      }
     } catch (err) {
       console.error('Erro ao ler racha:', err);
       setErrorMsg('Não foi possível carregar as informações do racha atual.');
@@ -120,6 +190,181 @@ export default function DashboardStatus({
   useEffect(() => {
     loadDashboardData();
   }, [currentUser.id]);
+
+  // Helper to change event counter values on dashboard
+  const changeEventRsvpCount = (eventId: string, isAdult: boolean, increment: boolean) => {
+    if (isAdult) {
+      const current = tempEventAdults[eventId] || 0;
+      const next = increment ? current + 1 : Math.max(0, current - 1);
+      setTempEventAdults(prev => ({ ...prev, [eventId]: next }));
+    } else {
+      const current = tempEventChildren[eventId] || 0;
+      const next = increment ? current + 1 : Math.max(0, current - 1);
+      setTempEventChildren(prev => ({ ...prev, [eventId]: next }));
+    }
+  };
+
+  // Helper to save event RSVP from dashboard
+  const handleSaveEventRsvp = async (eventId: string) => {
+    setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: true }));
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const adults = tempEventAdults[eventId] || 0;
+    const children = tempEventChildren[eventId] || 0;
+
+    try {
+      const res = await fetch(`/api/events/${eventId}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          playerId: currentUser.id,
+          adultsCount: adults,
+          childrenCount: children
+        })
+      });
+
+      if (res.ok) {
+        setSuccessMsg('Presença no evento atualizada com sucesso!');
+        await loadDashboardData();
+        refreshParticipantsList(eventId);
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || 'Erro ao registrar sua presença no evento.');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro de conexão.');
+    } finally {
+      setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: false }));
+    }
+  };
+
+  // Helper to cancel/remove event RSVP from dashboard
+  const handleCancelEventRsvp = (eventId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Cancelar Presença',
+      message: 'Tem certeza que deseja cancelar sua presença neste evento? Isso removerá seus acompanhantes e cobranças associadas.',
+      confirmText: 'Confirmar Cancelamento',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: true }));
+        setErrorMsg('');
+        setSuccessMsg('');
+
+        try {
+          const res = await fetch(`/api/events/${eventId}/confirm`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              playerId: currentUser.id,
+              adultsCount: 0,
+              childrenCount: 0
+            })
+          });
+
+          if (res.ok) {
+            setSuccessMsg('Sua presença foi cancelada com sucesso!');
+            await loadDashboardData();
+            refreshParticipantsList(eventId);
+          } else {
+            const data = await res.json();
+            setErrorMsg(data.error || 'Erro ao cancelar sua presença.');
+          }
+        } catch (err: any) {
+          setErrorMsg(err.message || 'Erro de conexão.');
+        } finally {
+          setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: false }));
+        }
+      }
+    });
+  };
+
+  // Toggle participants list with lazy loading
+  const toggleParticipantsList = async (eventId: string) => {
+    const isExpanded = !!expandedParticipantsMap[eventId];
+    setExpandedParticipantsMap(prev => ({ ...prev, [eventId]: !isExpanded }));
+
+    if (!isExpanded && !eventParticipantsMap[eventId]) {
+      setLoadingParticipantsMap(prev => ({ ...prev, [eventId]: true }));
+      try {
+        const res = await fetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
+        if (res.ok) {
+          const data = await res.json();
+          setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
+        }
+      } catch (err) {
+        console.error('Erro ao buscar participantes do evento:', err);
+      } finally {
+        setLoadingParticipantsMap(prev => ({ ...prev, [eventId]: false }));
+      }
+    }
+  };
+
+  // Re-fetch list dynamically on RSVP updates
+  const refreshParticipantsList = async (eventId: string) => {
+    try {
+      const res = await fetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
+      if (res.ok) {
+        const data = await res.json();
+        setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
+      }
+    } catch (err) {
+      console.error('Erro ao atualizar participantes do evento:', err);
+    }
+  };
+
+  // Share confirmed event participants list on WhatsApp
+  const handleShareConfirmedList = async (evt: any) => {
+    let list = eventParticipantsMap[evt.id];
+    if (!list) {
+      setLoadingParticipantsMap(prev => ({ ...prev, [evt.id]: true }));
+      try {
+        const res = await fetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
+        if (res.ok) {
+          list = await res.json();
+          setEventParticipantsMap(prev => ({ ...prev, [evt.id]: list }));
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingParticipantsMap(prev => ({ ...prev, [evt.id]: false }));
+      }
+    }
+
+    if (!list || list.length === 0) {
+      alert('Nenhum participante confirmado para gerar a lista de compartilhamento.');
+      return;
+    }
+
+    // Sort: Alphabetically since everyone here has confirmed
+    const sortedList = [...list].sort((a, b) => a.playerName.localeCompare(b.playerName));
+
+    const totalPessoas = sortedList.reduce((sum, p) => sum + p.adultsCount + p.childrenCount, 0);
+
+    const confirmedLines = sortedList.map(p => {
+      const parts: string[] = [];
+      const companionAdults = p.adultsCount - 1;
+      if (companionAdults > 0) {
+        parts.push(`+${companionAdults} adulto${companionAdults > 1 ? 's' : ''}`);
+      }
+      if (p.childrenCount > 0) {
+        parts.push(`+${p.childrenCount} criança${p.childrenCount > 1 ? 's' : ''}`);
+      }
+
+      if (parts.length > 0) {
+        return `${p.playerName} (${parts.join(', ')})`;
+      } else {
+        return `${p.playerName}`;
+      }
+    }).join('\n');
+
+    const formattedDate = evt.date.split('-').reverse().join('/');
+
+    const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\n\uD83D\uDC65 *Confirmados*\n\n${confirmedLines}\n\n*Total previsto:*\n${totalPessoas} pessoas\n\n\uD83D\uDCC5 *Data:* ${formattedDate} às ${evt.time}\n\uD83D\uDCCD *Local:* ${evt.location || 'Não especificado'}`;
+    const escapedMsg = encodeURIComponent(textMsg);
+    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+  };
 
   // Handle RSVP status toggling
   const handleRsvpHolder = async (status: 'confirmado' | 'cancelado') => {
@@ -354,6 +599,335 @@ export default function DashboardStatus({
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* SEÇÃO DE EVENTOS & CONFRATERNIZAÇÕES ATIVOS */}
+      {activeEvents.length > 0 && (
+        <div className="rounded-xl border border-zinc-850 bg-zinc-950/20 p-5 space-y-4 shadow-xl font-sans" id="dashboard-active-events-panel">
+          <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/40">
+            <Gift className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-display font-extrabold text-white text-sm uppercase tracking-wide">
+              Eventos & Confraternizações do Grupo
+            </h3>
+            <span className="ml-auto text-[9px] font-mono tracking-wider font-bold text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 animate-pulse">
+              Confirmação Disponível
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeEvents.map((evt) => {
+              const isConfirmed = !!evt.myParticipant;
+              const originalAdults = evt.myParticipant?.adultsCount || 0;
+              const originalChildren = evt.myParticipant?.childrenCount || 0;
+              
+              const currentAdults = tempEventAdults[evt.id] || 0;
+              const currentChildren = tempEventChildren[evt.id] || 0;
+              const hasDraftChanges = (currentAdults !== originalAdults) || (currentChildren !== originalChildren);
+
+              // Live cost estimation helper
+              let priceText = `R$ ${evt.adultPrice} (Adulto) / R$ ${evt.childPrice} (Criança)`;
+              if (evt.adultPrice === 0 && evt.childPrice === 0) {
+                priceText = "Gratuito";
+              }
+
+              return (
+                <div key={evt.id} className="bg-[#0c1311] border border-zinc-900 rounded-xl p-4 flex flex-col justify-between space-y-3 hover:border-emerald-500/20 transition">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start gap-1">
+                      <div className="space-y-0.5">
+                        <span className="text-[9px] font-mono font-bold text-emerald-400 uppercase bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          {evt.type === 'churrasco' ? 'Churrasco' : evt.type === 'confraternizacao' ? 'Confraternização' : evt.type === 'festa' ? 'Festa' : evt.type === 'viagem' ? 'Viagem' : 'Personalizado'}
+                        </span>
+                        <h4 className="font-display font-bold text-white text-sm tracking-tight mt-1">
+                          {evt.name}
+                        </h4>
+                      </div>
+                      <span className={`text-[8px] font-mono font-bold px-2 py-0.5 rounded uppercase ${
+                        isConfirmed 
+                          ? 'bg-emerald-500/15 border border-emerald-500/20 text-emerald-400' 
+                          : 'bg-zinc-800 border border-zinc-700 text-zinc-400'
+                      }`}>
+                        {isConfirmed ? 'Confirmado' : 'Pendente'}
+                      </span>
+                    </div>
+
+                    {evt.description && (
+                      <p className="text-zinc-400 text-[11px] leading-relaxed line-clamp-2">
+                        {evt.description}
+                      </p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2 bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-900/40 text-[11px] text-zinc-400 font-mono">
+                      <div>
+                        <span className="text-[8px] text-zinc-500 uppercase block font-bold">Data & Hora</span>
+                        <span className="text-zinc-300 font-bold">{evt.date.split('-').reverse().join('/')} - {evt.time}</span>
+                      </div>
+                      <div>
+                        <span className="text-[8px] text-zinc-500 uppercase block font-bold">Valor</span>
+                        <span className="text-emerald-400 font-bold">{priceText}</span>
+                      </div>
+                      <div className="col-span-2 border-t border-zinc-900/40 pt-1.5 mt-0.5">
+                        <span className="text-[8px] text-zinc-500 uppercase block font-bold">Local</span>
+                        <span className="text-zinc-300 block truncate">{evt.location || 'Não especificado'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 border-t border-zinc-900/60 pt-2 font-mono">
+                    {/* Confirmation Status statement */}
+                    {isConfirmed && !hasDraftChanges && (
+                      <div className="text-center py-1 bg-emerald-950/15 border border-emerald-900/40 rounded text-[11px] text-[#4ade80]">
+                        ✔️ Você confirmou <strong>{originalAdults} adulto(s)</strong> e <strong>{originalChildren} criança(s)</strong>.
+                      </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1.5 rounded border border-zinc-900 text-[11px] flex-1 justify-center" title="Adultos">
+                        <UserIcon className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        <button
+                          type="button"
+                          onClick={() => changeEventRsvpCount(evt.id, true, false)}
+                          className="w-5 h-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-center transition font-bold"
+                        >
+                          -
+                        </button>
+                        <span className="w-4 text-center text-white font-bold">{currentAdults}</span>
+                        <button
+                          type="button"
+                          onClick={() => changeEventRsvpCount(evt.id, true, true)}
+                          className="w-5 h-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-center transition font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 bg-zinc-950 px-2.5 py-1.5 rounded border border-zinc-900 text-[11px] flex-1 justify-center" title="Crianças">
+                        <Baby className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                        <button
+                          type="button"
+                          onClick={() => changeEventRsvpCount(evt.id, false, false)}
+                          className="w-5 h-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-center transition font-bold"
+                        >
+                          -
+                        </button>
+                        <span className="w-4 text-center text-white font-bold">{currentChildren}</span>
+                        <button
+                          type="button"
+                          onClick={() => changeEventRsvpCount(evt.id, false, true)}
+                          className="w-5 h-5 bg-zinc-900 hover:bg-zinc-800 text-white rounded text-center transition font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5 pt-1">
+                      {/* Save Attendance button */}
+                      {hasDraftChanges ? (
+                        <button
+                          type="button"
+                          disabled={isSavingEventRsvp[evt.id]}
+                          onClick={() => handleSaveEventRsvp(evt.id)}
+                          className="flex-1 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[10px] uppercase rounded transition cursor-pointer text-center"
+                        >
+                          {isSavingEventRsvp[evt.id] ? "Salvando..." : "Confirmar Presença"}
+                        </button>
+                      ) : null}
+
+                      {/* Cancel Attendance completely button */}
+                      {isConfirmed && (
+                        <button
+                          type="button"
+                          disabled={isSavingEventRsvp[evt.id]}
+                          onClick={() => handleCancelEventRsvp(evt.id)}
+                          className="flex-1 py-1.5 bg-rose-950/40 hover:bg-rose-900 border border-rose-500/10 text-rose-400 font-bold text-[10px] uppercase rounded transition cursor-pointer text-center"
+                        >
+                          Cancelar Presença
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* COLLAPSIBLE CONFIRMED PARTICIPANTS SECTION */}
+                  <div className="border-t border-zinc-900/60 pt-2 font-mono">
+                    <button
+                      type="button"
+                      onClick={() => toggleParticipantsList(evt.id)}
+                      className="w-full py-2 px-3 bg-zinc-950 hover:bg-zinc-900 border border-zinc-900 rounded-lg flex items-center justify-between text-[11px] text-zinc-300 transition"
+                    >
+                      <span className="flex items-center gap-1.5 font-bold">
+                        <Users className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>Participantes Confirmados</span>
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                          {evt.totalParticipants || 0} pessoas
+                        </span>
+                        {expandedParticipantsMap[evt.id] ? (
+                          <ChevronUp className="w-3.5 h-3.5 text-zinc-500" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5 text-zinc-500" />
+                        )}
+                      </div>
+                    </button>
+
+                    {expandedParticipantsMap[evt.id] && (
+                      <div className="mt-2.5 bg-zinc-950/50 rounded-lg border border-zinc-900/60 p-3 space-y-3">
+                        {loadingParticipantsMap[evt.id] ? (
+                          <div className="text-center py-2 text-zinc-500 text-[10px] flex items-center justify-center gap-2">
+                            <Clock className="w-3 h-3 animate-spin text-emerald-400" />
+                            <span>Carregando dados...</span>
+                          </div>
+                        ) : !eventParticipantsMap[evt.id] || eventParticipantsMap[evt.id].length === 0 ? (
+                          <div className="text-center py-2 text-zinc-500 italic text-[10px]">
+                            Nenhum participante confirmado ainda.
+                          </div>
+                        ) : (() => {
+                          const partsList = eventParticipantsMap[evt.id] || [];
+                          const countPlayers = partsList.length;
+                          const countAdultCompanions = partsList.reduce((sum, p) => sum + Math.max(0, p.adultsCount - 1), 0);
+                          const countChildren = partsList.reduce((sum, p) => sum + p.childrenCount, 0);
+                          const totalPessoas = partsList.reduce((sum, p) => sum + p.adultsCount + p.childrenCount, 0);
+
+                          const sortedPartsList = [...partsList].sort((a, b) => a.playerName.localeCompare(b.playerName));
+
+                          return (
+                            <div className="space-y-3">
+                              {/* Dashboard do Evento / Stats Summary */}
+                              <div className="bg-[#090f0d] border border-emerald-500/5 p-2 rounded text-[10px] space-y-1">
+                                <div className="grid grid-cols-2 gap-2 text-zinc-400">
+                                  <div>
+                                    <span className="text-zinc-500 text-[8px] uppercase block font-bold">👥 Confirmados</span>
+                                    <span className="text-white font-medium">{countPlayers} atletas</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-zinc-500 text-[8px] uppercase block font-bold">👨 Adultos</span>
+                                    <span className="text-white font-medium">+{countAdultCompanions} acomp.</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-zinc-500 text-[8px] uppercase block font-bold">👶 Crianças</span>
+                                    <span className="text-white font-medium">{countChildren} crianças</span>
+                                  </div>
+                                  <div className="border-l border-zinc-900 pl-1.5">
+                                    <span className="text-emerald-500 text-[8px] uppercase block font-bold">📊 Total Geral</span>
+                                    <span className="text-emerald-400 font-bold">{totalPessoas} pessoas</span>
+                                  </div>
+                                </div>
+
+                                <div className="pt-2 border-t border-zinc-900 mt-1 flex justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleShareConfirmedList(evt)}
+                                    className="px-2 py-1 bg-[#102419] hover:bg-emerald-600 border border-emerald-500/10 hover:border-emerald-500 hover:text-white text-emerald-400 font-bold text-[9px] uppercase rounded transition cursor-pointer flex items-center gap-1"
+                                  >
+                                    <Share2 className="w-2.5 h-2.5" />
+                                    <span>Compartilhar Lista</span>
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Simple List of confirmed cards */}
+                              <div className="grid grid-cols-1 gap-1.5 text-[10px]">
+                                {sortedPartsList.map(p => {
+                                  const companionAdults = p.adultsCount - 1;
+                                  const hasAdults = companionAdults > 0;
+                                  const hasChildren = p.childrenCount > 0;
+
+                                  return (
+                                    <div key={p.id} className="bg-zinc-900 border border-zinc-850 p-1.5 rounded flex items-center gap-2">
+                                      {p.photoOriginal ? (
+                                        <img src={p.photoOriginal} alt="" className="w-6 h-6 rounded-full object-cover border border-zinc-850" referralPolicy="no-referrer" />
+                                      ) : (
+                                        <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400 font-sans border border-zinc-750 text-[8px]">
+                                          {p.playerName?.slice(0, 2).toUpperCase()}
+                                        </div>
+                                      )}
+                                      <div className="flex-1 min-w-0">
+                                        <span className="font-sans font-bold text-zinc-200 block truncate">{p.playerName}</span>
+                                        <div className="text-[9px] text-zinc-500 flex flex-wrap gap-x-1 font-mono">
+                                          {!hasAdults && !hasChildren ? (
+                                            <span>Somente participante</span>
+                                          ) : (
+                                            <>
+                                              {hasAdults && (
+                                                <span className="text-emerald-400">+{companionAdults} adulto{companionAdults > 1 ? 's' : ''}</span>
+                                              )}
+                                              {hasChildren && (
+                                                <span className="text-amber-400">+{p.childrenCount} criança{p.childrenCount > 1 ? 's' : ''}</span>
+                                              )}
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 📸 DESTAQUE DA SEMANA SECTION ON HOME DASHBOARD */}
+      {highlightPost && (
+        <div className="bg-gradient-to-r from-emerald-950/20 to-zinc-950/40 border border-emerald-500/15 rounded-2xl p-5 shadow-xl relative overflow-hidden animate-fadeIn" id="dashboard-destaque-da-semana">
+          <div className="flex flex-col sm:flex-row gap-5 items-center">
+            
+            {/* Visual media */}
+            <div className="w-full sm:w-[150px] h-[95px] bg-zinc-900 rounded-xl overflow-hidden relative border border-zinc-850 shadow-md flex-shrink-0">
+              {highlightPost.mediaType === 'image' ? (
+                <img 
+                  src={highlightPost.mediaUrl} 
+                  alt={highlightPost.title} 
+                  className="w-full h-full object-cover" 
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full relative flex items-center justify-center bg-zinc-950">
+                  <video src={highlightPost.mediaUrl} className="w-full h-full object-cover opacity-60" />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[10px] bg-emerald-600 font-mono font-bold px-2 py-0.5 rounded text-white tracking-widest uppercase">PLAY</span>
+                  </div>
+                </div>
+              )}
+              <span className="absolute top-1.5 left-1.5 bg-emerald-600 text-white font-mono font-black text-[8px] px-2 py-0.25 rounded">
+                DESTAQUE
+              </span>
+            </div>
+
+            {/* Description details */}
+            <div className="flex-1 text-left space-y-1.5 w-full">
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">
+                  📸 Destaque da Semana ({highlightPost.category})
+                </span>
+                <span className="text-[10px] text-zinc-500 font-mono">
+                  {new Date(highlightPost.createdAt).toLocaleDateString('pt-BR')}
+                </span>
+              </div>
+
+              <h4 className="font-display font-extrabold text-white text-base tracking-tight leading-snug">
+                {highlightPost.title}
+              </h4>
+
+              <p className="text-zinc-400 text-xs line-clamp-1 leading-normal max-w-xl">
+                {highlightPost.description || 'Publicação destacada pelos administradores esta semana.'}
+              </p>
+
+              <div className="text-[10px] text-zinc-500 font-mono">
+                Momentos eternizados por: <span className="font-extrabold text-zinc-300 uppercase">{highlightPost.authorName}</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -866,6 +1440,39 @@ export default function DashboardStatus({
           </div>
         </div>
       </div>
+
+      {/* CUSTOM STATE-BASED CONFIRMATION MODAL */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0b100e] border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative p-5 space-y-4">
+            <div className="flex items-center gap-2.5 text-rose-400">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <h4 className="font-display font-bold text-sm uppercase tracking-wide text-white">
+                {confirmModal.title}
+              </h4>
+            </div>
+            <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3 pt-2 font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white py-2 rounded-lg border border-zinc-800 transition cursor-pointer text-center uppercase text-[10px] tracking-wider"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="flex-1 bg-rose-950/45 hover:bg-rose-900 border border-rose-500/25 text-rose-400 hover:text-white py-2 rounded-lg transition cursor-pointer text-center uppercase text-[10px] tracking-wider"
+              >
+                {confirmModal.confirmText || 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

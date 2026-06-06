@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Player, Bill, PaymentRecord, RecurrentConfig } from '../types';
 import { 
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,
-  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer
+  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle
 } from 'lucide-react';
 
 interface FinanceManagerProps {
@@ -37,6 +37,21 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   const [newBillCompetence, setNewBillCompetence] = useState('');
   const [newBillAmount, setNewBillAmount] = useState('');
   const [newBillDueDate, setNewBillDueDate] = useState('');
+
+  // Custom confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    onConfirm: () => {}
+  });
 
   // Local datetime mock helpers
   const [todayStr, setTodayStr] = useState('');
@@ -180,26 +195,34 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   };
 
   // Remove billing record completely
-  const handleDeleteBill = async (billId: string) => {
-    if (!confirm('ATENÇÃO: Deseja realmente excluir permanentemente este lançamento financeiro de forma irreversível?')) return;
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await fetch(`/api/finances/bills/${billId}`, {
-        method: 'DELETE'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Falha ao remover lançamento.');
+  const handleDeleteBill = (billId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Lançamento',
+      message: 'ATENÇÃO: Deseja realmente excluir permanentemente este lançamento financeiro de forma irreversível?',
+      confirmText: 'Sim, Excluir',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setActionLoading(true);
+        setErrorMsg('');
+        setSuccessMsg('');
+        try {
+          const res = await fetch(`/api/finances/bills/${billId}`, {
+            method: 'DELETE'
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Falha ao remover lançamento.');
 
-      setSuccessMsg('Lançamento removido com sucesso do histórico!');
-      await fetchFinanceData();
-      setTimeout(() => setSuccessMsg(''), 4500);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro de conexão.');
-    } finally {
-      setActionLoading(false);
-    }
+          setSuccessMsg('Lançamento removido com sucesso do histórico!');
+          await fetchFinanceData();
+          setTimeout(() => setSuccessMsg(''), 4500);
+        } catch (err: any) {
+          setErrorMsg(err.message || 'Erro de conexão.');
+        } finally {
+          setActionLoading(false);
+        }
+      }
+    });
   };
 
   // Save changes to recurrent finances
@@ -1038,6 +1061,39 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         </div>
       )}
       
+      {/* CUSTOM STATE-BASED CONFIRMATION MODAL */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0b100e] border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative p-5 space-y-4">
+            <div className="flex items-center gap-2.5 text-rose-400">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <h4 className="font-display font-bold text-sm uppercase tracking-wide text-white">
+                {confirmModal.title}
+              </h4>
+            </div>
+            <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3 pt-2 font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white py-2 rounded-lg border border-zinc-800 transition cursor-pointer text-center uppercase text-[10px] tracking-wider"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="flex-1 bg-rose-950/45 hover:bg-rose-900 border border-rose-500/25 text-rose-400 hover:text-white py-2 rounded-lg transition cursor-pointer text-center uppercase text-[10px] tracking-wider"
+              >
+                {confirmModal.confirmText || 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -280,5 +280,82 @@ export interface PlayerStats {
   maxStreak: number;
 }
 
+export type GrupalEventType = 'churrasco' | 'confraternizacao' | 'festa' | 'viagem' | 'personalizado';
+export type GrupalEventStatus = 'agendado' | 'confirmando' | 'encerrado' | 'cancelado';
 
+export interface GrupalEvent {
+  id: string;
+  name: string;
+  description: string;
+  type: GrupalEventType;
+  date: string; // ISO YYYY-MM-DD
+  time: string; // HH:MM
+  location: string;
+  adultPrice: number;
+  childPrice: number;
+  status: GrupalEventStatus;
+  createdAt: string;
+}
 
+export interface EventParticipant {
+  id: string;
+  eventId: string;
+  playerId: string;
+  adultsCount: number;
+  childrenCount: number;
+  confirmedAt: string;
+}
+
+export interface EventBill {
+  id: string;
+  eventId: string;
+  playerId: string;
+  amount: number;
+  status: 'pendente' | 'pago';
+  paidAt?: string;
+}
+
+// --- MURAL DO RACHA TYPES ---
+
+export interface MuralPost {
+  id: string;
+  title: string;
+  description: string;
+  mediaUrl: string; // AWS S3 URL or Base64 / Local preview
+  mediaType: 'image' | 'video';
+  fileSize: number; // in bytes
+  category: 'partida' | 'evento' | 'resenha' | 'livre';
+  authorId: string;
+  authorName: string;
+  authorRole: string;
+  createdAt: string;
+  updatedAt: string;
+  matchId?: string; // Optional match association
+  eventId?: string; // Optional event association
+  isHighlighted?: boolean; // Highlight of the week
+  highlightedAt?: string;
+  allowPublicView?: boolean; // Approved for public page
+}
+
+export interface MuralCategory {
+  id: 'partida' | 'evento' | 'resenha' | 'livre';
+  name: string;
+}
+
+export interface MuralHighlight {
+  id: string;
+  postId: string;
+  highlightedBy: string;
+  highlightedAt: string;
+}
+
+export interface MuralFile {
+  id: string;
+  postId: string;
+  s3Url: string;
+  mediaType: 'image' | 'video';
+  size: number;
+  originalName: string;
+  mimeType: string;
+  uploadedAt: string;
+}

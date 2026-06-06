@@ -313,35 +313,35 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
       const bestDuoObj = (stats.duos || [])[0];
       const bestDuoStr = bestDuoObj ? `${bestDuoObj.playerAName} + ${bestDuoObj.playerBName}` : 'Nenhuma cadastrada';
       
-      const text = `🏆 *Resultado do Racha* (${item.date.split('-').reverse().join('/')})
+      const text = `\uD83C\uDFC6 *Resultado do Racha* (${item.date.split('-').reverse().join('/')})
 
 *Campeão:*
 Time ${matchResult.champions.join(', ')}
 
 *Vitórias:*
-🔵 Azul: ${matchResult.winsBlue} vitórias
-🔴 Vermelho: ${matchResult.winsRed} vitórias
-🟢 Verde: ${matchResult.winsGreen} vitórias
+\uD83D\uDD35 Azul: ${matchResult.winsBlue} vitórias
+\uD83D\uDD34 Vermelho: ${matchResult.winsRed} vitórias
+\uD83D\uDFE2 Verde: ${matchResult.winsGreen} vitórias
 
-🔥 *Top 5 Vitórias*
+\uD83D\uDD25 *Top 5 Vitórias*
 ${top5}
 
-👥 *Melhor Dupla:*
+\uD83D\uDC65 *Melhor Dupla:*
 ${bestDuoStr}
 
-*Racha do Fofim* - Acesse para ver as estatísticas completas! ⚽`;
+*Racha do Fofim* - Acesse para ver as estatísticas completas! \u26BD`;
 
       const encoded = encodeURIComponent(text);
       window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
     } catch (err) {
-      const text = `🏆 *Resultado do Racha* (${item.date.split('-').reverse().join('/')})
+      const text = `\uD83C\uDFC6 *Resultado do Racha* (${item.date.split('-').reverse().join('/')})
 
 *Campeão:*
 Time ${matchResult.champions.join(', ')}
 
-🔵 Azul: ${matchResult.winsBlue} vitórias | 🔴 Vermelho: ${matchResult.winsRed} vitórias | 🟢 Verde: ${matchResult.winsGreen} vitórias.
+\uD83D\uDD35 Azul: ${matchResult.winsBlue} vitórias | \uD83D\uDD34 Vermelho: ${matchResult.winsRed} vitórias | \uD83D\uDFE2 Verde: ${matchResult.winsGreen} vitórias.
 
-Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! ⚽`;
+Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26BD`;
       window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
     } finally {
       setActionLoading(false);

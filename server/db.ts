@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition } from '../src/types';
+import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile } from '../src/types';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'database.json');
@@ -25,6 +25,13 @@ interface DatabaseSchema {
   payments: PaymentRecord[];
   competences: CompetenceConfig[];
   categoryTransitions?: CategoryTransition[];
+  events?: GrupalEvent[];
+  eventParticipants?: EventParticipant[];
+  eventBills?: EventBill[];
+  muralPosts?: MuralPost[];
+  muralCategories?: MuralCategory[];
+  muralHighlights?: MuralHighlight[];
+  muralFiles?: MuralFile[];
 }
 
 const DEFAULT_ADMINS = {
@@ -184,7 +191,10 @@ function ensureDbExists() {
       results: [],
       bills: [],
       payments: [],
-      competences: []
+      competences: [],
+      events: [],
+      eventParticipants: [],
+      eventBills: []
     };
     fs.writeFileSync(DB_FILE, JSON.stringify(initialDb, null, 2), 'utf-8');
   }
@@ -299,6 +309,39 @@ export function readDb(): DatabaseSchema {
   }
   if (!db.reservesOrder) {
     db.reservesOrder = [];
+    updated = true;
+  }
+  if (!db.events) {
+    db.events = [];
+    updated = true;
+  }
+  if (!db.eventParticipants) {
+    db.eventParticipants = [];
+    updated = true;
+  }
+  if (!db.eventBills) {
+    db.eventBills = [];
+    updated = true;
+  }
+  if (!db.muralPosts) {
+    db.muralPosts = [];
+    updated = true;
+  }
+  if (!db.muralCategories) {
+    db.muralCategories = [
+      { id: 'partida', name: 'Partida' },
+      { id: 'evento', name: 'Evento' },
+      { id: 'resenha', name: 'Resenha' },
+      { id: 'livre', name: 'Livre' }
+    ];
+    updated = true;
+  }
+  if (!db.muralHighlights) {
+    db.muralHighlights = [];
+    updated = true;
+  }
+  if (!db.muralFiles) {
+    db.muralFiles = [];
     updated = true;
   }
 

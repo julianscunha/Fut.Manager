@@ -1,5 +1,6 @@
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { readDb, writeDb, generateMonthlyBillingsIfNeeded } from './server/db';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
@@ -10,9 +11,9 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Middleware for parsing JSON requests with 10MB limit for base64 uploads
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ limit: '10mb', extended: true }));
+  // Middleware for parsing JSON requests with 250MB limit for base64 uploads
+  app.use(express.json({ limit: '250mb' }));
+  app.use(express.urlencoded({ limit: '250mb', extended: true }));
 
   // --- API Routes ---
 
@@ -1097,6 +1098,414 @@ async function startServer() {
   });
 
   // ==========================================
+  // --- GRUPAL EVENTS (EVENTOS DO GRUPO) -----
+  // ==========================================
+
+  app.get('/api/events', (req, res) => {
+    try {
+      const { playerId } = req.query;
+      const db = readDb();
+      const events = db.events || [];
+      const participants = db.eventParticipants || [];
+      const bills = db.eventBills || [];
+
+      const result = events.map(evt => {
+        const eventParts = participants.filter(p => p.eventId === evt.id);
+        const totalAdults = eventParts.reduce((sum, p) => sum + p.adultsCount, 0);
+        const totalChildren = eventParts.reduce((sum, p) => sum + p.childrenCount, 0);
+        const totalParticipants = totalAdults + totalChildren;
+
+        let myParticipant = null;
+        let myBill = null;
+
+        if (playerId) {
+          myParticipant = eventParts.find(p => p.playerId === playerId) || null;
+          myBill = bills.find(b => b.eventId === evt.id && b.playerId === playerId) || null;
+        }
+
+        const eventBillsOfEvt = bills.filter(b => b.eventId === evt.id);
+        const hasPaidBills = eventBillsOfEvt.some(b => b.status === 'pago');
+
+        return {
+          ...evt,
+          totalAdults,
+          totalChildren,
+          totalParticipants,
+          myParticipant,
+          myBill,
+          hasPaidBills
+        };
+      });
+
+      result.sort((a, b) => b.date.localeCompare(a.date));
+      return res.json(result);
+    } catch (err) {
+      console.error('[Get Events]', err);
+      return res.status(500).json({ error: 'Erro ao buscar eventos.' });
+    }
+  });
+
+  app.post('/api/events', (req, res) => {
+    try {
+      const { name, description, type, date, time, location, adultPrice, childPrice } = req.body;
+      if (!name || !type || !date) {
+        return res.status(400).json({ error: 'Nome, tipo e data são campos obrigatórios.' });
+      }
+
+      const db = readDb();
+      const newEvent = {
+        id: 'event-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        name,
+        description: description || '',
+        type,
+        date,
+        time: time || '12:00',
+        location: location || '',
+        adultPrice: parseFloat(adultPrice || '0'),
+        childPrice: parseFloat(childPrice || '0'),
+        status: 'agendado' as const,
+        createdAt: new Date().toISOString()
+      };
+
+      if (!db.events) db.events = [];
+      db.events.push(newEvent);
+      writeDb(db);
+
+      return res.status(201).json(newEvent);
+    } catch (err) {
+      console.error('[Create Event]', err);
+      return res.status(500).json({ error: 'Erro ao criar evento.' });
+    }
+  });
+
+  const recalculateEventBills = (db: any, eventId: string) => {
+    const event = db.events.find((e: any) => e.id === eventId);
+    if (!event) return;
+
+    const participants = (db.eventParticipants || []).filter((p: any) => p.eventId === eventId);
+    const bills = db.eventBills || [];
+
+    participants.forEach((pt: any) => {
+      const player = db.players.find((p: any) => p.id === pt.playerId);
+      if (!player) return;
+
+      const isChurrasco = event.type === 'churrasco';
+      const isMensalista = player.category === 'mensalista' || player.category === 'mensalista_goleiro';
+
+      let billAmount = 0;
+      if (isChurrasco && isMensalista) {
+        const paidAdults = Math.max(0, pt.adultsCount - 1);
+        billAmount = (paidAdults * event.adultPrice) + (pt.childrenCount * event.childPrice);
+      } else {
+        billAmount = (pt.adultsCount * event.adultPrice) + (pt.childrenCount * event.childPrice);
+      }
+
+      const billIndex = bills.findIndex((b: any) => b.eventId === eventId && b.playerId === pt.playerId);
+      if (billIndex !== -1) {
+        bills[billIndex].amount = billAmount;
+      } else if (pt.adultsCount > 0 || pt.childrenCount > 0) {
+        bills.push({
+          id: 'evbill-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          eventId,
+          playerId: pt.playerId,
+          amount: billAmount,
+          status: 'pendente'
+        });
+      }
+    });
+  };
+
+  app.put('/api/events/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, description, type, date, time, location, adultPrice, childPrice, status } = req.body;
+
+      const db = readDb();
+      const eventIndex = (db.events || []).findIndex(e => e.id === id);
+      if (eventIndex === -1) {
+        return res.status(404).json({ error: 'Evento não encontrado.' });
+      }
+
+      const previousStatus = db.events[eventIndex].status;
+
+      db.events[eventIndex] = {
+        ...db.events[eventIndex],
+        name: name || db.events[eventIndex].name,
+        description: description !== undefined ? description : db.events[eventIndex].description,
+        type: type || db.events[eventIndex].type,
+        date: date || db.events[eventIndex].date,
+        time: time || db.events[eventIndex].time,
+        location: location !== undefined ? location : db.events[eventIndex].location,
+        adultPrice: adultPrice !== undefined ? parseFloat(adultPrice) : db.events[eventIndex].adultPrice,
+        childPrice: childPrice !== undefined ? parseFloat(childPrice) : db.events[eventIndex].childPrice,
+        status: status || db.events[eventIndex].status
+      };
+
+      if (status === 'cancelado' && previousStatus !== 'cancelado') {
+        db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
+      } else {
+        recalculateEventBills(db, id);
+      }
+
+      writeDb(db);
+      return res.json(db.events[eventIndex]);
+    } catch (err) {
+      console.error('[Update Event]', err);
+      return res.status(500).json({ error: 'Erro ao salvar alterações do evento.' });
+    }
+  });
+
+  app.post('/api/events/:id/cancel', (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = readDb();
+      const eventIndex = (db.events || []).findIndex(e => e.id === id);
+      if (eventIndex === -1) {
+        return res.status(404).json({ error: 'Evento não encontrado.' });
+      }
+
+      db.events[eventIndex].status = 'cancelado';
+      // Mantenha cobranças que já foram pagas (histórico/movimentação), remova apenas as pendentes
+      db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id || b.status === 'pago');
+
+      writeDb(db);
+      return res.json({ message: 'Evento cancelado e cobranças pendentes suspensas.', event: db.events[eventIndex] });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao cancelar o evento.' });
+    }
+  });
+
+  app.delete('/api/events/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = readDb();
+      const eventIndex = (db.events || []).findIndex(e => e.id === id);
+      if (eventIndex === -1) {
+        return res.status(404).json({ error: 'Evento não encontrado.' });
+      }
+
+      const event = db.events[eventIndex];
+      if (event.status !== 'cancelado') {
+        return res.status(400).json({ error: 'Apenas eventos cancelados podem ser excluídos.' });
+      }
+
+      // Verifica se houve movimentação financeira (algum débito pago deste evento)
+      const hasPaidBills = (db.eventBills || []).some((b: any) => b.eventId === id && b.status === 'pago');
+      if (hasPaidBills) {
+        return res.status(400).json({ error: 'Este evento possui movimentação financeira (débitos pagos) e não pode ser excluído.' });
+      }
+
+      // Remover evento do array principal
+      db.events = db.events.filter((e: any) => e.id !== id);
+      // Remover os registros de participantes
+      db.eventParticipants = (db.eventParticipants || []).filter((p: any) => p.eventId !== id);
+      // Remover as cobranças não pagas que sobraram
+      db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
+
+      writeDb(db);
+      return res.json({ message: 'Evento excluído com sucesso.' });
+    } catch (err) {
+      console.error('[Delete Event]', err);
+      return res.status(500).json({ error: 'Erro ao excluir o evento.' });
+    }
+  });
+
+  app.post('/api/events/:id/end', (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = readDb();
+      const eventIndex = (db.events || []).findIndex(e => e.id === id);
+      if (eventIndex === -1) {
+        return res.status(404).json({ error: 'Evento não encontrado.' });
+      }
+
+      db.events[eventIndex].status = 'encerrado';
+      writeDb(db);
+      return res.json({ message: 'Evento encerrado com sucesso.', event: db.events[eventIndex] });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao encerrar o evento.' });
+    }
+  });
+
+  app.get('/api/events/:id/participants', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { userRole } = req.query;
+      const db = readDb();
+
+      const event = (db.events || []).find((e) => e.id === id);
+      if (!event) {
+        return res.status(404).json({ error: 'Evento não encontrado.' });
+      }
+
+      const participants = (db.eventParticipants || []).filter((p) => p.eventId === id);
+      const bills = db.eventBills || [];
+
+      const result = participants.map(part => {
+        const player = db.players.find(p => p.id === part.playerId);
+        const bill = bills.find(b => b.eventId === id && b.playerId === part.playerId);
+
+        const baseInfo = {
+          id: part.id,
+          playerId: part.playerId,
+          playerName: player ? player.name : 'Jogador Desconhecido',
+          category: player ? player.category : 'reserva',
+          photoOriginal: player ? player.photoOriginal : '',
+          adultsCount: part.adultsCount,
+          childrenCount: part.childrenCount,
+          confirmedAt: part.confirmedAt,
+        };
+
+        if (userRole === 'admin' || userRole === 'auxiliar') {
+          return {
+            ...baseInfo,
+            amount: bill ? bill.amount : 0,
+            status: bill ? bill.status : 'pendente'
+          };
+        } else {
+          return {
+            ...baseInfo,
+            amount: 0,
+            status: 'oculto'
+          };
+        }
+      });
+
+      return res.json(result);
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao buscar participantes do evento.' });
+    }
+  });
+
+  app.post('/api/events/:id/confirm', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { playerId, adultsCount, childrenCount } = req.body;
+
+      if (!playerId || adultsCount === undefined || childrenCount === undefined) {
+        return res.status(400).json({ error: 'playerId, adultsCount e childrenCount são obrigatórios.' });
+      }
+
+      const db = readDb();
+      const event = (db.events || []).find((e) => e.id === id);
+      if (!event) {
+        return res.status(404).json({ error: 'Evento não encontrado.' });
+      }
+
+      if (event.status === 'encerrado' || event.status === 'cancelado') {
+        return res.status(400).json({ error: 'Este evento já está encerrado ou cancelado.' });
+      }
+
+      const player = db.players.find(p => p.id === playerId);
+      if (!player) {
+        return res.status(404).json({ error: 'Atleta não encontrado.' });
+      }
+
+      if (!db.eventParticipants) db.eventParticipants = [];
+      let partIndex = db.eventParticipants.findIndex(p => p.eventId === id && p.playerId === playerId);
+
+      const adults = parseInt(adultsCount || '0');
+      const children = parseInt(childrenCount || '0');
+
+      if (adults === 0 && children === 0) {
+        if (partIndex !== -1) {
+          db.eventParticipants.splice(partIndex, 1);
+        }
+        db.eventBills = (db.eventBills || []).filter(b => !(b.eventId === id && b.playerId === playerId));
+        writeDb(db);
+        return res.json({ message: 'Confirmação removida.', participant: null, bill: null });
+      }
+
+      const participantRecord = {
+        id: partIndex !== -1 ? db.eventParticipants[partIndex].id : 'part-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        eventId: id,
+        playerId,
+        adultsCount: adults,
+        childrenCount: children,
+        confirmedAt: partIndex !== -1 ? db.eventParticipants[partIndex].confirmedAt : new Date().toISOString()
+      };
+
+      if (partIndex !== -1) {
+        db.eventParticipants[partIndex] = participantRecord;
+      } else {
+        db.eventParticipants.push(participantRecord);
+      }
+
+      const isChurrasco = event.type === 'churrasco';
+      const isMensalista = player.category === 'mensalista' || player.category === 'mensalista_goleiro';
+
+      let billAmount = 0;
+      if (isChurrasco && isMensalista) {
+        const paidAdults = Math.max(0, adults - 1);
+        billAmount = (paidAdults * event.adultPrice) + (children * event.childPrice);
+      } else {
+        billAmount = (adults * event.adultPrice) + (children * event.childPrice);
+      }
+
+      if (!db.eventBills) db.eventBills = [];
+      let billIndex = db.eventBills.findIndex(b => b.eventId === id && b.playerId === playerId);
+
+      let billRecord;
+      if (billIndex !== -1) {
+        const existingBill = db.eventBills[billIndex];
+        const status = (existingBill.amount !== billAmount) ? 'pendente' : existingBill.status;
+        billRecord = {
+          ...existingBill,
+          amount: billAmount,
+          status: billAmount === 0 ? 'pago' : status
+        };
+        db.eventBills[billIndex] = billRecord;
+      } else {
+        billRecord = {
+          id: 'evbill-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          eventId: id,
+          playerId,
+          amount: billAmount,
+          status: billAmount === 0 ? 'pago' : 'pendente'
+        };
+        db.eventBills.push(billRecord);
+      }
+
+      writeDb(db);
+      return res.json({
+        message: 'Presença confirmada com sucesso!',
+        participant: participantRecord,
+        bill: billRecord
+      });
+    } catch (err) {
+      console.error('[Confirm Event RSVP]', err);
+      return res.status(500).json({ error: 'Erro ao confirmar presença no evento.' });
+    }
+  });
+
+  app.post('/api/events/:id/pay', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { playerId } = req.body;
+
+      if (!playerId) {
+        return res.status(400).json({ error: 'playerId é obrigatório.' });
+      }
+
+      const db = readDb();
+      if (!db.eventBills) db.eventBills = [];
+
+      const billIndex = db.eventBills.findIndex(b => b.eventId === id && b.playerId === playerId);
+      if (billIndex === -1) {
+        return res.status(404).json({ error: 'Nenhuma cobrança registrada para este evento.' });
+      }
+
+      db.eventBills[billIndex].status = 'pago';
+      db.eventBills[billIndex].paidAt = new Date().toISOString();
+
+      writeDb(db);
+      return res.json({ message: 'Pagamento registrado com sucesso!', bill: db.eventBills[billIndex] });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao registrar pagamento.' });
+    }
+  });
+
+  // ==========================================
   // --- PRESENCES (CONFIRMAÇÕES DE RACHA) ---
   // ==========================================
 
@@ -1471,6 +1880,30 @@ async function startServer() {
         results: db.results || [],
         seasonId: seasonId as string || null
       });
+
+      // Compute group events attendance (completed/encerrado events only)
+      const completedEvents = (db.events || []).filter(e => e.status === 'encerrado');
+      const playerEventCount: Record<string, number> = {};
+      
+      db.players.forEach(p => {
+        playerEventCount[p.id] = 0;
+      });
+
+      completedEvents.forEach(evt => {
+        const parts = (db.eventParticipants || []).filter(p => p.eventId === evt.id);
+        parts.forEach(pt => {
+          if (pt.adultsCount > 0 || pt.childrenCount > 0) {
+            playerEventCount[pt.playerId] = (playerEventCount[pt.playerId] || 0) + 1;
+          }
+        });
+      });
+
+      if (stats && stats.individual) {
+        stats.individual = stats.individual.map(ind => ({
+          ...ind,
+          eventsCount: playerEventCount[ind.playerId] || 0
+        }));
+      }
 
       return res.json(stats);
     } catch (err) {
@@ -2001,6 +2434,352 @@ async function startServer() {
     } catch (err) {
       console.error('[API POST trigger-sync]', err);
       return res.status(500).json({ error: 'Erro ao sincronizar cobranças.' });
+    }
+  });
+
+  // --- MURAL DO RACHA API ENDPOINTS ---
+
+  // Get all mural categories
+  app.get('/api/mural/categories', (req, res) => {
+    try {
+      const db = readDb();
+      res.json(db.muralCategories || []);
+    } catch (err) {
+      console.error('[API GET Categories]', err);
+      res.status(500).json({ error: 'Erro ao listar categorias.' });
+    }
+  });
+
+  // Get association options (matches and events)
+  app.get('/api/mural/associations', (req, res) => {
+    try {
+      const db = readDb();
+      const matches = db.matches
+        // only show matches that have a season (or all for association)
+        .map(m => ({
+          id: m.id,
+          date: m.date,
+          location: m.location,
+          label: `Partida - ${m.date.split('-').reverse().join('/')} (${m.location})`
+        }));
+      const events = (db.events || []).map(e => ({
+        id: e.id,
+        date: e.date,
+        name: e.name,
+        label: `Evento - ${e.name} (${e.date.split('-').reverse().join('/')})`
+      }));
+      res.json({ matches, events });
+    } catch (err) {
+      console.error('[API GET Associations]', err);
+      res.status(500).json({ error: 'Erro ao carregar associações.' });
+    }
+  });
+
+  // Get mural statistics
+  app.get('/api/mural/stats', (req, res) => {
+    try {
+      const db = readDb();
+      const posts = db.muralPosts || [];
+      const photosCount = posts.filter(p => p.mediaType === 'image').length;
+      const videosCount = posts.filter(p => p.mediaType === 'video').length;
+      res.json({
+        publicationsCount: posts.length,
+        photosCount,
+        videosCount
+      });
+    } catch (err) {
+      console.error('[API GET Mural Stats]', err);
+      res.status(500).json({ error: 'Erro ao carregar estatísticas.' });
+    }
+  });
+
+  // Get all categories, posts, highlights (Mural Principal)
+  app.get('/api/mural/posts', (req, res) => {
+    try {
+      const db = readDb();
+      const posts = [...(db.muralPosts || [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      res.json(posts);
+    } catch (err) {
+      console.error('[API GET Mural Posts]', err);
+      res.status(500).json({ error: 'Erro ao carregar publicações.' });
+    }
+  });
+
+  // Get public mural posts (Página Pública Simplificada)
+  app.get('/api/mural/public-posts', (req, res) => {
+    try {
+      const db = readDb();
+      const posts = (db.muralPosts || [])
+        .filter(p => p.allowPublicView === true)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      res.json(posts);
+    } catch (err) {
+      console.error('[API GET Public Mural Posts]', err);
+      res.status(500).json({ error: 'Erro ao carregar mural público.' });
+    }
+  });
+
+  // Upload endpoint with validation
+  app.post('/api/mural/upload', (req, res) => {
+    try {
+      const { filename, fileType, fileData, size } = req.body;
+
+      if (!filename || !fileType || !fileData) {
+        return res.status(400).json({ error: 'Os campos filename, fileType e fileData são obrigatórios.' });
+      }
+
+      const isVideo = fileType.toLowerCase().startsWith('video/') || filename.toLowerCase().endsWith('.mp4') || filename.toLowerCase().endsWith('.mov');
+      const isImage = fileType.toLowerCase().startsWith('image/') || filename.toLowerCase().endsWith('.jpg') || filename.toLowerCase().endsWith('.jpeg') || filename.toLowerCase().endsWith('.png') || filename.toLowerCase().endsWith('.webp');
+
+      if (!isImage && !isVideo) {
+        return res.status(400).json({ error: 'Formato de arquivo inválido. Use JPG, JPEG, PNG, WEBP para fotos ou MP4, MOV para vídeos.' });
+      }
+
+      const fileSize = parseInt(size) || 0;
+      if (isImage) {
+        if (fileSize > 10 * 1024 * 1024) {
+          return res.status(400).json({ error: 'A foto excede o limite permitido de 10 MB.' });
+        }
+      } else if (isVideo) {
+        if (fileSize > 200 * 1024 * 1024) {
+          return res.status(400).json({ error: 'O vídeo excede o limite permitido de 200 MB.' });
+        }
+      }
+
+      const timestamp = Date.now();
+      const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.]/g, '-');
+      const uniqueFilename = `${timestamp}-${sanitizedFilename}`;
+
+      const uploadDir = path.join(process.cwd(), 'data', 'uploads');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      try {
+        const base64Data = fileData.replace(/^data:([A-Za-z-+\/]+);base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        fs.writeFileSync(path.join(uploadDir, uniqueFilename), buffer);
+      } catch (errWrite) {
+        console.error('Falha ao gravar arquivo em disco:', errWrite);
+      }
+
+      const awsRegion = process.env.AWS_REGION || 'sa-east-1';
+      const awsBucket = process.env.AWS_S3_BUCKET || 'racha-do-fofim';
+      const simulatedS3Url = `https://${awsBucket}.s3.${awsRegion}.amazonaws.com/uploads/${uniqueFilename}`;
+
+      return res.json({
+        s3Url: simulatedS3Url,
+        localUrl: `/uploads/${uniqueFilename}`,
+        filename: uniqueFilename,
+        mediaType: isImage ? 'image' : 'video'
+      });
+    } catch (err) {
+      console.error('[API POST Mural Upload]', err);
+      res.status(500).json({ error: 'Falha interna ao processar upload.' });
+    }
+  });
+
+  // Serve static uploads
+  app.get('/uploads/:filename', (req, res) => {
+    const filePath = path.join(process.cwd(), 'data', 'uploads', req.params.filename);
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('Arquivo não encontrado.');
+    }
+  });
+
+  // Add a new post
+  app.post('/api/mural/posts', (req, res) => {
+    try {
+      const { title, description, mediaUrl, mediaType, fileSize, category, matchId, eventId, allowPublicView, authorId, authorName, authorRole } = req.body;
+
+      if (!title || !mediaUrl || !category || !authorId) {
+        return res.status(400).json({ error: 'Título, arquivo, categoria e autor são obrigatórios.' });
+      }
+
+      const db = readDb();
+      const newPostId = 'post-' + Date.now();
+      const newPost = {
+        id: newPostId,
+        title: title.trim(),
+        description: (description || '').trim(),
+        mediaUrl,
+        mediaType: mediaType || 'image',
+        fileSize: fileSize || 0,
+        category,
+        authorId,
+        authorName,
+        authorRole,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        matchId: matchId || undefined,
+        eventId: eventId || undefined,
+        isHighlighted: false,
+        allowPublicView: allowPublicView !== false
+      };
+
+      if (!db.muralPosts) db.muralPosts = [];
+      db.muralPosts.push(newPost);
+
+      // Save file metadata separately in muralFiles
+      if (!db.muralFiles) db.muralFiles = [];
+      db.muralFiles.push({
+        id: 'file-' + Date.now(),
+        postId: newPostId,
+        s3Url: mediaUrl,
+        mediaType: mediaType || 'image',
+        size: fileSize || 0,
+        originalName: mediaUrl.split('/').pop() || 'uploaded-file',
+        mimeType: mediaType === 'image' ? 'image/jpeg' : 'video/mp4',
+        uploadedAt: new Date().toISOString()
+      });
+
+      writeDb(db);
+      res.status(201).json(newPost);
+    } catch (err) {
+      console.error('[API POST Mural Post]', err);
+      res.status(500).json({ error: 'Erro ao criar publicação.' });
+    }
+  });
+
+  // Edit title/description
+  app.put('/api/mural/posts/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, description, allowPublicView, reqUserId, reqUserRole } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ error: 'O título é obrigatório.' });
+      }
+
+      const db = readDb();
+      if (!db.muralPosts) db.muralPosts = [];
+
+      const postIndex = db.muralPosts.findIndex(p => p.id === id);
+      if (postIndex === -1) {
+        return res.status(404).json({ error: 'Publicação não encontrada.' });
+      }
+
+      const post = db.muralPosts[postIndex];
+
+      const isAdmin = reqUserRole === 'admin';
+      const isAuthor = post.authorId === reqUserId;
+
+      if (!isAdmin && !isAuthor) {
+        return res.status(403).json({ error: 'Apenas o autor ou o administrador pode editar esta publicação.' });
+      }
+
+      db.muralPosts[postIndex] = {
+        ...post,
+        title: title.trim(),
+        description: (description || '').trim(),
+        allowPublicView: allowPublicView !== false,
+        updatedAt: new Date().toISOString()
+      };
+
+      writeDb(db);
+      res.json(db.muralPosts[postIndex]);
+    } catch (err) {
+      console.error('[API PUT Mural Post]', err);
+      res.status(500).json({ error: 'Erro ao editar publicação.' });
+    }
+  });
+
+  // Delete publication (Admin only)
+  app.delete('/api/mural/posts/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reqUserRole } = req.body;
+
+      const db = readDb();
+      if (!db.muralPosts) db.muralPosts = [];
+
+      const postIndex = db.muralPosts.findIndex(p => p.id === id);
+      if (postIndex === -1) {
+        return res.status(404).json({ error: 'Publicação não encontrada.' });
+      }
+
+      const post = db.muralPosts[postIndex];
+
+      // Exclusão is strictly administrative as outlined in specifications
+      const isAdmin = reqUserRole === 'admin' || req.query.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir publicações do Mural.' });
+      }
+
+      db.muralPosts = db.muralPosts.filter(p => p.id !== id);
+
+      if (db.muralHighlights) {
+        db.muralHighlights = db.muralHighlights.filter(h => h.postId !== id);
+      }
+      if (db.muralFiles) {
+        db.muralFiles = db.muralFiles.filter(f => f.postId !== id);
+      }
+
+      writeDb(db);
+      res.json({ message: 'Publicação excluída com sucesso.' });
+    } catch (err) {
+      console.error('[API DELETE Mural Post]', err);
+      res.status(500).json({ error: 'Erro ao excluir publicação.' });
+    }
+  });
+
+  // Highlight/toggle Destaque da Semana (Admin only)
+  app.post('/api/mural/posts/:id/highlight', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reqUserId, reqUserRole } = req.body;
+
+      const isAdmin = reqUserRole === 'admin' || req.query.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Apenas Administradores podem gerenciar o Destaque da Semana.' });
+      }
+
+      const db = readDb();
+      if (!db.muralPosts) db.muralPosts = [];
+      if (!db.muralHighlights) db.muralHighlights = [];
+
+      const postIndex = db.muralPosts.findIndex(p => p.id === id);
+      if (postIndex === -1) {
+        return res.status(404).json({ error: 'Publicação não encontrada.' });
+      }
+
+      const post = db.muralPosts[postIndex];
+      const isHighlighted = !post.isHighlighted;
+
+      db.muralPosts = db.muralPosts.map((p, idx) => {
+        if (idx === postIndex) {
+          return {
+            ...p,
+            isHighlighted,
+            highlightedAt: isHighlighted ? new Date().toISOString() : undefined
+          };
+        }
+        // Turn off highlight on all other posts of the week
+        return {
+          ...p,
+          isHighlighted: false,
+          highlightedAt: undefined
+        };
+      });
+
+      if (isHighlighted) {
+        db.muralHighlights = [{
+          id: 'highlight-' + Date.now(),
+          postId: id,
+          highlightedBy: reqUserId || 'user-admin',
+          highlightedAt: new Date().toISOString()
+        }];
+      } else {
+        db.muralHighlights = [];
+      }
+
+      writeDb(db);
+      res.json(db.muralPosts.find(p => p.id === id));
+    } catch (err) {
+      console.error('[API POST Highlight]', err);
+      res.status(500).json({ error: 'Erro ao gerenciar Destaque da Semana.' });
     }
   });
 

@@ -26,13 +26,18 @@ import {
   Clock,
   Award,
   Calendar,
-  DollarSign
+  DollarSign,
+  Gift,
+  AlertTriangle
 } from 'lucide-react';
 import CalendarManager from './components/CalendarManager';
 import DrawManager from './components/DrawManager';
 import FinanceManager from './components/FinanceManager';
+import EventManager from './components/EventManager';
+import MuralManager from './components/MuralManager';
+import { Camera } from 'lucide-react';
 
-type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances';
+type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances' | 'events' | 'mural';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
@@ -53,6 +58,21 @@ export default function App() {
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+
+  // Custom confirmation modal state
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    onConfirm: () => {}
+  });
 
   // Loading / Messages status
   const [loading, setLoading] = useState(false);
@@ -197,21 +217,29 @@ export default function App() {
     setIsFormOpen(true);
   };
 
-  const handleInactivatePlayer = async (id: string) => {
-    if (!confirm('Deseja realmente inativar este jogador?')) return;
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await fetch(`/api/players/${id}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao inativar jogador.');
+  const handleInactivatePlayer = (id: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Inativar Jogador',
+      message: 'Tem certeza que deseja inativar este jogador? Ele não aparecerá nas próximas convocações, mas seus históricos anteriores e faturamentos serão preservados.',
+      confirmText: 'Sim, Inativar',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setErrorMsg('');
+        setSuccessMsg('');
+        try {
+          const res = await fetch(`/api/players/${id}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Erro ao inativar jogador.');
 
-      setSuccessMsg('Jogador inativado (soft delete aplicado).');
-      await fetchPlayers();
-      setTimeout(() => setSuccessMsg(''), 4000);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao inativar usuário.');
-    }
+          setSuccessMsg('Jogador inativado (soft delete aplicado).');
+          await fetchPlayers();
+          setTimeout(() => setSuccessMsg(''), 4000);
+        } catch (err: any) {
+          setErrorMsg(err.message || 'Falha ao inativar usuário.');
+        }
+      }
+    });
   };
 
   const handleRestorePlayer = async (id: string) => {
@@ -229,6 +257,44 @@ export default function App() {
       setErrorMsg(err.message || 'Não foi possível reativar.');
     }
   };
+
+  const isPublicUrl = window.location.search.includes('public=true') || window.location.pathname.includes('/public-mural');
+
+  if (!currentUser && isPublicUrl) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#0b110e]" id="racha-public-viewport">
+        <header className="sticky top-0 z-40 bg-[#0d1612]/95 border-b border-zinc-900 backdrop-blur-md px-4 py-3 select-none">
+          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-[#22c55e] p-1.5 rounded-lg border border-white/10 flex items-center justify-center shadow shadow-emerald-500/10">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="font-display font-black text-sm tracking-tight text-white uppercase flex items-center gap-2">
+                  Racha do <span className="text-[#22c55e]">Fofim</span>
+                  <span className="text-[10px] text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-850 uppercase font-mono">Público</span>
+                </span>
+                <span className="block text-[8px] font-mono text-zinc-500 uppercase tracking-widest">
+                  Mural de Memórias & Destaques
+                </span>
+              </div>
+            </div>
+            
+            {/* Direct Login Portal link as a clean text */}
+            <a href="/" className="text-xs font-mono font-bold text-[#22c55e] hover:underline uppercase">
+              Entrar no Sistema
+            </a>
+          </div>
+        </header>
+        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
+          <MuralManager currentUser={null} isPublicMode={true} />
+        </main>
+        <footer className="bg-[#0a0e0c] border-t border-zinc-950 py-5 text-center text-xs text-zinc-650 select-none">
+          <p>© 2026 Racha do Fofim. Mural de Memórias Público do Grupo.</p>
+        </footer>
+      </div>
+    );
+  }
 
   if (!currentUser) {
     return <AuthScreens onLoginSuccess={handleLoginSuccess} />;
@@ -354,6 +420,32 @@ export default function App() {
               <span>Financeiro</span>
             </button>
 
+            <button
+              id="tab-events"
+              onClick={() => { setActiveTab('events'); setIsFormOpen(false); }}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'events'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+              }`}
+            >
+              <Gift className="w-3.5 h-3.5" />
+              <span>Eventos</span>
+            </button>
+
+            <button
+              id="tab-mural"
+              onClick={() => { setActiveTab('mural'); setIsFormOpen(false); }}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                activeTab === 'mural'
+                  ? 'bg-emerald-600 text-white shadow'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Mural</span>
+            </button>
+
             {isEditor && (
               <button
                 id="tab-approvals"
@@ -426,6 +518,11 @@ export default function App() {
         {/* TAB - FINANCE DISCIPLINE */}
         {activeTab === 'finances' && (
           <FinanceManager currentUser={currentUser} />
+        )}
+
+        {/* TAB - GROUP EVENTS & FEED */}
+        {activeTab === 'events' && (
+          <EventManager currentUser={currentUser} />
         )}
 
         {/* TAB 5 - CALENDARIO, TEMPORADAS E RESERVAS */}
@@ -643,7 +740,45 @@ export default function App() {
         {activeTab === 'ranking' && (
           <TechnicalRanking players={players} currentUser={currentUser} />
         )}
+
+        {/* TAB - MURAL DO RACHA MEMORIES */}
+        {activeTab === 'mural' && (
+          <MuralManager currentUser={currentUser} />
+        )}
       </main>
+
+      {/* CUSTOM STATE-BASED CONFIRMATION MODAL */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-[#0b100e] border border-zinc-800 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl relative p-5 space-y-4">
+            <div className="flex items-center gap-2.5 text-rose-400">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+              <h4 className="font-display font-bold text-sm uppercase tracking-wide text-white">
+                {confirmModal.title}
+              </h4>
+            </div>
+            <p className="text-xs font-mono text-zinc-300 leading-relaxed">
+              {confirmModal.message}
+            </p>
+            <div className="flex gap-3 pt-2 font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white py-2 rounded-lg border border-zinc-800 transition cursor-pointer text-center uppercase text-[10px] tracking-wider"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                onClick={confirmModal.onConfirm}
+                className="flex-1 bg-rose-950/45 hover:bg-rose-900 border border-rose-500/25 text-rose-400 hover:text-white py-2 rounded-lg transition cursor-pointer text-center uppercase text-[10px] tracking-wider"
+              >
+                {confirmModal.confirmText || 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="bg-[#0a0e0c] border-t border-zinc-950 py-5 text-center text-xs text-zinc-600 select-none">
         <p>© 2026 Racha do Fofim. Sistema PWA preparado para celular e desktop.</p>

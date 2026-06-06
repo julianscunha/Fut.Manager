@@ -274,14 +274,16 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     };
 
-    let text = `⚽ *RACHA DO FOFIM - ESCALAÇÕES* ⚽\n`;
-    text += `📅 *Partida:* ${formatDate(selectedMatch.date)} às ${selectedMatch.time}\n`;
-    text += `📍 *Quadra:* ${selectedMatch.location}\n`;
-    text += `⚖️ *Diferença Técnica:* ${activeDraw.maxDifference.toFixed(1)} de Rating\n\n`;
+    let text = `\u26BD *RACHA DO FOFIM - ESCALAÇÕES* \u26BD\n`;
+    text += `\uD83D\uDCC5 *Partida:* ${formatDate(selectedMatch.date)} às ${selectedMatch.time}\n`;
+    text += `\uD83D\uDCCD *Quadra:* ${selectedMatch.location}\n`;
+    text += `\u2696\uFE0F *Diferença Técnica:* ${activeDraw.maxDifference.toFixed(1)} de Rating\n\n`;
 
     activeDraw.teams.forEach((t) => {
       const teamOverall = t.name === 'Azul' ? activeDraw.overallBlue : t.name === 'Vermelho' ? activeDraw.overallRed : activeDraw.overallGreen;
-      text += `🔵 *TIME ${t.name.toUpperCase()}* (Média: ${teamOverall.toFixed(1)})\n`;
+      // Use color circle depending on team name
+      const colorIcon = t.name === 'Azul' ? '\uD83D\uDD35' : t.name === 'Vermelho' ? '\uD83D\uDD34' : '\uD83D\uDFE2';
+      text += `${colorIcon} *TIME ${t.name.toUpperCase()}* (Média: ${teamOverall.toFixed(1)})\n`;
       
       t.playerIds.forEach((pid, i) => {
         const p = getPlayerObj(pid);
@@ -289,17 +291,17 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
           const isCap = t.captainPlayerId === pid || captains[t.name] === pid;
           const labelPos = p.primaryPosition === 'goleiro' ? 'GK' : p.primaryPosition.toUpperCase().slice(0,3);
           const points = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
-          text += `${i + 1}. ${isCap ? '👑 ' : ''}${p.name} (_${labelPos}_ - ⭐ ${points})\n`;
+          text += `${i + 1}. ${isCap ? '\uD83D\uDC51 ' : ''}${p.name} (_${labelPos}_ - \u2B50 ${points})\n`;
         }
       });
       text += `\n`;
     });
 
     if (activeDraw.isSharedGoalkeepers) {
-      text += `💡 *Observação:* Goleiros compartilhados jogam revezadamente para garantir o lazer de todos!\n`;
+      text += `\uD83D\uDCA1 *Observação:* Goleiros compartilhados jogam revezadamente para garantir o lazer de todos!\n`;
     }
 
-    text += `💥 Venha calibrado! Por favor, chegue 15 minutos antes.`;
+    text += `\uD83D\uDCA5 Venha calibrado! Por favor, chegue 15 minutos antes.`;
     return text;
   };
 
