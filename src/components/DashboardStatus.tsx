@@ -47,6 +47,7 @@ export default function DashboardStatus({
   const [tempEventChildren, setTempEventChildren] = useState<Record<string, number>>({});
   const [isSavingEventRsvp, setIsSavingEventRsvp] = useState<Record<string, boolean>>({});
   const [highlightPost, setHighlightPost] = useState<any>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
 
   // Custom confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -178,6 +179,17 @@ export default function DashboardStatus({
         }
       } catch (err) {
         console.error('Falha ao ler destaque do mural:', err);
+      }
+
+      // Fetch Latest Notifications
+      try {
+        const notifRes = await fetch(`/api/notifications?userId=${currentUser.id}&email=${currentUser.email}`);
+        if (notifRes.ok) {
+          const notifData = await notifRes.json();
+          setNotifications(notifData.notifications || []);
+        }
+      } catch (err) {
+        console.error('Falha ao sincronizar notificações no dashboard:', err);
       }
     } catch (err) {
       console.error('Erro ao ler racha:', err);
@@ -535,6 +547,62 @@ export default function DashboardStatus({
           </div>
         </div>
       </div>
+
+      {/* Dynamic Avisos Recentes Widget banner */}
+      {notifications.filter(n => n.status === 'nao_lida').length > 0 && (
+        <div className="rounded-2xl border border-emerald-500/15 bg-emerald-950/5 p-5 space-y-3 shadow-lg" id="dashboard-recent-news-banner">
+          <div className="flex items-center gap-2 pb-2.5 border-b border-zinc-900/40">
+            <BellRing className="w-4.5 h-4.5 text-amber-400 animate-pulse" />
+            <span className="font-display font-black text-xs text-white uppercase tracking-wider">Avisos Importantes</span>
+            <span className="ml-auto text-[9px] font-mono tracking-wider font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+              {notifications.filter(n => n.status === 'nao_lida').length} Pendentes
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
+            {notifications
+              .filter(n => n.status === 'nao_lida')
+              .slice(0, 3)
+              .map((notif: any) => {
+                const getBannerThemeRGB = (category: string) => {
+                  switch(category) {
+                    case 'financeiro': return 'border-amber-500/25 bg-amber-500/5 text-amber-400';
+                    case 'evento': return 'border-violet-500/25 bg-violet-500/5 text-violet-400';
+                    case 'sorteio': return 'border-sky-500/25 bg-sky-500/5 text-sky-400';
+                    case 'jogador': return 'border-rose-500/25 bg-rose-500/5 text-rose-400';
+                    default: return 'border-emerald-500/25 bg-emerald-500/5 text-emerald-400';
+                  }
+                };
+
+                return (
+                  <div 
+                    key={notif.id} 
+                    className={`p-3.5 rounded-xl border flex flex-col justify-between space-y-2 text-xs relative overflow-hidden transition hover:bg-zinc-900/10 ${getBannerThemeRGB(notif.category)}`}
+                  >
+                    <div className="space-y-1">
+                      <div className="font-bold flex items-center gap-1">
+                        <span>{notif.title}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-450 leading-normal line-clamp-3">
+                        {notif.message}
+                      </p>
+                    </div>
+                    {notif.actionUrl && (
+                      <button
+                        onClick={() => {
+                          const event = new CustomEvent('set-active-tab', { detail: notif.actionUrl });
+                          window.dispatchEvent(event);
+                        }}
+                        className="text-[10px] font-extrabold underline cursor-pointer hover:opacity-80 transition self-start block text-emerald-400"
+                      >
+                        Ver detalhes →
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+          </div>
+        </div>
+      )}
 
       {/* Action alerts and success indicators */}
       {successMsg && (

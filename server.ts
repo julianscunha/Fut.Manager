@@ -11,6 +11,116 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  // --- NOTIFICATION HELPERS & STRUCTURES ---
+
+  function notify(db: any, params: {
+    category: 'sistema' | 'partida' | 'sorteio' | 'financeiro' | 'evento' | 'jogador',
+    title: string,
+    message: string,
+    targetUserId?: string,
+    actionUrl?: string
+  }) {
+    if (!db.notifications) {
+      db.notifications = [];
+    }
+    const id = 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const newNotif = {
+      id,
+      category: params.category,
+      title: params.title,
+      message: params.message,
+      status: 'nao_lida',
+      createdAt: new Date().toISOString(),
+      targetUserId: params.targetUserId || 'all',
+      actionUrl: params.actionUrl
+    };
+    db.notifications.push(newNotif);
+
+    console.log(`[Notification Created] Category: ${params.category}, Title: "${params.title}"`);
+
+    // --- FUTURE OUTBOUND CHANNELS INTEGRATION PROFILES (ARCHITECTURE PREPARATION) ---
+    // 1. Web Push PWA simulation hook
+    console.log(`[PWA PUSH ARCHITECTURE PREP] Target: ${newNotif.targetUserId}. payload: { title: "${newNotif.title}", body: "${newNotif.message}" }`);
+    
+    // 2. WhatsApp simulator hook
+    console.log(`[WHATSAPP INTEGRATION PREP] Target: ${newNotif.targetUserId}. template_message: "*${newNotif.title}*\n${newNotif.message}"`);
+
+    return newNotif;
+  }
+
+  function syncDynamicNotifications(db: any) {
+    if (!db.notifications) db.notifications = [];
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    // 1. Sync bills (created and overdue)
+    (db.bills || []).forEach((bill: any) => {
+      const player = db.players.find((p: any) => p.id === bill.playerId);
+      const pName = player ? player.name : 'Jogador';
+
+      // Bill created
+      const createdKey = `notif-bill-created-${bill.id}`;
+      if (!db.notifications.some((n: any) => n.id === createdKey)) {
+        db.notifications.push({
+          id: createdKey,
+          category: 'financeiro',
+          title: '💰 Nova Cobrança Gerada',
+          message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente à competência ${bill.competence} para o jogador ${pName}.`,
+          status: 'nao_lida',
+          createdAt: new Date().toISOString(),
+          targetUserId: bill.playerId,
+          actionUrl: 'finance'
+        });
+      }
+
+      // Bill overdue
+      const overdueKey = `notif-bill-overdue-${bill.id}`;
+      if (bill.status === 'pendente' && bill.dueDate < todayStr) {
+        if (!db.notifications.some((n: any) => n.id === overdueKey)) {
+          db.notifications.push({
+            id: overdueKey,
+            category: 'financeiro',
+            title: '🚨 Cobrança Vencida',
+            message: `Sua mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) venceu em ${bill.dueDate.split('-').reverse().join('/')}.`,
+            status: 'nao_lida',
+            createdAt: new Date().toISOString(),
+            targetUserId: bill.playerId,
+            actionUrl: 'finance'
+          });
+        }
+      }
+    });
+
+    // 2. Scan matches for upcoming deadline warns (2 days before)
+    (db.matches || []).forEach((match: any) => {
+      if (match.status === 'confirmando' && match.confirmationDeadlineDaysBefore) {
+        try {
+          const mDate = new Date(match.date + 'T12:00:00');
+          mDate.setDate(mDate.getDate() - parseInt(match.confirmationDeadlineDaysBefore));
+          const deadlineStr = mDate.toISOString().split('T')[0];
+          
+          if (todayStr >= deadlineStr && todayStr <= match.date) {
+            const deadlineKey = `notif-match-deadline-${match.id}`;
+            if (!db.notifications.some((n: any) => n.id === deadlineKey)) {
+              db.notifications.push({
+                id: deadlineKey,
+                category: 'partida',
+                title: '⚠️ Prazo de Confirmação Próximo',
+                message: `O prazo para confirmar sua presença na rodada de ${match.date.split('-').reverse().join('/')} se encerra em breve (limite: ${deadlineStr.split('-').reverse().join('/')}).`,
+                status: 'nao_lida',
+                createdAt: new Date().toISOString(),
+                targetUserId: 'all',
+                actionUrl: 'calendar'
+              });
+            }
+          }
+        } catch (err) {
+          console.error('[sync] Error parsing match/deadline', err);
+        }
+      }
+    });
+  }
+
   // Middleware for parsing JSON requests with 250MB limit for base64 uploads
   app.use(express.json({ limit: '250mb' }));
   app.use(express.urlencoded({ limit: '250mb', extended: true }));
@@ -213,6 +323,22 @@ async function startServer() {
 
     if (action === 'approve') {
       db.users[userIndex].status = 'approved';
+      
+      notify(db, {
+        category: 'jogador',
+        title: '🎉 Cadastro Aprovado!',
+        message: `Seu cadastro no Racha do Fofim foi aprovado. Seja bem-vindo ao grupo!`,
+        targetUserId: userId,
+        actionUrl: 'players'
+      });
+
+      notify(db, {
+        category: 'jogador',
+        title: '🏃 Novo Jogador no Grupo',
+        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administração.`,
+        targetUserId: 'all',
+        actionUrl: 'players'
+      });
     } else if (action === 'reject') {
       db.users[userIndex].status = 'rejected';
     } else if (action === 'update_role' && role) {
@@ -305,6 +431,50 @@ async function startServer() {
     if (updatedPlayer.status === 'disponivel' || updatedPlayer.status === 'afastado') {
       updatedPlayer.statusStartDate = undefined;
       updatedPlayer.statusEndDate = undefined;
+    }
+
+    const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
+    if (statusChanged) {
+      const statusLabels: Record<string, string> = {
+        disponivel: 'Disponível',
+        indisponivel: 'Indisponível',
+        lesionado: 'Lesionado',
+        afastado: 'Afastado'
+      };
+      notify(db, {
+        category: 'jogador',
+        title: '🏃 Status Alterado',
+        message: `O jogador ${existingPlayer.name} teve seu status alterado para "${statusLabels[updateData.status!] || updateData.status}".`,
+        targetUserId: 'all',
+        actionUrl: 'players'
+      });
+
+      if (existingPlayer.status === 'lesionado' && updateData.status === 'disponivel') {
+        notify(db, {
+          category: 'jogador',
+          title: '💪 Lesão Encerrada!',
+          message: `Ótimas notícias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente à disposição do grupo!`,
+          targetUserId: 'all',
+          actionUrl: 'players'
+        });
+      }
+    }
+
+    if (categoryChanged && updateData.category === 'mensalista') {
+      notify(db, {
+        category: 'jogador',
+        title: '⭐️ Promoção para Mensalista!',
+        message: `O jogador ${existingPlayer.name} foi oficialmente promovido ao grupo de Mensalistas. Parabéns!`,
+        targetUserId: existingPlayer.id,
+        actionUrl: 'players'
+      });
+      notify(db, {
+        category: 'jogador',
+        title: '⭐️ Novo Mensalista no Racha',
+        message: `O jogador ${existingPlayer.name} agora é um Mensalista oficial do racha!`,
+        targetUserId: 'all',
+        actionUrl: 'players'
+      });
     }
 
     db.players[index] = updatedPlayer;
@@ -870,6 +1040,13 @@ async function startServer() {
 
       db.matches.push(newMatch);
 
+      notify(db, {
+        category: 'partida',
+        title: '⚽ Nova Partida Agendada',
+        message: `Uma nova partida foi agendada para o dia ${newMatch.date.split('-').reverse().join('/')} às ${newMatch.time} na localidade ${newMatch.location}.`,
+        actionUrl: 'calendar'
+      });
+
       // Manual schedule acts as confirmation of occurrence, so we resume recurrent Config if active
       if (db.recurrentConfig && !db.recurrentConfig.active) {
         db.recurrentConfig.active = true;
@@ -912,6 +1089,12 @@ async function startServer() {
         if (db.recurrentConfig) {
           db.recurrentConfig.active = false; // Parar a recorrência
         }
+        notify(db, {
+          category: 'partida',
+          title: '❌ Partida Cancelada',
+          message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi cancelada.`,
+          actionUrl: 'calendar'
+        });
       }
 
       // RESUMPTION POLICY: Se o administrador confirma ou agenda a partida manualmente, reativamos a recorrência
@@ -919,6 +1102,12 @@ async function startServer() {
         if (db.recurrentConfig) {
           db.recurrentConfig.active = true; // Retomar a recorrência normal
         }
+        notify(db, {
+          category: 'partida',
+          title: '🔄 Partida Reaberta',
+          message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi reaberta por um administrador.`,
+          actionUrl: 'calendar'
+        });
       }
 
       writeDb(db);
@@ -1169,6 +1358,14 @@ async function startServer() {
 
       if (!db.events) db.events = [];
       db.events.push(newEvent);
+
+      notify(db, {
+        category: 'evento',
+        title: '🎉 Novo Evento Criado',
+        message: `O evento "${newEvent.name}" foi agendado para o dia ${newEvent.date.split('-').reverse().join('/')} às ${newEvent.time} na localidade ${newEvent.location}.`,
+        actionUrl: 'mural'
+      });
+
       writeDb(db);
 
       return res.status(201).json(newEvent);
@@ -1243,8 +1440,20 @@ async function startServer() {
 
       if (status === 'cancelado' && previousStatus !== 'cancelado') {
         db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
+        notify(db, {
+          category: 'evento',
+          title: '❌ Evento Cancelado',
+          message: `O evento "${db.events[eventIndex].name}" marcado para o dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
+          actionUrl: 'mural'
+        });
       } else {
         recalculateEventBills(db, id);
+        notify(db, {
+          category: 'evento',
+          title: '✏️ Detalhes do Evento Alterados',
+          message: `O evento "${db.events[eventIndex].name}" foi editado. Confira o cronograma ou local na aba de eventos.`,
+          actionUrl: 'mural'
+        });
       }
 
       writeDb(db);
@@ -1267,6 +1476,13 @@ async function startServer() {
       db.events[eventIndex].status = 'cancelado';
       // Mantenha cobranças que já foram pagas (histórico/movimentação), remova apenas as pendentes
       db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id || b.status === 'pago');
+
+      notify(db, {
+        category: 'evento',
+        title: '❌ Evento Cancelado',
+        message: `O evento "${db.events[eventIndex].name}" do dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
+        actionUrl: 'mural'
+      });
 
       writeDb(db);
       return res.json({ message: 'Evento cancelado e cobranças pendentes suspensas.', event: db.events[eventIndex] });
@@ -1627,6 +1843,28 @@ async function startServer() {
 
         db.reserveAlerts.push(alertObj);
         alertCreated = alertObj;
+
+        if (suggestedReservePlayerId) {
+          const reservePlayer = db.players.find(p => p.id === suggestedReservePlayerId);
+          if (reservePlayer) {
+            // Personal alert
+            notify(db, {
+              category: 'partida',
+              title: '🏃 vaga de Reserva Convocada!',
+              message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
+              targetUserId: suggestedReservePlayerId,
+              actionUrl: 'calendar'
+            });
+            // Public alert
+            notify(db, {
+              category: 'partida',
+              title: '👥 Vaga Aberta e Convocação',
+              message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
+              targetUserId: 'all',
+              actionUrl: 'calendar'
+            });
+          }
+        }
       }
 
       writeDb(db);
@@ -1726,6 +1964,22 @@ async function startServer() {
       db.draws = (db.draws || []).filter(d => d.matchId !== matchId);
       db.draws.push(newDraw);
 
+      notify(db, {
+        category: 'sorteio',
+        title: '🎲 Times Sorteados!',
+        message: `O sorteio dos times da rodada do dia ${match.date.split('-').reverse().join('/')} foi realizado. Venha ver se ficou equilibrado!`,
+        actionUrl: 'calendar'
+      });
+
+      if (captainsConfigured) {
+        notify(db, {
+          category: 'sorteio',
+          title: '👑 Capitães Definidos',
+          message: `Os capitães da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
+          actionUrl: 'calendar'
+        });
+      }
+
       writeDb(db);
       return res.json(newDraw);
     } catch (err) {
@@ -1800,6 +2054,14 @@ async function startServer() {
 
       // Update in db
       db.draws[drawIndex] = drawObj;
+
+      notify(db, {
+        category: 'sorteio',
+        title: '✏️ Sorteio Alterado Manualmente',
+        message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equilíbrio.`,
+        actionUrl: 'calendar'
+      });
+
       writeDb(db);
 
       return res.json(drawObj);
@@ -2057,8 +2319,222 @@ async function startServer() {
         } else {
           player.currentStreak = 0; // Reset streak
         }
-        player.updatedAt = new Date().toISOString();
       });
+
+      // --- GENERATE AUTOMATIC MURAL POST FOR CLOSED MATCH ---
+      try {
+        const currentStats = computeStatsForSeason({
+          players: db.players,
+          matches: db.matches,
+          presences: db.presences,
+          results: db.results || [],
+          seasonId: match.seasonId
+        });
+
+        // Format Best Duo
+        let melhorDupla = 'Nenhuma registrada';
+        if (currentStats.duos && currentStats.duos.length > 0) {
+          const topDuo = currentStats.duos[0];
+          melhorDupla = `${topDuo.playerAName} e ${topDuo.playerBName} (${topDuo.wonTogether} vitórias, ${topDuo.aproveitamento}% de aproveitamento)`;
+        }
+
+        // Format Best Trio
+        let melhorTrio = 'Nenhum registrado';
+        if (currentStats.trios && currentStats.trios.length > 0) {
+          const topTrio = currentStats.trios[0];
+          melhorTrio = `${topTrio.playerAName}, ${topTrio.playerBName} e ${topTrio.playerCName} (${topTrio.wonTogether} vitórias, ${topTrio.aproveitamento}% de aproveitamento)`;
+        }
+
+        // Format Leader/Wins
+        let liderVitorias = 'Nenhum';
+        if (currentStats.individual && currentStats.individual.length > 0) {
+          const leader = currentStats.individual[0];
+          liderVitorias = `${leader.name} (${leader.vitorias} vitórias)`;
+        }
+
+        // Format Best Current Streak
+        let seqAtual = 'Nenhuma';
+        if (currentStats.individual && currentStats.individual.length > 0) {
+          let maxCurrent = -1;
+          let pBest = null;
+          currentStats.individual.forEach(ind => {
+            if (ind.currentStreak > maxCurrent) {
+              maxCurrent = ind.currentStreak;
+              pBest = ind;
+            }
+          });
+          if (pBest && maxCurrent > 0) {
+            seqAtual = `${pBest.name} (${maxCurrent} partidas seguidas vencendo)`;
+          }
+        }
+
+        // Format Best Historical Streak
+        let seqHistorica = 'Nenhuma';
+        if (currentStats.individual && currentStats.individual.length > 0) {
+          let maxMax = -1;
+          let pBest = null;
+          currentStats.individual.forEach(ind => {
+            if (ind.maxStreak > maxMax) {
+              maxMax = ind.maxStreak;
+              pBest = ind;
+            }
+          });
+          if (pBest && maxMax > 0) {
+            seqHistorica = `${pBest.name} (${maxMax} partidas)`;
+          }
+        }
+
+        const formattedDate = match.date.split('-').reverse().join('/');
+        const seasonObj = (db.seasons || []).find(s => s.id === match.seasonId);
+        const seasonName = seasonObj ? seasonObj.name : 'Temporada Atual';
+
+        const participantPlayerIds = new Set<string>();
+        draw.teams.forEach(t => t.playerIds.forEach(pid => participantPlayerIds.add(pid)));
+        const participantsCount = participantPlayerIds.size;
+
+        const playerMap = new Map<string, string>();
+        db.players.forEach(p => playerMap.set(p.id, p.name));
+
+        const blueTeamPlayers = draw.teams.find(t => t.name === 'Azul')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
+        const redTeamPlayers = draw.teams.find(t => t.name === 'Vermelho')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
+        const greenTeamPlayers = draw.teams.find(t => t.name === 'Verde')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
+
+        const automaticPostText = `### 📅 Informações Gerais
+- **Data:** ${formattedDate}
+- **Horário:** ${match.time}
+- **Temporada:** ${seasonName}
+- **Participantes:** ${participantsCount} jogadores
+
+### ⚽ Placar Geral
+- **🔵 Time Azul:** ${winsBlue} vitórias
+- **🔴 Time Vermelho:** ${winsRed} vitórias
+- **🟢 Time Verde:** ${winsGreen} vitórias
+
+### 🏆 Campeões da Rodada
+- ${champions.length > 0 ? champions.map(c => `Time ${c}`).join(' & ') : 'Empate'}
+
+### 👥 Escalação das Equipes
+- **🔵 Time Azul:** ${blueTeamPlayers}
+- **🔴 Time Vermelho:** ${redTeamPlayers}
+- **🟢 Time Verde:** ${greenTeamPlayers}
+
+### 📊 Estatísticas do Momento
+- **Melhor Dupla Atual:** ${melhorDupla}
+- **Melhor Trio Atual:** ${melhorTrio}
+- **Líder de Vitórias:** ${liderVitorias}
+- **Maior Sequência Atual:** ${seqAtual}
+- **Maior Sequência Histórica:** ${seqHistorica}`;
+
+        const generateMatchSvg = (dateStr: string, champs: string[], wB: number, wR: number, wG: number) => {
+          const width = 800;
+          const height = 450;
+          const champText = champs.length > 0 ? `Campeão: ${champs.join(' & ')}` : 'Empate!';
+          const svgText = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#040a08"/>
+      <stop offset="50%" stop-color="#0b1712"/>
+      <stop offset="100%" stop-color="#050c09"/>
+    </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="100%" stop-color="#dc2626"/>
+    </linearGradient>
+    <linearGradient id="greenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="${width}" height="${height}" fill="url(#bgGrad)"/>
+  
+  <g opacity="0.12">
+    <rect x="30" y="30" width="740" height="390" fill="none" stroke="#22c55e" stroke-width="2"/>
+    <line x1="400" y1="30" x2="400" y2="420" stroke="#22c55e" stroke-width="2"/>
+    <circle cx="400" cy="225" r="70" fill="none" stroke="#22c55e" stroke-width="2"/>
+    <rect x="30" y="145" width="120" height="160" fill="none" stroke="#22c55e" stroke-width="2"/>
+    <rect x="650" y="145" width="120" height="160" fill="none" stroke="#22c55e" stroke-width="2"/>
+  </g>
+
+  <text x="400" y="55" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="14" fill="#22c55e" letter-spacing="3" text-anchor="middle" opacity="0.8">
+    RACHA DO FOFIM • REGISTRO AUTOMÁTICO
+  </text>
+  
+  <text x="400" y="90" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle" filter="url(#shadow)">
+    DADOS DA RODADA
+  </text>
+  
+  <text x="400" y="125" font-family="'JetBrains Mono', monospace" font-size="16" fill="#86efac" font-weight="bold" text-anchor="middle">
+    ${dateStr}
+  </text>
+
+  <g transform="translate(110, 160)" filter="url(#shadow)">
+    <rect width="160" height="140" rx="16" fill="#0c1311" stroke="#1d302a" stroke-width="2"/>
+    <text x="80" y="40" font-family="'Inter', sans-serif" font-weight="900" font-size="16" fill="#38bdf8" text-anchor="middle">TIME AZUL</text>
+    <text x="80" y="105" font-family="'Inter', sans-serif" font-weight="900" font-size="56" fill="url(#blueGrad)" text-anchor="middle">${wB}</text>
+  </g>
+
+  <g transform="translate(320, 160)" filter="url(#shadow)">
+    <rect width="160" height="140" rx="16" fill="#0c1311" stroke="#1d302a" stroke-width="2"/>
+    <text x="80" y="40" font-family="'Inter', sans-serif" font-weight="900" font-size="16" fill="#f87171" text-anchor="middle">TIME VERMELHO</text>
+    <text x="80" y="105" font-family="'Inter', sans-serif" font-weight="900" font-size="56" fill="url(#redGrad)" text-anchor="middle">${wR}</text>
+  </g>
+
+  <g transform="translate(530, 160)" filter="url(#shadow)">
+    <rect width="160" height="140" rx="16" fill="#0c1311" stroke="#1d302a" stroke-width="2"/>
+    <text x="80" y="40" font-family="'Inter', sans-serif" font-weight="900" font-size="16" fill="#4ade80" text-anchor="middle">TIME VERDE</text>
+    <text x="80" y="105" font-family="'Inter', sans-serif" font-weight="900" font-size="56" fill="url(#greenGrad)" text-anchor="middle">${wG}</text>
+  </g>
+
+  <g transform="translate(150, 340)" filter="url(#shadow)">
+    <rect width="500" height="55" rx="27.5" fill="#142c22" stroke="#22c55e" stroke-width="2" opacity="0.95"/>
+    <text x="250" y="34" font-family="'Inter', sans-serif" font-weight="bold" font-size="18" fill="#ffffff" text-anchor="middle">
+      🏆 ${champText.toUpperCase()}
+    </text>
+  </g>
+</svg>
+`;
+          return 'data:image/svg+xml;base64,' + Buffer.from(svgText.trim()).toString('base64');
+        };
+
+        const nowIso = new Date().toISOString();
+        const autoPostMediaUrl = generateMatchSvg(formattedDate, champions, parseInt(winsBlue), parseInt(winsRed), parseInt(winsGreen));
+
+        const automaticPost = {
+          id: 'post-auto-' + Date.now(),
+          title: `🏆 Resultado do Racha - ${formattedDate}`,
+          description: automaticPostText,
+          mediaUrl: autoPostMediaUrl,
+          mediaType: 'image' as const,
+          fileSize: autoPostMediaUrl.length,
+          category: 'partida' as const,
+          authorId: 'system',
+          authorName: 'Racha do Fofim Bot',
+          authorRole: 'admin',
+          createdAt: nowIso,
+          updatedAt: nowIso,
+          matchId: matchId,
+          isHighlighted: false,
+          allowPublicView: true,
+          eventDate: match.date,
+          origin: ('automatic' as const)
+        };
+
+        db.muralPosts = db.muralPosts || [];
+        // Clean previous auto post for this match if it exists
+        db.muralPosts = db.muralPosts.filter(p => !(p.matchId === matchId && p.origin === 'automatic'));
+        db.muralPosts.push(automaticPost);
+      } catch (autoErr) {
+        console.error('[Error generating automatic mural post]', autoErr);
+      }
 
       writeDb(db);
       return res.json({ message: 'Resultado do racha gravado com sucesso!', result: newResult });
@@ -2314,6 +2790,16 @@ async function startServer() {
       
       db.payments.push(payment);
 
+      const targetPlayer = db.players.find(p => p.id === bill.playerId);
+      const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
+      notify(db, {
+        category: 'financeiro',
+        title: '✅ Pagamento Confirmado',
+        message: `O pagamento da mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) para o jogador ${targetPlayerName} foi confirmado.`,
+        targetUserId: bill.playerId,
+        actionUrl: 'finance'
+      });
+
       writeDb(db);
       return res.json({ message: 'Pagamento confirmado com sucesso!', bill: db.bills[billIndex] });
     } catch (err) {
@@ -2365,6 +2851,18 @@ async function startServer() {
         db.payments = db.payments.filter(p => p.billId !== bill.id);
       }
 
+      if (newStatus === 'pago') {
+        const targetPlayer = db.players.find(p => p.id === bill.playerId);
+        const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
+        notify(db, {
+          category: 'financeiro',
+          title: '✅ Pagamento Confirmado',
+          message: `O pagamento da mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) para o jogador ${targetPlayerName} foi confirmado.`,
+          targetUserId: bill.playerId,
+          actionUrl: 'finance'
+        });
+      }
+
       writeDb(db);
       return res.json({ message: 'Status de cobrança alterado com sucesso!', bill: db.bills[billIndex] });
     } catch (err) {
@@ -2391,6 +2889,17 @@ async function startServer() {
       };
 
       db.bills.push(newBill);
+
+      const targetPlayer = db.players.find(p => p.id === newBill.playerId);
+      const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
+      notify(db, {
+        category: 'financeiro',
+        title: '💰 Nova Cobrança Gerada',
+        message: `Foi gerada uma cobrança manual no valor de R$ ${newBill.amount.toFixed(2)} (${newBill.competence}) para o jogador ${targetPlayerName}.`,
+        targetUserId: newBill.playerId,
+        actionUrl: 'finance'
+      });
+
       writeDb(db);
       return res.status(201).json({ message: 'Cobrança manual criada com sucesso!', bill: newBill });
     } catch (err) {
@@ -2510,12 +3019,70 @@ async function startServer() {
     try {
       const db = readDb();
       const posts = (db.muralPosts || [])
-        .filter(p => p.allowPublicView === true)
+        .filter(p => p.showOnLanding === true)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       res.json(posts);
     } catch (err) {
       console.error('[API GET Public Mural Posts]', err);
       res.status(500).json({ error: 'Erro ao carregar mural público.' });
+    }
+  });
+
+  // Get public Next Match status
+  app.get('/api/public/next-match', (req, res) => {
+    try {
+      const db = readDb();
+      const todayStr = new Date().toISOString().split('T')[0];
+      // Filter matches that are scheduled or confirming starting from today
+      const upcoming = db.matches
+        .filter(m => (m.status === 'agendada' || m.status === 'confirmando') && m.date >= todayStr)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      if (upcoming.length > 0) {
+        const next = upcoming[0];
+        return res.json({
+          date: next.date,
+          time: next.time,
+          location: next.location,
+          status: next.status
+        });
+      }
+
+      // Fallback: If no future matches exist, check any upcoming matches regardless of date
+      const anyUpcoming = db.matches
+        .filter(m => m.status === 'agendada' || m.status === 'confirmando')
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      if (anyUpcoming.length > 0) {
+        const next = anyUpcoming[0];
+        return res.json({
+          date: next.date,
+          time: next.time,
+          location: next.location,
+          status: next.status
+        });
+      }
+
+      // Secondary Fallback: retrieve the most recent match overall to show as reference
+      const sortedAll = [...db.matches].sort((a, b) => b.date.localeCompare(a.date));
+      if (sortedAll.length > 0) {
+        const last = sortedAll[0];
+        return res.json({
+          date: last.date,
+          time: last.time,
+          location: last.location,
+          status: last.status
+        });
+      }
+
+      return res.json({
+        date: '---',
+        time: '---',
+        location: 'A definir'
+      });
+    } catch (err) {
+      console.error('[API GET Public Next Match]', err);
+      res.status(500).json({ error: 'Erro ao obter informações do próximo racha.' });
     }
   });
 
@@ -2592,14 +3159,17 @@ async function startServer() {
   // Add a new post
   app.post('/api/mural/posts', (req, res) => {
     try {
-      const { title, description, mediaUrl, mediaType, fileSize, category, matchId, eventId, allowPublicView, authorId, authorName, authorRole } = req.body;
+      const { title, description, mediaUrl, mediaType, fileSize, category, matchId, eventId, authorId, authorName, authorRole, eventDate, thumbnailUrl, mediumUrl, showOnLanding } = req.body;
 
       if (!title || !mediaUrl || !category || !authorId) {
         return res.status(400).json({ error: 'Título, arquivo, categoria e autor são obrigatórios.' });
       }
 
       const db = readDb();
-      const newPostId = 'post-' + Date.now();
+      const newPostId = 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const nowIso = new Date().toISOString();
+      const defaultEventDate = eventDate || nowIso.split('T')[0];
+
       const newPost = {
         id: newPostId,
         title: title.trim(),
@@ -2611,12 +3181,16 @@ async function startServer() {
         authorId,
         authorName,
         authorRole,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: nowIso,
+        updatedAt: nowIso,
         matchId: matchId || undefined,
         eventId: eventId || undefined,
         isHighlighted: false,
-        allowPublicView: allowPublicView !== false
+        showOnLanding: showOnLanding === true,
+        thumbnailUrl: thumbnailUrl || mediaUrl,
+        mediumUrl: mediumUrl || mediaUrl,
+        eventDate: defaultEventDate,
+        origin: 'manual' as const
       };
 
       if (!db.muralPosts) db.muralPosts = [];
@@ -2647,7 +3221,7 @@ async function startServer() {
   app.put('/api/mural/posts/:id', (req, res) => {
     try {
       const { id } = req.params;
-      const { title, description, allowPublicView, reqUserId, reqUserRole } = req.body;
+      const { title, description, reqUserId, reqUserRole, eventDate, showOnLanding } = req.body;
 
       if (!title) {
         return res.status(400).json({ error: 'O título é obrigatório.' });
@@ -2674,8 +3248,9 @@ async function startServer() {
         ...post,
         title: title.trim(),
         description: (description || '').trim(),
-        allowPublicView: allowPublicView !== false,
-        updatedAt: new Date().toISOString()
+        showOnLanding: showOnLanding === true,
+        updatedAt: new Date().toISOString(),
+        eventDate: eventDate || post.eventDate || post.createdAt.split('T')[0]
       };
 
       writeDb(db);
@@ -2725,7 +3300,7 @@ async function startServer() {
     }
   });
 
-  // Highlight/toggle Destaque da Semana (Admin only)
+  // Highlight/toggle Destacar na Tela Inicial (Admin only)
   app.post('/api/mural/posts/:id/highlight', (req, res) => {
     try {
       const { id } = req.params;
@@ -2733,12 +3308,11 @@ async function startServer() {
 
       const isAdmin = reqUserRole === 'admin' || req.query.role === 'admin';
       if (!isAdmin) {
-        return res.status(403).json({ error: 'Apenas Administradores podem gerenciar o Destaque da Semana.' });
+        return res.status(403).json({ error: 'Apenas Administradores podem gerenciar os destaques.' });
       }
 
       const db = readDb();
       if (!db.muralPosts) db.muralPosts = [];
-      if (!db.muralHighlights) db.muralHighlights = [];
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
@@ -2746,40 +3320,216 @@ async function startServer() {
       }
 
       const post = db.muralPosts[postIndex];
-      const isHighlighted = !post.isHighlighted;
+      const newShowOnLanding = !post.showOnLanding;
 
-      db.muralPosts = db.muralPosts.map((p, idx) => {
-        if (idx === postIndex) {
-          return {
-            ...p,
-            isHighlighted,
-            highlightedAt: isHighlighted ? new Date().toISOString() : undefined
-          };
+      db.muralPosts[postIndex] = {
+        ...post,
+        showOnLanding: newShowOnLanding,
+        isHighlighted: newShowOnLanding, // keep in sync
+        updatedAt: new Date().toISOString()
+      };
+
+      writeDb(db);
+      res.json(db.muralPosts[postIndex]);
+    } catch (err) {
+      console.error('[API POST Highlight]', err);
+      res.status(500).json({ error: 'Erro ao gerenciar destaque da tela inicial.' });
+    }
+  });
+
+  // ==========================================
+  // --- UNIFIED NOTIFICATION CENTER APIs -----
+  // ==========================================
+
+  app.get('/api/notifications', (req, res) => {
+    try {
+      const { userId, email } = req.query as { userId?: string; email?: string };
+      const db = readDb();
+
+      // Ensure data syncing happens in real time (such as upcoming match deadlines)
+      syncDynamicNotifications(db);
+      writeDb(db);
+
+      let targetUserId = userId;
+      // If only email is provided, we can resolve the playerId
+      if (!targetUserId && email) {
+        const resolvedPlayer = db.players.find(p => p.email.toLowerCase().trim() === email.toLowerCase().trim());
+        if (resolvedPlayer) {
+          targetUserId = resolvedPlayer.id;
         }
-        // Turn off highlight on all other posts of the week
-        return {
-          ...p,
-          isHighlighted: false,
-          highlightedAt: undefined
-        };
+      }
+
+      const notifications = db.notifications || [];
+      const preferencesList = db.notificationPreferences || [];
+
+      // Load user preferences or set defaults
+      const pref = preferencesList.find(p => p.userId === targetUserId) || {
+        userId: targetUserId || 'all',
+        all: true,
+        partidas: true,
+        eventos: true,
+        financeiro: true,
+        sistema: true
+      };
+
+      // Filter based on userId and preferences
+      let userNotifications = notifications.filter((n: any) => {
+        // Must belong to 'all' or this user
+        const isBelong = n.targetUserId === 'all' || n.targetUserId === targetUserId;
+        if (!isBelong) return false;
+
+        // Apply preferences filtering
+        if (pref.all) {
+          return true; // receives everything
+        }
+
+        // Check categories toggle (system maps to sistema/jogador/sorteio)
+        if (n.category === 'partida') {
+          return pref.partidas;
+        } else if (n.category === 'evento') {
+          return pref.eventos;
+        } else if (n.category === 'financeiro') {
+          return pref.financeiro;
+        } else if (n.category === 'sistema' || n.category === 'jogador' || n.category === 'sorteio') {
+          return pref.sistema;
+        }
+
+        return true;
       });
 
-      if (isHighlighted) {
-        db.muralHighlights = [{
-          id: 'highlight-' + Date.now(),
-          postId: id,
-          highlightedBy: reqUserId || 'user-admin',
-          highlightedAt: new Date().toISOString()
-        }];
+      // Sort with latest first
+      userNotifications.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+
+      const unreadCount = userNotifications.filter(n => n.status === 'nao_lida').length;
+
+      return res.json({
+        notifications: userNotifications,
+        unreadCount
+      });
+    } catch (err) {
+      console.error('[API GET notifications]', err);
+      return res.status(500).json({ error: 'Erro ao listar as notificações.' });
+    }
+  });
+
+  app.post('/api/notifications/mark-read', (req, res) => {
+    try {
+      const { id, ids } = req.body as { id?: string; ids?: string[] };
+      const db = readDb();
+
+      if (!db.notifications) db.notifications = [];
+
+      let updatedCount = 0;
+      if (id) {
+        const idx = db.notifications.findIndex(n => n.id === id);
+        if (idx !== -1) {
+          db.notifications[idx].status = 'lida';
+          updatedCount++;
+        }
+      } else if (ids && Array.isArray(ids)) {
+        db.notifications.forEach((n, idx) => {
+          if (ids.includes(n.id)) {
+            db.notifications![idx].status = 'lida';
+            updatedCount++;
+          }
+        });
       } else {
-        db.muralHighlights = [];
+        return res.status(400).json({ error: 'Id ou lista de Ids de notificações são obrigatórios.' });
       }
 
       writeDb(db);
-      res.json(db.muralPosts.find(p => p.id === id));
+      return res.json({ message: `${updatedCount} notificações marcadas como lidas com sucesso.` });
     } catch (err) {
-      console.error('[API POST Highlight]', err);
-      res.status(500).json({ error: 'Erro ao gerenciar Destaque da Semana.' });
+      console.error('[API POST mark-read]', err);
+      return res.status(500).json({ error: 'Erro ao marcar notificações como lidas.' });
+    }
+  });
+
+  app.post('/api/notifications/mark-all-read', (req, res) => {
+    try {
+      const { userId, email } = req.body as { userId?: string; email?: string };
+      const db = readDb();
+
+      if (!db.notifications) db.notifications = [];
+
+      let targetUserId = userId;
+      if (!targetUserId && email) {
+        const resolvedPlayer = db.players.find(p => p.email.toLowerCase().trim() === email.toLowerCase().trim());
+        if (resolvedPlayer) {
+          targetUserId = resolvedPlayer.id;
+        }
+      }
+
+      let count = 0;
+      db.notifications.forEach((n, idx) => {
+        const isBelong = n.targetUserId === 'all' || n.targetUserId === targetUserId;
+        if (isBelong && n.status === 'nao_lida') {
+          db.notifications![idx].status = 'lida';
+          count++;
+        }
+      });
+
+      writeDb(db);
+      return res.json({ message: `Todas as ${count} notificações pendentes foram marcadas como lidas.` });
+    } catch (err) {
+      console.error('[API POST mark-all-read]', err);
+      return res.status(500).json({ error: 'Erro ao marcar todas as notificações como lidas.' });
+    }
+  });
+
+  app.get('/api/notifications/preferences', (req, res) => {
+    try {
+      const { userId } = req.query as { userId?: string };
+      const db = readDb();
+
+      const preferencesList = db.notificationPreferences || [];
+      const pref = preferencesList.find(p => p.userId === userId) || {
+        userId: userId || 'anonymous',
+        all: true,
+        partidas: true,
+        eventos: true,
+        financeiro: true,
+        sistema: true
+      };
+
+      return res.json(pref);
+    } catch (err) {
+      console.error('[API GET preferences]', err);
+      return res.status(500).json({ error: 'Erro ao obter configurações de notificação.' });
+    }
+  });
+
+  app.post('/api/notifications/preferences', (req, res) => {
+    try {
+      const { userId, preferences } = req.body as { userId: string; preferences: any };
+      if (!userId || !preferences) {
+        return res.status(400).json({ error: 'Id do usuário e configurações são obrigatórios.' });
+      }
+
+      const db = readDb();
+      if (!db.notificationPreferences) db.notificationPreferences = [];
+
+      const index = db.notificationPreferences.findIndex(p => p.userId === userId);
+      const updatedPref = {
+        userId,
+        all: preferences.all !== undefined ? !!preferences.all : true,
+        partidas: preferences.partidas !== undefined ? !!preferences.partidas : true,
+        eventos: preferences.eventos !== undefined ? !!preferences.eventos : true,
+        financeiro: preferences.financeiro !== undefined ? !!preferences.financeiro : true,
+        sistema: preferences.sistema !== undefined ? !!preferences.sistema : true
+      };
+
+      if (index !== -1) {
+        db.notificationPreferences[index] = updatedPref;
+      } else {
+        db.notificationPreferences.push(updatedPref);
+      }
+
+      writeDb(db);
+      return res.json({ message: 'Configurações de notificação atualizadas com sucesso.', preferences: updatedPref });
+    } catch (err) {
+      console.error('[API POST preferences]', err);
+      return res.status(500).json({ error: 'Erro ao salvar preferências de notificação.' });
     }
   });
 

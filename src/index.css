@@ -34,3 +34,33 @@ body {
   background-image: radial-gradient(circle, rgba(255,255,255,0.02) 1px, transparent 1px);
   background-size: 20px 20px;
 }
+
+/* Hide scrollbars for elements using no-scrollbar and the entire Notification Hub area */
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important;
+}
+.no-scrollbar {
+  -ms-overflow-style: none !important;  /* IE and Edge */
+  scrollbar-width: none !important;  /* Firefox */
+}
+
+/* Premium sleek custom scrollbar for desktop usability */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px !important;
+  height: 5px !important;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25) !important; /* grey-400 with opacity */
+  border-radius: 9999px !important;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.5) !important;
+}
+.custom-scrollbar {
+  scrollbar-width: thin !important;
+  scrollbar-color: rgba(156, 163, 175, 0.25) transparent !important;
+}
+

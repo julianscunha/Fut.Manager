@@ -335,6 +335,11 @@ export interface MuralPost {
   isHighlighted?: boolean; // Highlight of the week
   highlightedAt?: string;
   allowPublicView?: boolean; // Approved for public page
+  showOnLanding?: boolean; // Exibir na Página Inicial
+  thumbnailUrl?: string; // Cache/Miniatura da imagem
+  mediumUrl?: string; // Versão média otimizada
+  eventDate?: string; // Date of the event/photo (YYYY-MM-DD)
+  origin?: 'manual' | 'automatic'; // Origem da Publicação
 }
 
 export interface MuralCategory {
@@ -359,3 +364,28 @@ export interface MuralFile {
   mimeType: string;
   uploadedAt: string;
 }
+
+// --- NOTIFICATION TYPES ---
+
+export type NotificationCategory = 'sistema' | 'partida' | 'sorteio' | 'financeiro' | 'evento' | 'jogador';
+
+export interface Notification {
+  id: string;
+  category: NotificationCategory;
+  title: string;
+  message: string;
+  status: 'lida' | 'nao_lida';
+  createdAt: string;
+  targetUserId: string; // 'all' (system-wide) or specific userId
+  actionUrl?: string; // e.g. path or tab name, or a custom event/action detail
+}
+
+export interface NotificationPreferences {
+  userId: string;
+  all: boolean;
+  partidas: boolean;
+  eventos: boolean;
+  financeiro: boolean;
+  sistema: boolean;
+}
+

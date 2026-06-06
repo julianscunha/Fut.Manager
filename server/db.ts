@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile } from '../src/types';
+import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile, Notification, NotificationPreferences } from '../src/types';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'database.json');
@@ -32,6 +32,8 @@ interface DatabaseSchema {
   muralCategories?: MuralCategory[];
   muralHighlights?: MuralHighlight[];
   muralFiles?: MuralFile[];
+  notifications?: Notification[];
+  notificationPreferences?: NotificationPreferences[];
 }
 
 const DEFAULT_ADMINS = {
@@ -342,6 +344,14 @@ export function readDb(): DatabaseSchema {
   }
   if (!db.muralFiles) {
     db.muralFiles = [];
+    updated = true;
+  }
+  if (!db.notifications) {
+    db.notifications = [];
+    updated = true;
+  }
+  if (!db.notificationPreferences) {
+    db.notificationPreferences = [];
     updated = true;
   }
 

@@ -35,6 +35,7 @@ import DrawManager from './components/DrawManager';
 import FinanceManager from './components/FinanceManager';
 import EventManager from './components/EventManager';
 import MuralManager from './components/MuralManager';
+import NotificationCenter from './components/NotificationCenter';
 import { Camera } from 'lucide-react';
 
 type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances' | 'events' | 'mural';
@@ -179,6 +180,19 @@ export default function App() {
     }
   }, [currentUser, activeTab]);
 
+  useEffect(() => {
+    const handleSetActiveTabEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<NavTab>;
+      if (customEvent.detail) {
+        setActiveTab(customEvent.detail);
+      }
+    };
+    window.addEventListener('set-active-tab', handleSetActiveTabEvent);
+    return () => {
+      window.removeEventListener('set-active-tab', handleSetActiveTabEvent);
+    };
+  }, []);
+
   // Player CRUD actions
   const handleSavePlayer = async (formData: Omit<Player, 'id' | 'createdAt' | 'updatedAt'>) => {
     setErrorMsg('');
@@ -257,44 +271,6 @@ export default function App() {
       setErrorMsg(err.message || 'Não foi possível reativar.');
     }
   };
-
-  const isPublicUrl = window.location.search.includes('public=true') || window.location.pathname.includes('/public-mural');
-
-  if (!currentUser && isPublicUrl) {
-    return (
-      <div className="min-h-screen flex flex-col bg-[#0b110e]" id="racha-public-viewport">
-        <header className="sticky top-0 z-40 bg-[#0d1612]/95 border-b border-zinc-900 backdrop-blur-md px-4 py-3 select-none">
-          <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="bg-[#22c55e] p-1.5 rounded-lg border border-white/10 flex items-center justify-center shadow shadow-emerald-500/10">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <span className="font-display font-black text-sm tracking-tight text-white uppercase flex items-center gap-2">
-                  Racha do <span className="text-[#22c55e]">Fofim</span>
-                  <span className="text-[10px] text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded-full border border-zinc-850 uppercase font-mono">Público</span>
-                </span>
-                <span className="block text-[8px] font-mono text-zinc-500 uppercase tracking-widest">
-                  Mural de Memórias & Destaques
-                </span>
-              </div>
-            </div>
-            
-            {/* Direct Login Portal link as a clean text */}
-            <a href="/" className="text-xs font-mono font-bold text-[#22c55e] hover:underline uppercase">
-              Entrar no Sistema
-            </a>
-          </div>
-        </header>
-        <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6">
-          <MuralManager currentUser={null} isPublicMode={true} />
-        </main>
-        <footer className="bg-[#0a0e0c] border-t border-zinc-950 py-5 text-center text-xs text-zinc-650 select-none">
-          <p>© 2026 Racha do Fofim. Mural de Memórias Público do Grupo.</p>
-        </footer>
-      </div>
-    );
-  }
 
   if (!currentUser) {
     return <AuthScreens onLoginSuccess={handleLoginSuccess} />;
@@ -473,6 +449,10 @@ export default function App() {
               <span className="text-[11px] font-bold text-white">{currentUser.name}</span>
               <span className="text-[9px] font-mono text-zinc-500 uppercase">{currentUser.role}</span>
             </div>
+            
+            {/* Unified Notification Center */}
+            <NotificationCenter currentUser={currentUser} />
+
             <button
               id="btn-logout"
               onClick={handleLogout}

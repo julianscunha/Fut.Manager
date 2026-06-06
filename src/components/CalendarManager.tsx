@@ -70,6 +70,7 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [recurMonthlyFee, setRecurMonthlyFee] = useState('100');
   const [recurChargeDateRule, setRecurChargeDateRule] = useState('primeiro_jogo');
   const [recurMaxMensalistas, setRecurMaxMensalistas] = useState('12');
+  const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
 
   // Data Fetching
   const fetchAllData = async () => {
@@ -133,6 +134,26 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
 
   useEffect(() => {
     fetchAllData();
+  }, []);
+
+  useEffect(() => {
+    const handleHighlightMatch = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      const matchId = customEvent.detail;
+      if (matchId) {
+        setHighlightedMatchId(matchId);
+        setTimeout(() => {
+          const el = document.getElementById(`match-card-${matchId}`);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
+      }
+    };
+    window.addEventListener('highlight-match', handleHighlightMatch);
+    return () => {
+      window.removeEventListener('highlight-match', handleHighlightMatch);
+    };
   }, []);
 
   const triggerFeedback = (success: string, error: string = '') => {
@@ -863,14 +884,17 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                       </div>
                     )}
                     <div 
+                      id={`match-card-${item.id}`}
                       className={`flex-1 p-4 rounded-xl border ${
-                        item.status === 'confirmando' 
-                          ? 'border-amber-500/20 bg-amber-500/5' 
-                          : item.status === 'cancelada'
-                            ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
-                            : item.status === 'encerrada'
-                              ? 'border-emerald-500/10 bg-emerald-500/5'
-                              : 'border-zinc-900 bg-zinc-950/30'
+                        highlightedMatchId === item.id
+                          ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500 bg-emerald-950/20 scale-[1.01]'
+                          : item.status === 'confirmando' 
+                            ? 'border-amber-500/20 bg-amber-500/5' 
+                            : item.status === 'cancelada'
+                              ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
+                              : item.status === 'encerrada'
+                                ? 'border-emerald-500/10 bg-emerald-500/5'
+                                : 'border-zinc-900 bg-zinc-950/30'
                       } transition flex flex-col space-y-4`}
                     >
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -1000,6 +1024,19 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                             <span className="text-white text-xs font-extrabold">{matchResult.winsGreen} vitórias</span>
                           </div>
                         </div>
+
+                        {/* Link to Mural */}
+                        <button
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'mural' }));
+                            setTimeout(() => {
+                              window.dispatchEvent(new CustomEvent('open-mural-post', { detail: item.id }));
+                            }, 150);
+                          }}
+                          className="w-full mt-3 bg-emerald-950/40 hover:bg-emerald-950/70 text-emerald-450 border border-emerald-500/20 rounded py-2 text-[10px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer uppercase font-mono tracking-wider"
+                        >
+                          🖼️ Ver Mural desta Partida
+                        </button>
                       </div>
                     )}
 

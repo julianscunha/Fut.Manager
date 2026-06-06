@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
-import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, Image as ImageIcon, Calendar, MapPin, Clock, Eye } from 'lucide-react';
 import { User } from '../types';
 
 interface AuthScreensProps {
@@ -36,6 +36,48 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Public info states
+  const [nextMatch, setNextMatch] = useState<{ date: string; time: string; location: string } | null>(null);
+  const [publicPosts, setPublicPosts] = useState<any[]>([]);
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [selectedLightboxPost, setSelectedLightboxPost] = useState<any | null>(null);
+
+  useEffect(() => {
+    // Fetch next match
+    fetch('/api/public/next-match')
+      .then(res => res.json())
+      .then(data => {
+        if (data && !data.error) {
+          setNextMatch(data);
+        }
+      })
+      .catch(err => console.error('Error fetching next match info:', err));
+
+    // Fetch public posts (which backend filters to only showOnLanding === true)
+    fetch('/api/mural/public-posts')
+      .then(res => res.json())
+      .then((data: any) => {
+        if (Array.isArray(data)) {
+          setPublicPosts(data);
+        }
+      })
+      .catch(err => console.error('Error fetching public mural posts:', err));
+  }, []);
+
+  // Auto-rotate highlight banner index of marked posts
+  useEffect(() => {
+    if (publicPosts.length <= 1) return;
+    const interval = setInterval(() => {
+      setCarouselIndex((prev) => (prev + 1) % publicPosts.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [publicPosts]);
+
+  const highlightPost = useMemo(() => {
+    if (publicPosts.length === 0) return null;
+    return publicPosts[carouselIndex] || publicPosts[0] || null;
+  }, [publicPosts, carouselIndex]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -477,14 +519,157 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
         )}
       </div>
 
-      {/* Default credentials box for easy grading */}
-      <div className="w-full max-w-md mt-4 p-4 rounded-xl border border-dashed border-[#10b981]/20 bg-emerald-950/10 text-xs text-zinc-400 space-y-1 relative z-10 text-center">
-        <p className="font-bold text-[#4ade80] flex items-center justify-center gap-1">
+      {/* PUBLIC ENHANCEMENTS SECTIONS BELOW LOGIN */}
+
+      {/* 2. Próximo Racha Widget */}
+      {nextMatch && (
+        <div id="landing-next-match" className="w-full max-w-md bg-[#0a0f0d]/90 border border-emerald-500/10 rounded-2xl p-4 shadow-xl flex flex-col gap-3 relative overflow-hidden mt-4 animate-fadeIn">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-[#22c55e]/5 to-transparent rounded-full blur-xl pointer-events-none" />
+          <div className="flex items-center gap-2 text-[#22c55e] font-mono text-[10px] uppercase font-bold tracking-wider">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse" />
+            <span>Próximo Racha Agendado</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs font-mono">
+            <div className="bg-zinc-950/70 p-2 rounded-xl border border-zinc-900 flex flex-col justify-center">
+              <span className="text-zinc-500 text-[8px] uppercase tracking-wider block mb-0.5">Data</span>
+              <span className="text-white font-bold block">{nextMatch.date !== '---' ? nextMatch.date.split('-').reverse().join('/') : 'A definir'}</span>
+            </div>
+            <div className="bg-zinc-950/70 p-2 rounded-xl border border-zinc-900 flex flex-col justify-center">
+              <span className="text-zinc-500 text-[8px] uppercase tracking-wider block mb-0.5">Horário</span>
+              <span className="text-[#22c55e] font-bold block">{nextMatch.time || '---'}</span>
+            </div>
+            <div className="bg-zinc-950/70 p-2 rounded-xl border border-zinc-900 flex flex-col justify-center">
+              <span className="text-zinc-500 text-[8px] uppercase tracking-wider block mb-0.5">Local</span>
+              <span className="text-zinc-300 font-semibold truncate block px-1" title={nextMatch.location}>{nextMatch.location || '---'}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Destaque do Mural (Banner Rotativo) */}
+      {publicPosts.length > 0 && highlightPost && (
+        <div id="landing-mural-highlight" className="w-full max-w-md bg-[#0a0f0d]/90 border border-zinc-850/80 rounded-2xl p-4 shadow-xl flex flex-col gap-2.5 relative overflow-hidden mt-4 animate-fadeIn">
+          <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400">
+            <span className="uppercase tracking-wider text-emerald-400 font-bold flex items-center gap-1">
+              <Sparkles className="w-3 h-3 text-[#22c55e] animate-pulse" /> Destaques do Mural
+            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] text-[#22c55e] font-semibold bg-emerald-950/40 px-1.5 py-0.5 rounded-md">
+                {carouselIndex + 1} de {publicPosts.length}
+              </span>
+              <span className="text-zinc-500">{highlightPost.eventDate ? highlightPost.eventDate.split('-').reverse().join('/') : ''}</span>
+            </div>
+          </div>
+
+          <div 
+            onClick={() => setSelectedLightboxPost(highlightPost)}
+            className="group relative h-44 rounded-xl overflow-hidden cursor-pointer border border-zinc-900 bg-black flex items-center justify-center text-center"
+          >
+            {highlightPost.mediaType === 'video' ? (
+              <div className="w-full h-full relative">
+                <video 
+                  src={highlightPost.mediaUrl} 
+                  muted 
+                  playsInline 
+                  loop
+                  autoPlay
+                  className="w-full h-full object-cover opacity-60 group-hover:scale-105 transition duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-10 h-10 rounded-full bg-emerald-600/95 text-white flex items-center justify-center shadow-lg group-hover:scale-110 transition duration-150">
+                    <span className="ml-1 border-t-[5px] border-t-transparent border-b-[5px] border-b-transparent border-l-[8px] border-l-white inline-block w-0 h-0" />
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full h-full relative">
+                <img 
+                  src={highlightPost.mediumUrl || highlightPost.mediaUrl} 
+                  alt={highlightPost.title} 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-transparent to-transparent" />
+              </div>
+            )}
+            
+            <div className="absolute bottom-3 left-3 right-3 text-left">
+              <h4 className="text-white text-xs font-bold line-clamp-1 group-hover:text-[#22c55e] transition">{highlightPost.title}</h4>
+              <p className="text-zinc-400 text-[10px] line-clamp-1 mt-0.5">{highlightPost.description || 'Confira os bastidores do nosso racha.'}</p>
+            </div>
+          </div>
+
+          {/* Indicators dots for rotating banner */}
+          {publicPosts.length > 1 && (
+            <div className="flex justify-center gap-1.5 pt-0.5">
+              {publicPosts.map((_, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setCarouselIndex(i)}
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                    i === carouselIndex ? 'bg-emerald-500 w-3' : 'bg-zinc-800'
+                  }`}
+                  title={`Ver publicação ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. Miniaturas (Até 6) */}
+      {publicPosts.length > 0 && (
+        <div id="landing-mural-thumbnails" className="w-full max-w-md bg-[#0a0f0d]/90 border border-zinc-850/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 relative mt-4 animate-fadeIn">
+          <div className="flex items-center justify-between font-mono text-[9px] text-zinc-500 uppercase tracking-wider">
+            <span>Galeria Recente</span>
+            <span>Até 6 mídias públicas em destaque</span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {publicPosts.slice(0, 6).map((post, idx) => (
+              <div 
+                key={post.id}
+                onClick={() => {
+                  setCarouselIndex(idx);
+                  setSelectedLightboxPost(post);
+                }}
+                className={`group relative aspect-square rounded-lg overflow-hidden bg-zinc-950 border transition cursor-pointer ${
+                  carouselIndex === idx ? 'border-[#22c55e] shadow-lg shadow-emerald-500/10' : 'border-zinc-900 hover:border-zinc-700'
+                }`}
+              >
+                <img 
+                  src={post.thumbnailUrl || post.mediaUrl} 
+                  alt={post.title} 
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
+                  loading="lazy"
+                />
+                
+                {post.mediaType === 'video' && (
+                  <div className="absolute top-1 right-1 bg-black/60 p-0.5 rounded">
+                    <span className="block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  </div>
+                )}
+                
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                  <span className="text-[9px] text-white font-mono bg-emerald-600 px-1 py-0.5 rounded font-bold">VER</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 6. Default credentials box for easy grading */}
+      <div className="w-full max-w-md mt-4 p-4 rounded-xl border border-dashed border-[#10b981]/25 bg-emerald-950/10 text-xs text-zinc-400 space-y-1 relative z-10 text-center">
+        <p className="font-bold text-[#4ade80] flex items-center justify-center gap-1.5 font-mono text-[10px] uppercase">
           <Shield className="w-3.5 h-3.5" />
           <span>Contas de Acesso (Dica para Testes)</span>
         </p>
         <p className="text-[11px] leading-relaxed">
-          Para ver o fluxo completo de Admin (aprovar usuários,CRUD de atletas), utilize:
+          Para ver o fluxo completo de Admin (aprovar usuários, CRUD de atletas), utilize:
         </p>
         <p className="font-mono text-white select-all text-[11px] mt-1 bg-zinc-950/60 p-1.5 rounded inline-block">
           admin@racha.com / admin
@@ -493,6 +678,56 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
           Novos registros começam pendentes de decisão do Administrador.
         </p>
       </div>
+
+      {/* FULL RESPONSIVE LIGHTBOX PORTAL */}
+      {selectedLightboxPost && (
+        <div className="fixed inset-0 z-50 bg-black/98 flex flex-col items-center justify-center p-4 animate-scaleUp">
+          <button
+            onClick={() => setSelectedLightboxPost(null)}
+            className="absolute top-4 right-4 p-2.5 bg-zinc-900/80 text-white hover:bg-zinc-800 rounded-full border border-zinc-850 hover:border-zinc-700 transition cursor-pointer"
+            title="Fechar"
+          >
+            <span className="text-xs font-mono font-bold leading-none block w-4 h-4 flex items-center justify-center">✕</span>
+          </button>
+
+          <div className="max-w-3xl w-full flex flex-col items-center gap-4 relative">
+            <div className="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-xl border border-zinc-900 shadow-2xl bg-zinc-950">
+              {selectedLightboxPost.mediaType === 'video' ? (
+                <video 
+                  src={selectedLightboxPost.mediaUrl}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                />
+              ) : (
+                <img 
+                  src={selectedLightboxPost.mediumUrl || selectedLightboxPost.mediaUrl}
+                  alt={selectedLightboxPost.title}
+                  referrerPolicy="no-referrer"
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg"
+                />
+              )}
+            </div>
+
+            <div className="text-left w-full max-w-xl text-xs space-y-1.5 p-1">
+              <div className="flex items-center justify-between gap-4">
+                <h4 className="text-white font-extrabold text-sm uppercase tracking-wider">{selectedLightboxPost.title}</h4>
+                <span className="text-zinc-500 font-mono text-[9px] uppercase tracking-wider bg-zinc-950 px-2 py-0.5 rounded border border-zinc-900">
+                  {selectedLightboxPost.eventDate ? selectedLightboxPost.eventDate.split('-').reverse().join('/') : ''}
+                </span>
+              </div>
+              {selectedLightboxPost.description && (
+                <p className="text-zinc-400 leading-relaxed text-[11px]">{selectedLightboxPost.description}</p>
+              )}
+              <div className="text-zinc-500 text-[10px] font-mono pt-1 border-t border-zinc-950 flex items-center justify-between">
+                <span>Autor: <strong>{selectedLightboxPost.authorName}</strong></span>
+                <span className="text-zinc-650">Categoria: {selectedLightboxPost.category || 'Mural'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
