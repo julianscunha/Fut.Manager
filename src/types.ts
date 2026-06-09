@@ -14,6 +14,7 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   createdAt: string;
+  playerId?: string;
 }
 
 export type PlayerCategory = 'mensalista' | 'mensalista_goleiro' | 'reserva';
@@ -25,7 +26,8 @@ export type PlayerPosition = 'goleiro' | 'zagueiro' | 'lateral' | 'volante' | 'm
 export interface Player {
   id: string;
   name: string;
-  email: string;
+  email?: string;
+  phone: string;
   photoOriginal: string;
   playerCardUrl: string;
   favoriteTeamId: string;
@@ -40,6 +42,7 @@ export interface Player {
   deletedAt?: string; // Soft delete
   currentStreak?: number;
   maxStreak?: number;
+  adminNotes?: string;
 }
 
 export interface PlayerEvaluation {
@@ -155,6 +158,8 @@ export interface Match {
   durationMinutes: number;
   status: MatchStatus;
   confirmationDeadlineDaysBefore?: number;
+  reservesReleased?: boolean;
+  reservesReleasedAt?: string;
 }
 
 export type PresenceStatus = 'confirmado' | 'nao_confirmado' | 'cancelado';
@@ -165,6 +170,7 @@ export interface Presence {
   playerId: string;
   status: PresenceStatus;
   confirmedAt?: string; // ISO date timestamp
+  manuallyApproved?: boolean;
 }
 
 export interface RecurrentConfig {
@@ -174,9 +180,20 @@ export interface RecurrentConfig {
   durationMinutes: number;
   confirmationDeadlineDaysBefore: number; // e.g. 2 days before racha
   active: boolean;
-  monthlyFee: number; // e.g. 100
-  chargeDateRule: 'primeiro_jogo' | 'ultimo_jogo'; // billing trigger game rules
+  monthlyFee?: number; // Legacy - use FinanceConfig instead
+  chargeDateRule?: 'primeiro_jogo' | 'ultimo_jogo'; // Legacy - use FinanceConfig instead
   maxMensalistas?: number; // max quota limit for mensualistas
+}
+
+export interface FinanceHistoryEntry {
+  date: string; // YYYY-MM-DD (vigência)
+  amount: number;
+}
+
+export interface FinanceConfig {
+  monthlyFee: number;
+  chargeDateRule: 'primeiro_jogo' | 'ultimo_jogo';
+  history: FinanceHistoryEntry[];
 }
 
 export interface CategoryTransition {
@@ -256,6 +273,8 @@ export interface TeamDraw {
   maxDifference: number;
   isSharedGoalkeepers: boolean;
   captainsConfigured: boolean;
+  affinitiesRecorded?: boolean;
+  winsRecorded?: boolean;
 }
 
 export interface MatchResult {

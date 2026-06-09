@@ -5,7 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { readDb, writeDb, generateMonthlyBillingsIfNeeded } from './server/db';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
-import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult } from './src/types';
+import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition } from './src/types';
 
 async function startServer() {
   const app = express();
@@ -46,6 +46,212 @@ async function startServer() {
     console.log(`[WHATSAPP INTEGRATION PREP] Target: ${newNotif.targetUserId}. template_message: "*${newNotif.title}*\n${newNotif.message}"`);
 
     return newNotif;
+  }
+
+  function getPlayerIdForUser(db: any, userId?: string, email?: string): string | null {
+    if (userId) {
+      const user = db.users.find((u: any) => u.id === userId);
+      if (user) {
+        if (user.playerId) {
+          return user.playerId;
+        }
+        if (user.email) {
+          const normalized = user.email.toLowerCase().trim();
+          const player = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === normalized);
+          if (player) {
+            return player.id;
+          }
+        }
+      }
+    }
+    if (email) {
+      const normalized = email.toLowerCase().trim();
+      const user = db.users.find((u: any) => u.email.toLowerCase().trim() === normalized);
+      if (user && user.playerId) {
+        return user.playerId;
+      }
+      const player = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === normalized);
+      if (player) {
+        return player.id;
+      }
+    }
+    return null;
+  }
+
+  function getMatchDeadlineInfo(match: any, deadlineDays: number) {
+    if (!match.date) {
+      return {
+        matchDateTime: new Date(),
+        deadlineDateTime: new Date(),
+        isDeadlineExpired: false,
+        deadlineDateStr: '',
+        hoursRemaining: 0
+      };
+    }
+    const [year, month, day] = match.date.split('-').map(Number);
+    let hours = 21;
+    let minutes = 30;
+    if (match.time && match.time.includes(':')) {
+      const [h, m] = match.time.split(':').map(Number);
+      if (!isNaN(h) && !isNaN(m)) {
+        hours = h;
+        minutes = m;
+      }
+    }
+    const matchDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    const deadlineDateTime = new Date(matchDateTime.getTime() - deadlineDays * 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const isDeadlineExpired = now >= deadlineDateTime;
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const formattedDate = `${pad(deadlineDateTime.getDate())}/${pad(deadlineDateTime.getMonth() + 1)}/${deadlineDateTime.getFullYear()}`;
+    const formattedTime = `${pad(deadlineDateTime.getHours())}:${pad(deadlineDateTime.getMinutes())}`;
+    const deadlineDateStr = `${formattedDate} às ${formattedTime}`;
+
+    const diffMs = deadlineDateTime.getTime() - now.getTime();
+    const hoursRemaining = diffMs / (1000 * 60 * 60);
+
+    return {
+      matchDateTime,
+      deadlineDateTime,
+      isDeadlineExpired,
+      deadlineDateStr,
+      hoursRemaining
+    };
+  }
+
+  function getComputedPresences(db: any, matchId: string) {
+    const match = db.matches.find((m: any) => m.id === matchId);
+    if (!match) return [];
+
+    const matchPresences = db.presences.filter((p: any) => p.matchId === matchId);
+    const activePlayers = db.players.filter((p: any) => !p.deletedAt);
+    const activePlayerIds = activePlayers.map((p: any) => p.id);
+
+    // Filter out presences of players who are deleted
+    const validPresences = matchPresences.filter((p: any) => activePlayerIds.includes(p.playerId));
+
+    // Determine deadline expired
+    const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+    const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
+    const { deadlineDateTime, isDeadlineExpired, deadlineDateStr, hoursRemaining } = getMatchDeadlineInfo(match, matchDeadlineDays);
+
+    if (isDeadlineExpired && !match.reservesReleased) {
+      match.reservesReleased = true;
+      match.reservesReleasedAt = new Date().toISOString();
+      if (!db.deadlineAudits) db.deadlineAudits = [];
+      db.deadlineAudits.push({
+        id: 'da-' + match.id + '-' + Date.now(),
+        matchId: match.id,
+        matchDate: match.date,
+        matchTime: match.time,
+        matchDeadlineDays,
+        calculatedDeadline: deadlineDateTime.toISOString(),
+        releasedAt: new Date().toISOString(),
+        auditType: 'deadline_and_reserves_release',
+        createdAt: new Date().toISOString(),
+        details: `Prazo de confirmação encerrado para racha de ${match.date} às ${match.time} (limite calculado: ${deadlineDateStr}). Reservas liberados e promovidos automaticamente às vagas restantes.`
+      });
+      writeDb(db);
+    }
+
+    // Build a map of player to their DB presence record
+    const presenceMap = new Map();
+    for (const pr of validPresences) {
+      presenceMap.set(pr.playerId, pr);
+    }
+
+    // Find all mensalistas & mensalista_goleiros and reserves
+    const mensalistas = activePlayers.filter((p: any) => p.category !== 'reserva');
+    const reserves = activePlayers.filter((p: any) => p.category === 'reserva');
+
+    // Confirmed Mensalistas
+    const confirmedMensalistas = mensalistas.filter((p: any) => {
+      const pr = presenceMap.get(p.id);
+      return pr && pr.status === 'confirmado';
+    });
+
+    // Manually Approved Reserves (always confirmed)
+    const manuallyApprovedReserves = reserves.filter((p: any) => {
+      const pr = presenceMap.get(p.id);
+      return pr && pr.status === 'confirmado' && pr.manuallyApproved === true;
+    });
+
+    // Count how many spots are already occupied by mensalistas and manually approved reserves
+    let count = confirmedMensalistas.length + manuallyApprovedReserves.length;
+
+    // Remaining spots to reach 15
+    const remainingSpots = Math.max(0, 15 - count);
+
+    // Eligible reserves for automatic promotion:
+    // Reserves who have status === 'confirmado' in DB but are not manually approved
+    const pendingReserves = reserves.filter((p: any) => {
+      const pr = presenceMap.get(p.id);
+      return pr && pr.status === 'confirmado' && !pr.manuallyApproved;
+    });
+
+    // Sort pendingReserves by reservesOrder priority from the DB
+    const reservesOrder = db.reservesOrder || [];
+    pendingReserves.sort((a: any, b: any) => {
+      const idxA = reservesOrder.indexOf(a.id);
+      const idxB = reservesOrder.indexOf(b.id);
+      const orderA = idxA !== -1 ? idxA : 999999;
+      const orderB = idxB !== -1 ? idxB : 999999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a.name.localeCompare(b.name);
+    });
+
+    // If deadline is expired, we automatically promote them up to the remaining spots
+    const autoApprovedReserveIds = new Set<string>();
+    if (isDeadlineExpired && remainingSpots > 0) {
+      const promoted = pendingReserves.slice(0, remainingSpots);
+      for (const r of promoted) {
+        autoApprovedReserveIds.add(r.id);
+      }
+    }
+
+    // Merged player and matches list
+    const mergedList = activePlayers.map((player: any) => {
+      const pr = presenceMap.get(player.id);
+      let originalStatus = pr ? pr.status : 'nao_confirmado';
+      
+      // Calculate computed presenceStatus
+      let computedStatus: string = originalStatus;
+
+      if (player.category === 'reserva') {
+        if (originalStatus === 'confirmado') {
+          const isManuallyApproved = pr && pr.manuallyApproved === true;
+          const isAutoPromoted = autoApprovedReserveIds.has(player.id);
+          if (isManuallyApproved || isAutoPromoted) {
+            computedStatus = 'confirmado';
+          } else {
+            computedStatus = 'nao_confirmado'; // Becomes "Fila" / Pending in waitlist
+          }
+        }
+      }
+
+      return {
+        playerId: player.id,
+        name: player.name,
+        email: player.email,
+        category: player.category,
+        status: player.status,
+        presenceStatus: computedStatus,
+        confirmedAt: pr ? pr.confirmedAt : undefined,
+        manuallyApproved: pr ? pr.manuallyApproved || false : false,
+        isAutoPromoted: autoApprovedReserveIds.has(player.id)
+      };
+    });
+
+    // Sort: mensalistas first, reserves second!
+    mergedList.sort((a: any, b: any) => {
+      const catOrder: Record<string, number> = { mensalista_goleiro: 1, mensalista: 2, reserva: 3 };
+      const catDiff = (catOrder[a.category] || 99) - (catOrder[b.category] || 99);
+      if (catDiff !== 0) return catDiff;
+      return a.name.localeCompare(b.name);
+    });
+
+    return mergedList;
   }
 
   function syncDynamicNotifications(db: any) {
@@ -91,22 +297,68 @@ async function startServer() {
       }
     });
 
-    // 2. Scan matches for upcoming deadline warns (2 days before)
+    // 2. Scan matches for upcoming deadline warns
+    const defaultDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
     (db.matches || []).forEach((match: any) => {
-      if (match.status === 'confirmando' && match.confirmationDeadlineDaysBefore) {
+      if (match.status === 'confirmando') {
         try {
-          const mDate = new Date(match.date + 'T12:00:00');
-          mDate.setDate(mDate.getDate() - parseInt(match.confirmationDeadlineDaysBefore));
-          const deadlineStr = mDate.toISOString().split('T')[0];
+          const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : defaultDays;
+          const { deadlineDateTime } = getMatchDeadlineInfo(match, matchDeadlineDays);
+          const now = new Date();
           
-          if (todayStr >= deadlineStr && todayStr <= match.date) {
-            const deadlineKey = `notif-match-deadline-${match.id}`;
-            if (!db.notifications.some((n: any) => n.id === deadlineKey)) {
+          // Time diff in ms
+          const diffMs = deadlineDateTime.getTime() - now.getTime();
+          const hoursRemaining = diffMs / (1000 * 60 * 60);
+
+          let deadlineTimeStr = "21:30";
+          if (match.time) {
+            deadlineTimeStr = match.time;
+          }
+
+          // 24 hours before alert (when hoursRemaining is between 0 and 24 hours)
+          if (hoursRemaining > 0 && hoursRemaining <= 24) {
+            const key24h = `notif-match-deadline-24h-${match.id}`;
+            if (!db.notifications.some((n: any) => n.id === key24h)) {
               db.notifications.push({
-                id: deadlineKey,
+                id: key24h,
+                category: 'partida',
+                title: '⏳ Confirmações Encerram Amanhã',
+                message: `Lembrete: confirmações encerram amanhã às ${deadlineTimeStr}.`,
+                status: 'nao_lida',
+                createdAt: new Date().toISOString(),
+                targetUserId: 'all',
+                actionUrl: 'calendar'
+              });
+            }
+          }
+
+          // 2 hours before alert (when hoursRemaining is between 0 and 2 hours)
+          if (hoursRemaining > 0 && hoursRemaining <= 2) {
+            const key2h = `notif-match-deadline-2h-${match.id}`;
+            if (!db.notifications.some((n: any) => n.id === key2h)) {
+              db.notifications.push({
+                id: key2h,
+                category: 'partida',
+                title: '🚨 Últimas Horas de Confirmação',
+                message: 'Últimas horas para confirmação.',
+                status: 'nao_lida',
+                createdAt: new Date().toISOString(),
+                targetUserId: 'all',
+                actionUrl: 'calendar'
+              });
+            }
+          }
+
+          // Legacy / general warning (when hoursRemaining <= matchDeadlineDays * 24)
+          const legacyLimitHours = matchDeadlineDays * 24;
+          if (hoursRemaining > 0 && hoursRemaining <= legacyLimitHours) {
+            const keyGeneral = `notif-match-deadline-general-${match.id}`;
+            if (!db.notifications.some((n: any) => n.id === keyGeneral)) {
+              db.notifications.push({
+                id: keyGeneral,
                 category: 'partida',
                 title: '⚠️ Prazo de Confirmação Próximo',
-                message: `O prazo para confirmar sua presença na rodada de ${match.date.split('-').reverse().join('/')} se encerra em breve (limite: ${deadlineStr.split('-').reverse().join('/')}).`,
+                message: `O prazo para confirmar sua presença na rodada de ${match.date.split('-').reverse().join('/')} se encerra em breve.`,
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
@@ -302,9 +554,45 @@ async function startServer() {
     return res.json(db.users);
   });
 
+  // Usuários: Listar auditoria de alterações (Apenas Admin/Auxiliar)
+  app.get('/api/users/audits', (req, res) => {
+    const db = readDb();
+    return res.json(db.userAudits || []);
+  });
+
+  // Auditoria de prazos e liberação de reservas
+  app.get('/api/deadline-audits', (req, res) => {
+    const db = readDb();
+    return res.json(db.deadlineAudits || []);
+  });
+
   // Usuários: Aprovar / Rejeitar / Mudar Permissão (Admin apenas)
   app.post('/api/users/action', (req, res) => {
-    const { userId, action, role } = req.body as { userId: string; action: 'approve' | 'reject' | 'update_role'; role?: UserRole };
+    const { 
+      userId, 
+      action, 
+      role, 
+      adminName,
+      linkOption,
+      selectedPlayerId,
+      phone,
+      playerCategory,
+      primaryPosition,
+      secondaryPositions,
+      favoriteTeamId
+    } = req.body as { 
+      userId: string; 
+      action: 'approve' | 'reject' | 'update_role'; 
+      role?: UserRole; 
+      adminName?: string;
+      linkOption?: 'existing' | 'create';
+      selectedPlayerId?: string;
+      phone?: string;
+      playerCategory?: PlayerCategory;
+      primaryPosition?: PlayerPosition;
+      secondaryPositions?: PlayerPosition[];
+      favoriteTeamId?: string;
+    };
 
     if (!userId || !action) {
       return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
@@ -321,13 +609,136 @@ async function startServer() {
       return res.status(400).json({ error: 'Incapaz de modificar o Administrador raiz.' });
     }
 
+    // Safety check: Prevent removing/demoting the last active administrator
+    const approvedAdmins = db.users.filter(u => u.role === 'admin' && u.status === 'approved');
+    const isTargetAdmin = db.users[userIndex].role === 'admin' && db.users[userIndex].status === 'approved';
+    if (isTargetAdmin) {
+      const isDemotingOrRejecting = 
+        (action === 'reject') || 
+        (action === 'update_role' && role && role !== 'admin');
+      if (isDemotingOrRejecting && approvedAdmins.length <= 1) {
+        return res.status(400).json({ error: 'Erro de Segurança: Não faz sentido e é proibido remover ou rebaixar o único Administrador ativo no sistema.' });
+      }
+    }
+
+    const previousRole = db.users[userIndex].role;
+    const previousStatus = db.users[userIndex].status;
+
+    let auditActionText = '';
+    let chosenRole = role;
+
+    if (!db.userAudits) {
+      db.userAudits = [];
+    }
+
     if (action === 'approve') {
+      chosenRole = role || 'jogador';
       db.users[userIndex].status = 'approved';
+      db.users[userIndex].role = chosenRole;
+      auditActionText = `Aprovação de Cadastro (Perfil Inicial: ${chosenRole})`;
       
+      // DECOUPLING LINKING OR CREATING OF ATHLETE DURING APPROVAL
+      if (linkOption === 'existing' && selectedPlayerId) {
+        db.users[userIndex].playerId = selectedPlayerId;
+        const matchingPlayer = db.players.find(p => p.id === selectedPlayerId);
+        if (matchingPlayer) {
+          matchingPlayer.updatedAt = new Date().toISOString();
+          
+          db.userAudits.push({
+            id: 'audit-link-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            timestamp: new Date().toISOString(),
+            userId,
+            userName: db.users[userIndex].name,
+            userEmail: db.users[userIndex].email,
+            action: 'Alteração de Vínculo',
+            previousRole: '',
+            newRole: '',
+            previousStatus: '',
+            newStatus: '',
+            performedBy: adminName || 'Administrador do Sistema',
+            details: `Vínculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
+          });
+        }
+      } else {
+        // Create new player athlete
+        const newPlId = 'player-' + Date.now();
+        const formattedPhone = phone || '(85) 99999-9999';
+        const initialCategory = playerCategory || 'reserva';
+        const initialPosition = primaryPosition || 'atacante';
+
+        const newPlayer: Player = {
+          id: newPlId,
+          name: db.users[userIndex].name,
+          phone: formattedPhone,
+          photoOriginal: '',
+          playerCardUrl: '',
+          favoriteTeamId: favoriteTeamId || 'out',
+          category: initialCategory,
+          status: 'disponivel',
+          primaryPosition: initialPosition,
+          secondaryPositions: secondaryPositions || [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          currentStreak: 0,
+          maxStreak: 0
+        };
+
+        db.players.push(newPlayer);
+        db.users[userIndex].playerId = newPlId;
+
+        // Auditoria: Criação de atleta
+        db.userAudits.push({
+          id: 'audit-pcreate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          timestamp: new Date().toISOString(),
+          userId,
+          userName: db.users[userIndex].name,
+          userEmail: db.users[userIndex].email,
+          action: 'Criação de Atleta',
+          previousRole: '',
+          newRole: '',
+          previousStatus: '',
+          newStatus: '',
+          performedBy: adminName || 'Administrador do Sistema',
+          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovação. Posição principal: ${newPlayer.primaryPosition}.`
+        });
+
+        // Auditoria: Troca de categoria
+        db.userAudits.push({
+          id: 'audit-pcat-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          timestamp: new Date().toISOString(),
+          userId,
+          userName: db.users[userIndex].name,
+          userEmail: db.users[userIndex].email,
+          action: 'Troca de categoria',
+          previousRole: '',
+          newRole: '',
+          previousStatus: '',
+          newStatus: '',
+          performedBy: adminName || 'Administrador do Sistema',
+          details: `Categoria inicial definida como: ${initialCategory}`
+        });
+
+        // Auditoria: Alteração de telefone
+        db.userAudits.push({
+          id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          timestamp: new Date().toISOString(),
+          userId,
+          userName: db.users[userIndex].name,
+          userEmail: db.users[userIndex].email,
+          action: 'Alteração de telefone',
+          previousRole: '',
+          newRole: '',
+          previousStatus: '',
+          newStatus: '',
+          performedBy: adminName || 'Administrador do Sistema',
+          details: `Telefone definido como: ${formattedPhone}`
+        });
+      }
+
       notify(db, {
         category: 'jogador',
         title: '🎉 Cadastro Aprovado!',
-        message: `Seu cadastro no Racha do Fofim foi aprovado. Seja bem-vindo ao grupo!`,
+        message: `Seu cadastro no Racha do Fofim foi aprovado como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}. Seja bem-vindo ao grupo!`,
         targetUserId: userId,
         actionUrl: 'players'
       });
@@ -335,15 +746,56 @@ async function startServer() {
       notify(db, {
         category: 'jogador',
         title: '🏃 Novo Jogador no Grupo',
-        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administração.`,
+        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administração como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}.`,
         targetUserId: 'all',
         actionUrl: 'players'
       });
     } else if (action === 'reject') {
       db.users[userIndex].status = 'rejected';
+      auditActionText = 'Cadastro Rejeitado';
     } else if (action === 'update_role' && role) {
       db.users[userIndex].role = role;
+      auditActionText = `Alteração de Perfil de ${previousRole} para ${role}`;
+
+      // Update link action if provided
+      if (selectedPlayerId) {
+        const oldPlayerId = db.users[userIndex].playerId;
+        db.users[userIndex].playerId = selectedPlayerId;
+        const matchingPlayer = db.players.find(p => p.id === selectedPlayerId);
+        const prevPlayer = oldPlayerId ? db.players.find(p => p.id === oldPlayerId) : null;
+        if (matchingPlayer) {
+          db.userAudits.push({
+            id: 'audit-link-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            timestamp: new Date().toISOString(),
+            userId,
+            userName: db.users[userIndex].name,
+            userEmail: db.users[userIndex].email,
+            action: 'Alteração de Vínculo',
+            previousRole: '',
+            newRole: '',
+            previousStatus: '',
+            newStatus: '',
+            performedBy: adminName || 'Administrador do Sistema',
+            details: `Vínculo de atleta alterado para ${matchingPlayer.name} (${matchingPlayer.id}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+          });
+        }
+      }
     }
+
+    // Write audit log entry
+    db.userAudits.push({
+      id: 'audit-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      timestamp: new Date().toISOString(),
+      userId,
+      userName: db.users[userIndex].name,
+      userEmail: db.users[userIndex].email,
+      action: auditActionText,
+      previousRole,
+      newRole: chosenRole || previousRole,
+      previousStatus,
+      newStatus: db.users[userIndex].status,
+      performedBy: adminName || 'Administrador do Sistema'
+    });
 
     writeDb(db);
     return res.json({ message: 'Ação realizada com sucesso!', user: db.users[userIndex] });
@@ -365,14 +817,18 @@ async function startServer() {
   // Jogadores: Criar Jogador
   app.post('/api/players', (req, res) => {
     const playerData = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'>;
+    const { responsibleName } = req.body as { responsibleName?: string };
 
     if (!playerData.name || !playerData.category || !playerData.status || !playerData.primaryPosition) {
       return res.status(400).json({ error: 'Nome, categoria, status e posição principal são obrigatórios.' });
     }
 
     const db = readDb();
+    const formattedPhone = playerData.phone || '(85) 99999-9999';
+
     const newPlayer: Player = {
       ...playerData,
+      phone: formattedPhone,
       id: 'player-' + Date.now(),
       secondaryPositions: playerData.secondaryPositions || [],
       createdAt: new Date().toISOString(),
@@ -382,6 +838,56 @@ async function startServer() {
     };
 
     db.players.push(newPlayer);
+
+    // Auditoria: Criação de atleta
+    if (!db.userAudits) db.userAudits = [];
+    db.userAudits.push({
+      id: 'audit-pcreate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userName: newPlayer.name,
+      userEmail: playerData.email || 'atleta@racha.fofim',
+      action: 'Criação de Atleta',
+      previousRole: '',
+      newRole: '',
+      previousStatus: '',
+      newStatus: '',
+      performedBy: responsibleName || 'Administrador',
+      details: `Atleta ${newPlayer.name} cadastrado manualmente no gerenciamento esportivo.`
+    });
+
+    // Auditoria: Troca de categoria
+    db.userAudits.push({
+      id: 'audit-pcat-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userName: newPlayer.name,
+      userEmail: playerData.email || 'atleta@racha.fofim',
+      action: 'Troca de categoria',
+      previousRole: '',
+      newRole: '',
+      previousStatus: '',
+      newStatus: '',
+      performedBy: responsibleName || 'Administrador',
+      details: `Categoria inicial definida como: ${newPlayer.category}`
+    });
+
+    // Auditoria: Alteração de telefone
+    db.userAudits.push({
+      id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+      timestamp: new Date().toISOString(),
+      userId: 'system',
+      userName: newPlayer.name,
+      userEmail: playerData.email || 'atleta@racha.fofim',
+      action: 'Alteração de telefone',
+      previousRole: '',
+      newRole: '',
+      previousStatus: '',
+      newStatus: '',
+      performedBy: responsibleName || 'Atleta',
+      details: `Telefone definido como: ${formattedPhone}`
+    });
+
     writeDb(db);
 
     return res.status(201).json({ message: 'Jogador cadastrado com sucesso!', player: newPlayer });
@@ -391,6 +897,7 @@ async function startServer() {
   app.put('/api/players/:id', (req, res) => {
     const { id } = req.params;
     const updateData = req.body as Partial<Player>;
+    const { responsibleName } = req.body as any;
 
     const db = readDb();
     const index = db.players.findIndex((p) => p.id === id);
@@ -403,7 +910,6 @@ async function startServer() {
 
     const categoryChanged = updateData.category && updateData.category !== existingPlayer.category;
     if (categoryChanged) {
-      const { responsibleName } = req.body as any;
       const transition = {
         id: 'category-transition-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
         playerId: existingPlayer.id,
@@ -417,6 +923,44 @@ async function startServer() {
         db.categoryTransitions = [];
       }
       db.categoryTransitions.push(transition);
+    }
+
+    // Register precise audit logs
+    if (!db.userAudits) db.userAudits = [];
+
+    if (categoryChanged) {
+      db.userAudits.push({
+        id: 'audit-pcat-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        timestamp: new Date().toISOString(),
+        userId: 'system',
+        userName: existingPlayer.name,
+        userEmail: existingPlayer.email || 'atleta@racha.fofim',
+        action: 'Troca de categoria',
+        previousRole: '',
+        newRole: '',
+        previousStatus: '',
+        newStatus: '',
+        performedBy: responsibleName || 'Administrador',
+        details: `Categoria de ${existingPlayer.name} alterada de ${existingPlayer.category} para ${updateData.category}`
+      });
+    }
+
+    const phoneChanged = updateData.phone && updateData.phone !== existingPlayer.phone;
+    if (phoneChanged) {
+      db.userAudits.push({
+        id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        timestamp: new Date().toISOString(),
+        userId: 'system',
+        userName: existingPlayer.name,
+        userEmail: existingPlayer.email || 'atleta@racha.fofim',
+        action: 'Alteração de telefone',
+        previousRole: '',
+        newRole: '',
+        previousStatus: '',
+        newStatus: '',
+        performedBy: responsibleName || 'Administrador',
+        details: `Telefone de ${existingPlayer.name} alterado de ${existingPlayer.phone} para ${updateData.phone}`
+      });
     }
 
     // Merge updates
@@ -932,24 +1476,19 @@ async function startServer() {
       const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
 
       const enrichedMatches = db.matches.map((m) => {
-        const matchPresences = db.presences.filter((pr) => pr.matchId === m.id);
-        const confirmedPlayers = matchPresences.filter(
-          (pr) => pr.status === 'confirmado' && activePlayerIds.includes(pr.playerId)
-        );
-        const confirmedCount = confirmedPlayers.length;
+        const computedList = getComputedPresences(db, m.id);
+        const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
 
         // Calculations
-        const vacancies = Math.max(0, 24 - confirmedCount);
+        const vacancies = Math.max(0, 15 - confirmedCount);
         const hasMinimumPlayers = confirmedCount >= 15;
         const missingPlayersCount = Math.max(0, 15 - confirmedCount);
 
         // Deadline check
         const matchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : deadlineDays;
-        const matchDate = new Date(`${m.date}T12:00:00`);
-        const deadlineDate = new Date(matchDate.getTime() - matchDeadlineDays * 24 * 60 * 60 * 1000);
-        const isDeadlineExpired = new Date() >= deadlineDate;
+        const { deadlineDateTime, isDeadlineExpired, deadlineDateStr, hoursRemaining } = getMatchDeadlineInfo(m, matchDeadlineDays);
 
-        const hasPresences = matchPresences.some((pr) => pr.status === 'confirmado');
+        const hasPresences = computedList.some((p: any) => p.presenceStatus === 'confirmado');
         const hasDraws = (db.draws || []).some((d) => d.matchId === m.id);
         const hasResults = (db.results || []).some((r) => r.matchId === m.id);
 
@@ -960,7 +1499,9 @@ async function startServer() {
           hasMinimumPlayers,
           missingPlayersCount,
           isDeadlineExpired,
-          deadlineDateStr: deadlineDate.toISOString().split('T')[0],
+          deadlineDateStr,
+          hoursRemaining,
+          deadlineDateISO: deadlineDateTime.toISOString(),
           hasPresences,
           hasDraws,
           hasResults
@@ -1072,6 +1613,10 @@ async function startServer() {
       }
 
       const previousStatus = db.matches[index].status;
+      const dateChanged = date && date !== db.matches[index].date;
+      const timeChanged = time && time !== db.matches[index].time;
+      const deadlineDaysChanged = confirmationDeadlineDaysBefore !== undefined && parseInt(confirmationDeadlineDaysBefore) !== db.matches[index].confirmationDeadlineDaysBefore;
+
       const updatedMatch = {
         ...db.matches[index],
         date: date || db.matches[index].date,
@@ -1079,8 +1624,27 @@ async function startServer() {
         location: location || db.matches[index].location,
         durationMinutes: durationMinutes ? parseInt(durationMinutes) : db.matches[index].durationMinutes,
         status: status || db.matches[index].status,
-        confirmationDeadlineDaysBefore: confirmationDeadlineDaysBefore !== undefined && confirmationDeadlineDaysBefore !== null ? parseInt(confirmationDeadlineDaysBefore) : db.matches[index].confirmationDeadlineDaysBefore
+        confirmationDeadlineDaysBefore: confirmationDeadlineDaysBefore !== undefined && confirmationDeadlineDaysBefore !== null ? parseInt(confirmationDeadlineDaysBefore) : db.matches[index].confirmationDeadlineDaysBefore,
+        reservesReleased: (dateChanged || timeChanged || deadlineDaysChanged) ? false : db.matches[index].reservesReleased,
+        reservesReleasedAt: (dateChanged || timeChanged || deadlineDaysChanged) ? undefined : db.matches[index].reservesReleasedAt
       };
+
+      // Reschedule audit log
+      if (dateChanged || timeChanged || deadlineDaysChanged) {
+        const deadlineDays = updatedMatch.confirmationDeadlineDaysBefore !== undefined ? updatedMatch.confirmationDeadlineDaysBefore : (db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2);
+        const { deadlineDateTime, deadlineDateStr } = getMatchDeadlineInfo(updatedMatch, deadlineDays);
+        if (!db.deadlineAudits) db.deadlineAudits = [];
+        db.deadlineAudits.push({
+          id: 'da-' + updatedMatch.id + '-resched-' + Date.now(),
+          matchId: updatedMatch.id,
+          matchDate: updatedMatch.date,
+          matchTime: updatedMatch.time,
+          calculatedDeadline: deadlineDateTime.toISOString(),
+          auditType: 'deadline_recalculation_by_admin',
+          createdAt: new Date().toISOString(),
+          details: `Partida/Prazos atualizados pelo admin. Novo limite de confirmação calculado: ${deadlineDateStr}.`
+        });
+      }
 
       db.matches[index] = updatedMatch;
 
@@ -1206,7 +1770,7 @@ async function startServer() {
 
   app.post('/api/recurrent-config', (req, res) => {
     try {
-      const { dayOfWeek, time, location, durationMinutes, confirmationDeadlineDaysBefore, active, monthlyFee, chargeDateRule, maxMensalistas } = req.body;
+      const { dayOfWeek, time, location, durationMinutes, confirmationDeadlineDaysBefore, active, maxMensalistas } = req.body;
 
       const db = readDb();
       db.recurrentConfig = {
@@ -1216,8 +1780,6 @@ async function startServer() {
         durationMinutes: parseInt(durationMinutes),
         confirmationDeadlineDaysBefore: parseInt(confirmationDeadlineDaysBefore),
         active: active !== undefined ? !!active : true,
-        monthlyFee: monthlyFee !== undefined ? parseFloat(monthlyFee) : (db.recurrentConfig?.monthlyFee || 100),
-        chargeDateRule: chargeDateRule || (db.recurrentConfig?.chargeDateRule || 'primeiro_jogo'),
         maxMensalistas: maxMensalistas !== undefined ? parseInt(maxMensalistas) : (db.recurrentConfig?.maxMensalistas || 12)
       };
 
@@ -1307,9 +1869,17 @@ async function startServer() {
         let myParticipant = null;
         let myBill = null;
 
+        let targetPlayerId = playerId as string;
         if (playerId) {
-          myParticipant = eventParts.find(p => p.playerId === playerId) || null;
-          myBill = bills.find(b => b.eventId === evt.id && b.playerId === playerId) || null;
+          const mappedId = getPlayerIdForUser(db, playerId as string);
+          if (mappedId) {
+            targetPlayerId = mappedId;
+          }
+        }
+
+        if (playerId) {
+          myParticipant = eventParts.find(p => p.playerId === targetPlayerId) || null;
+          myBill = bills.find(b => b.eventId === evt.id && b.playerId === targetPlayerId) || null;
         }
 
         const eventBillsOfEvt = bills.filter(b => b.eventId === evt.id);
@@ -1596,7 +2166,7 @@ async function startServer() {
   app.post('/api/events/:id/confirm', (req, res) => {
     try {
       const { id } = req.params;
-      const { playerId, adultsCount, childrenCount } = req.body;
+      let { playerId, adultsCount, childrenCount } = req.body;
 
       if (!playerId || adultsCount === undefined || childrenCount === undefined) {
         return res.status(400).json({ error: 'playerId, adultsCount e childrenCount são obrigatórios.' });
@@ -1612,9 +2182,45 @@ async function startServer() {
         return res.status(400).json({ error: 'Este evento já está encerrado ou cancelado.' });
       }
 
-      const player = db.players.find(p => p.id === playerId);
+      let player = db.players.find(p => p.id === playerId);
       if (!player) {
-        return res.status(404).json({ error: 'Atleta não encontrado.' });
+        const mappedId = getPlayerIdForUser(db, playerId);
+        if (mappedId) {
+          playerId = mappedId;
+          player = db.players.find((p) => p.id === playerId);
+        }
+      }
+
+      if (!player) {
+        const user = db.users.find((u: any) => u.id === playerId);
+        if (user) {
+          const newPlId = 'player-' + Date.now();
+          const newPlayer: any = {
+            id: newPlId,
+            name: user.name,
+            email: user.email,
+            phone: '(85) 99999-9999',
+            photoOriginal: '',
+            playerCardUrl: '',
+            favoriteTeamId: 'out',
+            category: 'reserva',
+            status: 'disponivel',
+            primaryPosition: 'meio_campo',
+            secondaryPositions: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            currentStreak: 0,
+            maxStreak: 0
+          };
+          db.players.push(newPlayer);
+          user.playerId = newPlId;
+          writeDb(db);
+
+          playerId = newPlId;
+          player = newPlayer;
+        } else {
+          return res.status(404).json({ error: 'Atleta não encontrado.' });
+        }
       }
 
       if (!db.eventParticipants) db.eventParticipants = [];
@@ -1735,30 +2341,21 @@ async function startServer() {
         return res.status(404).json({ error: 'Partida não encontrada.' });
       }
 
-      const matchPresences = db.presences.filter((p) => p.matchId === matchId);
-      const activePlayers = db.players.filter((p) => !p.deletedAt);
+      const mergedList = getComputedPresences(db, matchId);
 
-      // Merge players list with existing presence confirmations, defaults to 'nao_confirmado'
-      const mergedList = activePlayers.map((player) => {
-        const pres = matchPresences.find((p) => p.playerId === player.id);
-        return {
-          playerId: player.id,
-          name: player.name,
-          category: player.category,
-          status: player.status,
-          presenceStatus: pres ? pres.status : ('nao_confirmado' as PresenceStatus),
-          confirmedAt: pres ? pres.confirmedAt : undefined
-        };
-      });
-
-      // Sort list: mensalistas e mensalistas_goleiros first, reserves second!
-      mergedList.sort((a, b) => {
-        const catOrder: Record<string, number> = { mensalista_goleiro: 1, mensalista: 2, reserva: 3 };
-        return (catOrder[a.category] || 99) - (catOrder[b.category] || 99);
-      });
+      const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+      const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
+      const { deadlineDateTime, isDeadlineExpired, deadlineDateStr, hoursRemaining } = getMatchDeadlineInfo(match, matchDeadlineDays);
+      const enrichedMatch = {
+        ...match,
+        isDeadlineExpired,
+        deadlineDateStr,
+        hoursRemaining,
+        deadlineDateISO: deadlineDateTime.toISOString()
+      };
 
       return res.json({
-        match,
+        match: enrichedMatch,
         presences: mergedList
       });
     } catch (err) {
@@ -1769,7 +2366,7 @@ async function startServer() {
   app.post('/api/matches/:matchId/presences/toggle', (req, res) => {
     try {
       const { matchId } = req.params;
-      const { playerId, status } = req.body; // status: 'confirmado' | 'nao_confirmado' | 'cancelado'
+      const { playerId, status, manuallyApproved } = req.body; // status: 'confirmado' | 'nao_confirmado' | 'cancelado'
 
       if (!playerId || !status) {
         return res.status(400).json({ error: 'playerId e status são obrigatórios.' });
@@ -1781,25 +2378,82 @@ async function startServer() {
         return res.status(404).json({ error: 'Partida não existe.' });
       }
 
-      const player = db.players.find((p) => p.id === playerId);
+      let resolvedPlayerId = playerId;
+      let player = db.players.find((p) => p.id === playerId);
       if (!player) {
-        return res.status(404).json({ error: 'Jogador não encontrado.' });
+        const mappedId = getPlayerIdForUser(db, playerId);
+        if (mappedId) {
+          resolvedPlayerId = mappedId;
+          player = db.players.find((p) => p.id === resolvedPlayerId);
+        }
       }
 
-      let presenceIndex = db.presences.findIndex((p) => p.matchId === matchId && p.playerId === playerId);
+      if (!player) {
+        // Let's check if playerId is actually a userId in db.users
+        const user = db.users.find((u: any) => u.id === playerId);
+        if (user) {
+          // Auto-create a player for this user
+          const newPlId = 'player-' + Date.now();
+          const newPlayer: any = {
+            id: newPlId,
+            name: user.name,
+            email: user.email,
+            phone: '(85) 99999-9999',
+            photoOriginal: '',
+            playerCardUrl: '',
+            favoriteTeamId: 'out',
+            category: 'reserva',
+            status: 'disponivel',
+            primaryPosition: 'meio_campo',
+            secondaryPositions: [],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            currentStreak: 0,
+            maxStreak: 0
+          };
+          db.players.push(newPlayer);
+          user.playerId = newPlId;
+          writeDb(db);
+
+          resolvedPlayerId = newPlId;
+          player = newPlayer;
+        } else {
+          return res.status(404).json({ error: 'Jogador não encontrado.' });
+        }
+      }
+
+      // Ensure we use the resolved Player ID from now on
+      const effectivePlayerId = resolvedPlayerId;
+
+      // Check deadline for mensalistas (non-reserves)
+      const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+      const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
+      const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
+
+      if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired) {
+        return res.status(400).json({ error: 'Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.' });
+      }
+
+      let presenceIndex = db.presences.findIndex((p) => p.matchId === matchId && p.playerId === effectivePlayerId);
       let previousStatus: PresenceStatus = 'nao_confirmado';
 
       if (presenceIndex !== -1) {
         previousStatus = db.presences[presenceIndex].status;
         db.presences[presenceIndex].status = status;
         db.presences[presenceIndex].confirmedAt = status === 'confirmado' ? new Date().toISOString() : undefined;
+        if (manuallyApproved !== undefined) {
+          db.presences[presenceIndex].manuallyApproved = manuallyApproved;
+        } else if (status === 'cancelado') {
+          db.presences[presenceIndex].manuallyApproved = false;
+        }
       } else {
         db.presences.push({
           id: 'pres-' + Date.now(),
           matchId,
-          playerId,
+          playerId: effectivePlayerId,
           status,
-          confirmedAt: status === 'confirmado' ? new Date().toISOString() : undefined
+          confirmedAt: status === 'confirmado' ? new Date().toISOString() : undefined,
+          manuallyApproved: manuallyApproved || false
         });
       }
 
@@ -1835,7 +2489,7 @@ async function startServer() {
         const alertObj = {
           id: 'alert-' + Date.now(),
           matchId,
-          cancelledPlayerId: playerId,
+          cancelledPlayerId: effectivePlayerId,
           suggestedReservePlayerId,
           createdAt: new Date().toISOString(),
           cleared: false
@@ -1875,6 +2529,140 @@ async function startServer() {
     } catch (err) {
       console.error('[Toggle Presence Error]', err);
       return res.status(500).json({ error: 'Erro ao atualizar confirmação de presença.' });
+    }
+  });
+
+  app.post('/api/matches/:matchId/presences/bulk-toggle', (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const { playerIds, status } = req.body; // status: 'confirmado' | 'nao_confirmado' | 'cancelado'
+
+      if (!playerIds || !Array.isArray(playerIds) || playerIds.length === 0 || !status) {
+        return res.status(400).json({ error: 'playerIds (array) e status são obrigatórios.' });
+      }
+
+      const db = readDb();
+      const match = db.matches.find((m) => m.id === matchId);
+      if (!match) {
+        return res.status(404).json({ error: 'Partida não existe.' });
+      }
+
+      const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+      const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
+      const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
+
+      let count = 0;
+      let alertsCreatedCount = 0;
+
+      for (const idToToggle of playerIds) {
+        let resolvedPlayerId = idToToggle;
+        let player = db.players.find((p) => p.id === idToToggle);
+        if (!player) {
+          const mappedId = getPlayerIdForUser(db, idToToggle);
+          if (mappedId) {
+            resolvedPlayerId = mappedId;
+            player = db.players.find((p) => p.id === resolvedPlayerId);
+          }
+        }
+
+        if (!player) {
+          continue;
+        }
+
+        if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired) {
+          continue; // Skip mensalistas after deadline
+        }
+
+        const effectivePlayerId = resolvedPlayerId;
+        let presenceIndex = db.presences.findIndex((p) => p.matchId === matchId && p.playerId === effectivePlayerId);
+        let previousStatus: PresenceStatus = 'nao_confirmado';
+
+        if (presenceIndex !== -1) {
+          previousStatus = db.presences[presenceIndex].status;
+          db.presences[presenceIndex].status = status;
+          db.presences[presenceIndex].confirmedAt = status === 'confirmado' ? new Date().toISOString() : undefined;
+          if (status === 'confirmado') {
+            db.presences[presenceIndex].manuallyApproved = true;
+          } else if (status === 'cancelado') {
+            db.presences[presenceIndex].manuallyApproved = false;
+          }
+        } else {
+          db.presences.push({
+            id: 'pres-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            matchId,
+            playerId: effectivePlayerId,
+            status,
+            confirmedAt: status === 'confirmado' ? new Date().toISOString() : undefined,
+            manuallyApproved: status === 'confirmado'
+          });
+        }
+
+        count++;
+
+        if (previousStatus === 'confirmado' && status === 'cancelado') {
+          const activeReserves = db.players.filter((p) => p.category === 'reserva' && !p.deletedAt && p.status === 'disponivel');
+          const unconfirmedReserves = activeReserves.filter((p) => {
+            const pres = db.presences.find((pr) => pr.matchId === matchId && pr.playerId === p.id);
+            return !pres || pres.status !== 'confirmado';
+          });
+
+          let suggestedReservePlayerId: string | undefined = undefined;
+          const currentReservesOrder = db.reservesOrder || [];
+
+          for (const orderId of currentReservesOrder) {
+            const isEligible = unconfirmedReserves.some((r) => r.id === orderId);
+            if (isEligible) {
+              suggestedReservePlayerId = orderId;
+              break;
+            }
+          }
+
+          if (!suggestedReservePlayerId && unconfirmedReserves.length > 0) {
+            suggestedReservePlayerId = unconfirmedReserves[0].id;
+          }
+
+          const alertObj = {
+            id: 'alert-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            matchId,
+            cancelledPlayerId: effectivePlayerId,
+            suggestedReservePlayerId,
+            createdAt: new Date().toISOString(),
+            cleared: false
+          };
+
+          db.reserveAlerts.push(alertObj);
+          alertsCreatedCount++;
+
+          if (suggestedReservePlayerId) {
+            const reservePlayer = db.players.find(p => p.id === suggestedReservePlayerId);
+            if (reservePlayer) {
+              notify(db, {
+                category: 'partida',
+                title: '🏃 vaga de Reserva Convocada!',
+                message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
+                targetUserId: suggestedReservePlayerId,
+                actionUrl: 'calendar'
+              });
+              notify(db, {
+                category: 'partida',
+                title: '👥 Vaga Aberta e Convocação',
+                message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
+                targetUserId: 'all',
+                actionUrl: 'calendar'
+              });
+            }
+          }
+        }
+      }
+
+      writeDb(db);
+      return res.json({
+        message: `${count} presenças atualizadas com sucesso.`,
+        alertsCreatedCount
+      });
+    } catch (err) {
+      console.error('[Bulk Toggle Presence Error]', err);
+      return res.status(500).json({ error: 'Erro ao atualizar presenças em massa.' });
     }
   });
 
@@ -2086,14 +2874,65 @@ async function startServer() {
       db.duoAffinities = db.duoAffinities || [];
       db.trioAffinities = db.trioAffinities || [];
 
+      // Check for duplicate recording protection
+      if (drawObj.affinitiesRecorded === true) {
+        return res.json({ 
+          message: 'Relações de afinidades já haviam sido consolidadas anteriormente para esta partida.', 
+          alreadyRecorded: true 
+        });
+      }
+
       // Record affinity increments for each team's players
       drawObj.teams.forEach(t => {
         const teamPlayers = t.playerIds;
         recordAffinities(teamPlayers, db.duoAffinities, db.trioAffinities);
       });
 
+      // Set idempotency protection flag
+      drawObj.affinitiesRecorded = true;
+
+      // Logger details for auditing
+      const totalDuosCount = drawObj.teams.reduce((acc, t) => {
+        const n = t.playerIds.length;
+        return acc + (n >= 2 ? (n * (n - 1)) / 2 : 0);
+      }, 0);
+      const totalTriosCount = drawObj.teams.reduce((acc, t) => {
+        const n = t.playerIds.length;
+        return acc + (n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0);
+      }, 0);
+
+      // Audit Log Registration
+      db.userAudits = db.userAudits || [];
+      const matchObj = db.matches.find(m => m.id === drawObj.matchId);
+      const matchName = matchObj ? `Racha de ${matchObj.date} em ${matchObj.location}` : `Partida ID ${drawObj.matchId}`;
+
+      db.userAudits.push({
+        id: 'audit-affinity-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        timestamp: new Date().toISOString(),
+        action: 'Registro de Afinidades de Time',
+        userName: 'Coordenador',
+        userEmail: 'sistema@racha.fofim',
+        userId: 'system',
+        previousRole: 'system',
+        newRole: 'system',
+        performedBy: 'Bloqueio do Sorteio (Idempotente)',
+        details: {
+          matchId: drawObj.matchId,
+          matchDate: matchObj ? matchObj.date : drawObj.date,
+          matchName: matchName,
+          duosCount: totalDuosCount,
+          triosCount: totalTriosCount,
+          loggedMessage: `Consolidação de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
+        }
+      });
+
       writeDb(db);
-      return res.json({ message: 'Sorteio consolidado com sucesso! Afinidade de duplas e trios atualizada para novas partidas.' });
+      return res.json({ 
+        message: 'Sorteio consolidado com sucesso! Afinidade de duplas e trios atualizada para novas partidas.',
+        alreadyRecorded: false,
+        duosCount: totalDuosCount,
+        triosCount: totalTriosCount
+      });
     } catch (err) {
       console.error('[Error Locking Draw]', err);
       return res.status(500).json({ error: 'Falha ao consolidar relações de afinidades.' });
@@ -2228,16 +3067,21 @@ async function startServer() {
       db.duoAffinities = db.duoAffinities || [];
       db.trioAffinities = db.trioAffinities || [];
 
+      const filterRecorded = draw.affinitiesRecorded === true;
+      const winsAlreadyRecorded = draw.winsRecorded === true;
+
       // Record played and wins count directly for teams
       draw.teams.forEach(t => {
         const teamPlayers = t.playerIds;
         const isChamp = champions.includes(t.name);
 
-        // Record general partnership count played together first
-        recordAffinities(teamPlayers, db.duoAffinities, db.trioAffinities);
+        // Record general partnership count played together first (only if not already recorded)
+        if (!filterRecorded) {
+          recordAffinities(teamPlayers, db.duoAffinities, db.trioAffinities);
+        }
 
-        // Record won together (increment winsCount)
-        if (isChamp) {
+        // Record won together (increment winsCount) only if not already recorded
+        if (isChamp && !winsAlreadyRecorded) {
           // Duo partners wins count
           for (let i = 0; i < teamPlayers.length; i++) {
             for (let j = i + 1; j < teamPlayers.length; j++) {
@@ -2268,6 +3112,45 @@ async function startServer() {
           }
         }
       });
+
+      const newlyRecordedAffinities = !filterRecorded;
+      draw.affinitiesRecorded = true;
+      draw.winsRecorded = true;
+
+      // Log to audit if we newly registered affinities
+      if (newlyRecordedAffinities) {
+        const totalDuosCount = draw.teams.reduce((acc, t) => {
+          const n = t.playerIds.length;
+          return acc + (n >= 2 ? (n * (n - 1)) / 2 : 0);
+        }, 0);
+        const totalTriosCount = draw.teams.reduce((acc, t) => {
+          const n = t.playerIds.length;
+          return acc + (n >= 3 ? (n * (n - 1) * (n - 2)) / 6 : 0);
+        }, 0);
+
+        db.userAudits = db.userAudits || [];
+        const matchName = match ? `Racha de ${match.date} em ${match.location}` : `Partida ID ${matchId}`;
+
+        db.userAudits.push({
+          id: 'audit-affinity-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          timestamp: new Date().toISOString(),
+          action: 'Registro de Afinidades de Time',
+          userName: 'Coordenador',
+          userEmail: 'sistema@racha.fofim',
+          userId: 'system',
+          previousRole: 'system',
+          newRole: 'system',
+          performedBy: 'Registro de Resultados (Idempotente)',
+          details: {
+            matchId: matchId,
+            matchDate: match ? match.date : draw.date,
+            matchName: matchName,
+            duosCount: totalDuosCount,
+            triosCount: totalTriosCount,
+            loggedMessage: `Consolidação de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
+          }
+        });
+      }
 
       // --- STREAK UPDATE FOR PLAYERS ---
       const blueTeamPlayerIds = new Set(draw.teams.find(t => t.name === 'Azul')?.playerIds || []);
@@ -2710,6 +3593,7 @@ async function startServer() {
           payments: db.payments,
           competences: db.competences,
           recurrentConfig: db.recurrentConfig,
+          financeConfig: db.financeConfig,
           health,
           players: allPlayers
         });
@@ -2722,6 +3606,7 @@ async function startServer() {
             payments: [],
             competences: [],
             recurrentConfig: db.recurrentConfig,
+            financeConfig: db.financeConfig,
             health,
             players: []
           });
@@ -2736,6 +3621,7 @@ async function startServer() {
           payments: myPayments,
           competences: [], // Hide competences structure due to privacy
           recurrentConfig: db.recurrentConfig,
+          financeConfig: db.financeConfig,
           health,
           players: [player] // Only return themselves
         });
@@ -2743,6 +3629,83 @@ async function startServer() {
     } catch (err) {
       console.error('[API GET Finances]', err);
       return res.status(500).json({ error: 'Erro ao buscar dados financeiros.' });
+    }
+  });
+
+  app.get('/api/finances/config', (req, res) => {
+    try {
+      const db = readDb();
+      return res.json(db.financeConfig || {
+        monthlyFee: 100,
+        chargeDateRule: 'primeiro_jogo',
+        history: [{ date: '2026-01-01', amount: 100 }]
+      });
+    } catch (err) {
+      return res.status(500).json({ error: 'Erro ao obter configuração financeira.' });
+    }
+  });
+
+  app.post('/api/finances/config', (req, res) => {
+    try {
+      const { monthlyFee, chargeDateRule, effectiveDate } = req.body;
+      const db = readDb();
+
+      if (!db.financeConfig) {
+        db.financeConfig = {
+          monthlyFee: 100,
+          chargeDateRule: 'primeiro_jogo',
+          history: [{ date: '2026-01-01', amount: 100 }]
+        };
+      }
+
+      const prevFee = db.financeConfig.monthlyFee;
+      const newFee = parseFloat(monthlyFee);
+
+      if (isNaN(newFee) || newFee <= 0) {
+        return res.status(400).json({ error: 'Valor da mensalidade inválido.' });
+      }
+
+      if (chargeDateRule !== 'primeiro_jogo' && chargeDateRule !== 'ultimo_jogo') {
+        return res.status(400).json({ error: 'Forma de geração inválida. Escolha entre Primeiro Jogo ou Último Jogo.' });
+      }
+
+      const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
+      if (prevFee !== newFee) {
+        const existingIdx = db.financeConfig.history.findIndex(h => h.date === targetEffectiveDate);
+        if (existingIdx >= 0) {
+          db.financeConfig.history[existingIdx].amount = newFee;
+        } else {
+          db.financeConfig.history.push({
+            date: targetEffectiveDate,
+            amount: newFee
+          });
+        }
+        db.financeConfig.monthlyFee = newFee;
+      }
+
+      db.financeConfig.chargeDateRule = chargeDateRule;
+
+      db.userAudits = db.userAudits || [];
+      db.userAudits.push({
+        id: 'audit-fin-change-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        timestamp: new Date().toISOString(),
+        userId: 'admin',
+        userName: 'Administrador',
+        userEmail: 'admin@racha.com',
+        action: 'Alteração de Parâmetros Financeiros',
+        previousRole: '',
+        newRole: '',
+        previousStatus: '',
+        newStatus: '',
+        performedBy: 'Administrador',
+        details: `Parâmetros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (Vigência: ${targetEffectiveDate}). Nova regra de geração: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do Mês' : 'Último Jogo do Mês'}.`
+      });
+
+      writeDb(db);
+      return res.json(db.financeConfig);
+    } catch (err) {
+      console.error('[API POST /api/finances/config]', err);
+      return res.status(500).json({ error: 'Erro ao salvar configuração financeira.' });
     }
   });
 
@@ -3159,7 +4122,7 @@ async function startServer() {
   // Add a new post
   app.post('/api/mural/posts', (req, res) => {
     try {
-      const { title, description, mediaUrl, mediaType, fileSize, category, matchId, eventId, authorId, authorName, authorRole, eventDate, thumbnailUrl, mediumUrl, showOnLanding } = req.body;
+      const { title, description, mediaUrl, mediaType, fileSize, category, matchId, eventId, authorId, authorName, authorRole, eventDate, thumbnailUrl, mediumUrl, showOnLanding, isHighlighted } = req.body;
 
       if (!title || !mediaUrl || !category || !authorId) {
         return res.status(400).json({ error: 'Título, arquivo, categoria e autor são obrigatórios.' });
@@ -3169,6 +4132,29 @@ async function startServer() {
       const newPostId = 'post-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
       const nowIso = new Date().toISOString();
       const defaultEventDate = eventDate || nowIso.split('T')[0];
+
+      const isPostHighlighted = isHighlighted === true;
+      if (isPostHighlighted) {
+        if (!db.muralPosts) db.muralPosts = [];
+        const currentlyHighlighted = db.muralPosts.filter(p => p.isHighlighted === true);
+        if (currentlyHighlighted.length >= 3) {
+          currentlyHighlighted.sort((a, b) => {
+            const dateA = a.highlightedAt || a.createdAt || '';
+            const dateB = b.highlightedAt || b.createdAt || '';
+            return dateA.localeCompare(dateB);
+          });
+          const oldest = currentlyHighlighted[0];
+          const offIndex = db.muralPosts.findIndex(p => p.id === oldest.id);
+          if (offIndex !== -1) {
+            db.muralPosts[offIndex] = {
+              ...db.muralPosts[offIndex],
+              isHighlighted: false,
+              highlightedAt: undefined,
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
+      }
 
       const newPost = {
         id: newPostId,
@@ -3185,7 +4171,8 @@ async function startServer() {
         updatedAt: nowIso,
         matchId: matchId || undefined,
         eventId: eventId || undefined,
-        isHighlighted: false,
+        isHighlighted: isPostHighlighted,
+        highlightedAt: isPostHighlighted ? nowIso : undefined,
         showOnLanding: showOnLanding === true,
         thumbnailUrl: thumbnailUrl || mediaUrl,
         mediumUrl: mediumUrl || mediaUrl,
@@ -3221,7 +4208,7 @@ async function startServer() {
   app.put('/api/mural/posts/:id', (req, res) => {
     try {
       const { id } = req.params;
-      const { title, description, reqUserId, reqUserRole, eventDate, showOnLanding } = req.body;
+      const { title, description, reqUserId, reqUserRole, eventDate, showOnLanding, isHighlighted } = req.body;
 
       if (!title) {
         return res.status(400).json({ error: 'O título é obrigatório.' });
@@ -3244,11 +4231,41 @@ async function startServer() {
         return res.status(403).json({ error: 'Apenas o autor ou o administrador pode editar esta publicação.' });
       }
 
+      const isPostHighlighted = isHighlighted === true;
+      let highlightedAt = post.highlightedAt;
+
+      if (isPostHighlighted && !post.isHighlighted) {
+        // Enforce max 3 highlighted posts
+        const currentlyHighlighted = db.muralPosts.filter(p => p.isHighlighted === true);
+        if (currentlyHighlighted.length >= 3) {
+          currentlyHighlighted.sort((a, b) => {
+            const dateA = a.highlightedAt || a.createdAt || '';
+            const dateB = b.highlightedAt || b.createdAt || '';
+            return dateA.localeCompare(dateB);
+          });
+          const oldest = currentlyHighlighted[0];
+          const offIndex = db.muralPosts.findIndex(p => p.id === oldest.id);
+          if (offIndex !== -1) {
+            db.muralPosts[offIndex] = {
+              ...db.muralPosts[offIndex],
+              isHighlighted: false,
+              highlightedAt: undefined,
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
+        highlightedAt = new Date().toISOString();
+      } else if (!isPostHighlighted) {
+        highlightedAt = undefined;
+      }
+
       db.muralPosts[postIndex] = {
         ...post,
         title: title.trim(),
         description: (description || '').trim(),
         showOnLanding: showOnLanding === true,
+        isHighlighted: isPostHighlighted,
+        highlightedAt,
         updatedAt: new Date().toISOString(),
         eventDate: eventDate || post.eventDate || post.createdAt.split('T')[0]
       };
@@ -3300,7 +4317,7 @@ async function startServer() {
     }
   });
 
-  // Highlight/toggle Destacar na Tela Inicial (Admin only)
+  // Highlight/toggle Destacar no Mural (Admin only - Max 3 automatic rollover)
   app.post('/api/mural/posts/:id/highlight', (req, res) => {
     try {
       const { id } = req.params;
@@ -3308,7 +4325,69 @@ async function startServer() {
 
       const isAdmin = reqUserRole === 'admin' || req.query.role === 'admin';
       if (!isAdmin) {
-        return res.status(403).json({ error: 'Apenas Administradores podem gerenciar os destaques.' });
+        return res.status(403).json({ error: 'Apenas Administradores podem gerenciar os destaques do mural.' });
+      }
+
+      const db = readDb();
+      if (!db.muralPosts) db.muralPosts = [];
+
+      const postIndex = db.muralPosts.findIndex(p => p.id === id);
+      if (postIndex === -1) {
+        return res.status(404).json({ error: 'Publicação não encontrada.' });
+      }
+
+      const post = db.muralPosts[postIndex];
+      const newIsHighlighted = !post.isHighlighted;
+
+      if (newIsHighlighted) {
+        // Enforce max 3 highlighted posts on the mural
+        const currentlyHighlighted = db.muralPosts.filter(p => p.isHighlighted === true);
+        if (currentlyHighlighted.length >= 3) {
+          // Sort currently highlighted by highlightedAt or createdAt (oldest first)
+          currentlyHighlighted.sort((a, b) => {
+            const dateA = a.highlightedAt || a.createdAt || '';
+            const dateB = b.highlightedAt || b.createdAt || '';
+            return dateA.localeCompare(dateB);
+          });
+
+          // Unhighlight the oldest one
+          const oldest = currentlyHighlighted[0];
+          const offIndex = db.muralPosts.findIndex(p => p.id === oldest.id);
+          if (offIndex !== -1) {
+            db.muralPosts[offIndex] = {
+              ...db.muralPosts[offIndex],
+              isHighlighted: false,
+              highlightedAt: undefined,
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
+      }
+
+      db.muralPosts[postIndex] = {
+        ...post,
+        isHighlighted: newIsHighlighted,
+        highlightedAt: newIsHighlighted ? new Date().toISOString() : undefined,
+        updatedAt: new Date().toISOString()
+      };
+
+      writeDb(db);
+      res.json(db.muralPosts[postIndex]);
+    } catch (err) {
+      console.error('[API POST Highlight Mural]', err);
+      res.status(500).json({ error: 'Erro ao gerenciar destaque do mural.' });
+    }
+  });
+
+  // Highlight/toggle Destacar na Tela Inicial (Admin only - No Limit)
+  app.post('/api/mural/posts/:id/toggle-landing', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reqUserId, reqUserRole } = req.body;
+
+      const isAdmin = reqUserRole === 'admin' || req.query.role === 'admin';
+      if (!isAdmin) {
+        return res.status(403).json({ error: 'Apenas Administradores podem gerenciar destaque na tela inicial.' });
       }
 
       const db = readDb();
@@ -3325,14 +4404,13 @@ async function startServer() {
       db.muralPosts[postIndex] = {
         ...post,
         showOnLanding: newShowOnLanding,
-        isHighlighted: newShowOnLanding, // keep in sync
         updatedAt: new Date().toISOString()
       };
 
       writeDb(db);
       res.json(db.muralPosts[postIndex]);
     } catch (err) {
-      console.error('[API POST Highlight]', err);
+      console.error('[API POST Toggle Landing]', err);
       res.status(500).json({ error: 'Erro ao gerenciar destaque da tela inicial.' });
     }
   });

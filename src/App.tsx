@@ -28,7 +28,8 @@ import {
   Calendar,
   DollarSign,
   Gift,
-  AlertTriangle
+  AlertTriangle,
+  X
 } from 'lucide-react';
 import CalendarManager from './components/CalendarManager';
 import DrawManager from './components/DrawManager';
@@ -49,6 +50,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<NavTab>('dash');
   const [players, setPlayers] = useState<Player[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Player search and filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -303,21 +305,33 @@ export default function App() {
       <header className="sticky top-0 z-40 bg-[#0d1612]/95 border-b border-zinc-900 backdrop-blur-md px-4 py-3 select-none">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <div className="bg-[#22c55e] p-1.5 rounded-lg border border-white/10 flex items-center justify-center shadow shadow-emerald-500/10">
-              <Shield className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-display font-black text-sm tracking-tight text-white uppercase">
-                Racha do <span className="text-[#22c55e]">Fofim</span>
-              </span>
-              <span className="block text-[8px] font-mono text-zinc-500 uppercase tracking-wide">
-                Private Soccer Group
-              </span>
+            <button
+              id="btn-mobile-menu"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="lg:hidden p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/40 rounded-xl border border-zinc-850 h-[44px] px-3 flex items-center justify-center gap-1.5"
+              title="Abrir Menu"
+            >
+              <span className="text-lg">☰</span>
+              <span className="font-semibold text-xs text-white">Menu</span>
+            </button>
+
+            <div className="hidden sm:flex items-center gap-2">
+              <div className="bg-[#22c55e] p-1.5 rounded-lg border border-white/10 flex items-center justify-center shadow shadow-emerald-500/10">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="font-display font-black text-sm tracking-tight text-white uppercase">
+                  Racha do <span className="text-[#22c55e]">Fofim</span>
+                </span>
+                <span className="block text-[8px] font-mono text-zinc-500 uppercase tracking-wide">
+                  Private Soccer Group
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Quick Nav bar links */}
-          <nav className="flex items-center bg-[#131e18] p-1 rounded-xl border border-zinc-850 text-xs">
+          <nav className="hidden lg:flex items-center bg-[#131e18] p-1 rounded-xl border border-zinc-850 text-xs">
             <button
               id="tab-dash"
               onClick={() => { setActiveTab('dash'); setIsFormOpen(false); }}
@@ -456,7 +470,7 @@ export default function App() {
             <button
               id="btn-logout"
               onClick={handleLogout}
-              className="p-2 border border-zinc-850 hover:bg-rose-950/20 text-zinc-400 hover:text-rose-400 rounded-xl transition cursor-pointer"
+              className="p-2 border border-zinc-850 hover:bg-rose-950/20 text-zinc-400 hover:text-rose-400 rounded-xl transition cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
               title="Sair da Conta"
             >
               <LogOut className="w-4 h-4" />
@@ -464,6 +478,119 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      {/* MOBILE SIDEBAR MENU DRAWER */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-[150] lg:hidden" id="mobile-menu-drawer">
+          {/* Backdrop with transition fade effect */}
+          <div 
+            className="absolute inset-0 bg-black/85 backdrop-blur-sm transition-opacity duration-305"
+            onClick={() => setIsMobileMenuOpen(false)} 
+          />
+          
+          {/* Menu Panel sliding from left */}
+          <div className="absolute top-0 bottom-0 left-0 w-[280px] max-w-[85vw] bg-[#0c1210] border-r border-zinc-800/80 flex flex-col justify-between p-5 shadow-2xl h-full transition-transform duration-300">
+            <div className="space-y-6">
+              {/* Drawer Title Block */}
+              <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#22c55e] p-1.5 rounded-lg border border-white/10 flex items-center justify-center shadow">
+                    <Shield className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <span className="font-display font-black text-sm tracking-tight text-white uppercase block">
+                      Racha do <span className="text-[#22c55e]">Fofim</span>
+                    </span>
+                    <span className="text-[8px] font-mono text-zinc-505 uppercase tracking-wider block">
+                      Grupo Privado Society
+                    </span>
+                  </div>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1.5 border border-zinc-800 hover:bg-zinc-800/80 text-zinc-400 hover:text-white rounded-lg transition min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
+                  title="Fechar Menu"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              {/* Connected Active Profile info card */}
+              <div className="bg-zinc-950/60 p-3 rounded-xl border border-zinc-900/40 flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs uppercase">
+                  {currentUser.name?.slice(0, 2).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold text-white truncate leading-tight">{currentUser.name}</span>
+                  <span className="block text-[8px] font-mono text-emerald-400 uppercase tracking-wider mt-0.5">{currentUser.role === 'admin' ? 'Administrador' : currentUser.role === 'auxiliar' ? 'Auxiliar Técnico' : 'Atleta'}</span>
+                </div>
+              </div>
+
+              {/* Navigation Items list (Interactive and touch-safe) */}
+              <nav className="flex flex-col gap-1.5 font-sans">
+                {[
+                  { id: 'dash', label: 'Início', icon: LayoutDashboard },
+                  { id: 'players', label: 'Jogadores', icon: Users },
+                  { id: 'calendar', label: 'Calendário', icon: Calendar },
+                  { id: 'draw', label: 'Sorteio', icon: Sparkles },
+                  { id: 'ranking', label: 'Ranking', icon: Award },
+                  { id: 'finances', label: 'Financeiro', icon: DollarSign },
+                  { id: 'events', label: 'Eventos', icon: Gift },
+                  { id: 'mural', label: 'Mural', icon: Camera },
+                  ...(isEditor ? [{ id: 'approvals', label: 'Aprovações', icon: CheckSquare, showBadge: true }] : [])
+                ].map((item) => {
+                  const IconComp = item.icon;
+                  const isCurActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(item.id as NavTab);
+                        setIsFormOpen(false);
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className={`w-full min-h-[44px] px-3.5 rounded-xl font-bold text-xs flex items-center justify-between transition cursor-pointer ${
+                        isCurActive
+                          ? 'bg-emerald-600 text-white shadow shadow-emerald-500/10'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent hover:border-zinc-850'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <IconComp className={`w-4 h-4 ${isCurActive ? 'text-white' : 'text-zinc-500'}`} />
+                        <span>{item.label}</span>
+                      </div>
+                      
+                      {item.showBadge && pendingApprovalsCount > 0 && (
+                        <span className="bg-amber-500 text-zinc-950 font-black px-1.5 py-0.5 rounded-full text-[9px] font-mono leading-none">
+                          {pendingApprovalsCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Logout actions of main app */}
+            <div className="border-t border-zinc-900 pt-4 mt-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  handleLogout();
+                }}
+                className="w-full min-h-[44px] px-4 bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-white font-bold text-xs rounded-xl border border-rose-500/20 hover:border-transparent flex items-center justify-center gap-2 transition cursor-pointer uppercase tracking-wider font-mono"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Sair da Conta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Container Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6 relative">

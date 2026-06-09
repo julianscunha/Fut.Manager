@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, Zap, RotateCcw, TrendingUp, ChevronDown, ChevronUp, Star, Award, History } from 'lucide-react';
 import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
+import { getAchievementsForPlayer, Achievement } from '../utils/achievements';
 
 interface PlayerCardProps {
   key?: any;
@@ -26,6 +27,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   // Real-time metrics
   const [metrics, setMetrics] = useState<any>(null);
   const [rachaStats, setRachaStats] = useState<any>(null);
+  const [allStats, setAllStats] = useState<any>(null);
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [evalModalOpen, setEvalModalOpen] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
@@ -48,6 +50,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       const statsRes = await fetch('/api/stats');
       if (statsRes.ok) {
         const statsData = await statsRes.json();
+        setAllStats(statsData);
         const statsObj = (statsData.individual || []).find((s: any) => s.playerId === player.id);
         if (statsObj) {
           setRachaStats(statsObj);
@@ -601,6 +604,95 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                         Sem trocas de categorias registradas para este atleta.
                       </p>
                     )}
+                  </div>
+
+                  {/* Categorized and Styled Player Achievements component */}
+                  <div className="space-y-3 bg-[#0a0f0d] p-3.5 rounded-xl border border-zinc-900 shadow-inner font-sans">
+                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🏅</span>
+                        <h4 className="font-display font-black text-xs text-white uppercase tracking-wider">Conquistas do Jogador</h4>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-400 font-extrabold bg-[#22c55e]/10 px-2 py-0.5 rounded border border-[#22c55e]/20">
+                        {getAchievementsForPlayer(player, rachaStats, allStats).filter(a => a.earned).length} / {getAchievementsForPlayer(player, rachaStats, allStats).length} Concluídas
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                      {getAchievementsForPlayer(player, rachaStats, allStats).map((ach) => {
+                        // Determine border color and style based on category
+                        let categoryClasses = "";
+                        let textBadgeColor = "";
+                        switch (ach.category) {
+                          case 'bronze':
+                            categoryClasses = "border-amber-955/10 bg-amber-955/[0.02] text-amber-500 hover:bg-amber-950/[0.04]";
+                            textBadgeColor = "text-amber-500";
+                            break;
+                          case 'prata':
+                            categoryClasses = "border-zinc-800 bg-zinc-900/10 text-zinc-350 hover:bg-zinc-900/20";
+                            textBadgeColor = "text-zinc-500";
+                            break;
+                          case 'ouro':
+                            categoryClasses = "border-yellow-600/20 bg-yellow-950/[0.02] text-yellow-500 hover:bg-yellow-950/[0.04] ring-1 ring-yellow-550/5";
+                            textBadgeColor = "text-yellow-400";
+                            break;
+                          case 'lendaria':
+                            categoryClasses = "border-purple-500/10 bg-purple-950/[0.04] text-purple-400 hover:bg-purple-950/[0.08] ring-1 ring-purple-550/10 shadow-[0_0_10px_rgba(168,85,247,0.01)]";
+                            textBadgeColor = "text-purple-400";
+                            break;
+                        }
+
+                        return (
+                          <div
+                            key={ach.id}
+                            className={`flex gap-3 p-2.5 rounded-lg border transition ${categoryClasses} ${
+                              ach.earned ? 'opacity-100' : 'opacity-40'
+                            }`}
+                          >
+                            {/* Left Badge with styling */}
+                            <div className={`w-11 h-11 flex-shrink-0 rounded-lg flex items-center justify-center text-xl select-none transition ${
+                              ach.earned 
+                                ? 'bg-zinc-950 border border-white/5 shadow-md scale-105' 
+                                : 'bg-zinc-900/40 border border-zinc-950 grayscale'
+                            }`}>
+                              {ach.icon}
+                            </div>
+
+                            {/* Middle & Right Content */}
+                            <div className="flex-1 min-w-0 flex flex-col justify-between">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="block text-[11px] font-bold text-white leading-tight truncate">{ach.title}</span>
+                                <span className={`text-[8px] font-mono font-bold uppercase tracking-wider ${textBadgeColor}`}>
+                                  {ach.category === 'lendaria' ? 'Lendária' : ach.category}
+                                </span>
+                              </div>
+                              <p className="text-[10.5px] text-zinc-400 leading-snug mt-0.5 line-clamp-2">{ach.description}</p>
+                              
+                              {/* Progress bar info for unlocked/locked achievements */}
+                              <div className="mt-1.5 flex items-center gap-2">
+                                <div className="flex-1 h-1 bg-zinc-950/80 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full transition-all duration-300 ${
+                                      ach.earned 
+                                        ? 'bg-[#22c55e]' 
+                                        : ach.category === 'lendaria' 
+                                          ? 'bg-purple-650' 
+                                          : ach.category === 'ouro' 
+                                            ? 'bg-yellow-550' 
+                                            : 'bg-zinc-600'
+                                    }`}
+                                    style={{ width: `${ach.progressPercent}%` }}
+                                  />
+                                </div>
+                                <span className="text-[8px] font-mono text-zinc-500 font-bold whitespace-nowrap leading-none">
+                                  {ach.progress} / {ach.target}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
 
                   {/* Click to trigger evaluator modal from sheet directly */}

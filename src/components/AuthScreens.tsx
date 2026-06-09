@@ -624,7 +624,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
         <div id="landing-mural-thumbnails" className="w-full max-w-md bg-[#0a0f0d]/90 border border-zinc-850/80 rounded-2xl p-4 shadow-xl flex flex-col gap-3 relative mt-4 animate-fadeIn">
           <div className="flex items-center justify-between font-mono text-[9px] text-zinc-500 uppercase tracking-wider">
             <span>Galeria Recente</span>
-            <span>Até 6 mídias públicas em destaque</span>
+            <span>Até 6 mídias em destaque</span>
           </div>
 
           <div className="grid grid-cols-3 gap-2">

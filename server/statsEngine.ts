@@ -216,8 +216,8 @@ export function computeStatsForSeason({
       presences,
       vitorias,
       aproveitamento,
-      currentStreak: p.currentStreak || 0,
-      maxStreak: p.maxStreak || 0
+      currentStreak: currentStreakMap[p.id] || 0,
+      maxStreak: maxStreakMap[p.id] || 0
     };
   });
 

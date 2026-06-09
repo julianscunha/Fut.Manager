@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, PresenceStatus } from '../types';
+import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
 import { 
   Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check, 
   Users, Users2, Shield, Sparkles, X, ChevronDown, ChevronUp, BellRing,
@@ -27,12 +28,27 @@ export default function DashboardStatus({
   const [presences, setPresences] = useState<any[]>([]);
   const [reserveAlerts, setReserveAlerts] = useState<any[]>([]);
   const [myPresence, setMyPresence] = useState<string>('nao_confirmado');
+  const [resolvedPlayerId, setResolvedPlayerId] = useState<string | null>(currentUser.playerId || null);
+  const [currentUserCategory, setCurrentUserCategory] = useState<string>('reserva');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [isHoveredHighlight, setIsHoveredHighlight] = useState(false);
   const [showPresenceListDetail, setShowPresenceListDetail] = useState(false);
+  const [selectedPlayerIds, setSelectedPlayerIds] = useState<string[]>([]);
+
+  // Admin Operational states
+  const [allMatches, setAllMatches] = useState<any[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<any[]>([]);
+  const [priorityReserves, setPriorityReserves] = useState<any[]>([]);
+  const [loadingReserves, setLoadingReserves] = useState(false);
+  const [showReserveSuggestions, setShowReserveSuggestions] = useState(false);
+  
+  // Results inputs for inline past match registrations
+  const [winsBlueInput, setWinsBlueInput] = useState<string>('0');
+  const [winsRedInput, setWinsRedInput] = useState<string>('0');
+  const [winsGreenInput, setWinsGreenInput] = useState<string>('0');
 
   // Financial Stats
   const [finData, setFinData] = useState<any>(null);
@@ -105,6 +121,7 @@ export default function DashboardStatus({
       const matchRes = await fetch('/api/matches');
       if (!matchRes.ok) throw new Error('Falha ao listar partidas.');
       const matches = await matchRes.json();
+      setAllMatches(matches || []);
 
       if (matches && matches.length > 0) {
         // Find most recent scheduled or confirmando match (closest to today)
@@ -121,11 +138,25 @@ export default function DashboardStatus({
           setPresences(presData.presences || []);
           
           // Find current user's presence
-          const myPresRecord = (presData.presences || []).find((pr: any) => pr.playerId === currentUser.id);
+          const myPresRecord = (presData.presences || []).find((pr: any) => {
+            if (currentUser.playerId && pr.playerId === currentUser.playerId) {
+              return true;
+            }
+            if (pr.email && currentUser.email && pr.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
+              return true;
+            }
+            if (pr.playerId === currentUser.id) {
+              return true;
+            }
+            return false;
+          });
           if (myPresRecord) {
             setMyPresence(myPresRecord.presenceStatus);
+            setResolvedPlayerId(myPresRecord.playerId);
+            setCurrentUserCategory(myPresRecord.category || 'reserva');
           } else {
             setMyPresence('nao_confirmado');
+            setCurrentUserCategory('reserva');
           }
         }
       } else {
@@ -138,6 +169,16 @@ export default function DashboardStatus({
         if (alertsRes.ok) {
           const alertsData = await alertsRes.json();
           setReserveAlerts(alertsData || []);
+        }
+
+        try {
+          const uRes = await fetch('/api/users');
+          if (uRes.ok) {
+            const allUsers = await uRes.json();
+            setPendingUsers(allUsers.filter((u: any) => u.status === 'pending') || []);
+          }
+        } catch (uErr) {
+          console.error('Falha ao ler cadastros pendentes:', uErr);
         }
       }
 
@@ -202,6 +243,24 @@ export default function DashboardStatus({
   useEffect(() => {
     loadDashboardData();
   }, [currentUser.id]);
+
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => {
+        setSuccessMsg('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
+
+  useEffect(() => {
+    if (errorMsg) {
+      const timer = setTimeout(() => {
+        setErrorMsg('');
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMsg]);
 
   // Helper to change event counter values on dashboard
   const changeEventRsvpCount = (eventId: string, isAdult: boolean, increment: boolean) => {
@@ -385,6 +444,12 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
 
+    if (status === 'confirmado' && currentUserCategory !== 'reserva' && isDeadlineExpired) {
+      setErrorMsg('Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.');
+      setActionLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
         method: 'POST',
@@ -459,7 +524,7 @@ export default function DashboardStatus({
       const response = await fetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerId, status })
+        body: JSON.stringify({ playerId, status, manuallyApproved: status === 'confirmado' })
       });
       const resData = await response.json();
       if (!response.ok) {
@@ -469,6 +534,212 @@ export default function DashboardStatus({
       await loadDashboardData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao alterar presença do jogador.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleQuickApproveUser = async (userId: string) => {
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch('/api/users/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          action: 'approve',
+          linkOption: 'create',
+          role: 'jogador',
+          adminName: currentUser.name || 'Admin',
+          playerCategory: 'reserva',
+          primaryPosition: 'atacante'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao aprovar usuário.');
+      setSuccessMsg('Usuário aprovado com sucesso e atleta correspondente criado!');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao aprovar usuário.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleQuickRejectUser = async (userId: string) => {
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch('/api/users/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          action: 'reject',
+          adminName: currentUser.name || 'Admin'
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao rejeitar usuário.');
+      setSuccessMsg('Solicitação de cadastro rejeitada com sucesso.');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao processar ação.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleQuickSaveResult = async (matchId: string) => {
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`/api/matches/${matchId}/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          winsBlue: parseInt(winsBlueInput) || 0,
+          winsRed: parseInt(winsRedInput) || 0,
+          winsGreen: parseInt(winsGreenInput) || 0
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao registrar resultado.');
+      setSuccessMsg('Resultado da rodada gravado e estatísticas consolidadas com sucesso!');
+      setWinsBlueInput('0');
+      setWinsRedInput('0');
+      setWinsGreenInput('0');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao registrar resultado.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleQuickConfirmPayment = async (billId: string) => {
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch('/api/finances/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          billId,
+          email: currentUser.email,
+          role: currentUser.role
+        })
+      });
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Erro ao confirmar pagamento.');
+      }
+      setSuccessMsg('Pagamento confirmado e registrado no histórico financeiro!');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Não foi possível confirmar o pagamento.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const fetchReservesOrder = async () => {
+    setLoadingReserves(true);
+    try {
+      const res = await fetch('/api/reserves/order');
+      if (res.ok) {
+        const data = await res.json();
+        const reservesList = Array.isArray(data) ? data : (data.reserves || []);
+        setPriorityReserves(reservesList);
+      }
+    } catch (err) {
+      console.error('Error fetching priority reserves:', err);
+    } finally {
+      setLoadingReserves(false);
+    }
+  };
+
+  const handleOpenConfirmations = async () => {
+    if (!nextMatch) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`/api/matches/${nextMatch.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'confirmando' })
+      });
+      if (!res.ok) throw new Error('Falha ao abrir confirmações.');
+      setSuccessMsg('Confirmações abertas e lista liberada para o grupo!');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao abrir confirmações.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleShareMatchOnWhatsApp = () => {
+    if (!nextMatch) return;
+    const formattedDate = nextMatch.date.split('-').reverse().join('/');
+    const confirmedList = confirmedPlayers.map((p, idx) => `👉 ${idx + 1}. ${p.name}`).join('\n');
+    const absentList = cancelPlayers.map(p => `❌ ${p.name}`).join('\n');
+    const vacanciesCount = Math.max(0, 15 - confirmedCount);
+    
+    const textMsg = `⚽ *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* ⚽\n` +
+      `📅 *Data:* ${formattedDate} às ${nextMatch.time}\n` +
+      `📍 *Local:* ${nextMatch.location}\n\n` +
+      `👥 *Confirmados (${confirmedCount}/15):*\n${confirmedList || '_Nenhum jogador confirmado ainda_'}\n\n` +
+      `❌ *Não Vão (${cancelPlayers.length}):*\n${absentList || '_Nenhuma recusa registrada_'}\n\n` +
+      `⚠️ *Vagas em aberto:* ${vacanciesCount} vagas disponíveis!\n\n` +
+      `Por favor, atualizem seus status de presença no app oficial:\n` +
+      `👉 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `Abraços e bom racha!`;
+      
+    const escapedMsg = encodeURIComponent(textMsg);
+    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+  };
+
+  const handleToggleSelectPlayer = (pId: string) => {
+    setSelectedPlayerIds(prev =>
+      prev.includes(pId) ? prev.filter(id => id !== pId) : [...prev, pId]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedPlayerIds.length === presences.length) {
+      setSelectedPlayerIds([]);
+    } else {
+      setSelectedPlayerIds(presences.map(p => p.playerId));
+    }
+  };
+
+  const handleBulkTogglePresence = async (status: 'confirmado' | 'cancelado') => {
+    if (!nextMatch || selectedPlayerIds.length === 0) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerIds: selectedPlayerIds, status })
+      });
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Erro ao alterar as presenças.');
+      }
+      setSuccessMsg(`Presenças (${selectedPlayerIds.length}) alteradas com sucesso pelo administrador!`);
+      setSelectedPlayerIds([]);
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao alterar presenças em massa.');
     } finally {
       setActionLoading(false);
     }
@@ -502,7 +773,8 @@ export default function DashboardStatus({
   const unconfirmedPlayers = presences.filter(p => p.presenceStatus === 'nao_confirmado');
 
   const confirmedCount = confirmedPlayers.length;
-  const missingCount = nextMatch ? Math.max(0, 15 - confirmedCount) : 0;
+  const maxPlayersLimit = nextMatch && nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
+  const missingCount = nextMatch ? Math.max(0, maxPlayersLimit - confirmedCount) : 0;
   const isDeadlineExpired = nextMatch ? nextMatch.isDeadlineExpired : false;
 
   // Find current record holder of the longest historical streak
@@ -513,44 +785,370 @@ export default function DashboardStatus({
   };
   const streakRecordHolder = getStreakRecordHolder();
 
+  // Admin Operational calculations
+  const todayStr = new Date().toISOString().split('T')[0];
+  const pastMatchesWithoutResults = allMatches.filter((m: any) => {
+    return m.date < todayStr && m.status !== 'encerrada' && !m.hasResults;
+  });
+
+  const pendingBills = (finData?.bills || []).filter((b: any) => b.status === 'pendente');
+
+  const getPlayerNameForBill = (playerId: string) => {
+    const playerObj = (finData?.players || []).find((p: any) => p.id === playerId);
+    return playerObj ? playerObj.name : 'Jogador';
+  };
+
+  const hasPendingActions = isAdmin && (
+    (nextMatch && nextMatch.status === 'agendada') ||
+    (nextMatch && (nextMatch.status === 'confirmando' || nextMatch.status === 'agendada') && confirmedCount < 15) ||
+    (pastMatchesWithoutResults.length > 0) ||
+    (pendingUsers.length > 0) ||
+    (pendingBills.length > 0)
+  );
+
   return (
-    <div className="space-y-6 animate-fadeIn" id="dashboard-status-wrapper">
+    <div className="flex flex-col gap-6 animate-fadeIn" id="dashboard-status-wrapper">
       
       {/* Welcome Card & Status */}
-      <div className="relative rounded-2xl border border-zinc-850 bg-zinc-950/40 px-5 py-6 md:p-8 overflow-hidden shadow-xl">
+      <div className="relative rounded-xl border border-zinc-850 bg-zinc-950/40 p-4 md:p-5 overflow-hidden shadow-md order-1">
         <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-emerald-500/5 blur-3xl" />
 
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-5 relative z-10">
-          <div>
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <span className="text-[10px] font-mono tracking-wider font-bold text-emerald-400 uppercase bg-emerald-500/10 px-2.5 py-0.5 rounded border border-emerald-500/20">
-                ● Racha do Fofim Ativo
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[9px] font-mono tracking-wider font-extrabold text-[#22c55e] bg-[#22c55e]/10 px-2 py-0.5 rounded border border-[#22c55e]/25">
+                ● Racha Ativo
               </span>
-              <span className={`text-[10px] uppercase font-mono font-bold px-2.5 py-0.5 rounded border ${getRoleBadgeColor(currentUser.role)}`}>
+              <span className={`text-[9px] uppercase font-mono font-bold px-2 py-0.5 rounded border ${getRoleBadgeColor(currentUser.role)}`}>
                 {getRoleLabel(currentUser.role)}
               </span>
             </div>
-            <h2 className="text-2xl font-display font-black text-white tracking-tight">
-              Fala, <span className="text-emerald-400">{currentUser.name}</span>!
+            <h2 className="text-base font-display font-black text-white tracking-tight flex items-center gap-1.5 animate-fadeIn">
+              <span>Atleta:</span>
+              <span className="text-emerald-400">{currentUser.name}</span>
             </h2>
-            <p className="text-zinc-400 text-xs mt-1">
-              Bem-vindo ao centro oficial de controle. Gerencie sua presença, substituições e acompanhe as estatísticas do grupo society.
-            </p>
+            {(() => {
+              const myStatsObj = (stats?.individual || []).find((s: any) => s.playerId === (resolvedPlayerId || currentUser.id));
+              const myAchievements = getAchievementsForPlayer(
+                { id: (resolvedPlayerId || currentUser.id), primaryPosition: myStatsObj?.primaryPosition || 'jogador' } as any,
+                myStatsObj,
+                stats
+              );
+              const mostRecent = getMostRecentAchievement(myAchievements);
+              if (!mostRecent) return null;
+              return (
+                <div className="mt-2 flex items-center gap-2.5 bg-[#0e1814] border border-[#22c55e]/15 px-3 py-1.5 rounded-lg max-w-sm">
+                  <span className="text-base select-none leading-none">{mostRecent.icon}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[8px] font-mono tracking-widest text-[#22c55e] font-extrabold uppercase block leading-none mb-1">Destaque de Conquista</span>
+                    <span className="text-[10px] font-black text-white block truncate leading-normal">
+                      {mostRecent.title} <span className="text-[9px] text-zinc-400 font-normal">({mostRecent.description})</span>
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
-          <div className="flex flex-col items-start md:items-end gap-1 font-mono">
-            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Acesso Liberado</span>
-            <span className="text-xs text-emerald-400 font-extrabold flex items-center gap-1.5 bg-[#0a1510] border border-emerald-950 px-3 py-1.5 rounded-xl">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Jogador Registrado</span>
-            </span>
+          <div className="flex items-center gap-3 sm:text-right font-mono self-start sm:self-auto">
+            <div className="flex flex-col text-left sm:text-right text-[10px] text-zinc-500">
+              <span className="uppercase tracking-widest text-[8px] block">Acesso do Grupo</span>
+              <span className="text-emerald-400 font-bold block">✔️ Autorizado</span>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* PAINEL OPERACIONAL: AÇÕES NECESSÁRIAS */}
+      {isAdmin && hasPendingActions && (
+        <div className="rounded-xl border border-dashed border-emerald-500/30 bg-emerald-950/5 p-4 md:p-5 space-y-4 shadow-lg order-2" id="admin-required-actions-panel">
+          <div className="flex items-center gap-2 pb-2.5 border-b border-[#22c55e]/20">
+            <Shield className="w-5 h-5 text-emerald-400 animate-pulse" />
+            <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">AÇÕES NECESSÁRIAS</span>
+            <span className="ml-auto text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+              Painel do Administrador
+            </span>
+          </div>
+
+          <div className="space-y-4">
+            
+            {/* 1. ABRIR CONFIRMAÇÕES (PASSAR PARTIDA PARA CONFIRMANDO) */}
+            {nextMatch && nextMatch.status === 'agendada' && (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-lg text-xs">
+                <div className="space-y-1">
+                  <div className="font-bold text-white flex items-center gap-1.5 font-sans">
+                    <Calendar className="w-4 h-4 text-emerald-400" />
+                    <span>Abrir Confirmações para o Próximo Racha</span>
+                  </div>
+                  <p className="text-zinc-400 text-[11px] leading-relaxed">
+                    A rodada de <span className="text-emerald-400 font-bold font-mono">{nextMatch.date.split('-').reverse().join('/')}</span> às <span className="text-white font-bold">{nextMatch.time}</span> está agendada mas fechada. Atletas não conseguem interagir.
+                  </p>
+                </div>
+                <button
+                  disabled={actionLoading}
+                  onClick={handleOpenConfirmations}
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-4 py-2 rounded-lg text-xs uppercase tracking-wider transition cursor-pointer flex-shrink-0 self-end md:self-auto shadow-md"
+                >
+                  Abrir Confirmações
+                </button>
+              </div>
+            )}
+
+            {/* 2. CONVOCAR RESERVAS / SINALIZAR FALTAS */}
+            {nextMatch && (nextMatch.status === 'confirmando' || nextMatch.status === 'agendada') && confirmedCount < 15 && (
+              <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-lg text-xs space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-900 pb-2.5">
+                  <div className="space-y-1">
+                    <div className="font-bold text-amber-400 flex items-center gap-1.5 font-sans">
+                      <AlertTriangle className="w-4 h-4 text-amber-400" />
+                      {isDeadlineExpired ? (
+                        <span>Encerramento do Prazo com Vagas em Aberto</span>
+                      ) : (
+                        <span>Vagas em Aberto no Racha</span>
+                      )}
+                    </div>
+                    <p className="text-zinc-300 text-[11px] leading-relaxed">
+                      {isDeadlineExpired ? (
+                        <span className="text-rose-400 font-bold font-sans">
+                          O prazo de confirmação foi encerrado e ainda faltam atletas para fechar o racha.
+                        </span>
+                      ) : (
+                        <span>
+                          ⚠ Faltam <span className="text-amber-400 font-bold font-mono">{15 - confirmedCount}</span> jogadores para fechar o racha de 15.
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2 font-mono text-[10px] bg-zinc-900 px-3 py-1.5 rounded-md border border-zinc-850">
+                    <span className="text-emerald-400">√ Conf: {confirmedCount}</span>
+                    <span className="text-zinc-500">|</span>
+                    <span className="text-rose-400">x Rec: {cancelPlayers.length}</span>
+                    <span className="text-zinc-500">|</span>
+                    <span className="text-amber-400 font-semibold">? Pend: {unconfirmedPlayers.length}</span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <p className="text-zinc-400 text-[11px] leading-relaxed max-w-xl">
+                    Abra a fila de prioridades do grupo para encontrar reservas aptos no Racha do Fofim e convocá-los diretamente em 1 clique.
+                  </p>
+                  
+                  <button
+                    onClick={async () => {
+                      if (!showReserveSuggestions) {
+                        await fetchReservesOrder();
+                      }
+                      setShowReserveSuggestions(!showReserveSuggestions);
+                    }}
+                    className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black px-4 py-2 rounded-lg text-xs uppercase tracking-wider transition cursor-pointer select-none flex items-center gap-1.5 self-end sm:self-auto"
+                  >
+                    <span>CONVOCAR RESERVAS</span>
+                    {showReserveSuggestions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                {showReserveSuggestions && (
+                  <div className="pt-2.5 border-t border-zinc-900/60 space-y-2">
+                    <div className="text-[10px] uppercase font-mono tracking-wider text-amber-400 font-bold">
+                      Sugeridos da Fila de Reservas (Próximos em Ordem de Prioridade):
+                    </div>
+                    {loadingReserves ? (
+                      <div className="text-[11px] text-zinc-500 font-mono animate-pulse py-2">
+                        Buscando fila de prioridade do banco...
+                      </div>
+                    ) : priorityReserves.filter(r => !confirmedPlayers.some(p => p.playerId === r.id)).length === 0 ? (
+                      <div className="text-[11px] text-zinc-500 font-mono py-1">
+                        Nenhum reserva pendente na fila disponível para convocação.
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {priorityReserves
+                          .filter(r => !confirmedPlayers.some(p => p.playerId === r.id))
+                          .slice(0, 4)
+                          .map((reserve: any, idx) => (
+                            <div key={reserve.id} className="flex items-center justify-between bg-zinc-950 px-3 py-2 rounded-lg border border-zinc-900/80">
+                              <div className="min-w-0">
+                                <span className="font-semibold text-zinc-200 block truncate text-xs">
+                                  {idx + 1}. {reserve.name}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 font-mono">
+                                  ⚽ Reserva {reserve.phone ? `| ${reserve.phone}` : ''}
+                                </span>
+                              </div>
+                              <button
+                                disabled={actionLoading}
+                                onClick={() => handleAdminTogglePresence(reserve.id, 'confirmado')}
+                                className="bg-emerald-600/95 hover:bg-emerald-500 text-white font-extrabold px-2.5 py-1.5 rounded text-[10px] uppercase transition cursor-pointer flex items-center gap-1 hover:scale-[1.02] active:scale-95"
+                              >
+                                <Check className="w-3.5 h-3.5 inline" />
+                                Convocar
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 3. REGISTRAR RESULTADO DE PARTIDAS PASSADAS */}
+            {pastMatchesWithoutResults.length > 0 && (
+              <div className="space-y-2">
+                {pastMatchesWithoutResults.slice(0, 2).map((pmObj) => (
+                  <div key={pmObj.id} className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-lg text-xs space-y-3">
+                    <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+                      <div className="font-bold text-amber-500 flex items-center gap-1.5 font-sans">
+                        <Trophy className="w-4 h-4 text-amber-500 animate-pulse" />
+                        <span>Registrar Resultado da Rodada Pendente</span>
+                      </div>
+                      <span className="text-[10px] font-mono bg-zinc-900 border border-zinc-850 px-2 py-0.5 rounded text-zinc-400">
+                        Racha de {pmObj.date.split('-').reverse().join('/')}
+                      </span>
+                    </div>
+
+                    <p className="text-zinc-400 text-[11px] leading-relaxed">
+                      A partida agendada para <span className="text-white font-semibold">{pmObj.date.split('-').reverse().join('/')} ({pmObj.time})</span> já passou de sua data, mas o placar ainda não foi gravado. Digite abaixo as vitórias obtidas por cada equipe e clique para confirmar:
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-3 bg-zinc-900/40 p-3 rounded-lg border border-zinc-900/60">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        <span className="text-zinc-300 text-[11px]">Time Azul:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={winsBlueInput}
+                          onChange={(e) => setWinsBlueInput(e.target.value)}
+                          className="w-12 bg-zinc-950 text-center border border-zinc-800 text-xs font-bold text-white rounded p-1.5 focus:border-blue-500 focus:outline-none"
+                        />
+                        <span className="text-[10px] text-zinc-500">vits</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <span className="text-zinc-300 text-[11px]">Time Vermelho:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={winsRedInput}
+                          onChange={(e) => setWinsRedInput(e.target.value)}
+                          className="w-12 bg-zinc-950 text-center border border-zinc-800 text-xs font-bold text-white rounded p-1.5 focus:border-rose-500 focus:outline-none"
+                        />
+                        <span className="text-[10px] text-zinc-500">vits</span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span className="text-zinc-300 text-[11px]">Time Verde:</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={winsGreenInput}
+                          onChange={(e) => setWinsGreenInput(e.target.value)}
+                          className="w-12 bg-zinc-950 text-center border border-zinc-800 text-xs font-bold text-white rounded p-1.5 focus:border-emerald-500 focus:outline-none"
+                        />
+                        <span className="text-[10px] text-zinc-500">vits</span>
+                      </div>
+
+                      <button
+                        disabled={actionLoading}
+                        onClick={() => handleQuickSaveResult(pmObj.id)}
+                        className="ml-auto bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold px-3.5 py-2 rounded-lg text-[10px] uppercase tracking-wide cursor-pointer flex items-center gap-1.5 shadow-md active:scale-95 transition-all"
+                      >
+                        <Trophy className="w-3.5 h-3.5 text-amber-300" />
+                        Gravar Placar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 4. APROVAÇÕES DE NOVOS CADASTROS PENDENTES */}
+            {pendingUsers.length > 0 && (
+              <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-lg text-xs space-y-3">
+                <div className="font-bold text-white flex items-center gap-1.5 border-b border-zinc-900 pb-2 font-sans">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span>Aprovar Novos Usuários ({pendingUsers.length})</span>
+                </div>
+                <div className="space-y-2">
+                  {pendingUsers.slice(0, 3).map((userObj) => (
+                    <div key={userObj.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-900/40 p-2.5 rounded-lg border border-zinc-805">
+                      <div>
+                        <span className="font-extrabold text-white text-xs block font-sans">{userObj.name}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono block">
+                          📧 {userObj.email} {userObj.phone ? `| 📞 ${userObj.phone}` : ''}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleQuickApproveUser(userObj.id)}
+                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-3 py-1.5 rounded-lg text-[10px] uppercase cursor-pointer hover:scale-101 active:scale-95 transition"
+                        >
+                          Aprovar
+                        </button>
+                        <button
+                          disabled={actionLoading}
+                          onClick={() => handleQuickRejectUser(userObj.id)}
+                          className="bg-zinc-950 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase cursor-pointer transition"
+                        >
+                          Rejeitar
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {pendingUsers.length > 3 && onNavigateToApprovals && (
+                    <button
+                      onClick={onNavigateToApprovals}
+                      className="text-[10px] text-emerald-400 font-bold hover:underline font-mono cursor-pointer transition flex items-center gap-0.5"
+                    >
+                      Ver mais {pendingUsers.length - 3} solicitações →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 5. CONFIRMAR COBRANÇAS FINANCEIRAS PENDENTES (PAGAMENTOS) */}
+            {pendingBills.length > 0 && (
+              <div className="bg-zinc-950/80 border border-zinc-900 p-3.5 rounded-lg text-xs space-y-3">
+                <div className="font-bold text-white flex items-center gap-1.5 border-b border-zinc-900 pb-2 font-sans">
+                  <span className="text-emerald-400">💵</span>
+                  <span>Confirmar Pagamentos Pendentes ({pendingBills.length})</span>
+                </div>
+                <p className="text-zinc-400 text-[11px] leading-relaxed">
+                  Os seguintes atletas mensalistas possuem mensalidade em aberto. Se você já recebeu a quantia via PIX ou dinheiro, confirme para atualizar o status e registrar as finanças:
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {pendingBills.slice(0, 4).map((billObj: any) => (
+                    <div key={billObj.id} className="flex items-center justify-between bg-zinc-900/40 p-2.5 rounded-lg border border-zinc-805 gap-2">
+                      <div className="min-w-0">
+                        <span className="font-extrabold text-[#4ade80] text-[11px] block truncate font-sans">{getPlayerNameForBill(billObj.playerId)}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono block">
+                          Ref: {billObj.competence} | R$ {billObj.amount}
+                        </span>
+                      </div>
+                      <button
+                        disabled={actionLoading}
+                        onClick={() => handleQuickConfirmPayment(billObj.id)}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-black px-2.5 py-1.5 rounded text-[10px] uppercase cursor-pointer shrink-0 transition"
+                      >
+                        Confirmar Pago
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Avisos Recentes Widget banner */}
       {notifications.filter(n => n.status === 'nao_lida').length > 0 && (
-        <div className="rounded-2xl border border-emerald-500/15 bg-emerald-950/5 p-5 space-y-3 shadow-lg" id="dashboard-recent-news-banner">
+        <div className="rounded-2xl border border-emerald-500/15 bg-emerald-950/5 p-5 space-y-3 shadow-lg order-5" id="dashboard-recent-news-banner">
           <div className="flex items-center gap-2 pb-2.5 border-b border-zinc-900/40">
             <BellRing className="w-4.5 h-4.5 text-amber-400 animate-pulse" />
             <span className="font-display font-black text-xs text-white uppercase tracking-wider">Avisos Importantes</span>
@@ -606,7 +1204,7 @@ export default function DashboardStatus({
 
       {/* Action alerts and success indicators */}
       {successMsg && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-mono flex items-center gap-2 animate-slideDown">
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-mono flex items-center gap-2 animate-slideDown order-2">
           <Check className="w-4 h-4" />
           <span className="flex-1">{successMsg}</span>
           <button onClick={() => setSuccessMsg('')} className="p-1 text-zinc-500 hover:text-white">
@@ -616,7 +1214,7 @@ export default function DashboardStatus({
       )}
 
       {errorMsg && (
-        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-mono flex items-center gap-2 animate-slideDown">
+        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-mono flex items-center gap-2 animate-slideDown order-2">
           <AlertCircle className="w-4 h-4" />
           <span className="flex-1">{errorMsg}</span>
           <button onClick={() => setErrorMsg('')} className="p-1 text-zinc-500 hover:text-white">
@@ -627,7 +1225,7 @@ export default function DashboardStatus({
 
       {/* Admin Reserve Queue substitution prompts */}
       {reserveAlerts.length > 0 && (currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 animate-pulse">
+        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 animate-pulse order-4">
           <div className="flex items-center gap-2 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider">
             <BellRing className="w-4 h-4 animate-bounce text-amber-400" />
             <span>Convocação de Reservas Recomendada ({reserveAlerts.length})</span>
@@ -673,7 +1271,7 @@ export default function DashboardStatus({
 
       {/* SEÇÃO DE EVENTOS & CONFRATERNIZAÇÕES ATIVOS */}
       {activeEvents.length > 0 && (
-        <div className="rounded-xl border border-zinc-850 bg-zinc-950/20 p-5 space-y-4 shadow-xl font-sans" id="dashboard-active-events-panel">
+        <div className="rounded-xl border border-zinc-850 bg-zinc-950/20 p-5 space-y-4 shadow-xl font-sans order-6" id="dashboard-active-events-panel">
           <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/40">
             <Gift className="w-5 h-5 text-emerald-400" />
             <h3 className="font-display font-extrabold text-white text-sm uppercase tracking-wide">
@@ -948,7 +1546,7 @@ export default function DashboardStatus({
 
       {/* 📸 DESTAQUE DA SEMANA SECTION ON HOME DASHBOARD */}
       {highlightPost && (
-        <div className="bg-gradient-to-r from-emerald-950/20 to-zinc-950/40 border border-emerald-500/15 rounded-2xl p-5 shadow-xl relative overflow-hidden animate-fadeIn" id="dashboard-destaque-da-semana">
+        <div className="bg-gradient-to-r from-emerald-950/20 to-zinc-950/40 border border-emerald-500/15 rounded-2xl p-5 shadow-xl relative overflow-hidden animate-fadeIn order-7" id="dashboard-destaque-da-semana">
           <div className="flex flex-col sm:flex-row gap-5 items-center">
             
             {/* Visual media */}
@@ -1001,12 +1599,12 @@ export default function DashboardStatus({
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-12 text-zinc-500 font-mono gap-2 text-xs">
+        <div className="flex flex-col items-center justify-center p-12 text-zinc-500 font-mono gap-2 text-xs order-2">
           <Clock className="w-6 h-6 text-emerald-400 animate-spin" />
           <span>Lendo informações da próxima rodada...</span>
         </div>
       ) : nextMatch ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-col gap-6 order-2 w-full">
           
           {/* Próximo Racha Panel */}
           <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 space-y-4 flex flex-col justify-between shadow-lg">
@@ -1055,17 +1653,11 @@ export default function DashboardStatus({
                 </div>
 
                 <div className="border-t border-zinc-900/40 pt-3 flex items-center justify-between text-xs">
-                  <div className="space-y-0.5 font-mono">
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Confirmados</span>
-                    <span className="text-emerald-400 font-extrabold flex items-center gap-1">
-                      <Users className="w-3.5 h-3.5" />
-                      <span>{confirmedCount} Confirmados</span>
-                    </span>
-                  </div>
-                  <div className="space-y-0.5 text-right font-mono">
-                    <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Vagas Restantes</span>
-                    <span className="text-zinc-300 font-extrabold">
-                      {nextMatch.vacancies > 0 ? `${nextMatch.vacancies} Vagas` : 'Lista de Espera'}
+                  <div className="space-y-0.5 font-mono w-full text-center">
+                    <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Status do Racha</span>
+                    <span className="text-emerald-400 font-extrabold flex items-center justify-center gap-1.5 text-sm">
+                      <Users className="w-4 h-4" />
+                      <span>{confirmedCount} de {maxPlayersLimit} jogadores confirmados</span>
                     </span>
                   </div>
                 </div>
@@ -1074,26 +1666,70 @@ export default function DashboardStatus({
                 <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-zinc-850">
                   <div 
                     className="bg-emerald-500 h-full rounded-full transition-all duration-300 shadow shadow-emerald-500/20"
-                    style={{ width: `${Math.min((confirmedCount / 24) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((confirmedCount / maxPlayersLimit) * 100, 100)}%` }}
                   />
                 </div>
 
-                {/* ALERT SYSTEM RULE: Prazo Expirado ou Menos de 15 confirmados */}
-                {missingCount > 0 && (
+                {/* ALERT SYSTEM RULE: Vagas personalizáveis */}
+                {missingCount > 0 ? (
                   <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 p-3 rounded-lg text-[11px] font-mono text-amber-400">
                     <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="font-bold">Faltam jogadores para completar o racha.</span> Necessita de pelo menos 15 atletas. Falta(m) <span className="underline font-black">{missingCount} jogador(es)</span>!
+                      <span className="font-bold">⚠ Faltam {missingCount} jogadores para fechar o racha.</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-start gap-2 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg text-[11px] font-mono text-emerald-400">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <span className="font-bold block">✅ Racha Fechado</span>
+                      <span className="text-[10px] text-zinc-400">{confirmedCount} de {maxPlayersLimit} jogadores confirmados</span>
                     </div>
                   </div>
                 )}
 
-                {isDeadlineExpired && (
-                  <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/25 p-2 rounded-lg text-[10px] font-mono text-rose-400">
-                    <AlertCircle className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
-                    <span>Prazo limite para confirmações regulares finalizado (D-{nextMatch.deadlineDateStr}).</span>
+                {/* PRAZO DE CONFIRMAÇÃO DISPLAY (REGRA OFICIAL CORREÇÃO DO PRAZO) */}
+                <div className={`p-3 rounded-lg border flex flex-col gap-1.5 font-mono text-[11px] ${
+                  isDeadlineExpired 
+                    ? 'bg-rose-950/20 border-rose-500/20 text-rose-400' 
+                    : (nextMatch.hoursRemaining !== undefined && nextMatch.hoursRemaining <= 2)
+                      ? 'bg-amber-950/30 border-amber-500/30 text-amber-400 animate-pulse'
+                      : 'bg-zinc-900/60 border-zinc-850 text-zinc-300'
+                }`}>
+                  <div className="flex items-center gap-2 font-bold">
+                    <Clock className={`w-4 h-4 flex-shrink-0 ${
+                      isDeadlineExpired ? 'text-rose-400' : 'text-emerald-400'
+                    }`} />
+                    <span>Prazo de Confirmação</span>
                   </div>
-                )}
+                  <div className="flex flex-col gap-1 pl-6">
+                    <span className="text-zinc-400">
+                      {isDeadlineExpired ? 'Confirmações encerradas em:' : 'Confirmações encerram em:'}
+                    </span>
+                    <span className={`text-[12px] font-bold ${isDeadlineExpired ? 'text-rose-400' : 'text-white'}`}>
+                      {nextMatch.deadlineDateStr || 'Não definido'}
+                    </span>
+                  </div>
+
+                  {/* CUSTOM REAL-TIME ALERT BANNERS */}
+                  {nextMatch.hoursRemaining !== undefined && nextMatch.hoursRemaining > 0 && (
+                    <div className="mt-2 pt-2 border-t border-zinc-800/60 text-[10px] font-sans flex items-start gap-1.5 font-semibold">
+                      {nextMatch.hoursRemaining <= 2 ? (
+                        <>
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-amber-400">Últimas horas para confirmação.</span>
+                        </>
+                      ) : nextMatch.hoursRemaining <= 24 ? (
+                        <>
+                          <AlertCircle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                          <span className="text-amber-400">
+                            Lembrete: confirmações encerram amanhã às {nextMatch.time || '21:30'}.
+                          </span>
+                        </>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex items-center justify-between text-[11px] bg-zinc-950 p-3 rounded-lg border border-zinc-900 font-mono">
                   <span className="text-zinc-400 font-medium">Sua Confirmação:</span>
@@ -1115,12 +1751,14 @@ export default function DashboardStatus({
             <div className="space-y-2 mt-4">
               <div className="grid grid-cols-2 gap-2">
                 <button
-                  disabled={actionLoading}
+                  disabled={actionLoading || (currentUserCategory !== 'reserva' && isDeadlineExpired && myPresence !== 'confirmado')}
                   onClick={() => handleRsvpHolder('confirmado')}
-                  className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 cursor-pointer ${
-                    myPresence === 'confirmado'
-                      ? 'bg-emerald-600/30 border border-emerald-400 text-emerald-300'
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow shadow-emerald-500/5'
+                  className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
+                    (currentUserCategory !== 'reserva' && isDeadlineExpired && myPresence !== 'confirmado')
+                      ? 'bg-zinc-800 border border-zinc-750 text-zinc-500 cursor-not-allowed opacity-50'
+                      : myPresence === 'confirmado'
+                        ? 'bg-emerald-600/30 border border-emerald-400 text-emerald-300'
+                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow shadow-emerald-500/5'
                   }`}
                 >
                   <CheckCircle2 className="w-4 h-4" />
@@ -1141,6 +1779,17 @@ export default function DashboardStatus({
                 </button>
               </div>
 
+              {nextMatch.status === 'confirmando' && (
+                <button
+                  type="button"
+                  onClick={handleShareMatchOnWhatsApp}
+                  className="w-full bg-[#128C7E] hover:bg-[#075e54] text-white font-extrabold py-2.5 rounded-lg text-xs uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md mt-2"
+                >
+                  <Share2 className="w-4 h-4 text-white shrink-0" />
+                  <span>Compartilhar no WhatsApp</span>
+                </button>
+              )}
+
               {/* LIST OF CONFIRMED / CANCELLED IN THE MATCH */}
               <div className="border-t border-zinc-900 pt-3">
                 <button
@@ -1156,37 +1805,101 @@ export default function DashboardStatus({
                 </button>
 
                 {showPresenceListDetail && (
-                  <div className="mt-2 bg-zinc-950 border border-zinc-900 p-2.5 rounded max-h-56 overflow-y-auto space-y-2 font-mono text-[11px] animate-fadeIn">
+                  <div className="mt-2 bg-zinc-950 border border-zinc-900 p-2.5 rounded max-h-96 overflow-y-auto space-y-2 font-mono text-[11px] animate-fadeIn">
                     {presences.length === 0 ? (
                       <div className="text-center italic text-zinc-600 py-3">Nenhuma presença declarada ainda.</div>
                     ) : (
-                      <div className="space-y-1.5">
+                      <div className="space-y-2.5">
+                        {/* Bulk action selection bar for admins */}
+                        {isAdmin && presences.length > 0 && (
+                          <div className="bg-[#0b120f] border border-emerald-500/15 rounded-xl p-3 flex flex-col gap-2.5 mb-2 font-mono">
+                            <div className="flex items-center justify-between">
+                              <label className="flex items-center gap-2 text-[10px] font-sans font-bold text-zinc-300 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPlayerIds.length === presences.length && presences.length > 0}
+                                  onChange={handleToggleSelectAll}
+                                  className="accent-emerald-500 w-4.5 h-4.5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer"
+                                />
+                                <span className="uppercase tracking-wider">Selecionar Todos ({presences.length})</span>
+                              </label>
+                              {selectedPlayerIds.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedPlayerIds([])}
+                                  className="text-[9px] font-sans font-extrabold text-[#94a3b8] hover:text-white uppercase tracking-wider transition"
+                                >
+                                  Limpar
+                                </button>
+                              )}
+                            </div>
+
+                            {selectedPlayerIds.length > 0 && (
+                              <div className="flex items-center justify-between gap-2 border-t border-zinc-900/60 pt-2.5 mt-0.5 animate-fadeIn">
+                                <span className="text-[10px] text-zinc-400 font-sans">
+                                  Com os <strong className="text-emerald-400">{selectedPlayerIds.length}</strong> atletas:
+                                </span>
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() => handleBulkTogglePresence('confirmado')}
+                                    className="bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1.5 rounded-lg text-[9px] font-sans font-black uppercase tracking-wider transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                    <span>Confirmar</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={actionLoading}
+                                    onClick={() => handleBulkTogglePresence('cancelado')}
+                                    className="bg-rose-950/80 text-rose-400 hover:bg-rose-900 hover:text-white border border-rose-500/25 px-3 py-1.5 rounded-lg text-[9px] font-sans font-black uppercase tracking-wider transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                                  >
+                                    <X className="w-3.5 h-3.5 stroke-[3]" />
+                                    <span>Cancelar</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
                         {/* Group by category */}
                         <div>
                           <div className="text-[9px] text-zinc-500 uppercase font-black tracking-wider pb-1">Mensalistas & Goleiros ({confirmedPlayers.filter(p=>p.category !== 'reserva').length})</div>
                           <div className="space-y-1">
                             {presences.filter(p => p.category !== 'reserva').map((p) => (
-                              <div key={p.playerId} className="flex justify-between items-center py-0.5">
-                                <span className={p.presenceStatus === 'confirmado' ? 'text-white font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-600 line-through' : 'text-zinc-400'}>
-                                  ⚽ {p.name} {p.category === 'mensalista_goleiro' && '🧤'}
-                                </span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-[9.5px] px-1 rounded font-bold ${
-                                    p.presenceStatus === 'confirmado' ? 'text-emerald-400' : p.presenceStatus === 'cancelado' ? 'text-rose-500' : 'text-zinc-500'
+                              <div key={p.playerId} className="flex justify-between items-center py-2.5 gap-1.5 border-b border-zinc-900/40 last:border-0">
+                                <div className="flex items-center min-w-0">
+                                  {isAdmin && (
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPlayerIds.includes(p.playerId)}
+                                      onChange={() => handleToggleSelectPlayer(p.playerId)}
+                                      className="accent-emerald-500 w-4.5 h-4.5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer mr-3 flex-shrink-0"
+                                    />
+                                  )}
+                                  <span className={`${p.presenceStatus === 'confirmado' ? 'text-white font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-650 line-through' : 'text-zinc-400'} truncate text-xs sm:text-[11px]`}>
+                                    ⚽ {p.name} {p.category === 'mensalista_goleiro' && '🧤'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-zinc-900/40 ${
+                                    p.presenceStatus === 'confirmado' ? 'text-emerald-400 border border-emerald-500/10' : p.presenceStatus === 'cancelado' ? 'text-rose-500 border border-rose-500/10' : 'text-[#94a3b8] border border-zinc-805'
                                   }`}>
-                                    {p.presenceStatus === 'confirmado' ? 'CONFIRMADO' : p.presenceStatus === 'cancelado' ? 'CANCELADO' : 'PENDENTE'}
+                                    {p.presenceStatus === 'confirmado' ? 'Vou' : p.presenceStatus === 'cancelado' ? 'Falta' : 'Pendente'}
                                   </span>
                                   {isAdmin && (
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-2">
                                       {p.presenceStatus !== 'confirmado' && (
                                         <button
                                           type="button"
                                           disabled={actionLoading}
                                           onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
-                                          title="Aprovar participação"
+                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                          title="Confirmar participação"
                                         >
-                                          <Check className="w-2.5 h-2.5" />
+                                          <Check className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
                                         </button>
                                       )}
                                       {p.presenceStatus !== 'cancelado' && (
@@ -1194,10 +1907,10 @@ export default function DashboardStatus({
                                           type="button"
                                           disabled={actionLoading}
                                           onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                          className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
-                                          title="Remover / Cancelar"
+                                          className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                          title="Não vai / Cancelar"
                                         >
-                                          <X className="w-2.5 h-2.5" />
+                                          <X className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
                                         </button>
                                       )}
                                     </div>
@@ -1208,31 +1921,41 @@ export default function DashboardStatus({
                           </div>
                         </div>
 
-                        <div className="border-t border-zinc-900 pt-2.5 mt-2">
-                          <div className="text-[9px] text-zinc-500 uppercase font-black tracking-wider pb-1">Reservas na Prioridade ({confirmedPlayers.filter(p=>p.category === 'reserva').length})</div>
+                        <div className="border-t border-zinc-900 pt-3 mt-3">
+                          <div className="text-[9px] text-zinc-500 uppercase font-black tracking-wider pb-1.5 border-b border-zinc-900/50 mb-1">Reservas na Prioridade ({confirmedPlayers.filter(p=>p.category === 'reserva').length})</div>
                           <div className="space-y-1">
                             {presences.filter(p => p.category === 'reserva').map((p, idx) => (
-                              <div key={p.playerId} className="flex justify-between items-center py-0.5">
-                                <span className={p.presenceStatus === 'confirmado' ? 'text-[#4ade80] font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-600 line-through' : 'text-zinc-400'}>
-                                  {idx + 1}. {p.name} (Reserva)
-                                </span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-[9.5px] px-1 rounded font-bold ${
-                                    p.presenceStatus === 'confirmado' ? 'text-emerald-400' : p.presenceStatus === 'cancelado' ? 'text-rose-500' : 'text-[#a78bfa]'
+                              <div key={p.playerId} className="flex justify-between items-center py-2.5 gap-1.5 border-b border-zinc-900/40 last:border-0">
+                                <div className="flex items-center min-w-0">
+                                  {isAdmin && (
+                                    <input
+                                      type="checkbox"
+                                      checked={selectedPlayerIds.includes(p.playerId)}
+                                      onChange={() => handleToggleSelectPlayer(p.playerId)}
+                                      className="accent-emerald-500 w-4.5 h-4.5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer mr-3 flex-shrink-0"
+                                    />
+                                  )}
+                                  <span className={`${p.presenceStatus === 'confirmado' ? 'text-[#4ade80] font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-650 line-through' : 'text-zinc-400'} truncate text-xs sm:text-[11px]`}>
+                                    {idx + 1}. {p.name} (Reserva)
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-zinc-900/40 ${
+                                    p.presenceStatus === 'confirmado' ? 'text-[#4ade80] border border-emerald-500/10' : p.presenceStatus === 'cancelado' ? 'text-rose-500 border border-rose-500/10' : 'text-[#a78bfa] border border-[#a78bfa]/10'
                                   }`}>
-                                    {p.presenceStatus === 'confirmado' ? 'CONFIRMADO' : p.presenceStatus === 'cancelado' ? 'CANCELADO' : 'ESPERANDO'}
+                                    {p.presenceStatus === 'confirmado' ? 'Vou' : p.presenceStatus === 'cancelado' ? 'Falta' : 'Fila'}
                                   </span>
                                   {isAdmin && (
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-2">
                                       {p.presenceStatus !== 'confirmado' && (
                                         <button
                                           type="button"
                                           disabled={actionLoading}
                                           onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
+                                          className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
                                           title="Aprovar participação"
                                         >
-                                          <Check className="w-2.5 h-2.5" />
+                                          <Check className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
                                         </button>
                                       )}
                                       {p.presenceStatus !== 'cancelado' && (
@@ -1240,10 +1963,10 @@ export default function DashboardStatus({
                                           type="button"
                                           disabled={actionLoading}
                                           onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                          className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/20 rounded p-1 transition cursor-pointer flex items-center justify-center"
+                                          className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
                                           title="Remover / Cancelar"
                                         >
-                                          <X className="w-2.5 h-2.5" />
+                                          <X className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
                                         </button>
                                       )}
                                     </div>
@@ -1259,10 +1982,12 @@ export default function DashboardStatus({
                   </div>
                 )}
               </div>
-
             </div>
           </div>
+        </div>
 
+        {/* 3. ATALHOS DE ACESSO & 4. FINANCEIRO RESUMIDO */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 order-4">
           {/* Core Panel Menu / Stats Overview */}
           <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 flex flex-col justify-between space-y-4 shadow-lg">
             <div className="space-y-3">
@@ -1386,7 +2111,7 @@ export default function DashboardStatus({
 
         </div>
       ) : (
-        <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-8 text-center space-y-4 shadow-xl">
+        <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-8 text-center space-y-4 shadow-xl order-3">
           <Calendar className="w-10 h-10 text-zinc-600 mx-auto" />
           <h3 className="text-white font-display font-extrabold text-sm uppercase">Nenhuma Partida Agendada</h3>
           <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
@@ -1401,7 +2126,7 @@ export default function DashboardStatus({
       )}
 
       {/* SEÇÃO ANALÍTICA / RANKINGS DO RACHA */}
-      <div className="border-t border-zinc-900 pt-6 space-y-4">
+      <div className="border-t border-zinc-900 pt-6 space-y-4 order-8">
         <div>
           <h3 className="font-display font-black text-sm text-white uppercase tracking-tight flex items-center gap-2">
             <Trophy className="w-4 h-4 text-emerald-400" />

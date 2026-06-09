@@ -70,6 +70,8 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [recurMonthlyFee, setRecurMonthlyFee] = useState('100');
   const [recurChargeDateRule, setRecurChargeDateRule] = useState('primeiro_jogo');
   const [recurMaxMensalistas, setRecurMaxMensalistas] = useState('12');
+  const [recurMaxPlayers, setRecurMaxPlayers] = useState('15');
+  const [newMatchMaxPlayers, setNewMatchMaxPlayers] = useState('15');
   const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
 
   // Data Fetching
@@ -107,6 +109,7 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
           setRecurMonthlyFee((recurData.monthlyFee ?? 100).toString());
           setRecurChargeDateRule(recurData.chargeDateRule ?? 'primeiro_jogo');
           setRecurMaxMensalistas((recurData.maxMensalistas ?? 12).toString());
+          setRecurMaxPlayers((recurData.maxPlayers ?? 15).toString());
         }
       }
 
@@ -244,7 +247,8 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
           time: newMatchTime,
           location: newMatchLocation,
           durationMinutes: newMatchDuration,
-          confirmationDeadlineDaysBefore: newMatchDeadline ? parseInt(newMatchDeadline) : 2
+          confirmationDeadlineDaysBefore: newMatchDeadline ? parseInt(newMatchDeadline) : 2,
+          maxPlayers: parseInt(newMatchMaxPlayers || '15')
         })
       });
 
@@ -464,9 +468,8 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
           durationMinutes: recurDuration,
           confirmationDeadlineDaysBefore: recurDeadline,
           active: recurActive,
-          monthlyFee: parseFloat(recurMonthlyFee),
-          chargeDateRule: recurChargeDateRule,
-          maxMensalistas: parseInt(recurMaxMensalistas || '12')
+          maxMensalistas: parseInt(recurMaxMensalistas || '12'),
+          maxPlayers: parseInt(recurMaxPlayers || '15')
         })
       });
       if (!response.ok) throw new Error('Falha ao processar configuração de recorrência.');
@@ -822,6 +825,18 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                     className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-1.5 font-mono text-xs focus:outline-none focus:border-emerald-500"
                   />
                 </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono text-zinc-500 uppercase">Limite de Vagas (Atletas)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={newMatchMaxPlayers}
+                    onChange={(e) => setNewMatchMaxPlayers(e.target.value)}
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-1.5 font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
               </div>
 
               <button
@@ -918,8 +933,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                         </div>
 
                         <div className="flex gap-4 text-[10px] pt-1 font-mono text-zinc-500 uppercase">
-                          <div>⚽ Confirmados: <span className="text-emerald-400 font-extrabold">{item.confirmedCount}</span></div>
-                          <div>👥 Vagas Restantes: <span className="text-zinc-300 font-extrabold">{item.vacancies}</span></div>
+                          <div>⚽ Atletas Confirmados: <span className="text-emerald-400 font-extrabold">{item.confirmedCount} de {item.maxPlayers || 15}</span></div>
                         </div>
                       </div>
 
@@ -1310,43 +1324,16 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-mono text-zinc-500 uppercase">Mensalidade (R$)</label>
-                    <input
-                      type="number"
-                      required
-                      min="0"
-                      step="0.01"
-                      value={recurMonthlyFee}
-                      onChange={(e) => setRecurMonthlyFee(e.target.value)}
-                      className="w-full bg-[#1c1c1e] text-white border border-[#2b2b2b] rounded px-3 py-2 font-mono text-xs focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-mono text-zinc-500 uppercase">Faturamento</label>
-                    <select
-                      value={recurChargeDateRule}
-                      onChange={(e) => setRecurChargeDateRule(e.target.value)}
-                      className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-800 rounded px-2 py-2 font-mono text-xs focus:outline-none cursor-pointer"
-                    >
-                      <option value="primeiro_jogo">1º Jogo</option>
-                      <option value="ultimo_jogo">Último Jogo</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="block text-[10px] font-mono text-zinc-500 uppercase">Limite Vagas</label>
-                    <input
-                      type="number"
-                      required
-                      min="1"
-                      value={recurMaxMensalistas}
-                      onChange={(e) => setRecurMaxMensalistas(e.target.value)}
-                      className="w-full bg-[#1c1c1e] text-white border border-[#2b2b2b] rounded px-3 py-2 font-mono text-xs focus:outline-none"
-                    />
-                  </div>
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-mono text-zinc-500 uppercase">Limite de Vagas do Racha (Jogadores)</label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={recurMaxPlayers}
+                    onChange={(e) => setRecurMaxPlayers(e.target.value)}
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-800 rounded px-3 py-2 font-mono text-xs focus:outline-none focus:border-emerald-500"
+                  />
                 </div>
 
                 <div className="flex items-center justify-between p-2.5 bg-zinc-950 border border-zinc-900 rounded-lg">

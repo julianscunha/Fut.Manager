@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Player, Bill, PaymentRecord, RecurrentConfig } from '../types';
 import { 
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,
-  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle
+  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle, History
 } from 'lucide-react';
 
 interface FinanceManagerProps {
@@ -16,6 +16,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   const [bills, setBills] = useState<Bill[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [recurrentConfig, setRecurrentConfig] = useState<Partial<RecurrentConfig>>({});
+  const [financeConfig, setFinanceConfig] = useState<any>(null);
   const [health, setHealth] = useState({ totalExpected: 0, totalReceived: 0, totalPending: 0 });
   const [players, setPlayers] = useState<Player[]>([]);
   
@@ -87,9 +88,12 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       setPayments(data.payments || []);
       setHealth(data.health || { totalExpected: 0, totalReceived: 0, totalPending: 0 });
       setRecurrentConfig(data.recurrentConfig || {});
+      setFinanceConfig(data.financeConfig || null);
       setPlayers(data.players || []);
 
-      if (data.recurrentConfig?.monthlyFee) {
+      if (data.financeConfig?.monthlyFee) {
+        setNewBillAmount(data.financeConfig.monthlyFee.toString());
+      } else if (data.recurrentConfig?.monthlyFee) {
         setNewBillAmount(data.recurrentConfig.monthlyFee.toString());
       }
       
@@ -225,33 +229,31 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     });
   };
 
-  // Save changes to recurrent finances
+  // Save changes to parameters in Finance module
   const handleSaveRecurrentFinConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     const fee = (e.currentTarget.elements.namedItem('monthlyFee') as HTMLInputElement).value;
     const rule = (e.currentTarget.elements.namedItem('chargeDateRule') as HTMLSelectElement).value;
+    const effectiveDate = (e.currentTarget.elements.namedItem('effectiveDate') as HTMLInputElement).value;
 
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      // Fetch current schedules to merge
-      const curRes = await fetch('/api/recurrent-config');
-      const curData = await curRes.json();
-
-      const response = await fetch('/api/recurrent-config', {
+      const response = await fetch('/api/finances/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...curData,
           monthlyFee: parseFloat(fee),
-          chargeDateRule: rule
+          chargeDateRule: rule,
+          effectiveDate
         })
       });
 
-      if (!response.ok) throw new Error('Erro ao salvar parametrização.');
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.error || 'Erro ao salvar parametrização.');
 
-      setSuccessMsg('Configurações financeiras e regras de cobrança salvas!');
+      setSuccessMsg('Configurações financeiras e regras de cobrança salvas com sucesso!');
       await fetchFinanceData();
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
@@ -926,58 +928,114 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
 
       {/* TAB 4: RECURRENCE FINANCE CONFIGS (CONFIGURAR MENSALIDADE) */}
       {!loading && activeTab === 'config' && isAdmin && (
-        <div className="max-w-xl bg-zinc-950/40 p-5 rounded-xl border border-zinc-900 font-mono text-xs">
+        <div className="max-w-xl bg-[#09090b] p-5 rounded-xl border border-zinc-900 font-mono text-xs">
           <div className="flex items-center gap-2 pb-3 mb-4 border-b border-zinc-900/60">
             <Sliders className="w-4 h-4 text-emerald-400" />
-            <h3 className="font-display font-medium text-white text-sm">Parametrização de Lançamentos Recorrentes</h3>
+            <h3 className="font-display font-medium text-white text-sm">Parâmetros Financeiros do Grupo</h3>
+          </div>
+
+          {/* Status Atual do Grupo */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block mb-1">Mensalidade Atual</span>
+              <span className="text-base font-extrabold text-emerald-400 font-sans">
+                R$ {parseFloat(financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100).toFixed(2)}
+              </span>
+            </div>
+            <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
+              <span className="text-[10px] text-zinc-500 uppercase font-bold block mb-1">Cobrança Gerada</span>
+              <span className="text-[11px] font-bold text-zinc-300">
+                {(financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule) === 'ultimo_jogo' 
+                  ? 'Último Jogo do Mês' 
+                  : 'Primeiro Jogo do Mês'}
+              </span>
+            </div>
           </div>
           
-          <form onSubmit={handleSaveRecurrentFinConfig} className="space-y-4">
-            
-            <div className="space-y-1">
-              <label className="text-[10px] text-zinc-500 uppercase block font-bold">Valor da Parcela Mensal (R$)</label>
-              <input
-                type="number"
-                name="monthlyFee"
-                required
-                min="0"
-                step="0.01"
-                defaultValue={recurrentConfig.monthlyFee || 100}
-                placeholder="Exemplo: 100"
-                className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
-              />
-              <span className="text-[9px] text-zinc-650 mt-0.5 block">
-                Valor utilizado como semente para a cobrança automática e simulações.
-              </span>
-            </div>
+          <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40 mb-5">
+            <h4 className="font-display font-semibold text-white text-xs uppercase mb-3 text-emerald-400">Alterar Mensalidade / Regras</h4>
+            <form onSubmit={handleSaveRecurrentFinConfig} className="space-y-4">
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-500 uppercase block font-bold">Novo Valor (R$)</label>
+                  <input
+                    type="number"
+                    name="monthlyFee"
+                    required
+                    min="1"
+                    step="0.01"
+                    defaultValue={financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100}
+                    placeholder="Exemplo: 100"
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <label className="text-[10px] text-zinc-500 uppercase block font-bold">Data de Gatilho / Vencimento no Mês</label>
-              <select
-                name="chargeDateRule"
-                defaultValue={recurrentConfig.chargeDateRule || 'primeiro_jogo'}
-                className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none cursor-pointer"
+                <div className="space-y-1">
+                  <label className="text-[10px] text-zinc-500 uppercase block font-bold">Data de Vigência</label>
+                  <input
+                    type="date"
+                    name="effectiveDate"
+                    required
+                    defaultValue={new Date().toISOString().split('T')[0]}
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] text-zinc-500 uppercase block font-bold">Forma de Geração (Gatilho de Rodada)</label>
+                <select
+                  name="chargeDateRule"
+                  defaultValue={financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule ?? 'primeiro_jogo'}
+                  className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none cursor-pointer"
+                >
+                  <option value="primeiro_jogo">No Primeiro Jogo do Mês</option>
+                  <option value="ultimo_jogo">No Último Jogo do Mês</option>
+                </select>
+                <span className="text-[9px] text-zinc-650 mt-1 block leading-normal">
+                  As parcelas dos mensalistas serão geradas de forma prospectiva quando os rachas ocorrerem. Alterações de valor não afetam cobranças já geradas em meses anteriores.
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="w-full bg-[#10b981] hover:bg-emerald-500 disabled:opacity-40 text-zinc-950 font-extrabold rounded-lg py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer"
               >
-                <option value="primeiro_jogo">No Primeiro Jogo do Mês</option>
-                <option value="ultimo_jogo">No Último Jogo do Mês</option>
-              </select>
-              <span className="text-[9px] text-zinc-650 mt-0.5 block">
-                Garantia permanente de compatibilidade histórica: No dia correspondente à rodada de gatilho, as cobranças de todos os mensalistas são geradas permanentemente.
-              </span>
+                {actionLoading ? 'Processando...' : 'Aplicar Reajuste / Salvar Parâmetros'}
+              </button>
+            </form>
+          </div>
+
+          {/* Histórico Permanente de Mensalidades */}
+          <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
+            <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
+              <History className="w-3.5 h-3.5 text-zinc-400" />
+              <h4 className="font-display font-medium text-white text-xs uppercase">Histórico de Reajustes</h4>
             </div>
-
-            <p className="text-[10px] text-zinc-500 leading-normal bg-zinc-950 p-2.5 rounded-lg border border-zinc-900/40">
-              💡 As parcelas são retroativas de acordo com as regras acordadas e nunca interferem em parcelas de meses pretéritos previamente liquidadas!
-            </p>
-
-            <button
-              type="submit"
-              disabled={actionLoading}
-              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer"
-            >
-              Confirmar e Salvar Mudanças
-            </button>
-          </form>
+            
+            {financeConfig?.history && financeConfig.history.length > 0 ? (
+              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                {[...financeConfig.history]
+                  .sort((a: any, b: any) => b.date.localeCompare(a.date))
+                  .map((h: any, i: number) => {
+                    const parts = h.date.split('-');
+                    const formattedDate = parts.length === 3 
+                      ? `${parts[2]}/${parts[1]}/${parts[0]}`
+                      : h.date;
+                    return (
+                      <div key={i} className="flex items-center justify-between p-2.5 bg-zinc-950 rounded border border-zinc-900 font-mono text-[11px]">
+                        <span className="text-zinc-400">Vigência: <strong className="text-zinc-300">{formattedDate}</strong></span>
+                        <span className="text-emerald-400 font-bold">R$ {parseFloat(h.amount).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+              </div>
+            ) : (
+              <p className="text-[10px] text-zinc-600 italic">Nenhum reajuste ou alteração registrada no histórico.</p>
+            )}
+          </div>
         </div>
       )}
 

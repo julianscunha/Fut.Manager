@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Player, PlayerPosition, PlayerCategory, PlayerStatus, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
-import { Shield, Sparkles, X, Heart, Settings, UserPlus, Save } from 'lucide-react';
+import { Shield, Sparkles, X, Heart, Settings, UserPlus, Save, Phone, FileText } from 'lucide-react';
 
 interface PlayerFormProps {
   player?: Player | null; // If provided, we are editing
@@ -15,7 +15,9 @@ interface PlayerFormProps {
 
 export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps) {
   const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
   const [photoOriginal, setPhotoOriginal] = useState('');
   const [playerCardUrl, setPlayerCardUrl] = useState('');
   const [favoriteTeamId, setFavoriteTeamId] = useState('fla');
@@ -36,7 +38,9 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
   useEffect(() => {
     if (player) {
       setName(player.name);
+      setPhone(player.phone || '');
       setEmail(player.email || '');
+      setAdminNotes(player.adminNotes || '');
       setPhotoOriginal(player.photoOriginal || '');
       setPlayerCardUrl(player.playerCardUrl || '');
       setFavoriteTeamId(player.favoriteTeamId);
@@ -50,7 +54,9 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
     } else {
       // Clear
       setName('');
+      setPhone('');
       setEmail('');
+      setAdminNotes('');
       setPhotoOriginal('');
       setPlayerCardUrl('');
       setFavoriteTeamId('fla');
@@ -63,6 +69,13 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       setS3Path('');
     }
   }, [player]);
+
+  const formatPhoneStr = (v: string) => {
+    const digits = v.replace(/\D/g, '');
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+  };
 
   const handleSecondaryPositionToggle = (pos: PlayerPosition) => {
     if (secondaryPositions.includes(pos)) {
@@ -143,10 +156,22 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
     e.preventDefault();
     if (!name.trim()) return;
 
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (!phone) {
+      setUploadError('O campo Celular é obrigatório!');
+      return;
+    }
+    if (cleanPhone.length < 10) {
+      setUploadError('Informe um telefone celular válido contendo DDD.');
+      return;
+    }
+
     // Build the updated object
     onSave({
       name: name.trim(),
+      phone: phone.trim(),
       email: email.trim(),
+      adminNotes: adminNotes.trim(),
       photoOriginal,
       playerCardUrl,
       favoriteTeamId,
@@ -165,7 +190,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
     <form
       id="player-form-container"
       onSubmit={handleSubmit}
-      className="p-5 md:p-6 rounded-xl sports-card border border-zinc-800 text-sm max-w-2xl mx-auto space-y-5"
+      className="p-5 md:p-6 rounded-xl sports-card border border-zinc-800 text-sm max-w-2xl mx-auto space-y-5 select-none font-sans"
     >
       <div className="flex justify-between items-center pb-2 border-b border-zinc-800">
         <div className="flex items-center gap-2">
@@ -185,7 +210,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Name */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 col-span-1">
           <label className="text-zinc-300 font-medium">Nome Completo *</label>
           <input
             type="text"
@@ -197,9 +222,26 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           />
         </div>
 
+        {/* Phone Cellular */}
+        <div className="flex flex-col gap-1.5 col-span-1">
+          <label className="text-zinc-300 font-medium flex items-center gap-1">
+            <Phone className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Celular (Obrigatório)*</span>
+          </label>
+          <input
+            type="text"
+            required
+            maxLength={15}
+            value={phone}
+            onChange={(e) => setPhone(formatPhoneStr(e.target.value))}
+            placeholder="(85) 99999-9999"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-[#22c55e] placeholder-zinc-600 transition font-mono"
+          />
+        </div>
+
         {/* Email */}
-        <div className="flex flex-col gap-1.5">
-          <label className="text-zinc-300 font-medium">E-mail</label>
+        <div className="flex flex-col gap-1.5 col-span-1">
+          <label className="text-zinc-300 font-medium">E-mail (Opcional)</label>
           <input
             type="email"
             value={email}
@@ -209,116 +251,8 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           />
         </div>
 
-        {/* Interactive Photo upload component directly to S3 */}
-        <div className="flex flex-col gap-1.5 md:col-span-2">
-          <label className="text-zinc-300 font-medium">Foto Original do Atleta *</label>
-          
-          {photoOriginal ? (
-            <div className="flex items-center gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-850">
-              <div className="relative w-20 h-20 rounded-full border-2 border-emerald-500 overflow-hidden bg-zinc-950 flex-shrink-0 shadow-lg">
-                <img src={photoOriginal} alt="Preview" className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 space-y-1 min-w-0">
-                <span className="text-[10px] font-bold text-emerald-400 block font-mono bg-emerald-550/10 px-2 py-0.5 rounded border border-emerald-500/20 w-fit">● AWS S3: PRONTO_OK</span>
-                <p className="text-[11px] text-zinc-500 truncate font-mono mt-1 select-all" title={s3Path}>
-                  {s3Path || 'https://racha-do-fofim.s3.sa-east-1.amazonaws.com/uploads/original-image.png'}
-                </p>
-                <div className="flex items-center gap-2 pt-1.5">
-                  <label className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 hover:text-emerald-400 border border-zinc-750 px-3 py-1.5 rounded-lg cursor-pointer transition font-mono font-medium flex items-center gap-1">
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    <span>Substituir Foto</span>
-                    <input
-                      type="file"
-                      accept="image/png, image/jpeg, image/jpg, image/webp"
-                      className="hidden"
-                      onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => { setPhotoOriginal(''); setS3Path(''); }}
-                    className="text-xs text-rose-400 hover:text-rose-350 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/10 hover:border-rose-500/35 px-3 py-1.5 rounded-lg transition font-mono font-medium"
-                  >
-                    Remover
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              className={`border-2 border-dashed rounded-xl p-6 text-center transition flex flex-col items-center justify-center gap-2 cursor-pointer ${
-                isDragging
-                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400'
-                  : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 text-zinc-400'
-              }`}
-            >
-              <input
-                type="file"
-                id="image-file-input"
-                accept="image/png, image/jpeg, image/jpg, image/webp"
-                className="hidden"
-                onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
-              />
-              <label htmlFor="image-file-input" className="cursor-pointer flex flex-col items-center justify-center w-full h-full py-4 select-none">
-                {uploading ? (
-                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500 border-r-2 border-r-transparent mb-3" />
-                ) : (
-                  <svg className="w-10 h-10 text-zinc-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                )}
-                <p className="text-xs text-zinc-300 font-bold mb-1">
-                  Arraste e solte sua foto aqui, ou clique para navegar
-                </p>
-                <p className="text-[10px] text-zinc-500 font-mono">
-                  Upload direto para AWS S3 • JPG, JPEG, PNG ou WEBP (Max 5MB)
-                </p>
-              </label>
-            </div>
-          )}
-
-          {uploadError && (
-            <p className="text-xs text-rose-400 font-medium font-mono mt-1">⚠️ {uploadError}</p>
-          )}
-        </div>
-
-        {/* Card do Jogador (Future AI Integration Configuration structure) */}
-        <div className="flex flex-col gap-2 bg-[#091510] border border-emerald-500/10 p-4 rounded-xl md:col-span-2">
-          <label className="text-zinc-300 font-bold flex items-center gap-1.5 text-[10px] text-emerald-400 uppercase tracking-wider font-mono">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span>Card do Jogador (Reserva de IA de Geração Esportiva)</span>
-          </label>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-16 h-20 rounded-lg border border-emerald-550/20 bg-emerald-950/10 flex flex-col items-center justify-center text-center p-2 text-emerald-600 flex-shrink-0 shadow-inner">
-              <svg className="w-8 h-8 opacity-40 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-              <span className="text-[7px] font-mono mt-1 text-emerald-500/60 font-bold uppercase tracking-wider">AI ATLETA</span>
-            </div>
-            <div className="space-y-1 text-left flex-1 min-w-0">
-              <p className="text-xs text-zinc-300 font-bold">Processamento Futuro de Card Esportivo Dedicado</p>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Este atleta utilizará o time do coração {selectedTeamDetails ? `(${selectedTeamDetails.name})` : ''} para sintetizar o card final personalizado da temporada 2026. A foto original no S3 será processada automaticamente.
-              </p>
-              <input
-                id="input-player-card-url"
-                type="text"
-                placeholder="Insira uma URL direta para a imagem do Card Gerado (ou aguarde processamento automático de IA)"
-                value={playerCardUrl}
-                onChange={(e) => setPlayerCardUrl(e.target.value)}
-                className="w-full bg-zinc-90 w bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 font-mono focus:outline-none focus:border-[#22c55e]"
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Club Selection with accent badge color */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 col-span-1">
           <label className="text-zinc-300 font-medium flex items-center gap-1.5">
             <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />
             <span>Time do Coração</span>
@@ -342,8 +276,8 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           </div>
         </div>
 
-        {/* Category Selector */}
-        <div className="flex flex-col gap-1.5">
+        {/* Category Selector with live visual aid guides box */}
+        <div className="flex flex-col gap-1.5 md:col-span-1">
           <label className="text-zinc-300 font-medium">Categoria do Racha</label>
           <select
             value={category}
@@ -354,10 +288,24 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
             <option value="mensalista_goleiro">Mensalista Goleiro</option>
             <option value="reserva">Reserva</option>
           </select>
+          
+          {/* HELP VISUAL CONTAINER */}
+          <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-885 text-[10px] text-zinc-500 leading-normal">
+            <span className="font-bold text-zinc-400 block uppercase mb-1">Impacto Financeiro & Rodadas:</span>
+            {category === 'mensalista' && (
+              <span>📝 <strong>Mensalista</strong>: Participa da apuração mensal, recebendo mensalidades fixas recorrentes. Prioridade no sorteio do racha.</span>
+            )}
+            {category === 'mensalista_goleiro' && (
+              <span>🧤 <strong>Mensalista Goleiro</strong>: Isento total das taxas de faturamento. Prioritário nas vagas fixas do sorteio.</span>
+            )}
+            {category === 'reserva' && (
+              <span>📋 <strong>Reserva</strong>: Não cobrado por mensalidade regular. Sujeito apenas à taxa de presença unitária quando convocado.</span>
+            )}
+          </div>
         </div>
 
         {/* Status Selection */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 md:col-span-1">
           <label className="text-zinc-300 font-medium">Status de Disponibilidade</label>
           <select
             value={status}
@@ -369,36 +317,143 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
             <option value="lesionado">Lesionado 🩺</option>
             <option value="afastado">Afastado / Fora temporada</option>
           </select>
+
+          {/* Start / End dates for lesionado / indisponivel */}
+          {(status === 'lesionado' || status === 'indisponivel') && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-zinc-500">Ausente de:</label>
+                <input
+                  type="date"
+                  required
+                  value={statusStartDate}
+                  onChange={(e) => setStatusStartDate(e.target.value)}
+                  className="w-full bg-zinc-900 border border-[#22c55e]/20 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-[#22c55e] text-xs transition font-mono"
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-zinc-500">Até data:</label>
+                <input
+                  type="date"
+                  required
+                  value={statusEndDate}
+                  onChange={(e) => setStatusEndDate(e.target.value)}
+                  className="w-full bg-zinc-900 border border-[#22c55e]/20 rounded-lg px-2.5 py-1.5 text-white focus:outline-none focus:border-[#22c55e] text-xs transition font-mono"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Start / End dates for lesionado / indisponivel */}
-        {(status === 'lesionado' || status === 'indisponivel') && (
-          <div className="grid grid-cols-2 gap-3 md:col-span-1">
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-zinc-400 font-medium">Ausente de:</label>
-              <input
-                type="date"
-                required
-                value={statusStartDate}
-                onChange={(e) => setStatusStartDate(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-[#22c55e] text-xs transition"
-              />
+        {/* Photo upload component */}
+        <div className="flex flex-col gap-1.5 md:col-span-2">
+          <label className="text-zinc-300 font-medium flex items-center gap-1.5">
+            <span>Foto Original do Atleta</span>
+            <span className="text-[10px] text-zinc-500 font-mono">(Upload direto local via S3)</span>
+          </label>
+          
+          {photoOriginal ? (
+            <div className="flex items-center gap-4 bg-zinc-900/60 p-4 rounded-xl border border-zinc-850">
+              <div className="relative w-24 h-24 rounded-full border-2 border-emerald-500 overflow-hidden bg-zinc-950 flex-shrink-0 shadow-lg">
+                <img src={photoOriginal} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              </div>
+              <div className="flex-1 space-y-1 min-w-0">
+                <span className="text-[10px] font-bold text-emerald-450 block font-mono bg-emerald-550/10 px-2 py-0.5 rounded border border-emerald-500/20 w-fit">● AWS S3: PRONTO_OK</span>
+                <p className="text-[11px] text-zinc-500 truncate font-mono mt-1 select-all" title={s3Path}>
+                  {s3Path || 'https://racha-do-fofim.s3.sa-east-1.amazonaws.com/uploads/original-image.png'}
+                </p>
+                <div className="flex items-center gap-2 pt-1.5">
+                  <label className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 hover:text-emerald-450 border border-zinc-750 px-3 py-1.5 rounded-lg cursor-pointer transition font-mono font-medium flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    <span>Substituir Foto</span>
+                    <input
+                      type="file"
+                      accept="image/png, image/jpeg, image/jpg, image/webp"
+                      className="hidden"
+                      onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => { setPhotoOriginal(''); setS3Path(''); }}
+                    className="text-xs text-rose-450 hover:text-rose-350 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/10 hover:border-rose-500/35 px-3 py-1.5 rounded-lg transition font-mono font-medium"
+                  >
+                    Remover
+                  </button>
+                </div>
+              </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[11px] text-zinc-400 font-medium">Até data:</label>
+          ) : (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-xl p-6 text-center transition flex flex-col items-center justify-center gap-2 cursor-pointer ${
+                isDragging
+                  ? 'border-emerald-500 bg-emerald-500/10 text-emerald-450'
+                  : 'border-zinc-800 hover:border-zinc-700 bg-zinc-900/40 text-zinc-400'
+              }`}
+            >
               <input
-                type="date"
-                required
-                value={statusEndDate}
-                onChange={(e) => setStatusEndDate(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-2 text-white focus:outline-none focus:border-[#22c55e] text-xs transition"
+                type="file"
+                id="image-file-input"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && handleFileChange(e.target.files[0])}
+              />
+              <label htmlFor="image-file-input" className="cursor-pointer flex flex-col items-center justify-center w-full h-full py-2 select-none">
+                {uploading ? (
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-emerald-500 border-r-2 border-r-transparent mb-3" />
+                ) : (
+                  <svg className="w-10 h-10 text-zinc-600 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                )}
+                <p className="text-xs text-zinc-300 font-bold mb-1">
+                  Arraste e solte sua foto aqui, ou clique para navegar
+                </p>
+                <p className="text-[10px] text-zinc-500 font-mono">
+                  Upload direto para AWS S3 • JPG, JPEG, PNG ou WEBP (Max 5MB)
+                </p>
+              </label>
+            </div>
+          )}
+        </div>
+
+        {/* Card do Jogador (⚽ Card do Atleta) RENAME COMPLETED */}
+        <div className="flex flex-col gap-2 bg-[#091510] border border-emerald-500/10 p-4 rounded-xl md:col-span-2">
+          <label className="text-zinc-300 font-bold flex items-center gap-1.5 text-[10px] text-[#4ade80] uppercase tracking-wider font-mono">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            <span>⚽ Card do Atleta</span>
+          </label>
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-16 h-20 rounded-lg border border-emerald-550/20 bg-emerald-950/20 flex flex-col items-center justify-center text-center p-2 text-emerald-500 flex-shrink-0 shadow-inner">
+              <svg className="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+              </svg>
+              <span className="text-[7px] font-mono mt-1 text-emerald-450 font-bold uppercase tracking-wider">CARDS 2026</span>
+            </div>
+            <div className="space-y-1 text-left flex-1 min-w-0">
+              <p className="text-xs text-zinc-350 font-bold">Imagem Personalizada Estilo Figurinha</p>
+              <p className="text-[11px] text-zinc-500 leading-relaxed">
+                Este atleta utilizará o time do coração {selectedTeamDetails ? `(${selectedTeamDetails.name})` : ''} para sintetizar o card final personalizado da temporada 2026.
+              </p>
+              <input
+                id="input-player-card-url"
+                type="text"
+                placeholder="Insira uma URL direta para o Card Gerado / figurinha do futebol"
+                value={playerCardUrl}
+                onChange={(e) => setPlayerCardUrl(e.target.value)}
+                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 font-mono focus:outline-none focus:border-[#22c55e]"
               />
             </div>
           </div>
-        )}
+        </div>
 
         {/* Primary Position */}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 col-span-1">
           <label className="text-zinc-300 font-medium">Posição Principal *</label>
           <select
             value={primaryPosition}
@@ -411,6 +466,27 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
               </option>
             ))}
           </select>
+
+          {primaryPosition === 'goleiro' && (
+            <span className="text-[9.5px] font-mono text-emerald-450 mt-1 bg-emerald-950/20 px-2 py-1 rounded border border-emerald-500/10">
+              🧤 Goleiros assumem regras de isenção de faturamento se Mensalistas Goleiros e regras de sorteio automatizadas.
+            </span>
+          )}
+        </div>
+
+        {/* [NEW FIELD] Administrative Notes */}
+        <div className="flex flex-col gap-1.5 col-span-1">
+          <label className="text-zinc-300 font-medium flex items-center gap-1.5">
+            <FileText className="w-4 h-4 text-zinc-450" />
+            <span>Observações Administrativas (Opcional)</span>
+          </label>
+          <textarea
+            rows={2}
+            value={adminNotes}
+            onChange={(e) => setAdminNotes(e.target.value)}
+            placeholder="Ex: Jogador com grande potencial, indicado por Ricardo. Pagamentos via PIX avulso."
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white font-sans text-xs focus:outline-none focus:border-[#22c55e] placeholder-zinc-650 resize-y transition"
+          />
         </div>
 
         {/* Secondary Positions Checklist */}
@@ -450,6 +526,10 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           </div>
         </div>
       </div>
+
+      {uploadError && (
+        <p className="text-xs text-rose-455 font-bold font-mono mt-1 bg-rose-950/20 p-2 rounded border border-rose-500/10">⚠️ Falha no Formulário: {uploadError}</p>
+      )}
 
       {/* Buttons Footer */}
       <div className="flex justify-end gap-3 pt-3 border-t border-zinc-900">

@@ -230,6 +230,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   const [formCategory, setFormCategory] = useState<'partida' | 'evento' | 'resenha' | 'livre'>('partida');
   const [formAssociation, setFormAssociation] = useState(''); // e.g. "match-123" or "event-456"
   const [formShowOnLanding, setFormShowOnLanding] = useState(false);
+  const [formIsHighlighted, setFormIsHighlighted] = useState(false);
   const [formEventDate, setFormEventDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
   const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -238,12 +239,14 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editShowOnLanding, setEditShowOnLanding] = useState(false);
+  const [editIsHighlighted, setEditIsHighlighted] = useState(false);
   const [editEventDate, setEditEventDate] = useState<string>('');
 
   // States for album date grouping, custom delete, and mobile touch swiping
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [activeAlbumDate, setActiveAlbumDate] = useState<string | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [activeHighlightIdx, setActiveHighlightIdx] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -312,8 +315,19 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   const currentVideosCount = posts.filter(p => p.mediaType === 'video').length;
   const currentPublicationsCount = posts.length;
 
-  // Destaque na Tela Inicial
-  const highlightPost = posts.find((p) => p.showOnLanding);
+  // Destaques do Mural (No máximo 3)
+  const muralHighlights = useMemo(() => {
+    return posts.filter(p => p.isHighlighted === true).slice(0, 3);
+  }, [posts]);
+
+  // Adjust active index if it goes out of bounds
+  useEffect(() => {
+    if (activeHighlightIdx >= muralHighlights.length && muralHighlights.length > 0) {
+      setActiveHighlightIdx(0);
+    }
+  }, [muralHighlights, activeHighlightIdx]);
+
+  const activeHighlight = muralHighlights[activeHighlightIdx] || muralHighlights[0] || null;
 
   // Filter lists derived
   const years = Array.from(new Set(posts.map(p => new Date(p.createdAt).getFullYear()))).sort((a, b) => {
@@ -647,6 +661,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
           matchId,
           eventId,
           showOnLanding: formShowOnLanding,
+          isHighlighted: formIsHighlighted,
           thumbnailUrl,
           mediumUrl,
           authorId: currentUser.id,
@@ -667,11 +682,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
         }
       }
 
-      setSuccessMsg(
-        uploadItems.length > 1 
-          ? `Sucesso! Foram criadas ${uploadItems.length} publicações no Mural do Racha.` 
-          : 'Publicação enviada com sucesso ao Mural!'
-      );
+      setSuccessMsg('✅ Publicação enviada para o mural.');
       resetUploadForm();
       setIsUploadOpen(false);
       loadData();
@@ -713,6 +724,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
           title: editTitle,
           description: editDescription,
           showOnLanding: editShowOnLanding,
+          isHighlighted: editIsHighlighted,
           reqUserId: currentUser.id,
           reqUserRole: currentUser.role,
           eventDate: editEventDate
@@ -773,7 +785,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     }
   };
 
-  // Highlight Toggle Admin
+  // Highlight Toggle Admin (isHighlighted - Mural)
   const handleToggleHighlight = async (id: string) => {
     if (!currentUser || currentUser.role !== 'admin') return;
 
@@ -793,14 +805,47 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || 'Erro ao alternar destaque.');
+        throw new Error(errData.error || 'Erro ao alternar destaque do mural.');
       }
 
       const updated = await res.json();
-      setSuccessMsg(updated.showOnLanding ? 'Destacado na Tela Inicial!' : 'Removido dos destaques.');
+      setSuccessMsg(updated.isHighlighted ? '📌 Destacado no Mural (limite de 3)!' : 'Removido dos destaques do mural.');
       loadData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Falha ao alterar destaque da publicação.');
+      setErrorMsg(err.message || 'Falha ao alterar destaque do mural.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Toggle Landing Screen Highlight (showOnLanding)
+  const handleToggleLanding = async (id: string) => {
+    if (!currentUser || currentUser.role !== 'admin') return;
+
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    try {
+      const res = await fetch(`/api/mural/posts/${id}/toggle-landing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reqUserId: currentUser.id,
+          reqUserRole: currentUser.role
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || 'Erro ao alternar destaque na tela inicial.');
+      }
+
+      const updated = await res.json();
+      setSuccessMsg(updated.showOnLanding ? '⭐ Destacado na Tela Inicial!' : 'Removido dos destaques da tela inicial.');
+      loadData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Falha ao alterar destaque na tela inicial.');
     } finally {
       setActionLoading(false);
     }
@@ -825,7 +870,7 @@ ${shareUrl}`;
   const handleCopyLink = (post: MuralPost) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?public=true#post-${post.id}`;
     navigator.clipboard.writeText(shareUrl).then(() => {
-      alert('Link público copiado com sucesso! Compartilhe onde desejar.');
+      alert('Link copiado com sucesso! Compartilhe onde desejar.');
     });
   };
 
@@ -836,12 +881,12 @@ ${shareUrl}`;
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-900 pb-5">
         <div>
           <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase font-mono font-bold tracking-widest">
-            {isPublic ? 'Mural Público Simplificado' : 'Destaques & Memórias'}
+            {isPublic ? 'Destaques & Memórias' : 'Destaques & Memórias'}
           </span>
           <h2 className="font-display font-extrabold text-2xl text-white mt-2">Mural do Racha</h2>
           <p className="text-zinc-500 text-xs mt-0.5">
             {isPublic 
-              ? 'Área pública simplificada contendo os destaques e as fotos e vídeos autorizados do racha.'
+              ? 'Área contendo os destaques e as mídias selecionadas do racha.'
               : 'O espaço oficial para compartilhar e eternizar momentos, resenhas e grandes lances.'}
           </p>
         </div>
@@ -873,8 +918,8 @@ ${shareUrl}`;
         </div>
       )}
 
-      {/* SECTION 1: 📸 DESTAQUE DA SEMANA SECTION (Always visible) */}
-      {highlightPost && (
+      {/* SECTION 1: 📸 DESTAQUES DO MURAL (Supports up to 3 items) */}
+      {muralHighlights.length > 0 && activeHighlight && (
         <div className="bg-gradient-to-r from-emerald-950/20 to-zinc-950/40 border border-emerald-500/20 rounded-2xl p-5 md:p-6 shadow-xl relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
             <Award className="w-40 h-40 text-emerald-400" />
@@ -883,72 +928,99 @@ ${shareUrl}`;
           <div className="flex flex-col lg:flex-row gap-6 items-center">
             {/* Visual Media Cover */}
             <div className="w-full lg:w-[320px] h-[190px] bg-zinc-900 rounded-xl overflow-hidden relative border border-zinc-800 shadow-md group flex-shrink-0 cursor-pointer"
-                 onClick={() => setSelectedPost(highlightPost)}>
-              {highlightPost.mediaType === 'image' ? (
+                 onClick={() => setSelectedPost(activeHighlight)}>
+              {activeHighlight.mediaType === 'image' ? (
                 <img 
-                  src={highlightPost.mediaUrl} 
-                  alt={highlightPost.title} 
+                  src={activeHighlight.mediaUrl} 
+                  alt={activeHighlight.title} 
                   className="w-full h-full object-cover group-hover:scale-105 transition"
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="w-full h-full relative">
                   <video 
-                    src={highlightPost.mediaUrl}
+                    src={activeHighlight.mediaUrl}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
                     <div className="bg-emerald-600 p-3 rounded-full text-white shadow-xl">
-                      <Play className="w-5 h-5 fill-current" />
+                      <Play className="w-5 h-5 fill-current ml-0.5" />
                     </div>
                   </div>
                 </div>
               )}
-              <span className="absolute top-2.5 left-2.5 bg-amber-500 text-zinc-950 font-mono font-black text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
-                ⭐ DESTACADO NA TELA INICIAL
+              <span className="absolute top-2.5 left-2.5 bg-emerald-500 text-zinc-950 font-sans font-black text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 shadow-sm">
+                📌 DESTAQUE DO MURAL
               </span>
             </div>
 
             {/* details text */}
-            <div className="flex-1 space-y-3 w-full">
-              <div className="flex items-center gap-2">
-                {highlightPost.origin === 'automatic' ? (
-                  <span className="text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/20 font-bold px-2.5 py-0.5 rounded font-mono tracking-wider uppercase">
-                    🤖 Registro Automático
+            <div className="flex-1 space-y-3 w-full relative">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {activeHighlight.origin === 'automatic' ? (
+                    <span className="text-[10px] bg-emerald-950/80 text-emerald-300 border border-emerald-500/20 font-bold px-2.5 py-0.5 rounded font-mono tracking-wider uppercase">
+                      🤖 Registro Automático
+                    </span>
+                  ) : (
+                    <span className="text-[10px] bg-zinc-900 text-zinc-400 font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider">
+                      {activeHighlight.category}
+                    </span>
+                  )}
+                  <span className="text-[11px] text-zinc-500 font-mono">
+                    {new Date(activeHighlight.createdAt).toLocaleDateString('pt-BR')}
                   </span>
-                ) : (
-                  <span className="text-[10px] bg-zinc-900 text-zinc-400 font-bold px-2 py-0.5 rounded uppercase font-mono tracking-wider">
-                    {highlightPost.category}
-                  </span>
+                </div>
+
+                {/* Left/Right controls if more than 1 item */}
+                {muralHighlights.length > 1 && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveHighlightIdx(prev => (prev - 1 + muralHighlights.length) % muralHighlights.length)}
+                      className="p-1.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800 text-zinc-400 hover:text-white rounded-lg transition min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                      title="Anterior"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[10px] text-zinc-500 font-mono font-bold px-1.5 selection:bg-transparent">
+                      {activeHighlightIdx + 1}/{muralHighlights.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveHighlightIdx(prev => (prev + 1) % muralHighlights.length)}
+                      className="p-1.5 bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-lg transition min-h-[36px] min-w-[36px] flex items-center justify-center cursor-pointer"
+                      title="Próximo"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 )}
-                <span className="text-[11px] text-zinc-500 font-mono">
-                  {new Date(highlightPost.createdAt).toLocaleDateString('pt-BR')}
-                </span>
               </div>
 
               <h3 className="font-display font-extrabold text-xl md:text-2xl text-white tracking-tight leading-snug">
-                {highlightPost.title}
+                {activeHighlight.title}
               </h3>
 
               <p className="text-zinc-300 text-xs md:text-sm leading-relaxed max-w-2xl line-clamp-3">
-                {highlightPost.description || 'Nenhuma descrição inserida.'}
+                {activeHighlight.description || 'Nenhuma descrição inserida.'}
               </p>
 
               <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-zinc-900">
                 <div className="text-xs font-mono text-zinc-400">
-                  Postado por: <span className="font-bold text-white uppercase">{highlightPost.authorName}</span>
+                  Postado por: <span className="font-bold text-white uppercase">{activeHighlight.authorName}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setSelectedPost(highlightPost)}
+                    onClick={() => setSelectedPost(activeHighlight)}
                     className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white font-semibold text-xs rounded-lg transition"
                   >
                     Ver Tudo
                   </button>
 
                   <button
-                    onClick={() => handleShareWhatsApp(highlightPost)}
+                    onClick={() => handleShareWhatsApp(activeHighlight)}
                     className="p-2 bg-emerald-950/40 text-emerald-400 hover:bg-emerald-900/60 border border-emerald-500/25 rounded-lg transition"
                     title="Compartilhar no WhatsApp"
                   >
@@ -958,6 +1030,21 @@ ${shareUrl}`;
               </div>
             </div>
           </div>
+
+          {/* Carousel Dot Indicators at the bottom center if more than 1 */}
+          {muralHighlights.length > 1 && (
+            <div className="flex justify-center gap-1.5 mt-4">
+              {muralHighlights.map((_, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setActiveHighlightIdx(idx)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    idx === activeHighlightIdx ? 'bg-emerald-500 w-5' : 'bg-zinc-700 hover:bg-zinc-600'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1148,7 +1235,7 @@ ${shareUrl}`;
                   )}
 
                   {/* Badges labels */}
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10 text-[9px] font-mono select-none">
+                  <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1.5 z-10 text-[9px] font-mono select-none">
                     {post.origin === 'automatic' ? (
                       <span className="bg-emerald-950/90 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider flex items-center gap-1">
                         🤖 Registro Automático
@@ -1162,7 +1249,14 @@ ${shareUrl}`;
                     {post.showOnLanding && (
                       <span className="bg-amber-500 text-zinc-950 font-black px-2 py-0.5 rounded-full shadow flex items-center gap-1 uppercase tracking-wider font-mono">
                         <Star className="w-3 h-3 fill-zinc-950" />
-                        Destacado
+                        Capa
+                      </span>
+                    )}
+
+                    {post.isHighlighted && (
+                      <span className="bg-emerald-500 text-zinc-950 font-black px-2 py-0.5 rounded-full shadow flex items-center gap-1 uppercase tracking-wider font-mono">
+                        <Award className="w-3 h-3 fill-zinc-950 text-zinc-950" />
+                        Destaque Mural
                       </span>
                     )}
                   </div>
@@ -1233,19 +1327,33 @@ ${shareUrl}`;
                         <Copy className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Admin Actions */}
+                      {/* Admin Toggle Actions: separating Landing vs Mural header */}
                       {currentUser && currentUser.role === 'admin' && (
-                        <button
-                          onClick={() => handleToggleHighlight(post.id)}
-                          className={`p-1.5 border rounded-lg transition ${
-                            post.showOnLanding
-                              ? 'bg-amber-500/15 border-amber-500/25 text-amber-400'
-                              : 'bg-zinc-900 hover:bg-amber-950/20 border-zinc-850 text-zinc-500 hover:text-amber-400'
-                          }`}
-                          title="Destacar na Tela Inicial"
-                        >
-                          <Star className={`w-3.5 h-3.5 ${post.showOnLanding ? 'fill-amber-400' : ''}`} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleToggleLanding(post.id)}
+                            className={`p-1.5 border rounded-lg transition ${
+                              post.showOnLanding
+                                ? 'bg-amber-500/15 border-amber-500/25 text-amber-400'
+                                : 'bg-zinc-900 hover:bg-amber-950/20 border-zinc-850 text-zinc-500 hover:text-amber-400'
+                            }`}
+                            title="Destacar na Tela Inicial (Capa)"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${post.showOnLanding ? 'fill-amber-400' : ''}`} />
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleHighlight(post.id)}
+                            className={`p-1.5 border rounded-lg transition ${
+                              post.isHighlighted
+                                ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400'
+                                : 'bg-zinc-900 hover:bg-emerald-950/20 border-zinc-850 text-zinc-500 hover:text-emerald-400'
+                            }`}
+                            title="Destacar no Mural (Topo)"
+                          >
+                            <Award className={`w-3.5 h-3.5 ${post.isHighlighted ? 'fill-emerald-400 text-emerald-400' : ''}`} />
+                          </button>
+                        </>
                       )}
 
                       {/* Delete Admin */}
@@ -1374,7 +1482,7 @@ ${shareUrl}`;
                   )}
 
                   {/* Badges labels */}
-                  <div className="absolute top-2 left-2 flex items-center gap-1.5 z-10 text-[9px] font-mono select-none">
+                  <div className="absolute top-2 left-2 flex flex-wrap items-center gap-1.5 z-10 text-[9px] font-mono select-none">
                     {post.origin === 'automatic' ? (
                       <span className="bg-emerald-950/90 text-emerald-300 font-bold px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-wider flex items-center gap-1">
                         🤖 Registro Automático
@@ -1388,7 +1496,14 @@ ${shareUrl}`;
                     {post.showOnLanding && (
                       <span className="bg-amber-500 text-zinc-950 font-black px-2 py-0.5 rounded-full shadow flex items-center gap-1 uppercase tracking-wider font-mono">
                         <Star className="w-3 h-3 fill-zinc-950" />
-                        Destacado
+                        Capa
+                      </span>
+                    )}
+
+                    {post.isHighlighted && (
+                      <span className="bg-emerald-500 text-zinc-950 font-black px-2 py-0.5 rounded-full shadow flex items-center gap-1 uppercase tracking-wider font-mono">
+                        <Award className="w-3 h-3 fill-zinc-950 text-zinc-950" />
+                        Destaque Mural
                       </span>
                     )}
                   </div>
@@ -1459,19 +1574,33 @@ ${shareUrl}`;
                         <Copy className="w-3.5 h-3.5" />
                       </button>
 
-                      {/* Admin Actions */}
+                      {/* Admin Toggle Actions: separating Landing vs Mural header */}
                       {currentUser && currentUser.role === 'admin' && (
-                        <button
-                          onClick={() => handleToggleHighlight(post.id)}
-                          className={`p-1.5 border rounded-lg transition ${
-                            post.showOnLanding
-                              ? 'bg-amber-500/15 border-amber-500/25 text-amber-400'
-                              : 'bg-zinc-900 hover:bg-amber-950/20 border-zinc-850 text-zinc-500 hover:text-amber-400'
-                          }`}
-                          title="Destacar na Tela Inicial"
-                        >
-                          <Star className={`w-3.5 h-3.5 ${post.showOnLanding ? 'fill-amber-400' : ''}`} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleToggleLanding(post.id)}
+                            className={`p-1.5 border rounded-lg transition ${
+                              post.showOnLanding
+                                ? 'bg-amber-500/15 border-amber-500/25 text-amber-400'
+                                : 'bg-zinc-900 hover:bg-amber-950/20 border-zinc-850 text-zinc-500 hover:text-amber-400'
+                            }`}
+                            title="Destacar na Tela Inicial (Capa)"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${post.showOnLanding ? 'fill-amber-400' : ''}`} />
+                          </button>
+
+                          <button
+                            onClick={() => handleToggleHighlight(post.id)}
+                            className={`p-1.5 border rounded-lg transition ${
+                              post.isHighlighted
+                                ? 'bg-emerald-500/15 border-emerald-500/25 text-emerald-400'
+                                : 'bg-zinc-900 hover:bg-emerald-950/20 border-zinc-850 text-zinc-500 hover:text-emerald-400'
+                            }`}
+                            title="Destacar no Mural (Topo)"
+                          >
+                            <Award className={`w-3.5 h-3.5 ${post.isHighlighted ? 'fill-emerald-400 text-emerald-400' : ''}`} />
+                          </button>
+                        </>
                       )}
 
                       {/* Delete Admin */}
@@ -1658,6 +1787,7 @@ ${shareUrl}`;
                         setEditTitle(selectedPost.title);
                         setEditDescription(selectedPost.description);
                         setEditShowOnLanding(selectedPost.showOnLanding === true);
+                        setEditIsHighlighted(selectedPost.isHighlighted === true);
                         setEditEventDate(selectedPost.eventDate || selectedPost.createdAt.split('T')[0]);
                         setIsEditOpen(true);
                         setSelectedPost(null);
@@ -1706,9 +1836,9 @@ ${shareUrl}`;
                 </button>
               </div>
 
-              <form onSubmit={handleUploadSubmit} className="overflow-y-auto flex-1 p-5 space-y-4">
+              <form onSubmit={handleUploadSubmit} className="overflow-y-auto flex-1 p-5 space-y-5">
                 
-                {/* Drag & Drop Box */}
+                {/* 1. Arquivos (Área de upload) */}
                 <div
                   onDragEnter={handleDrag}
                   onDragOver={handleDrag}
@@ -1718,7 +1848,7 @@ ${shareUrl}`;
                     dragActive 
                       ? 'border-[#22c55e] bg-emerald-500/5' 
                       : uploadItems.length > 0 
-                        ? 'border-zinc-805 bg-zinc-950/40' 
+                        ? 'border-zinc-850 bg-zinc-950/40' 
                         : 'border-zinc-800 hover:border-[#22c55e]/30 bg-zinc-950/20'
                   }`}
                   onClick={() => fileInputRef.current?.click()}
@@ -1737,69 +1867,72 @@ ${shareUrl}`;
                       <Camera className="w-6 h-6 text-zinc-400" />
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-white">Arraste e solte seus arquivos aqui</p>
-                      <p className="text-[10px] text-zinc-500 mt-1">ou clique para navegar no dispositivo (permite múltiplos)</p>
+                      <p className="text-xs font-bold text-white">Arraste e solte ou toque para selecionar arquivos</p>
+                      <p className="text-[10px] text-zinc-500 mt-1">Selecione fotos e/ou vídeos do racha</p>
                     </div>
                     <div className="text-[9px] font-mono text-zinc-500 bg-zinc-950 px-2.5 py-1 rounded-full border border-zinc-900 inline-block uppercase tracking-wide">
-                      Foto: até 10 MB | Vídeo: até 200 MB
+                      Múltiplas mídias permitidas
                     </div>
                   </div>
                 </div>
 
-                {/* List of uploaded items preview */}
+                {/* Resumo do Upload com Miniaturas */}
                 {uploadItems.length > 0 && (
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                    <div className="flex items-center justify-between border-b border-zinc-900 pb-1.5">
-                      <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-mono">
-                        Arquivos Selecionados ({uploadItems.length})
-                      </span>
+                  <div className="space-y-3.5 p-3.5 bg-zinc-950/60 rounded-xl border border-zinc-900 font-sans">
+                    <div className="flex items-center justify-between border-b border-zinc-900 pb-2.5">
+                      <div className="space-y-1">
+                        <span className="block text-xs font-bold text-white uppercase tracking-wider font-mono">
+                          Arquivos Selecionados ({uploadItems.length})
+                        </span>
+                        <div className="flex flex-col gap-1 text-xs text-zinc-300 font-sans mt-0.5">
+                          {uploadItems.filter(item => item.file.type.startsWith('image/')).length > 0 && (
+                            <span className="flex items-center gap-1.5 font-bold text-white">
+                              📷 {uploadItems.filter(item => item.file.type.startsWith('image/')).length} {uploadItems.filter(item => item.file.type.startsWith('image/')).length === 1 ? 'foto selecionada' : 'fotos selecionadas'}
+                            </span>
+                          )}
+                          {uploadItems.filter(item => item.file.type.startsWith('video/')).length > 0 && (
+                            <span className="flex items-center gap-1.5 font-bold text-white">
+                              🎥 {uploadItems.filter(item => item.file.type.startsWith('video/')).length} {uploadItems.filter(item => item.file.type.startsWith('video/')).length === 1 ? 'vídeo selecionado' : 'vídeos selecionados'}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setUploadItems([])}
-                        className="text-[10px] text-rose-450 hover:underline uppercase font-mono"
+                        className="text-[11px] text-rose-400 hover:text-rose-300 font-mono font-bold min-h-[44px] px-2.5"
                       >
                         Limpar Tudo
                       </button>
                     </div>
-                    <div className="space-y-1.5 font-mono">
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[160px] overflow-y-auto pr-1">
                       {uploadItems.map((item) => (
                         <div 
                           key={item.id} 
-                          className="flex items-center gap-3 bg-zinc-950/80 border border-zinc-900 rounded-lg p-2 text-xs"
+                          className="flex items-center gap-2.5 bg-zinc-950 border border-zinc-850 rounded-lg p-2 text-xs"
                         >
-                          {/* Thumbnail preview */}
-                          <div className="w-10 h-10 bg-zinc-900 rounded overflow-hidden flex-shrink-0 flex items-center justify-center relative border border-zinc-850">
+                          <div className="w-8 h-8 bg-zinc-900 rounded overflow-hidden flex-shrink-0 flex items-center justify-center relative border border-zinc-800">
                             {item.file.type.startsWith('image/') ? (
                               <img src={item.preview} alt="Mini preview" className="w-full h-full object-cover" />
                             ) : (
-                              <Film className="w-4 h-4 text-emerald-400" />
+                              <Film className="w-3.5 h-3.5 text-[#22c55e]" />
                             )}
                           </div>
 
-                          {/* Metadata */}
-                          <div className="flex-1 min-w-0 font-mono text-[10px]">
-                            <p className="text-white font-bold truncate max-w-[200px]" title={item.file.name}>
+                          <div className="flex-1 min-w-0 font-mono text-[9px]">
+                            <p className="text-white font-bold truncate max-w-[130px]" title={item.file.name}>
                               {item.file.name}
                             </p>
-                            <div className="flex items-center gap-1.5 text-zinc-500 text-[9px] mt-0.5">
-                              <span>{(item.originalSize / (1024 * 1024)).toFixed(2)} MB</span>
-                              {item.isResized && (
-                                <>
-                                  <span>→</span>
-                                  <span className="text-[#4ade80] font-bold">{(item.currentSize / (1024 * 1024)).toFixed(2)} MB</span>
-                                  <span className="bg-emerald-500/10 text-[#4ade80] text-[8px] px-1 rounded border border-emerald-500/20 font-bold uppercase ml-1">
-                                    Otimizado
-                                  </span>
-                                </>
-                              )}
-                            </div>
+                            <span className="text-zinc-500 text-[8px]">
+                              {(item.originalSize / (1024 * 1024)).toFixed(1)} MB
+                            </span>
                           </div>
 
-                          {/* Action button to delete this specific file from selecting */}
                           <button
                             type="button"
                             onClick={() => setUploadItems(prev => prev.filter(x => x.id !== item.id))}
-                            className="p-1 px-1.5 bg-zinc-900 hover:bg-rose-950/40 border border-zinc-850 hover:border-rose-500/10 rounded text-zinc-400 hover:text-rose-400 transition ml-auto"
+                            className="p-1 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 rounded transition min-h-[30px]"
                             title="Remover"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -1810,111 +1943,155 @@ ${shareUrl}`;
                   </div>
                 )}
 
-                {/* Form fields */}
-                <div className="space-y-3 font-mono text-xs text-zinc-300">
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-white uppercase">Título da Publicação *</label>
+                {/* Form fields in clean vertical block layout (all full-width) */}
+                <div className="space-y-4 font-sans text-xs text-zinc-300">
+                  
+                  {/* 2. Título */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-white uppercase tracking-wide">Título da Publicação *</label>
                     <input
                       type="text"
                       required
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
-                      placeholder="Ex: Golaço do racha de quarta-feira!"
-                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-2 text-white rounded-lg focus:outline-none focus:border-[#22c55e]"
+                      placeholder="Ex: Gol do João, Racha de Quinta, Churrasco da Resenha..."
+                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-3 text-sm text-white rounded-xl focus:outline-none focus:border-[#22c55e] transition min-h-[44px]"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-white uppercase">Descrição / Momentos</label>
-                    <textarea
-                      value={formDescription}
-                      onChange={(e) => setFormDescription(e.target.value)}
-                      placeholder="Descreva o que rolou nesse grande lance ou confraternização..."
-                      rows={3}
-                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-2 text-white rounded-lg focus:outline-none focus:border-[#22c55e]"
-                    />
+                  {/* 3. Categoria */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-white uppercase tracking-wide">Categoria *</label>
+                    <select
+                      value={formCategory}
+                      onChange={(e) => setFormCategory(e.target.value as any)}
+                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-3 text-sm text-zinc-300 rounded-xl focus:outline-none cursor-pointer min-h-[44px] transition focus:border-[#22c55e]"
+                    >
+                      <option value="partida">Partida</option>
+                      <option value="evento">Evento</option>
+                      <option value="resenha">Resenha</option>
+                      <option value="livre">Livre</option>
+                    </select>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[11px] font-bold text-white uppercase">Data do Evento / Foto *</label>
+                  {/* 4. Relacionado a (Opcional) */}
+                  {(associations.matches?.length > 0 || associations.events?.length > 0) && (
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-bold text-white uppercase tracking-wide">Relacionado a (Opcional)</label>
+                      <select
+                        value={formAssociation}
+                        onChange={(e) => setFormAssociation(e.target.value)}
+                        className="w-full bg-zinc-950 border border-zinc-850 px-3 py-3 text-sm text-zinc-300 rounded-xl focus:outline-none cursor-pointer min-h-[44px] transition focus:border-[#22c55e]"
+                      >
+                        <option value="">Nenhum (não associar)</option>
+                        {associations.matches?.length > 0 && (
+                          <optgroup label="Partidas anteriores">
+                            {associations.matches.slice(0, 10).map((m) => (
+                              <option key={m.id} value={m.id}>
+                                {m.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {associations.events?.length > 0 && (
+                          <optgroup label="Eventos coletivos">
+                            {associations.events.slice(0, 10).map((e) => (
+                              <option key={e.id} value={e.id}>
+                                {e.label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                      </select>
+                    </div>
+                  )}
+
+                  {/* 5. Data */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-white uppercase tracking-wide">Data do Evento ou Foto *</label>
                     <input
                       type="date"
                       required
                       value={formEventDate}
                       onChange={(e) => setFormEventDate(e.target.value)}
-                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-2 text-white rounded-lg focus:outline-none focus:border-[#22c55e]"
+                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-3 text-sm text-white rounded-xl focus:outline-none focus:border-[#22c55e] transition min-h-[44px]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="block text-[11px] font-bold text-white uppercase">Categoria *</label>
-                      <select
-                        value={formCategory}
-                        onChange={(e) => setFormCategory(e.target.value as any)}
-                        className="w-full bg-zinc-950 border border-zinc-850 px-3 py-2 text-zinc-300 rounded-lg focus:outline-none cursor-pointer"
-                      >
-                        <option value="partida">Partida</option>
-                        <option value="evento">Evento</option>
-                        <option value="resenha">Resenha</option>
-                        <option value="livre">Livre</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="block text-[11px] font-bold text-white uppercase">Associação (Opcional)</label>
-                      <select
-                        value={formAssociation}
-                        onChange={(e) => setFormAssociation(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-850 px-2 py-2 text-zinc-300 rounded-lg focus:outline-none cursor-pointer"
-                      >
-                        <option value="">Nenhuma</option>
-                        <optgroup label="Partidas anteriores">
-                          {associations.matches.slice(0,10).map(m => (
-                            <option key={m.id} value={m.id}>{m.label}</option>
-                          ))}
-                        </optgroup>
-                        <optgroup label="Eventos coletivos">
-                          {associations.events.slice(0,10).map(e => (
-                            <option key={e.id} value={e.id}>{e.label}</option>
-                          ))}
-                        </optgroup>
-                      </select>
-                    </div>
+                  {/* 6. Descrição */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-white uppercase tracking-wide">Descrição (Opcional)</label>
+                    <textarea
+                      value={formDescription}
+                      onChange={(e) => setFormDescription(e.target.value)}
+                      placeholder="Conte um pouco sobre este momento..."
+                      rows={3}
+                      className="w-full bg-zinc-950 border border-zinc-850 px-3 py-3 text-sm text-white rounded-xl focus:outline-none focus:border-[#22c55e] transition"
+                    />
                   </div>
 
-                  {/* Destacar na Tela Inicial Toggle checkbox */}
-                  <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-center justify-between gap-4 mt-2">
-                    <div className="space-y-0.5 pr-2">
-                      <span className="block text-[11px] font-bold text-white uppercase flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                        ⭐ Destacar na Tela Inicial
-                      </span>
-                      <span className="block text-[9px] text-zinc-500">
-                        Esta publicação poderá aparecer na capa do Racha do Fofim antes do login.
-                      </span>
-                      <span className="block text-[8px] text-zinc-600 mt-0.5">
-                        Aparece na capa do sistema para visitantes e jogadores.
-                      </span>
+                  {/* 7. Destaque */}
+                  <div className="space-y-3">
+                    <span className="block text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                      7. Destaque
+                    </span>
+
+                    <div className="grid grid-cols-1 gap-3">
+                      {/* Checkbox: Landing Screen */}
+                      <div className="p-3.5 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-center justify-between gap-4">
+                        <div className="space-y-1 pr-2">
+                          <span className="text-xs font-bold text-white uppercase flex items-center gap-1.5 selection:bg-transparent">
+                            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                            ⭐ Destacar na Tela Inicial
+                          </span>
+                          <span className="block text-[10px] text-zinc-400 leading-normal">
+                            Esta publicação poderá aparecer na capa do sistema antes do login.
+                          </span>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer min-h-[44px]">
+                          <input
+                            type="checkbox"
+                            checked={formShowOnLanding}
+                            onChange={(e) => setFormShowOnLanding(e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white inline-block"></div>
+                        </label>
+                      </div>
+
+                      {/* Checkbox: Pinned to Mural (Admin only) */}
+                      {currentUser?.role === 'admin' && (
+                        <div className="p-3.5 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-center justify-between gap-4">
+                          <div className="space-y-1 pr-2">
+                            <span className="text-xs font-bold text-white uppercase flex items-center gap-1.5 selection:bg-transparent">
+                              <Award className="w-3.5 h-3.5 text-emerald-400" />
+                              📌 Destacar no Mural
+                            </span>
+                            <span className="block text-[10px] text-zinc-400 leading-normal">
+                              Esta publicação aparecerá no banner de destaques no topo do mural (máximo 3).
+                            </span>
+                          </div>
+                          <label className="relative inline-flex items-center cursor-pointer min-h-[44px]">
+                            <input
+                              type="checkbox"
+                              checked={formIsHighlighted}
+                              onChange={(e) => setFormIsHighlighted(e.target.checked)}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white inline-block"></div>
+                          </label>
+                        </div>
+                      )}
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={formShowOnLanding}
-                        onChange={(e) => setFormShowOnLanding(e.target.checked)}
-                        className="sr-only peer accent-[#22c55e]"
-                      />
-                      <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white inline-block"></div>
-                    </label>
                   </div>
                 </div>
 
                 {/* Submitting Actions */}
-                <div className="pt-3 flex gap-3 font-mono text-xs uppercase font-bold select-none">
+                <div className="pt-3 flex gap-3 font-sans text-xs uppercase font-bold select-none">
                   <button
                     type="button"
                     onClick={() => { setIsUploadOpen(false); resetUploadForm(); }}
-                    className="flex-1 py-3 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-lg border border-zinc-800 transition cursor-pointer text-center"
+                    className="flex-1 py-3 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white rounded-xl border border-zinc-800 transition cursor-pointer text-center min-h-[44px]"
                   >
                     Voltar
                   </button>
@@ -1922,7 +2099,7 @@ ${shareUrl}`;
                   <button
                     type="submit"
                     disabled={actionLoading || uploadItems.length === 0 || !formTitle}
-                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 text-white disabled:text-zinc-500 rounded-lg shadow-lg shadow-emerald-500/10 transition cursor-pointer text-center flex items-center justify-center gap-2"
+                    className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 text-white disabled:text-zinc-500 rounded-xl shadow-lg shadow-emerald-500/10 transition cursor-pointer text-center flex items-center justify-center gap-2 min-h-[44px]"
                   >
                     {actionLoading ? (
                       <>
@@ -1930,7 +2107,7 @@ ${shareUrl}`;
                         <span>Publicando...</span>
                       </>
                     ) : (
-                      <span>Publicar</span>
+                      <span>📤 Publicar no Mural</span>
                     )}
                   </button>
                 </div>
@@ -1984,30 +2161,54 @@ ${shareUrl}`;
                   />
                 </div>
 
-                {/* Destacar na Tela Inicial Toggle checkbox */}
-                <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-center justify-between gap-4">
-                  <div className="space-y-0.5 pr-2">
-                    <span className="block text-[11px] font-bold text-white uppercase flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                      ⭐ Destacar na Tela Inicial
-                    </span>
-                    <span className="block text-[9px] text-zinc-500">
-                      Esta publicação poderá aparecer na capa do Racha do Fofim antes do login.
-                    </span>
-                    <span className="block text-[8px] text-zinc-600 mt-0.5">
-                      Aparece na capa do sistema para visitantes e jogadores.
-                    </span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editShowOnLanding}
-                      onChange={(e) => setEditShowOnLanding(e.target.checked)}
-                      className="sr-only peer accent-[#22c55e]"
-                    />
-                    <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white inline-block"></div>
-                  </label>
-                </div>
+                 {/* Destacar Options toggles */}
+                 <div className="space-y-3">
+                   {/* Checkbox: Landing Screen */}
+                   <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-center justify-between gap-4">
+                     <div className="space-y-0.5 pr-2">
+                       <span className="block text-[11px] font-bold text-white uppercase flex items-center gap-1.5 selection:bg-transparent">
+                         <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
+                         ⭐ Destacar na Tela Inicial
+                       </span>
+                       <span className="block text-[9px] text-zinc-500 leading-normal font-sans">
+                         Esta publicação poderá aparecer na capa do Racha do Fofim antes do login.
+                       </span>
+                     </div>
+                     <label className="relative inline-flex items-center cursor-pointer min-h-[44px]">
+                       <input
+                         type="checkbox"
+                         checked={editShowOnLanding}
+                         onChange={(e) => setEditShowOnLanding(e.target.checked)}
+                         className="sr-only peer"
+                       />
+                       <div className="w-11 h-6 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white inline-block"></div>
+                     </label>
+                   </div>
+
+                   {/* Checkbox: Pinned to Mural (Admin only) */}
+                   {currentUser?.role === 'admin' && (
+                     <div className="p-3 bg-zinc-950/60 rounded-xl border border-zinc-900 flex items-center justify-between gap-4">
+                       <div className="space-y-0.5 pr-2">
+                         <span className="block text-[11px] font-bold text-white uppercase flex items-center gap-1.5 selection:bg-transparent">
+                           <Award className="w-3.5 h-3.5 text-emerald-400" />
+                           📌 Destacar no Mural
+                         </span>
+                         <span className="block text-[9px] text-zinc-500 leading-normal font-sans">
+                           Esta publicação aparecerá no topo do mural (máximo 3).
+                         </span>
+                       </div>
+                       <label className="relative inline-flex items-center cursor-pointer min-h-[44px]">
+                         <input
+                           type="checkbox"
+                           checked={editIsHighlighted}
+                           onChange={(e) => setEditIsHighlighted(e.target.checked)}
+                           className="sr-only peer"
+                         />
+                         <div className="w-11 h-6 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-zinc-400 after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white inline-block"></div>
+                       </label>
+                     </div>
+                   )}
+                 </div>
 
                 <div className="pt-3 flex gap-3 font-mono text-xs uppercase font-bold select-none">
                   <button

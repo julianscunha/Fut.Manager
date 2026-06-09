@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile, Notification, NotificationPreferences } from '../src/types';
+import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile, Notification, NotificationPreferences, FinanceConfig, FinanceHistoryEntry } from '../src/types';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'database.json');
@@ -16,6 +16,7 @@ interface DatabaseSchema {
   presences: Presence[];
   reservesOrder: string[]; // Order of player IDs for category 'reserva'
   recurrentConfig: RecurrentConfig;
+  financeConfig?: FinanceConfig;
   reserveAlerts: ReserveQueueAlert[];
   draws: TeamDraw[];
   duoAffinities: DuoAffinity[];
@@ -34,6 +35,8 @@ interface DatabaseSchema {
   muralFiles?: MuralFile[];
   notifications?: Notification[];
   notificationPreferences?: NotificationPreferences[];
+  userAudits?: any[];
+  deadlineAudits?: any[];
 }
 
 const DEFAULT_ADMINS = {
@@ -90,6 +93,7 @@ function ensureDbExists() {
         {
           id: 'player-1',
           name: 'Fofim Magalhães',
+          phone: '(85) 99111-1111',
           email: 'fofim@racha.com',
           photoOriginal: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=150',
           playerCardUrl: '',
@@ -104,6 +108,7 @@ function ensureDbExists() {
         {
           id: 'player-2',
           name: 'João Silva',
+          phone: '(85) 99222-2222',
           email: 'sistema@auditoria.local',
           photoOriginal: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
           playerCardUrl: '',
@@ -118,6 +123,7 @@ function ensureDbExists() {
         {
           id: 'player-3',
           name: 'Goleiro Paredão',
+          phone: '(85) 99333-3333',
           email: 'parede@racha.com',
           photoOriginal: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
           playerCardUrl: '',
@@ -132,6 +138,7 @@ function ensureDbExists() {
         {
           id: 'player-4',
           name: 'Zeco Canela',
+          phone: '(85) 99444-4444',
           email: 'zeco@racha.com',
           photoOriginal: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
           playerCardUrl: '',
@@ -262,6 +269,22 @@ export function readDb(): DatabaseSchema {
     ];
     updated = true;
   }
+  if (!db.financeConfig) {
+    const fee = db.recurrentConfig?.monthlyFee ?? 100;
+    const rule = db.recurrentConfig?.chargeDateRule ?? 'primeiro_jogo';
+    db.financeConfig = {
+      monthlyFee: fee,
+      chargeDateRule: rule,
+      history: [
+        {
+          date: '2026-01-01',
+          amount: fee
+        }
+      ]
+    };
+    updated = true;
+  }
+
   if (!db.recurrentConfig) {
     db.recurrentConfig = {
       dayOfWeek: 6, // Sábado
@@ -270,18 +293,42 @@ export function readDb(): DatabaseSchema {
       durationMinutes: 120,
       confirmationDeadlineDaysBefore: 2,
       active: true,
-      monthlyFee: 100,
-      chargeDateRule: 'primeiro_jogo',
       maxMensalistas: 12
     };
     updated = true;
   } else {
-    if (db.recurrentConfig.monthlyFee === undefined) {
-      db.recurrentConfig.monthlyFee = 100;
+    const recFee = db.recurrentConfig.monthlyFee;
+    const recRule = db.recurrentConfig.chargeDateRule;
+    const finFee = db.financeConfig.monthlyFee;
+    const finRule = db.financeConfig.chargeDateRule;
+
+    if ((recFee !== undefined && recFee !== finFee) || (recRule !== undefined && recRule !== finRule)) {
+      if (!db.userAudits) {
+        db.userAudits = [];
+      }
+      db.userAudits.push({
+        id: 'audit-fin-mig-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        timestamp: new Date().toISOString(),
+        userId: 'system',
+        userName: 'Sistema',
+        userEmail: 'sistema@racha.fofim',
+        action: 'Conciliação Financeira',
+        previousRole: '',
+        newRole: '',
+        previousStatus: '',
+        newStatus: '',
+        performedBy: 'Sistema',
+        details: `Conflito detectado entre Recorrência (R$ ${recFee}, ${recRule}) e Financeiro (R$ ${finFee}, ${finRule}). Módulo Financeiro definido como oficial. Removendo duplicidades das configurações de recorrência.`
+      });
+      console.log(`[FINANCE MIGRATION LOG] Resolved data discrepancy. Rec: R$${recFee}/${recRule}, Fin: R$${finFee}/${finRule}. Financial configuration is official.`);
+    }
+
+    if ('monthlyFee' in db.recurrentConfig) {
+      delete db.recurrentConfig.monthlyFee;
       updated = true;
     }
-    if (db.recurrentConfig.chargeDateRule === undefined) {
-      db.recurrentConfig.chargeDateRule = 'primeiro_jogo';
+    if ('chargeDateRule' in db.recurrentConfig) {
+      delete db.recurrentConfig.chargeDateRule;
       updated = true;
     }
     if (db.recurrentConfig.maxMensalistas === undefined) {
@@ -354,6 +401,10 @@ export function readDb(): DatabaseSchema {
     db.notificationPreferences = [];
     updated = true;
   }
+  if (!db.userAudits) {
+    db.userAudits = [];
+    updated = true;
+  }
 
   // Auto-sync reserves priorities based on existing active reserves
   const activeReservesIds = db.players
@@ -371,8 +422,25 @@ export function readDb(): DatabaseSchema {
   // Perform automatic status correction on read & migrating old players structure
   const nowStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
+  // Migration: Automatically link Users and Players using IDs (if there is an email match and user.playerId is not defined)
+  db.users.forEach((u: any) => {
+    if (!u.playerId) {
+      const matchPl = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === u.email.toLowerCase().trim());
+      if (matchPl) {
+        u.playerId = matchPl.id;
+        updated = true;
+      }
+    }
+  });
+
   db.players = db.players.map((p: any) => {
     let mutated = false;
+
+    // Ensure athlete has a phone field
+    if (!p.phone) {
+      p.phone = '(85) 99999-9999';
+      mutated = true;
+    }
 
     // Backward compatibility migration for photoOriginal and playerCardUrl
     if (p.photoUrl && !p.photoOriginal) {
@@ -395,27 +463,16 @@ export function readDb(): DatabaseSchema {
     if ((p.status === 'lesionado' || p.status === 'indisponivel') && p.statusEndDate) {
       if (p.statusEndDate < nowStr) {
         // Expiration date is in the past, auto-return to disponivel
+        p.status = 'disponivel';
+        p.statusStartDate = undefined;
+        p.statusEndDate = undefined;
+        p.updatedAt = new Date().toISOString();
         mutated = true;
-        return {
-          ...p,
-          photoOriginal: p.photoOriginal || '',
-          playerCardUrl: p.playerCardUrl || '',
-          status: 'disponivel',
-          statusStartDate: undefined,
-          statusEndDate: undefined,
-          updatedAt: new Date().toISOString()
-        };
       }
     }
 
     if (mutated) {
       updated = true;
-      return {
-        ...p,
-        photoOriginal: p.photoOriginal || '',
-        playerCardUrl: p.playerCardUrl || '',
-        updatedAt: new Date().toISOString()
-      };
     }
 
     return p;
@@ -438,13 +495,34 @@ export function readDb(): DatabaseSchema {
   return db;
 }
 
+export function getMonthlyFeeForDate(db: DatabaseSchema, dateStr: string): number {
+  if (!db.financeConfig) {
+    return 100;
+  }
+  const sortedHistory = [...(db.financeConfig.history || [])].sort((a, b) => a.date.localeCompare(b.date));
+  let activeFee = db.financeConfig.monthlyFee;
+  for (const entry of sortedHistory) {
+    if (entry.date <= dateStr) {
+      activeFee = entry.amount;
+    } else {
+      break;
+    }
+  }
+  return activeFee;
+}
+
 export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
   if (!db.recurrentConfig || !db.recurrentConfig.active) {
     return false;
   }
 
-  const { monthlyFee, chargeDateRule } = db.recurrentConfig;
-  if (monthlyFee === undefined || monthlyFee <= 0 || !chargeDateRule) {
+  if (!db.financeConfig) {
+    return false;
+  }
+
+  const { chargeDateRule } = db.financeConfig;
+  const currentFee = db.financeConfig.monthlyFee;
+  if (currentFee === undefined || currentFee <= 0 || !chargeDateRule) {
     return false;
   }
 
@@ -524,6 +602,8 @@ export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
           return true;
         });
 
+        const applicableFee = getMonthlyFeeForDate(db, chargeMatchDate);
+
         for (const p of eligiblePlayers) {
           const exists = db.bills.some(b => b.playerId === p.id && b.competence === compKey);
           if (!exists) {
@@ -531,7 +611,7 @@ export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
               id: 'bill-' + p.id + '-' + compKey.replace('/', '-'),
               playerId: p.id,
               competence: compKey,
-              amount: monthlyFee,
+              amount: applicableFee,
               dueDate: chargeMatchDate,
               status: 'pendente'
             });
@@ -543,7 +623,7 @@ export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
         const compIndex = db.competences.findIndex(c => c.competence === compKey);
         const compData: CompetenceConfig = {
           competence: compKey,
-          monthlyFee,
+          monthlyFee: applicableFee,
           chargeDateRule,
           generated: true,
           generatedDate: new Date().toISOString()
