@@ -373,6 +373,34 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     }
   };
 
+  const handleShareMatchOnWhatsApp = (match: any) => {
+    const formattedDate = match.date.split('-').reverse().join('/');
+    const textMsg = `⚽ *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* ⚽\n` +
+      `📅 *Data:* ${formattedDate} às ${match.time}\n` +
+      `📍 *Local:* ${match.location}\n\n` +
+      `👥 *Confirmados (${match.confirmedCount}/15):*\n\n` +
+      `⚠️ *Vagas em aberto:* ${match.vacancies} vagas disponíveis!\n\n` +
+      `Por favor, atualizem seus status de presença no app oficial:\n` +
+      `👉 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `Abraços e bom racha!`;
+      
+    const escapedMsg = encodeURIComponent(textMsg);
+    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+  };
+
+  const handleConvocarReservas = (match: any) => {
+    const formattedDate = match.date.split('-').reverse().join('/');
+    const textMsg = `⚽ *RACHA DO FOFIM - CONVOCAÇÃO DE RESERVAS!* ⚽\n` +
+      `📅 *Data:* ${formattedDate} às ${match.time}\n` +
+      `📍 *Local:* ${match.location}\n\n` +
+      `⚠️ Atenção reservas da fila de prioridade: O prazo de confirmação de mensalistas encerrou e ainda temos *${15 - match.confirmedCount} vagas em aberto*!\n\n` +
+      `Por favor, os próximos da fila de reservas acessem o app para registrar presença:\n` +
+      `👉 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `Abraços!`;
+    const escapedMsg = encodeURIComponent(textMsg);
+    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+  };
+
   // REMOVE MATCH
   const handleDeleteMatch = async (matchId: string) => {
     setErrorMsg('');
@@ -550,15 +578,21 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
   const getMatchStatusBadge = (status: string) => {
     switch (status) {
       case 'agendada':
-        return <span className="bg-zinc-800 border border-zinc-750 text-zinc-300 font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase">Agendada</span>;
+        return <span className="bg-zinc-800 border border-zinc-750 text-zinc-300 font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase">AGENDADA</span>;
       case 'confirmando':
-        return <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">Confirmando Presenças</span>;
+        return <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">CONFIRMAÇÕES ABERTAS</span>;
+      case 'aguardando_reservas':
+        return <span className="bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">AGUARDANDO RESERVAS</span>;
+      case 'fechada':
+        return <span className="bg-purple-500/15 border border-purple-500/30 text-purple-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">FECHADA</span>;
+      case 'sorteada':
+        return <span className="bg-sky-500/15 border border-sky-500/30 text-sky-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">SORTEADA</span>;
       case 'encerrada':
-        return <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase">Encerrada</span>;
+        return <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">FINALIZADA</span>;
       case 'cancelada':
-        return <span className="bg-rose-500/15 border border-rose-500/35 text-rose-400 font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase">Cancelada</span>;
+        return <span className="bg-rose-500/15 border border-rose-500/35 text-rose-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">CANCELADA</span>;
       default:
-        return <span className="bg-zinc-800 text-zinc-400 text-[9px] px-2 py-0.5 rounded">{status}</span>;
+        return <span className="bg-zinc-800 text-zinc-400 font-mono text-[10px] px-2 py-0.5 rounded uppercase">{status}</span>;
     }
   };
 
@@ -905,11 +939,17 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                           ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500 bg-emerald-950/20 scale-[1.01]'
                           : item.status === 'confirmando' 
                             ? 'border-amber-500/20 bg-amber-500/5' 
-                            : item.status === 'cancelada'
-                              ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
-                              : item.status === 'encerrada'
-                                ? 'border-emerald-500/10 bg-emerald-500/5'
-                                : 'border-zinc-900 bg-zinc-950/30'
+                            : item.status === 'aguardando_reservas'
+                              ? 'border-indigo-500/20 bg-indigo-500/5'
+                              : item.status === 'fechada'
+                                ? 'border-purple-500/20 bg-purple-500/5'
+                                : item.status === 'sorteada'
+                                  ? 'border-sky-500/20 bg-sky-500/5'
+                                  : item.status === 'encerrada'
+                                    ? 'border-emerald-500/10 bg-emerald-500/5'
+                                    : item.status === 'cancelada'
+                                      ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
+                                      : 'border-zinc-900 bg-zinc-950/30'
                       } transition flex flex-col space-y-4`}
                     >
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
@@ -932,86 +972,206 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                           </div>
                         </div>
 
-                        <div className="flex gap-4 text-[10px] pt-1 font-mono text-zinc-500 uppercase">
-                          <div>⚽ Atletas Confirmados: <span className="text-emerald-400 font-extrabold">{item.confirmedCount} de {item.maxPlayers || 15}</span></div>
-                        </div>
+                        {item.status !== 'agendada' && (
+                          <div className="flex flex-col gap-1 text-[11px] pt-1.5 font-mono text-zinc-400 uppercase">
+                            <div>⚽ Atletas Confirmados: <span className="text-emerald-400 font-extrabold">{item.confirmedCount} de {item.maxPlayers || 15}</span></div>
+                            
+                            {item.status === 'confirmando' && item.deadlineDateStr && (
+                              <div className="text-[10px] text-amber-500 font-semibold lowercase">
+                                ⏳ prazo limite: <span className="font-extrabold">{item.deadlineDateStr}</span>
+                              </div>
+                            )}
+
+                            {item.status === 'aguardando_reservas' && (
+                              <div className="text-[10px] text-indigo-400 font-semibold">
+                                📢 Faltam <span className="font-extrabold">{Math.max(0, 15 - item.confirmedCount)}</span> atletas
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
 
                       {/* ACTIONS BAR */}
                       <div className="flex flex-wrap gap-1.5 self-end sm:self-auto items-center">
-                        {/* Results / Share Buttons for Finished Matches */}
-                        {item.status === 'encerrada' && matchResult && (
-                          <button
-                            onClick={() => handleShareResult(item, matchResult)}
-                            title="Compartilhar resultado no WhatsApp"
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase flex items-center gap-1 cursor-pointer transition"
-                          >
-                            💚 WhatsApp
-                          </button>
+                        
+                        {/* Se a partida for finalizada (encerrada), exibimos o WhatsApp / Ver Resultado */}
+                        {item.status === 'encerrada' && (
+                          <div className="flex items-center gap-1.5 font-mono">
+                            {matchResult && (
+                              <button
+                                onClick={() => handleShareResult(item, matchResult)}
+                                title="Compartilhar resultado no WhatsApp"
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-sans font-bold text-[10px] px-2.5 py-1.5 rounded uppercase flex items-center gap-1 cursor-pointer transition"
+                              >
+                                💚 WhatsApp Resultados
+                              </button>
+                            )}
+                          </div>
                         )}
 
-                        {isAdmin && item.status !== 'encerrada' && item.status !== 'cancelada' && (
-                          <button
-                            onClick={() => {
-                              setShowResultFormId(showResultFormId === item.id ? null : item.id);
-                              setShowDeleteConfirmId(null);
-                              setWinsBlue('0');
-                              setWinsRed('0');
-                              setWinsGreen('0');
-                            }}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                            title="Registrar Vitórias das Equipes e Encerrar Racha"
-                          >
-                            {showResultFormId === item.id ? 'Fechar Placar' : 'Gravar Placar / Encerrar'}
-                          </button>
-                        )}
-
-                        {isAdmin && item.status !== 'confirmando' && item.status !== 'encerrada' && item.status !== 'cancelada' && (
-                          <button
-                            onClick={() => handleUpdateMatchStatus(item.id, 'confirmando')}
-                            className="bg-amber-500 hover:bg-amber-400 text-zinc-950 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                            title="Abrir confirmação de presenças"
-                          >
-                            Confirmar Presenças
-                          </button>
-                        )}
-
-                        {isAdmin && item.status !== 'cancelada' && (
-                          <button
-                            onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
-                            className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2 py-1.5 rounded uppercase cursor-pointer"
-                            title="Cancelar rodada"
-                          >
-                            Cancelar
-                          </button>
-                        )}
-
+                        {/* Se a partida estiver cancelada */}
                         {isAdmin && item.status === 'cancelada' && (
                           <button
                             onClick={() => handleUpdateMatchStatus(item.id, 'agendada')}
-                            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 font-mono font-bold text-[9px] px-2 py-1.5 rounded uppercase cursor-pointer"
-                            title="Reativar rodada"
+                            className="bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                            title="Reabrir racha"
                           >
                             Reabrir
                           </button>
                         )}
 
-                        {isAdmin && (
-                          <button
-                            onClick={() => {
-                              setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
-                              setShowResultFormId(null);
-                            }}
-                            className={`p-1.5 rounded-lg border transition ${
-                              showDeleteConfirmId === item.id
-                                ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 font-bold'
-                                : 'bg-zinc-950 border-zinc-900 text-rose-500 hover:bg-rose-500/10'
-                            }`}
-                            title="Opções de Exclusão da Partida"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        {/* Se a partida estiver ativa e o usuário for Administrador */}
+                        {isAdmin && item.status !== 'encerrada' && item.status !== 'cancelada' && (
+                          <div className="flex flex-wrap gap-1.5 items-center">
+                            
+                            {/* ESTADO: AGENDADA */}
+                            {item.status === 'agendada' && (
+                              <>
+                                <button
+                                  onClick={() => handleUpdateMatchStatus(item.id, 'confirmando')}
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition animate-pulse"
+                                  title="Iniciar confirmação de presenças"
+                                >
+                                  Abrir Confirmações
+                                </button>
+                                
+                                <button
+                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
+                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Cancelar racha"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            )}
+
+                            {/* ESTADO: CONFIRMANDO (Confirmações Abertas) */}
+                            {item.status === 'confirmando' && (
+                              <>
+                                <button
+                                  onClick={() => handleShareMatchOnWhatsApp(item)}
+                                  className="bg-[#128C7E] hover:bg-[#075e54] text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition inline-flex items-center gap-1"
+                                  title="Compartilhar lista de chamada no WhatsApp"
+                                >
+                                  💚 Compartilhar
+                                </button>
+
+                                <button
+                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
+                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Cancelar racha"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            )}
+
+                            {/* ESTADO: AGUARDANDO_RESERVAS */}
+                            {item.status === 'aguardando_reservas' && (
+                              <>
+                                <button
+                                  onClick={() => handleConvocarReservas(item)}
+                                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Convocar atletas reservas no WhatsApp"
+                                >
+                                  Convocar Reservas
+                                </button>
+
+                                <button
+                                  onClick={() => handleShareMatchOnWhatsApp(item)}
+                                  className="bg-[#128C7E] hover:bg-[#075e54] text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition inline-flex items-center gap-1"
+                                  title="Compartilhar lista de chamada"
+                                >
+                                  💚 Compartilhar
+                                </button>
+
+                                <button
+                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
+                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Cancelar racha"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            )}
+
+                            {/* ESTADO: FECHADA */}
+                            {item.status === 'fechada' && (
+                              <>
+                                <button
+                                  onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }))}
+                                  className="bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition animate-bounce"
+                                  title="Iniciar sorteio de equipes"
+                                >
+                                  Realizar Sorteio
+                                </button>
+
+                                <button
+                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
+                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Cancelar racha"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            )}
+
+                            {/* ESTADO: SORTEADA */}
+                            {item.status === 'sorteada' && (
+                              <>
+                                <button
+                                  onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }))}
+                                  className="bg-sky-600 hover:bg-sky-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Visualizar as equipes sorteadas"
+                                >
+                                  Visualizar Times
+                                </button>
+
+                                <button
+                                  onClick={() => {
+                                    setShowResultFormId(showResultFormId === item.id ? null : item.id);
+                                    setShowDeleteConfirmId(null);
+                                    setWinsBlue('0');
+                                    setWinsRed('0');
+                                    setWinsGreen('0');
+                                  }}
+                                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Registrar Vitórias das Equipes e Encerrar Racha"
+                                >
+                                  {showResultFormId === item.id ? 'Fechar Placar' : 'Gravar Placar / Encerrar'}
+                                </button>
+
+                                <button
+                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
+                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                                  title="Cancelar racha"
+                                >
+                                  Cancelar
+                                </button>
+                              </>
+                            )}
+
+                            {/* BOTÃO DE DELETAR / LIXEIRA (Disponível apenas para AGENDADA por segurança e precisão do fluxo) */}
+                            {item.status === 'agendada' && (
+                              <button
+                                onClick={() => {
+                                  setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
+                                  setShowResultFormId(null);
+                                }}
+                                className={`p-1.5 rounded-lg border transition ${
+                                  showDeleteConfirmId === item.id
+                                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 font-bold'
+                                    : 'bg-zinc-950 border-zinc-900 text-rose-500 hover:bg-rose-500/10'
+                                }`}
+                                title="Opções de Exclusão da Partida"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+
+                          </div>
                         )}
+                        
                       </div>
                     </div>
 

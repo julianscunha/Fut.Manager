@@ -390,7 +390,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                             <td className="py-3 px-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 flex-shrink-0">
-                                  <img src={player.photoOriginal} alt={player.name} className="w-full h-full object-cover" />
+                                  <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" />
                                 </div>
                                 <div className="min-w-0">
                                   <span className="font-sans font-bold text-white group-hover:text-emerald-400 transition block truncate">{player.name}</span>
@@ -455,7 +455,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               </td>
                               <td className="py-3 px-2 font-sans font-bold text-white flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 flex-shrink-0">
-                                  <img src={keeper.photoOriginal} alt={keeper.name} className="w-full h-full object-cover" />
+                                  <img src={keeper.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={keeper.name} className="w-full h-full object-cover" />
                                 </div>
                                 <span className="truncate">{keeper.name}</span>
                               </td>
@@ -573,7 +573,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               <td className="py-3 px-2">
                                 <div className="flex items-center gap-2">
                                   <div className="w-7 h-7 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 flex-shrink-0">
-                                    <img src={player.photoOriginal} alt={player.name} className="w-full h-full object-cover" />
+                                    <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" />
                                   </div>
                                   <div className="min-w-0">
                                     <span className="font-sans font-bold text-white group-hover:text-purple-400 transition block truncate">{player.name}</span>
@@ -637,7 +637,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       <div className="relative">
                         <span className="absolute -top-1 -left-1 text-xs bg-zinc-700 text-white rounded-full font-bold font-mono w-5 h-5 flex items-center justify-center shadow">2</span>
                         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-zinc-700 bg-zinc-900 mx-auto shadow-md">
-                          <img src={secondPlace.photoOriginal} alt={secondPlace.name} className="w-full h-full object-cover" />
+                          <img src={secondPlace.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={secondPlace.name} className="w-full h-full object-cover" />
                         </div>
                       </div>
                       <div>
@@ -678,7 +678,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       <div className="relative">
                         <span className="absolute -top-1 -left-1 text-sm bg-amber-500 text-zinc-950 rounded-full font-black font-mono w-6 h-6 flex items-center justify-center shadow border border-amber-600">1</span>
                         <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-amber-500 bg-zinc-900 mx-auto shadow-lg shadow-amber-500/10">
-                          <img src={firstPlace.photoOriginal} alt={firstPlace.name} className="w-full h-full object-cover" />
+                          <img src={firstPlace.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={firstPlace.name} className="w-full h-full object-cover" />
                         </div>
                       </div>
                       <div>
@@ -714,7 +714,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       <div className="relative">
                         <span className="absolute -top-1 -left-1 text-xs bg-amber-700 text-white rounded-full font-bold font-mono w-5 h-5 flex items-center justify-center shadow">3</span>
                         <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-amber-800/80 bg-zinc-900 mx-auto shadow-md">
-                          <img src={thirdPlace.photoOriginal} alt={thirdPlace.name} className="w-full h-full object-cover" />
+                          <img src={thirdPlace.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={thirdPlace.name} className="w-full h-full object-cover" />
                         </div>
                       </div>
                       <div>
@@ -771,7 +771,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               #{relativeRank}
                             </span>
                             <div className="w-10 h-10 rounded-full border border-zinc-850 overflow-hidden bg-zinc-900 flex-shrink-0">
-                              <img src={player.photoOriginal} alt={player.name} className="w-full h-full object-cover" />
+                              <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" />
                             </div>
                             <div className="min-w-0">
                               <h5 className="font-display font-bold text-white text-xs truncate flex items-center gap-1.5">
@@ -843,7 +843,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     
                     <div className="relative mt-2">
                       <div className="w-20 h-20 rounded-full border-2 border-amber-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg group-hover:scale-105 transition">
-                        <img src={accolades.keyWins.photoOriginal} alt={accolades.keyWins.name} className="w-full h-full object-cover" />
+                        <img src={accolades.keyWins.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={accolades.keyWins.name} className="w-full h-full object-cover" />
                       </div>
                       <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-amber-500 text-zinc-950 font-black px-2.5 py-0.5 rounded-full text-[10px] font-mono shadow uppercase">
                         {accolades.keyWins.vitorias} Wins
@@ -871,7 +871,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                     <div className="relative mt-2">
                       <div className="w-20 h-20 rounded-full border-2 border-sky-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg group-hover:scale-105 transition">
-                        <img src={accolades.keyPresences.photoOriginal} alt={accolades.keyPresences.name} className="w-full h-full object-cover" />
+                        <img src={accolades.keyPresences.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={accolades.keyPresences.name} className="w-full h-full object-cover" />
                       </div>
                       <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-sky-500 text-zinc-950 font-black px-2.5 py-0.5 rounded-full text-[10px] font-mono shadow uppercase">
                         {accolades.keyPresences.presences} Jogos
@@ -899,7 +899,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                     <div className="relative mt-2">
                       <div className="w-20 h-20 rounded-full border-2 border-emerald-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg group-hover:scale-105 transition">
-                        <img src={accolades.keyWinrate.photoOriginal} alt={accolades.keyWinrate.name} className="w-full h-full object-cover" />
+                        <img src={accolades.keyWinrate.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={accolades.keyWinrate.name} className="w-full h-full object-cover" />
                       </div>
                       <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-emerald-555 border border-emerald-600 bg-emerald-500 text-zinc-950 font-black px-2.5 py-0.5 rounded-full text-[10.5px] font-mono shadow uppercase">
                         {accolades.keyWinrate.aproveitamento}% Aprov
@@ -927,7 +927,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                     <div className="relative mt-2">
                       <div className="w-20 h-20 rounded-full border-2 border-rose-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg group-hover:scale-105 transition">
-                        <img src={accolades.keyKeeper.photoOriginal} alt={accolades.keyKeeper.name} className="w-full h-full object-cover" />
+                        <img src={accolades.keyKeeper.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={accolades.keyKeeper.name} className="w-full h-full object-cover" />
                       </div>
                       <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-rose-500 text-zinc-950 font-black px-2.5 py-0.5 rounded-full text-[10px] font-mono shadow uppercase">
                         {accolades.keyKeeper.vitorias} Vitórias
@@ -955,7 +955,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                     <div className="relative mt-2">
                       <div className="w-20 h-20 rounded-full border-2 border-purple-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg group-hover:scale-105 transition">
-                        <img src={accolades.keyStreak.photoOriginal} alt={accolades.keyStreak.name} className="w-full h-full object-cover" />
+                        <img src={accolades.keyStreak.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={accolades.keyStreak.name} className="w-full h-full object-cover" />
                       </div>
                       <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-purple-600 text-white font-black px-2.5 py-0.5 rounded-full text-[10px] font-mono shadow uppercase">
                         {accolades.keyStreak.maxStreak} Vitórias Seguidas

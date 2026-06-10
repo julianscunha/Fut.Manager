@@ -147,7 +147,7 @@ export interface Season {
   active: boolean;
 }
 
-export type MatchStatus = 'agendada' | 'confirmando' | 'encerrada' | 'cancelada';
+export type MatchStatus = 'agendada' | 'confirmando' | 'aguardando_reservas' | 'fechada' | 'sorteada' | 'encerrada' | 'cancelada';
 
 export interface Match {
   id: string;

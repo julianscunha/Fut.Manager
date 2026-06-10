@@ -488,6 +488,13 @@ export function readDb(): DatabaseSchema {
     console.error('Error in automatic billing generator:', err);
   }
 
+  // Sync match statuses upon read
+  try {
+    syncMatchStatuses(db);
+  } catch (err) {
+    console.error('Error syncing match statuses on read:', err);
+  }
+
   if (updated) {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   }
@@ -642,7 +649,179 @@ export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
   return updated;
 }
 
+export function getMatchDeadlineInfo(match: any, deadlineDays: number) {
+  if (!match.date) {
+    return { isDeadlineExpired: false, deadlineDateStr: '', hoursRemaining: 0 };
+  }
+  const [year, month, day] = match.date.split('-').map(Number);
+  let hours = 21;
+  let minutes = 30;
+  if (match.time && match.time.includes(':')) {
+    const [h, m] = match.time.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) {
+      hours = h;
+      minutes = m;
+    }
+  }
+  const matchDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  const deadlineDateTime = new Date(matchDateTime.getTime() - deadlineDays * 24 * 60 * 60 * 1000);
+  const now = new Date();
+  const isDeadlineExpired = now >= deadlineDateTime;
+
+  const pad = (n: number) => n.toString().padStart(2, '0');
+  const formattedDate = `${pad(deadlineDateTime.getDate())}/${pad(deadlineDateTime.getMonth() + 1)}/${deadlineDateTime.getFullYear()}`;
+  const formattedTime = `${pad(deadlineDateTime.getHours())}:${pad(deadlineDateTime.getMinutes())}`;
+  const deadlineDateStr = `${formattedDate} às ${formattedTime}`;
+
+  const diffMs = deadlineDateTime.getTime() - now.getTime();
+  const hoursRemaining = diffMs / (1000 * 60 * 60);
+
+  return { isDeadlineExpired, deadlineDateStr, hoursRemaining };
+}
+
+export function getComputedPresencesSimplified(db: any, matchId: string) {
+  const match = db.matches.find((m: any) => m.id === matchId);
+  if (!match) return [];
+
+  const matchPresences = db.presences.filter((p: any) => p.matchId === matchId);
+  const activePlayers = db.players.filter((p: any) => !p.deletedAt);
+  const activePlayerIds = activePlayers.map((p: any) => p.id);
+
+  const validPresences = matchPresences.filter((p: any) => activePlayerIds.includes(p.playerId));
+
+  const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+  const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
+  const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
+
+  const presenceMap = new Map();
+  for (const pr of validPresences) {
+    presenceMap.set(pr.playerId, pr);
+  }
+
+  const mensalistas = activePlayers.filter((p: any) => p.category !== 'reserva');
+  const reserves = activePlayers.filter((p: any) => p.category === 'reserva');
+
+  const confirmedMensalistas = mensalistas.filter((p: any) => {
+    const pr = presenceMap.get(p.id);
+    return pr && pr.status === 'confirmado';
+  });
+
+  const manuallyApprovedReserves = reserves.filter((p: any) => {
+    const pr = presenceMap.get(p.id);
+    return pr && pr.status === 'confirmado' && pr.manuallyApproved === true;
+  });
+
+  let count = confirmedMensalistas.length + manuallyApprovedReserves.length;
+  const remainingSpots = Math.max(0, 15 - count);
+
+  const pendingReserves = reserves.filter((p: any) => {
+    const pr = presenceMap.get(p.id);
+    return pr && pr.status === 'confirmado' && !pr.manuallyApproved;
+  });
+
+  const reservesOrder = db.reservesOrder || [];
+  pendingReserves.sort((a: any, b: any) => {
+    const idxA = reservesOrder.indexOf(a.id);
+    const idxB = reservesOrder.indexOf(b.id);
+    const orderA = idxA !== -1 ? idxA : 999999;
+    const orderB = idxB !== -1 ? idxB : 999999;
+    if (orderA !== orderB) return orderA - orderB;
+    return a.name.localeCompare(b.name);
+  });
+
+  const autoApprovedReserveIds = new Set<string>();
+  if (isDeadlineExpired && remainingSpots > 0) {
+    const promoted = pendingReserves.slice(0, remainingSpots);
+    for (const r of promoted) {
+      autoApprovedReserveIds.add(r.id);
+    }
+  }
+
+  const mergedList = activePlayers.map((player: any) => {
+    const pr = presenceMap.get(player.id);
+    let originalStatus = pr ? pr.status : 'nao_confirmado';
+    let computedStatus: string = originalStatus;
+
+    if (player.category === 'reserva') {
+      if (originalStatus === 'confirmado') {
+        const isManuallyApproved = pr && pr.manuallyApproved === true;
+        const isAutoPromoted = autoApprovedReserveIds.has(player.id);
+        if (isManuallyApproved || isAutoPromoted) {
+          computedStatus = 'confirmado';
+        } else {
+          computedStatus = 'nao_confirmado';
+        }
+      }
+    }
+
+    return {
+      playerId: player.id,
+      category: player.category,
+      presenceStatus: computedStatus
+    };
+  });
+
+  return mergedList;
+}
+
+export function syncMatchStatuses(db: any) {
+  if (!db.matches) return;
+
+  db.matches.forEach((m: any) => {
+    if (m.status === 'cancelada') {
+      return;
+    }
+
+    const hasResults = (db.results || []).some((r: any) => r.matchId === m.id);
+    if (hasResults || m.status === 'encerrada') {
+      m.status = 'encerrada';
+      return;
+    }
+
+    const matchDraw = (db.draws || []).find((d: any) => d.matchId === m.id);
+    const isDrawLocked = matchDraw && (matchDraw.affinitiesRecorded === true);
+    if (isDrawLocked || m.status === 'sorteada') {
+      m.status = 'sorteada';
+      return;
+    }
+
+    const computedList = getComputedPresencesSimplified(db, m.id);
+    const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
+
+    if (confirmedCount >= 15) {
+      m.status = 'fechada';
+      return;
+    }
+
+    const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+    const matchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : deadlineDays;
+    const { isDeadlineExpired } = getMatchDeadlineInfo(m, matchDeadlineDays);
+
+    const activePlayers = db.players.filter((p: any) => !p.deletedAt);
+    const mensalistas = activePlayers.filter((p: any) => p.category !== 'reserva');
+    const totalMensalistas = mensalistas.length;
+    const refusedMensalistas = computedList.filter((p: any) => p.category !== 'reserva' && p.presenceStatus === 'cancelado').length;
+    const impossibleToReach15WithMensalistas = (totalMensalistas - refusedMensalistas) < 15;
+
+    if (m.status !== 'agendada') {
+      if (isDeadlineExpired || impossibleToReach15WithMensalistas) {
+        m.status = 'aguardando_reservas';
+        return;
+      }
+    }
+
+    if (m.status === 'confirmando' || m.status === 'aguardando_reservas' || m.status === 'fechada') {
+      m.status = 'confirmando';
+      return;
+    }
+
+    // Default is agendada
+    m.status = 'agendada';
+  });
+}
+
 export function writeDb(db: DatabaseSchema) {
   ensureDbExists();
+  syncMatchStatuses(db);
   fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
 }

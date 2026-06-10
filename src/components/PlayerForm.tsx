@@ -70,6 +70,14 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
     }
   }, [player]);
 
+  // Forçar goleiro se a categoria for Goleiro Mensalista e desmarcar goleiro da secundária
+  useEffect(() => {
+    if (category === 'mensalista_goleiro') {
+      setPrimaryPosition('goleiro');
+      setSecondaryPositions((prev) => prev.filter((p) => p !== 'goleiro'));
+    }
+  }, [category]);
+
   const formatPhoneStr = (v: string) => {
     const digits = v.replace(/\D/g, '');
     if (digits.length <= 2) return digits;
@@ -457,8 +465,13 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           <label className="text-zinc-300 font-medium">Posição Principal *</label>
           <select
             value={primaryPosition}
+            disabled={category === 'mensalista_goleiro'}
             onChange={(e) => setPrimaryPosition(e.target.value as PlayerPosition)}
-            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
+            className={`w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition ${
+              category === 'mensalista_goleiro'
+                ? 'opacity-50 cursor-not-allowed bg-zinc-950 font-semibold'
+                : 'cursor-pointer'
+            }`}
           >
             {Object.entries(POSITION_LABELS).map(([key, label]) => (
               <option key={key} value={key}>

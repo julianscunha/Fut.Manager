@@ -254,6 +254,83 @@ async function startServer() {
     return mergedList;
   }
 
+  function syncMatchStatuses(db: any) {
+    if (!db.matches) return;
+    let mutated = false;
+
+    db.matches.forEach((m: any) => {
+      // If cancelled, state is CANCELADA
+      if (m.status === 'cancelada') {
+        return;
+      }
+
+      // If results are recorded, state is FINALIZADA ('encerrada')
+      const hasResults = (db.results || []).some((r: any) => r.matchId === m.id);
+      if (hasResults || m.status === 'encerrada') {
+        if (m.status !== 'encerrada') {
+          m.status = 'encerrada';
+          mutated = true;
+        }
+        return;
+      }
+
+      // If draw exists and is locked ('affinitiesRecorded' or lock confirmed), state is SORTEADA
+      const matchDraw = (db.draws || []).find((d: any) => d.matchId === m.id);
+      const isDrawLocked = matchDraw && (matchDraw.affinitiesRecorded === true);
+      if (isDrawLocked || m.status === 'sorteada') {
+        if (m.status !== 'sorteada') {
+          m.status = 'sorteada';
+          mutated = true;
+        }
+        return;
+      }
+
+      // Count confirmed presences
+      const computedList = getComputedPresences(db, m.id);
+      const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
+
+      // If 15 confirmados, state is FECHADA
+      if (confirmedCount >= 15) {
+        if (m.status !== 'fechada') {
+          m.status = 'fechada';
+          mutated = true;
+        }
+        return;
+      }
+
+      // Check if deadline is expired to trigger automatic reserves release
+      const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+      const matchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : deadlineDays;
+      const { isDeadlineExpired } = getMatchDeadlineInfo(m, matchDeadlineDays);
+
+      if (isDeadlineExpired && !m.reservesReleased) {
+        m.reservesReleased = true;
+        m.reservesReleasedAt = new Date().toISOString();
+        mutated = true;
+      }
+
+      if (m.status !== 'agendada') {
+        // Only set to aguardando_reservas if reserves are actually released and we need more athletes
+        if (m.reservesReleased === true && confirmedCount < 15) {
+          if (m.status !== 'aguardando_reservas') {
+            m.status = 'aguardando_reservas';
+            mutated = true;
+          }
+        } else {
+          // Otherwise keep status as confirmando (CONFIRMACOES_ABERTAS)
+          if (m.status !== 'confirmando') {
+            m.status = 'confirmando';
+            mutated = true;
+          }
+        }
+      }
+    });
+
+    if (mutated) {
+      writeDb(db);
+    }
+  }
+
   function syncDynamicNotifications(db: any) {
     if (!db.notifications) db.notifications = [];
     
@@ -1470,6 +1547,7 @@ async function startServer() {
   app.get('/api/matches', (req, res) => {
     try {
       const db = readDb();
+      syncMatchStatuses(db);
       const activeSeason = db.seasons.find((s) => s.active);
       
       const activePlayerIds = db.players.filter((p) => !p.deletedAt).map((p) => p.id);
@@ -1678,6 +1756,45 @@ async function startServer() {
       return res.json(updatedMatch);
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao atualizar partida.' });
+    }
+  });
+
+  app.post('/api/matches/:id/release-reserves', (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = readDb();
+      const index = db.matches.findIndex((m) => m.id === id);
+
+      if (index === -1) {
+        return res.status(404).json({ error: 'Partida não encontrada.' });
+      }
+
+      const match = db.matches[index];
+      match.reservesReleased = true;
+      match.reservesReleasedAt = new Date().toISOString();
+      
+      if (['agendada', 'confirmando'].includes(match.status)) {
+        match.status = 'aguardando_reservas';
+      }
+
+      if (!db.deadlineAudits) db.deadlineAudits = [];
+      db.deadlineAudits.push({
+        id: 'da-' + match.id + '-manual-' + Date.now(),
+        matchId: match.id,
+        matchDate: match.date,
+        matchTime: match.time,
+        releasedAt: new Date().toISOString(),
+        auditType: 'manual_reserves_release',
+        createdAt: new Date().toISOString(),
+        details: `Convocação de reservas iniciada manualmente pelo administrador.`
+      });
+
+      syncMatchStatuses(db);
+      writeDb(db);
+
+      return res.json({ success: true, match });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Erro ao liberar reservas.' });
     }
   });
 
