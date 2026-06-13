@@ -397,6 +397,8 @@ export interface Notification {
   createdAt: string;
   targetUserId: string; // 'all' (system-wide) or specific userId
   actionUrl?: string; // e.g. path or tab name, or a custom event/action detail
+  matchId?: string;
+  eventId?: string;
 }
 
 export interface NotificationPreferences {

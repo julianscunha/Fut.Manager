@@ -300,7 +300,7 @@ export default function App() {
   });
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b110e]" id="racha-app-viewport">
+    <div className="min-h-screen flex flex-col bg-[#0b110e] w-full max-w-full overflow-x-hidden" id="racha-app-viewport">
       {/* Dynamic Sports Header */}
       <header className="sticky top-0 z-40 bg-[#0d1612]/95 border-b border-zinc-900 backdrop-blur-md px-4 py-3 select-none">
         <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
@@ -593,7 +593,7 @@ export default function App() {
       )}
 
       {/* Main Container Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 space-y-6 relative">
+      <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 space-y-6 relative overflow-x-hidden" id="main-content-area">
         <div className="absolute inset-0 field-decor pointer-events-none opacity-5" />
 
         {/* Action confirmation notifications */}

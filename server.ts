@@ -18,7 +18,9 @@ async function startServer() {
     title: string,
     message: string,
     targetUserId?: string,
-    actionUrl?: string
+    actionUrl?: string,
+    matchId?: string,
+    eventId?: string
   }) {
     if (!db.notifications) {
       db.notifications = [];
@@ -32,7 +34,9 @@ async function startServer() {
       status: 'nao_lida',
       createdAt: new Date().toISOString(),
       targetUserId: params.targetUserId || 'all',
-      actionUrl: params.actionUrl
+      actionUrl: params.actionUrl,
+      matchId: params.matchId,
+      eventId: params.eventId
     };
     db.notifications.push(newNotif);
 
@@ -336,6 +340,52 @@ async function startServer() {
     
     const todayStr = new Date().toISOString().split('T')[0];
 
+    // --- SELF-HEALING & FILTERING OF STALE/CANCELLED/DELETED MATCHES/EVENTS ---
+    const existingMatchIds = new Set((db.matches || []).map((m: any) => m.id));
+    const existingEventIds = new Set((db.events || []).map((e: any) => e.id));
+    
+    const canceledMatchIds = new Set((db.matches || []).filter((m: any) => m.status === 'cancelada').map((m: any) => m.id));
+    const canceledEventIds = new Set((db.events || []).filter((e: any) => e.status === 'cancelado').map((e: any) => e.id));
+
+    // For deadline warnings, they should only exist for matches that are 'confirmando' or 'aguardando_reservas'
+    const activeDeadlineIds = new Set<string>();
+    (db.matches || []).forEach((match: any) => {
+      if (match.status === 'confirmando' || match.status === 'aguardando_reservas') {
+        activeDeadlineIds.add(`notif-match-deadline-24h-${match.id}`);
+        activeDeadlineIds.add(`notif-match-deadline-2h-${match.id}`);
+        activeDeadlineIds.add(`notif-match-deadline-general-${match.id}`);
+      }
+    });
+
+    db.notifications = db.notifications.filter((n: any) => {
+      // 1. Delete if match or event no longer exists
+      if (n.matchId && !existingMatchIds.has(n.matchId)) {
+        return false;
+      }
+      if (n.eventId && !existingEventIds.has(n.eventId)) {
+        return false;
+      }
+
+      // 2. Delete if it's a deadline alert but the match is not active for confirmations
+      if (n.id && n.id.startsWith('notif-match-deadline-')) {
+        return activeDeadlineIds.has(n.id);
+      }
+
+      // 3. Delete obsolete match notifications of cancelled matches (keeping only the final cancellation/exclusion notice)
+      if (n.matchId && canceledMatchIds.has(n.matchId)) {
+        const titleLower = (n.title || '').toLowerCase();
+        return titleLower.includes('cancelad') || titleLower.includes('excluíd');
+      }
+
+      // 4. Delete obsolete event notifications of cancelled events (keeping only the final cancellation/exclusion notice)
+      if (n.eventId && canceledEventIds.has(n.eventId)) {
+        const titleLower = (n.title || '').toLowerCase();
+        return titleLower.includes('cancelad') || titleLower.includes('excluíd');
+      }
+
+      return true;
+    });
+
     // 1. Sync bills (created and overdue)
     (db.bills || []).forEach((bill: any) => {
       const player = db.players.find((p: any) => p.id === bill.playerId);
@@ -404,7 +454,8 @@ async function startServer() {
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
-                actionUrl: 'calendar'
+                actionUrl: 'calendar',
+                matchId: match.id
               });
             }
           }
@@ -421,7 +472,8 @@ async function startServer() {
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
-                actionUrl: 'calendar'
+                actionUrl: 'calendar',
+                matchId: match.id
               });
             }
           }
@@ -439,7 +491,8 @@ async function startServer() {
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
-                actionUrl: 'calendar'
+                actionUrl: 'calendar',
+                matchId: match.id
               });
             }
           }
@@ -1663,7 +1716,8 @@ async function startServer() {
         category: 'partida',
         title: '⚽ Nova Partida Agendada',
         message: `Uma nova partida foi agendada para o dia ${newMatch.date.split('-').reverse().join('/')} às ${newMatch.time} na localidade ${newMatch.location}.`,
-        actionUrl: 'calendar'
+        actionUrl: 'calendar',
+        matchId: newMatch.id
       });
 
       // Manual schedule acts as confirmation of occurrence, so we resume recurrent Config if active
@@ -1735,7 +1789,8 @@ async function startServer() {
           category: 'partida',
           title: '❌ Partida Cancelada',
           message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi cancelada.`,
-          actionUrl: 'calendar'
+          actionUrl: 'calendar',
+          matchId: updatedMatch.id
         });
       }
 
@@ -1748,7 +1803,8 @@ async function startServer() {
           category: 'partida',
           title: '🔄 Partida Reaberta',
           message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi reaberta por um administrador.`,
-          actionUrl: 'calendar'
+          actionUrl: 'calendar',
+          matchId: updatedMatch.id
         });
       }
 
@@ -1829,6 +1885,16 @@ async function startServer() {
       db.presences = (db.presences || []).filter((p) => !toDelete.includes(p.matchId));
       db.reserveAlerts = (db.reserveAlerts || []).filter((a) => !toDelete.includes(a.matchId));
 
+      // Remove any related notifications
+      if (db.notifications) {
+        db.notifications = db.notifications.filter(
+          (n: any) => 
+            !(n.matchId && toDelete.includes(n.matchId)) &&
+            !(n.id && toDelete.some((dId: string) => n.id.includes(dId))) &&
+            !(n.actionUrl && n.actionUrl.includes('calendar') && toDelete.some((dId: string) => n.message && n.message.includes(dId)))
+        );
+      }
+
       writeDb(db);
 
       return res.json({
@@ -1864,6 +1930,16 @@ async function startServer() {
       db.matches = db.matches.filter((m) => m.id !== id);
       db.presences = db.presences.filter((p) => p.matchId !== id);
       db.reserveAlerts = db.reserveAlerts.filter((a) => a.matchId !== id);
+
+      // Remove any related notifications
+      if (db.notifications) {
+        db.notifications = db.notifications.filter(
+          (n: any) => 
+            n.matchId !== id && 
+            !(n.id && n.id.includes(id)) &&
+            !(n.actionUrl && n.actionUrl.includes('calendar') && n.message && n.message.includes(id))
+        );
+      }
 
       writeDb(db);
       return res.json({ message: 'Partida excluída com sucesso!' });
@@ -2050,7 +2126,8 @@ async function startServer() {
         category: 'evento',
         title: '🎉 Novo Evento Criado',
         message: `O evento "${newEvent.name}" foi agendado para o dia ${newEvent.date.split('-').reverse().join('/')} às ${newEvent.time} na localidade ${newEvent.location}.`,
-        actionUrl: 'mural'
+        actionUrl: 'mural',
+        eventId: newEvent.id
       });
 
       writeDb(db);
@@ -2131,7 +2208,8 @@ async function startServer() {
           category: 'evento',
           title: '❌ Evento Cancelado',
           message: `O evento "${db.events[eventIndex].name}" marcado para o dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
-          actionUrl: 'mural'
+          actionUrl: 'mural',
+          eventId: id
         });
       } else {
         recalculateEventBills(db, id);
@@ -2139,7 +2217,8 @@ async function startServer() {
           category: 'evento',
           title: '✏️ Detalhes do Evento Alterados',
           message: `O evento "${db.events[eventIndex].name}" foi editado. Confira o cronograma ou local na aba de eventos.`,
-          actionUrl: 'mural'
+          actionUrl: 'mural',
+          eventId: id
         });
       }
 
@@ -2168,7 +2247,8 @@ async function startServer() {
         category: 'evento',
         title: '❌ Evento Cancelado',
         message: `O evento "${db.events[eventIndex].name}" do dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
-        actionUrl: 'mural'
+        actionUrl: 'mural',
+        eventId: id
       });
 
       writeDb(db);
@@ -2204,6 +2284,16 @@ async function startServer() {
       db.eventParticipants = (db.eventParticipants || []).filter((p: any) => p.eventId !== id);
       // Remover as cobranças não pagas que sobraram
       db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
+
+      // Remover notificações associadas ao evento
+      if (db.notifications) {
+        db.notifications = db.notifications.filter(
+          (n: any) => 
+            n.eventId !== id && 
+            !(n.id && n.id.includes(id)) &&
+            !(n.actionUrl && n.actionUrl.includes('mural') && n.message && n.message.includes(id))
+        );
+      }
 
       writeDb(db);
       return res.json({ message: 'Evento excluído com sucesso.' });
@@ -2624,7 +2714,8 @@ async function startServer() {
               title: '🏃 vaga de Reserva Convocada!',
               message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
               targetUserId: suggestedReservePlayerId,
-              actionUrl: 'calendar'
+              actionUrl: 'calendar',
+              matchId
             });
             // Public alert
             notify(db, {
@@ -2632,7 +2723,8 @@ async function startServer() {
               title: '👥 Vaga Aberta e Convocação',
               message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
               targetUserId: 'all',
-              actionUrl: 'calendar'
+              actionUrl: 'calendar',
+              matchId
             });
           }
         }
@@ -2758,14 +2850,16 @@ async function startServer() {
                 title: '🏃 vaga de Reserva Convocada!',
                 message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
                 targetUserId: suggestedReservePlayerId,
-                actionUrl: 'calendar'
+                actionUrl: 'calendar',
+                matchId
               });
               notify(db, {
                 category: 'partida',
                 title: '👥 Vaga Aberta e Convocação',
                 message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
                 targetUserId: 'all',
-                actionUrl: 'calendar'
+                actionUrl: 'calendar',
+                matchId
               });
             }
           }
@@ -2873,7 +2967,8 @@ async function startServer() {
         category: 'sorteio',
         title: '🎲 Times Sorteados!',
         message: `O sorteio dos times da rodada do dia ${match.date.split('-').reverse().join('/')} foi realizado. Venha ver se ficou equilibrado!`,
-        actionUrl: 'calendar'
+        actionUrl: 'calendar',
+        matchId
       });
 
       if (captainsConfigured) {
@@ -2881,7 +2976,8 @@ async function startServer() {
           category: 'sorteio',
           title: '👑 Capitães Definidos',
           message: `Os capitães da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
-          actionUrl: 'calendar'
+          actionUrl: 'calendar',
+          matchId
         });
       }
 
@@ -2964,7 +3060,8 @@ async function startServer() {
         category: 'sorteio',
         title: '✏️ Sorteio Alterado Manualmente',
         message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equilíbrio.`,
-        actionUrl: 'calendar'
+        actionUrl: 'calendar',
+        matchId: drawObj.matchId
       });
 
       writeDb(db);

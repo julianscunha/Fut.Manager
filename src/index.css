@@ -8,10 +8,26 @@
 }
 
 /* Base customized layout */
-body {
+html, body, #root {
   background-color: #0b110e; /* Deep emerald-charcoal grass turf shadow */
   color: #f4f4f5;
   font-family: var(--font-sans);
+  overflow-x: hidden !important;
+  width: 100% !important;
+  max-width: 100vw !important;
+  box-sizing: border-box !important;
+}
+
+*, ::before, ::after {
+  box-sizing: border-box !important;
+}
+
+/* Ensure touch scrolling and proper containment for any table wrapper */
+.overflow-x-auto {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
 /* Sports ambient glow background elements */

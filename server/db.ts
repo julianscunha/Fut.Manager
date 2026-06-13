@@ -797,14 +797,14 @@ export function syncMatchStatuses(db: any) {
     const matchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : deadlineDays;
     const { isDeadlineExpired } = getMatchDeadlineInfo(m, matchDeadlineDays);
 
-    const activePlayers = db.players.filter((p: any) => !p.deletedAt);
-    const mensalistas = activePlayers.filter((p: any) => p.category !== 'reserva');
-    const totalMensalistas = mensalistas.length;
-    const refusedMensalistas = computedList.filter((p: any) => p.category !== 'reserva' && p.presenceStatus === 'cancelado').length;
-    const impossibleToReach15WithMensalistas = (totalMensalistas - refusedMensalistas) < 15;
+    // If the reservation deadline has expired, auto-release reserves
+    if (isDeadlineExpired && !m.reservesReleased) {
+      m.reservesReleased = true;
+      m.reservesReleasedAt = new Date().toISOString();
+    }
 
     if (m.status !== 'agendada') {
-      if (isDeadlineExpired || impossibleToReach15WithMensalistas) {
+      if (m.reservesReleased === true) {
         m.status = 'aguardando_reservas';
         return;
       }

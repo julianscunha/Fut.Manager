@@ -1011,13 +1011,31 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
                         {/* Se a partida estiver cancelada */}
                         {isAdmin && item.status === 'cancelada' && (
-                          <button
-                            onClick={() => handleUpdateMatchStatus(item.id, 'agendada')}
-                            className="bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                            title="Reabrir racha"
-                          >
-                            Reabrir
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => handleUpdateMatchStatus(item.id, 'agendada')}
+                              className="bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
+                              title="Reabrir racha"
+                            >
+                              Reabrir
+                            </button>
+                            {!item.hasPresences && (
+                              <button
+                                onClick={() => {
+                                  setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
+                                  setShowResultFormId(null);
+                                }}
+                                className={`p-1.5 rounded-lg border transition ${
+                                  showDeleteConfirmId === item.id
+                                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 font-bold'
+                                    : 'bg-zinc-950 border-zinc-900 text-rose-500 hover:bg-rose-500/10'
+                                }`}
+                                title="Opções de Exclusão da Partida"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         )}
 
                         {/* Se a partida estiver ativa e o usuário for Administrador */}

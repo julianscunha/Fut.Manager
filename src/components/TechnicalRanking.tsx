@@ -223,13 +223,13 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
       )}
 
       {/* THREE PRIMARY SUBTABS */}
-      <div className="flex bg-[#111815] p-1.5 rounded-xl border border-zinc-850 text-xs">
+      <div className="flex flex-col sm:flex-row bg-[#111815] p-1.5 rounded-xl border border-zinc-850 text-xs gap-1">
         <button
           onClick={() => setRankingSubTab('racha')}
-          className={`flex-1 py-2 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] ${
             rankingSubTab === 'racha'
               ? 'bg-emerald-600 text-white shadow'
-              : 'text-zinc-400 hover:text-white'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
           }`}
         >
           <Activity className="w-3.5 h-3.5" />
@@ -238,10 +238,10 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
         <button
           onClick={() => setRankingSubTab('overall')}
-          className={`flex-1 py-2 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] ${
             rankingSubTab === 'overall'
               ? 'bg-emerald-600 text-white shadow'
-              : 'text-zinc-400 hover:text-white'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
           }`}
         >
           <Award className="w-3.5 h-3.5" />
@@ -250,10 +250,10 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
         <button
           onClick={() => setRankingSubTab('hall')}
-          className={`flex-1 py-2 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] ${
             rankingSubTab === 'hall'
               ? 'bg-emerald-600 text-white shadow'
-              : 'text-zinc-400 hover:text-white'
+              : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
           }`}
         >
           <Trophy className="w-3.5 h-3.5" />
