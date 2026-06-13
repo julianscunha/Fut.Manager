@@ -184,8 +184,9 @@ async function startServer() {
     // Count how many spots are already occupied by mensalistas and manually approved reserves
     let count = confirmedMensalistas.length + manuallyApprovedReserves.length;
 
-    // Remaining spots to reach 15
-    const remainingSpots = Math.max(0, 15 - count);
+    // Remaining spots to reach match limit
+    const limit = match.maxPlayers !== undefined && match.maxPlayers !== null ? match.maxPlayers : 15;
+    const remainingSpots = Math.max(0, limit - count);
 
     // Eligible reserves for automatic promotion:
     // Reserves who have status === 'confirmado' in DB but are not manually approved
@@ -241,6 +242,7 @@ async function startServer() {
         category: player.category,
         status: player.status,
         presenceStatus: computedStatus,
+        declaredPresence: pr ? pr.status === 'confirmado' : false,
         confirmedAt: pr ? pr.confirmedAt : undefined,
         manuallyApproved: pr ? pr.manuallyApproved || false : false,
         isAutoPromoted: autoApprovedReserveIds.has(player.id)
@@ -292,9 +294,10 @@ async function startServer() {
       // Count confirmed presences
       const computedList = getComputedPresences(db, m.id);
       const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
+      const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
 
-      // If 15 confirmados, state is FECHADA
-      if (confirmedCount >= 15) {
+      // If limit confirmados, state is FECHADA
+      if (confirmedCount >= limit) {
         if (m.status !== 'fechada') {
           m.status = 'fechada';
           mutated = true;
@@ -315,7 +318,7 @@ async function startServer() {
 
       if (m.status !== 'agendada') {
         // Only set to aguardando_reservas if reserves are actually released and we need more athletes
-        if (m.reservesReleased === true && confirmedCount < 15) {
+        if (m.reservesReleased === true && confirmedCount < limit) {
           if (m.status !== 'aguardando_reservas') {
             m.status = 'aguardando_reservas';
             mutated = true;
@@ -888,27 +891,28 @@ async function startServer() {
       auditActionText = `Alteração de Perfil de ${previousRole} para ${role}`;
 
       // Update link action if provided
-      if (selectedPlayerId) {
+      if (selectedPlayerId !== undefined) {
         const oldPlayerId = db.users[userIndex].playerId;
-        db.users[userIndex].playerId = selectedPlayerId;
-        const matchingPlayer = db.players.find(p => p.id === selectedPlayerId);
+        db.users[userIndex].playerId = selectedPlayerId || undefined;
+        const matchingPlayer = selectedPlayerId ? db.players.find(p => p.id === selectedPlayerId) : null;
         const prevPlayer = oldPlayerId ? db.players.find(p => p.id === oldPlayerId) : null;
-        if (matchingPlayer) {
-          db.userAudits.push({
-            id: 'audit-link-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-            timestamp: new Date().toISOString(),
-            userId,
-            userName: db.users[userIndex].name,
-            userEmail: db.users[userIndex].email,
-            action: 'Alteração de Vínculo',
-            previousRole: '',
-            newRole: '',
-            previousStatus: '',
-            newStatus: '',
-            performedBy: adminName || 'Administrador do Sistema',
-            details: `Vínculo de atleta alterado para ${matchingPlayer.name} (${matchingPlayer.id}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
-          });
-        }
+        
+        db.userAudits.push({
+          id: 'audit-link-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          timestamp: new Date().toISOString(),
+          userId,
+          userName: db.users[userIndex].name,
+          userEmail: db.users[userIndex].email,
+          action: 'Alteração de Vínculo',
+          previousRole: '',
+          newRole: '',
+          previousStatus: '',
+          newStatus: '',
+          performedBy: adminName || 'Administrador do Sistema',
+          details: selectedPlayerId 
+            ? `Vínculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            : `Vínculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+        });
       }
     }
 
@@ -2637,8 +2641,24 @@ async function startServer() {
       const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
       const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
 
-      if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired) {
+      if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(match.status)) {
         return res.status(400).json({ error: 'Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.' });
+      }
+
+      if (status === 'confirmado') {
+        const computedListBefore = getComputedPresences(db, matchId);
+        const limit = match.maxPlayers !== undefined && match.maxPlayers !== null ? match.maxPlayers : 15;
+        
+        // Find if this player is already computed as confirmed
+        const comp = computedListBefore.find((p) => p.playerId === effectivePlayerId);
+        const isCurrentConfirmed = comp && comp.presenceStatus === 'confirmado';
+
+        if (!isCurrentConfirmed) {
+          const confirmedCount = computedListBefore.filter((p) => p.presenceStatus === 'confirmado').length;
+          if (confirmedCount >= limit) {
+            return res.status(400).json({ error: `Limite de ${limit} atletas atingido. O racha foi fechado automaticamente.` });
+          }
+        }
       }
 
       let presenceIndex = db.presences.findIndex((p) => p.matchId === matchId && p.playerId === effectivePlayerId);
@@ -2664,72 +2684,92 @@ async function startServer() {
         });
       }
 
+      // If returning to confirmed or pending, clear any active reserve alert for them
+      if (status === 'confirmado' || status === 'nao_confirmado') {
+        db.reserveAlerts = (db.reserveAlerts || []).map((a) => {
+          if (a.matchId === matchId && a.cancelledPlayerId === effectivePlayerId) {
+            return { ...a, cleared: true };
+          }
+          return a;
+        });
+      }
+
       // LOGIC: Se o jogador que cancelou a presença já estava CONFIRMADO
       let alertCreated = null;
       if (previousStatus === 'confirmado' && status === 'cancelado') {
-        // Encontrar primeiro reserva elegível (não confirmado ainda para este racha) por ordem do reservesOrder
-        const activeReserves = db.players.filter((p) => p.category === 'reserva' && !p.deletedAt && p.status === 'disponivel');
-        const activeReserveIds = activeReserves.map((p) => p.id);
+        // Encontrar se já existe um alerta ativo (não cleared) para este mesmo jogador e partida
+        const existingAlert = (db.reserveAlerts || []).find(
+          (a) => a.matchId === matchId && a.cancelledPlayerId === effectivePlayerId && !a.cleared
+        );
 
-        const unconfirmedReserves = activeReserves.filter((p) => {
-          const pres = db.presences.find((pr) => pr.matchId === matchId && pr.playerId === p.id);
-          return !pres || pres.status !== 'confirmado';
-        });
+        if (!existingAlert) {
+          // Encontrar primeiro reserva elegível (não confirmado ainda para este racha) por ordem do reservesOrder
+          const activeReserves = db.players.filter((p) => p.category === 'reserva' && !p.deletedAt && p.status === 'disponivel');
+          const activeReserveIds = activeReserves.map((p) => p.id);
 
-        // Encontrar o topo da lista de prioridade (reservesOrder)
-        let suggestedReservePlayerId: string | undefined = undefined;
-        const currentReservesOrder = db.reservesOrder || [];
+          const unconfirmedReserves = activeReserves.filter((p) => {
+            const pres = db.presences.find((pr) => pr.matchId === matchId && pr.playerId === p.id);
+            return !pres || pres.status !== 'confirmado';
+          });
 
-        for (const orderId of currentReservesOrder) {
-          const isEligible = unconfirmedReserves.some((r) => r.id === orderId);
-          if (isEligible) {
-            suggestedReservePlayerId = orderId;
-            break;
+          // Encontrar o topo da lista de prioridade (reservesOrder)
+          let suggestedReservePlayerId: string | undefined = undefined;
+          const currentReservesOrder = db.reservesOrder || [];
+
+          for (const orderId of currentReservesOrder) {
+            const isEligible = unconfirmedReserves.some((r) => r.id === orderId);
+            if (isEligible) {
+              suggestedReservePlayerId = orderId;
+              break;
+            }
           }
-        }
 
-        // Se a ordem de prioridades estiver vazia, pegamos o primeiro reserva elegível
-        if (!suggestedReservePlayerId && unconfirmedReserves.length > 0) {
-          suggestedReservePlayerId = unconfirmedReserves[0].id;
-        }
-
-        const alertObj = {
-          id: 'alert-' + Date.now(),
-          matchId,
-          cancelledPlayerId: effectivePlayerId,
-          suggestedReservePlayerId,
-          createdAt: new Date().toISOString(),
-          cleared: false
-        };
-
-        db.reserveAlerts.push(alertObj);
-        alertCreated = alertObj;
-
-        if (suggestedReservePlayerId) {
-          const reservePlayer = db.players.find(p => p.id === suggestedReservePlayerId);
-          if (reservePlayer) {
-            // Personal alert
-            notify(db, {
-              category: 'partida',
-              title: '🏃 vaga de Reserva Convocada!',
-              message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
-              targetUserId: suggestedReservePlayerId,
-              actionUrl: 'calendar',
-              matchId
-            });
-            // Public alert
-            notify(db, {
-              category: 'partida',
-              title: '👥 Vaga Aberta e Convocação',
-              message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
-              targetUserId: 'all',
-              actionUrl: 'calendar',
-              matchId
-            });
+          // Se a ordem de prioridades estiver vazia, pegamos o primeiro reserva elegível
+          if (!suggestedReservePlayerId && unconfirmedReserves.length > 0) {
+            suggestedReservePlayerId = unconfirmedReserves[0].id;
           }
+
+          const alertObj = {
+            id: 'alert-' + Date.now(),
+            matchId,
+            cancelledPlayerId: effectivePlayerId,
+            suggestedReservePlayerId,
+            createdAt: new Date().toISOString(),
+            cleared: false
+          };
+
+          db.reserveAlerts.push(alertObj);
+          alertCreated = alertObj;
+
+          if (suggestedReservePlayerId) {
+            const reservePlayer = db.players.find(p => p.id === suggestedReservePlayerId);
+            if (reservePlayer) {
+              // Personal alert
+              notify(db, {
+                category: 'partida',
+                title: '🏃 vaga de Reserva Convocada!',
+                message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
+                targetUserId: suggestedReservePlayerId,
+                actionUrl: 'calendar',
+                matchId
+              });
+              // Public alert
+              notify(db, {
+                category: 'partida',
+                title: '👥 Vaga Aberta e Convocação',
+                message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
+                targetUserId: 'all',
+                actionUrl: 'calendar',
+                matchId
+              });
+            }
+          }
+        } else {
+          alertCreated = existingAlert;
         }
       }
 
+      syncMatchStatuses(db);
       writeDb(db);
       return res.json({
         message: 'Presença updated with success!',
@@ -2763,7 +2803,49 @@ async function startServer() {
       let count = 0;
       let alertsCreatedCount = 0;
 
-      for (const idToToggle of playerIds) {
+      let playerIdsToProcess = playerIds;
+
+      if (status === 'confirmado') {
+        const computedListBefore = getComputedPresences(db, matchId);
+        const confirmedBeforeCount = computedListBefore.filter((p: any) => p.presenceStatus === 'confirmado').length;
+        const limit = match.maxPlayers !== undefined && match.maxPlayers !== null ? match.maxPlayers : 15;
+        const vacanciesAvailable = Math.max(0, limit - confirmedBeforeCount);
+
+        // Find which of the requested playerIds are not currently computed as confirmed
+        const playersToConfirm = playerIds.filter(pid => {
+          let resolvedPid = pid;
+          let player = db.players.find((p) => p.id === pid);
+          if (!player) {
+            const mappedId = getPlayerIdForUser(db, pid);
+            if (mappedId) {
+              resolvedPid = mappedId;
+            }
+          }
+          const comp = computedListBefore.find(c => c.playerId === resolvedPid);
+          return !comp || comp.presenceStatus !== 'confirmado';
+        });
+
+        const amountToConfirm = Math.min(playersToConfirm.length, vacanciesAvailable);
+        const playerIdsToActuallyConfirm = playersToConfirm.slice(0, amountToConfirm);
+
+        // Keep any playerIds that are already confirmed
+        const alreadyConfirmedIds = playerIds.filter(pid => {
+          let resolvedPid = pid;
+          let player = db.players.find((p) => p.id === pid);
+          if (!player) {
+            const mappedId = getPlayerIdForUser(db, pid);
+            if (mappedId) {
+              resolvedPid = mappedId;
+            }
+          }
+          const comp = computedListBefore.find(c => c.playerId === resolvedPid);
+          return comp && comp.presenceStatus === 'confirmado';
+        });
+
+        playerIdsToProcess = [...alreadyConfirmedIds, ...playerIdsToActuallyConfirm];
+      }
+
+      for (const idToToggle of playerIdsToProcess) {
         let resolvedPlayerId = idToToggle;
         let player = db.players.find((p) => p.id === idToToggle);
         if (!player) {
@@ -2778,7 +2860,7 @@ async function startServer() {
           continue;
         }
 
-        if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired) {
+        if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(match.status)) {
           continue; // Skip mensalistas after deadline
         }
 
@@ -2808,64 +2890,82 @@ async function startServer() {
 
         count++;
 
-        if (previousStatus === 'confirmado' && status === 'cancelado') {
-          const activeReserves = db.players.filter((p) => p.category === 'reserva' && !p.deletedAt && p.status === 'disponivel');
-          const unconfirmedReserves = activeReserves.filter((p) => {
-            const pres = db.presences.find((pr) => pr.matchId === matchId && pr.playerId === p.id);
-            return !pres || pres.status !== 'confirmado';
-          });
-
-          let suggestedReservePlayerId: string | undefined = undefined;
-          const currentReservesOrder = db.reservesOrder || [];
-
-          for (const orderId of currentReservesOrder) {
-            const isEligible = unconfirmedReserves.some((r) => r.id === orderId);
-            if (isEligible) {
-              suggestedReservePlayerId = orderId;
-              break;
+        // If returning to confirmed or pending, clear any active reserve alert for them
+        if (status === 'confirmado' || status === 'nao_confirmado') {
+          db.reserveAlerts = (db.reserveAlerts || []).map((a) => {
+            if (a.matchId === matchId && a.cancelledPlayerId === effectivePlayerId) {
+              return { ...a, cleared: true };
             }
-          }
+            return a;
+          });
+        }
 
-          if (!suggestedReservePlayerId && unconfirmedReserves.length > 0) {
-            suggestedReservePlayerId = unconfirmedReserves[0].id;
-          }
+        if (previousStatus === 'confirmado' && status === 'cancelado') {
+          // Encontrar se já existe um alerta ativo (não cleared) para este mesmo jogador e partida
+          const existingAlert = (db.reserveAlerts || []).find(
+            (a) => a.matchId === matchId && a.cancelledPlayerId === effectivePlayerId && !a.cleared
+          );
 
-          const alertObj = {
-            id: 'alert-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-            matchId,
-            cancelledPlayerId: effectivePlayerId,
-            suggestedReservePlayerId,
-            createdAt: new Date().toISOString(),
-            cleared: false
-          };
+          if (!existingAlert) {
+            const activeReserves = db.players.filter((p) => p.category === 'reserva' && !p.deletedAt && p.status === 'disponivel');
+            const unconfirmedReserves = activeReserves.filter((p) => {
+              const pres = db.presences.find((pr) => pr.matchId === matchId && pr.playerId === p.id);
+              return !pres || pres.status !== 'confirmado';
+            });
 
-          db.reserveAlerts.push(alertObj);
-          alertsCreatedCount++;
+            let suggestedReservePlayerId: string | undefined = undefined;
+            const currentReservesOrder = db.reservesOrder || [];
 
-          if (suggestedReservePlayerId) {
-            const reservePlayer = db.players.find(p => p.id === suggestedReservePlayerId);
-            if (reservePlayer) {
-              notify(db, {
-                category: 'partida',
-                title: '🏃 vaga de Reserva Convocada!',
-                message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
-                targetUserId: suggestedReservePlayerId,
-                actionUrl: 'calendar',
-                matchId
-              });
-              notify(db, {
-                category: 'partida',
-                title: '👥 Vaga Aberta e Convocação',
-                message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
-                targetUserId: 'all',
-                actionUrl: 'calendar',
-                matchId
-              });
+            for (const orderId of currentReservesOrder) {
+              const isEligible = unconfirmedReserves.some((r) => r.id === orderId);
+              if (isEligible) {
+                suggestedReservePlayerId = orderId;
+                break;
+              }
+            }
+
+            if (!suggestedReservePlayerId && unconfirmedReserves.length > 0) {
+              suggestedReservePlayerId = unconfirmedReserves[0].id;
+            }
+
+            const alertObj = {
+              id: 'alert-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+              matchId,
+              cancelledPlayerId: effectivePlayerId,
+              suggestedReservePlayerId,
+              createdAt: new Date().toISOString(),
+              cleared: false
+            };
+
+            db.reserveAlerts.push(alertObj);
+            alertsCreatedCount++;
+
+            if (suggestedReservePlayerId) {
+              const reservePlayer = db.players.find(p => p.id === suggestedReservePlayerId);
+              if (reservePlayer) {
+                notify(db, {
+                  category: 'partida',
+                  title: '🏃 vaga de Reserva Convocada!',
+                  message: `Você foi convocado da lista de espera para o racha do dia ${match.date.split('-').reverse().join('/')} devido ao cancelamento de ${player.name}.`,
+                  targetUserId: suggestedReservePlayerId,
+                  actionUrl: 'calendar',
+                  matchId
+                });
+                notify(db, {
+                  category: 'partida',
+                  title: '👥 Vaga Aberta e Convocação',
+                  message: `O cancelamento da presença de ${player.name} liberou uma vaga. O reserva ${reservePlayer.name} foi acionado.`,
+                  targetUserId: 'all',
+                  actionUrl: 'calendar',
+                  matchId
+                });
+              }
             }
           }
         }
       }
 
+      syncMatchStatuses(db);
       writeDb(db);
       return res.json({
         message: `${count} presenças atualizadas com sucesso.`,
@@ -3749,23 +3849,43 @@ async function startServer() {
       const matchId = alert.matchId;
       const reserveId = alert.suggestedReservePlayerId;
 
+      const match = db.matches.find(m => m.id === matchId);
+      if (match) {
+        const computedListBefore = getComputedPresences(db, matchId);
+        const limit = match.maxPlayers !== undefined && match.maxPlayers !== null ? match.maxPlayers : 15;
+        
+        // Find if this player is already computed as confirmed
+        const comp = computedListBefore.find((p) => p.playerId === reserveId);
+        const isCurrentConfirmed = comp && comp.presenceStatus === 'confirmado';
+
+        if (!isCurrentConfirmed) {
+          const confirmedCount = computedListBefore.filter((p) => p.presenceStatus === 'confirmado').length;
+          if (confirmedCount >= limit) {
+             return res.status(400).json({ error: `Limite de ${limit} atletas já foi atingido.` });
+          }
+        }
+      }
+
       let presenceIndex = db.presences.findIndex((p) => p.matchId === matchId && p.playerId === reserveId);
       if (presenceIndex !== -1) {
         db.presences[presenceIndex].status = 'confirmado';
         db.presences[presenceIndex].confirmedAt = new Date().toISOString();
+        db.presences[presenceIndex].manuallyApproved = true;
       } else {
         db.presences.push({
           id: 'pres-' + Date.now(),
           matchId,
           playerId: reserveId,
           status: 'confirmado',
-          confirmedAt: new Date().toISOString()
+          confirmedAt: new Date().toISOString(),
+          manuallyApproved: true
         });
       }
 
       // Marcar alerta como limpo
       db.reserveAlerts[alertIndex].cleared = true;
 
+      syncMatchStatuses(db);
       writeDb(db);
       return res.json({ message: 'Reserva convocado com sucesso!' });
     } catch (err) {

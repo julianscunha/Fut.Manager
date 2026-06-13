@@ -491,7 +491,13 @@ export default function EventManager({ currentUser }: EventManagerProps) {
 
     const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\n\uD83D\uDC65 *Confirmados*\n\n${confirmedLines}\n\n*Total previsto:*\n${totalPessoas} pessoas\n\n\uD83D\uDCC5 *Data:* ${formattedDate} às ${evt.time}\n\uD83D\uDCCD *Local:* ${evt.location || 'Não especificado'}`;
     const escapedMsg = encodeURIComponent(textMsg);
-    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+    const url = `https://wa.me/?text=${escapedMsg}`;
+
+    console.log("RAW MESSAGE (EVENT ATTS):", textMsg);
+    console.log("ENCODED (EVENT ATTS):", escapedMsg);
+    console.log("WHATSAPP URL (EVENT ATTS):", url);
+
+    window.open(url, '_blank');
   };
 
   // Mark personal bill as paid
@@ -546,7 +552,13 @@ export default function EventManager({ currentUser }: EventManagerProps) {
 
     const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\uD83D\uDCC5 Data: ${evt.date.split('-').reverse().join('/')} às ${evt.time}\n\uD83D\uDCCD Local: ${evt.location || 'Não especificado'}\n\uD83D\uDCB0 Valor: ${valueStr}\n\nConfirme sua presença no aplicativo do Racha do Fofim para garantir sua vaga! \u26BD\uD83C\uDF57\uD83C\uDF7B`;
     const escapedMsg = encodeURIComponent(textMsg);
-    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+    const url = `https://wa.me/?text=${escapedMsg}`;
+
+    console.log("RAW MESSAGE (EVENT DETAILS):", textMsg);
+    console.log("ENCODED (EVENT DETAILS):", escapedMsg);
+    console.log("WHATSAPP URL (EVENT DETAILS):", url);
+
+    window.open(url, '_blank');
   };
 
   // --- REPORT EXPORTS ---

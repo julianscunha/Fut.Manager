@@ -712,7 +712,8 @@ export function getComputedPresencesSimplified(db: any, matchId: string) {
   });
 
   let count = confirmedMensalistas.length + manuallyApprovedReserves.length;
-  const remainingSpots = Math.max(0, 15 - count);
+  const limit = match.maxPlayers !== undefined && match.maxPlayers !== null ? match.maxPlayers : 15;
+  const remainingSpots = Math.max(0, limit - count);
 
   const pendingReserves = reserves.filter((p: any) => {
     const pr = presenceMap.get(p.id);
@@ -757,7 +758,8 @@ export function getComputedPresencesSimplified(db: any, matchId: string) {
     return {
       playerId: player.id,
       category: player.category,
-      presenceStatus: computedStatus
+      presenceStatus: computedStatus,
+      declaredPresence: pr ? pr.status === 'confirmado' : false
     };
   });
 
@@ -787,8 +789,9 @@ export function syncMatchStatuses(db: any) {
 
     const computedList = getComputedPresencesSimplified(db, m.id);
     const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
+    const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
 
-    if (confirmedCount >= 15) {
+    if (confirmedCount >= limit) {
       m.status = 'fechada';
       return;
     }
@@ -804,7 +807,7 @@ export function syncMatchStatuses(db: any) {
     }
 
     if (m.status !== 'agendada') {
-      if (m.reservesReleased === true) {
+      if (m.reservesReleased === true && confirmedCount < limit) {
         m.status = 'aguardando_reservas';
         return;
       }

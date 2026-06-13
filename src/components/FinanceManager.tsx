@@ -4,6 +4,7 @@ import {
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,
   Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle, History
 } from 'lucide-react';
+import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
 interface FinanceManagerProps {
   currentUser: User;
@@ -494,10 +495,11 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       </div>
 
       {/* ACTION TABS NAVIGATION */}
-      <div className="flex border-b border-zinc-900 text-xs font-semibold overflow-x-auto pr-2 scrollbar-none">
+      <ResponsiveTabsContainer activeTabId={`tab-fin-${activeTab}`} className="text-xs font-semibold">
         
         {/* Minhas Cobranças */}
         <button
+          id="tab-fin-my"
           onClick={() => setActiveTab('my')}
           className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
             activeTab === 'my'
@@ -506,7 +508,10 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
           }`}
         >
           <CreditCard className="w-3.5 h-3.5" />
-          <span>Minhas Cobranças</span>
+          <span>
+            <span className="hidden md:inline">Minhas Cobranças</span>
+            <span className="md:hidden">Cobranças</span>
+          </span>
           {myPendingTotal > 0 && (
             <span className="bg-rose-500 text-white font-extrabold px-1.5 py-0.5 rounded-full text-[9px]">
               R$ {myPendingTotal}
@@ -517,6 +522,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         {/* Admin Debtoes Summary */}
         {isAdmin && (
           <button
+            id="tab-fin-admin_overview"
             onClick={() => setActiveTab('admin_overview')}
             className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'admin_overview'
@@ -525,10 +531,13 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
             }`}
           >
             <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Controle de Inadimplência</span>
+            <span>
+              <span className="hidden md:inline">Controle de Inadimplência</span>
+              <span className="md:hidden">Inadimplência</span>
+            </span>
             {debtorsList.length > 0 && (
               <span className="bg-amber-500 text-zinc-950 font-extrabold px-1.5 py-0.5 rounded-full text-[9px]">
-                {debtorsList.length} devedor(es)
+                {debtorsList.length}
               </span>
             )}
           </button>
@@ -537,6 +546,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         {/* Global billing ledger */}
         {isAdmin && (
           <button
+            id="tab-fin-ledger"
             onClick={() => setActiveTab('ledger')}
             className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'ledger'
@@ -545,13 +555,17 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Livro Caixa do Grupo</span>
+            <span>
+              <span className="hidden md:inline">Livro Caixa do Grupo</span>
+              <span className="md:hidden">Livro Caixa</span>
+            </span>
           </button>
         )}
 
         {/* Settings params */}
         {isAdmin && (
           <button
+            id="tab-fin-config"
             onClick={() => setActiveTab('config')}
             className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'config'
@@ -560,10 +574,13 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
             }`}
           >
             <Sliders className="w-3.5 h-3.5" />
-            <span>Parâmetros de Rodada</span>
+            <span>
+              <span className="hidden md:inline">Parâmetros de Rodada</span>
+              <span className="md:hidden">Parâmetros</span>
+            </span>
           </button>
         )}
-      </div>
+      </ResponsiveTabsContainer>
 
       {/* ACTIVE SCREEN RENDERING CONTENT */}
 

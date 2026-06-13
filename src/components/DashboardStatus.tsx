@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, PresenceStatus } from '../types';
+import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS } from '../types';
 import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
 import { 
   Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check, 
@@ -297,6 +297,12 @@ export default function DashboardStatus({
   }, [currentUser.id]);
 
   useEffect(() => {
+    if (nextMatch?.status === 'aguardando_reservas') {
+      fetchReservesOrder();
+    }
+  }, [nextMatch?.id, nextMatch?.status]);
+
+  useEffect(() => {
     if (successMsg) {
       const timer = setTimeout(() => {
         setSuccessMsg('');
@@ -486,7 +492,13 @@ export default function DashboardStatus({
 
     const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\n\uD83D\uDC65 *Confirmados*\n\n${confirmedLines}\n\n*Total previsto:*\n${totalPessoas} pessoas\n\n\uD83D\uDCC5 *Data:* ${formattedDate} às ${evt.time}\n\uD83D\uDCCD *Local:* ${evt.location || 'Não especificado'}`;
     const escapedMsg = encodeURIComponent(textMsg);
-    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+    
+    // Diagnostic logs for WhatsApp sharing (Request Pattern)
+    console.log("textMsg:", textMsg);
+    console.log("encodeURIComponent(textMsg):", escapedMsg);
+    console.log("urlFinal:", `https://wa.me/?text=${escapedMsg}`);
+
+    window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
   };
 
   // Handle RSVP status toggling
@@ -514,7 +526,7 @@ export default function DashboardStatus({
       return;
     }
 
-    if (status === 'confirmado' && currentUserCategory !== 'reserva' && isDeadlineExpired) {
+    if (status === 'confirmado' && currentUserCategory !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(nextMatch.status)) {
       setErrorMsg('Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.');
       setActionLoading(false);
       return;
@@ -808,22 +820,28 @@ export default function DashboardStatus({
   const handleShareMatchOnWhatsApp = () => {
     if (!nextMatch) return;
     const formattedDate = nextMatch.date.split('-').reverse().join('/');
-    const confirmedList = confirmedPlayers.map((p, idx) => `👉 ${idx + 1}. ${p.name}`).join('\n');
-    const absentList = cancelPlayers.map(p => `❌ ${p.name}`).join('\n');
+    const confirmedList = confirmedPlayers.map((p, idx) => `\uD83D\uDC49 ${idx + 1}. ${p.name}`).join('\n');
+    const absentList = cancelPlayers.map(p => `\u274C ${p.name}`).join('\n');
     const vacanciesCount = Math.max(0, 15 - confirmedCount);
     
-    const textMsg = `⚽ *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* ⚽\n` +
-      `📅 *Data:* ${formattedDate} às ${nextMatch.time}\n` +
-      `📍 *Local:* ${nextMatch.location}\n\n` +
-      `👥 *Confirmados (${confirmedCount}/15):*\n${confirmedList || '_Nenhum jogador confirmado ainda_'}\n\n` +
-      `❌ *Não Vão (${cancelPlayers.length}):*\n${absentList || '_Nenhuma recusa registrada_'}\n\n` +
-      `⚠️ *Vagas em aberto:* ${vacanciesCount} vagas disponíveis!\n\n` +
+    const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
+      `\uD83D\uDCC5 *Data:* ${formattedDate} às ${nextMatch.time}\n` +
+      `\uD83D\uDCCD *Local:* ${nextMatch.location}\n\n` +
+      `\uD83D\uDC65 *Confirmados (${confirmedCount}/15):*\n${confirmedList || '_Nenhum jogador confirmado ainda_'}\n\n` +
+      `\u274C *Não Vão (${cancelPlayers.length}):*\n${absentList || '_Nenhuma recusa registrada_'}\n\n` +
+      `\u26A0\uFE0F *Vagas em aberto:* ${vacanciesCount} vagas disponíveis!\n\n` +
       `Por favor, atualizem seus status de presença no app oficial:\n` +
-      `👉 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `\uD83D\uDC49 Acesse e confirme: https://racha-do-fofim.com\n\n` +
       `Abraços e bom racha!`;
       
     const escapedMsg = encodeURIComponent(textMsg);
-    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+    
+    // Diagnostic logs for WhatsApp sharing (Request Pattern)
+    console.log("textMsg:", textMsg);
+    console.log("encodeURIComponent(textMsg):", escapedMsg);
+    console.log("urlFinal:", `https://wa.me/?text=${escapedMsg}`);
+
+    window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
   };
 
   const handleToggleSelectPlayer = (pId: string) => {
@@ -837,6 +855,99 @@ export default function DashboardStatus({
       setSelectedPlayerIds([]);
     } else {
       setSelectedPlayerIds(presences.map(p => p.playerId));
+    }
+  };
+
+  const handleConfirmMensalistasInBulk = async () => {
+    if (!nextMatch) return;
+    const pendingMensalistas = presences.filter(p => {
+      const isMensalista = p.category === 'mensalista' || p.category === 'mensalista_goleiro';
+      return isMensalista && p.presenceStatus === 'nao_confirmado';
+    });
+    const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
+    const vacancies = Math.max(0, maxPlayersLimit - confirmedCount);
+    
+    if (pendingMensalistas.length === 0) {
+      setErrorMsg('Não há mensalistas pendentes para confirmar.');
+      return;
+    }
+    if (vacancies <= 0) {
+      setErrorMsg('Não há vagas disponíveis neste racha.');
+      return;
+    }
+
+    const playerIdsToConfirm = pendingMensalistas.slice(0, vacancies).map(p => p.playerId);
+    
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerIds: playerIdsToConfirm, status: 'confirmado' })
+      });
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Erro ao confirmar mensalistas em lote.');
+      }
+      setSuccessMsg(`Foram confirmados ${playerIdsToConfirm.length} mensalistas pendentes com sucesso!`);
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao realizar confirmação coletiva de mensalistas.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmReservesInBulk = async () => {
+    if (!nextMatch) return;
+    const pendingReservesToConfirm = presences.filter(p => {
+      return p.category === 'reserva' && p.declaredPresence === true && p.presenceStatus === 'nao_confirmado';
+    });
+    
+    const priorityIds = priorityReserves.map(r => r.id);
+    const sortedPendingReserves = [...pendingReservesToConfirm].sort((a, b) => {
+      const idxA = priorityIds.indexOf(a.playerId);
+      const idxB = priorityIds.indexOf(b.playerId);
+      const orderA = idxA !== -1 ? idxA : 999999;
+      const orderB = idxB !== -1 ? idxB : 999999;
+      return orderA - orderB;
+    });
+
+    const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
+    const vacancies = Math.max(0, maxPlayersLimit - confirmedCount);
+
+    if (sortedPendingReserves.length === 0) {
+      setErrorMsg('Não há reservas da fila disponíveis e pendentes para confirmar.');
+      return;
+    }
+    if (vacancies <= 0) {
+      setErrorMsg('Não há vagas disponíveis neste racha.');
+      return;
+    }
+
+    const playerIdsToConfirm = sortedPendingReserves.slice(0, vacancies).map(p => p.playerId);
+
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerIds: playerIdsToConfirm, status: 'confirmado' })
+      });
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Erro ao confirmar reservas em lote.');
+      }
+      setSuccessMsg(`Foram confirmados ${playerIdsToConfirm.length} reservas com sucesso!`);
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao realizar confirmação coletiva de reservas.');
+    } finally {
+      setActionLoading(false);
     }
   };
 
@@ -1054,6 +1165,190 @@ export default function DashboardStatus({
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+
+
+      {/* AREA DO ADMINISTRADOR: STANDALONE OPERATIONAL CONTROL CENTER */}
+      {isAdmin && nextMatch && (
+        <div className="rounded-xl border border-dashed border-emerald-500/20 bg-zinc-950/25 p-5 space-y-4 shadow-lg order-2" id="admin-operational-center-panel">
+          <div className="flex items-center gap-2 pb-2.5 border-b border-[#22c55e]/10">
+            <Shield className="w-5 h-5 text-emerald-400" />
+            <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">🛡 Área do Administrador</span>
+            <span className="ml-auto text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-widest leading-none">
+              Controle Operacional
+            </span>
+          </div>
+
+          {nextMatch.status === 'agendada' && (
+            <div className="space-y-2.5">
+              <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
+                A rodada está criada. O próximo passo é abrir as confirmações para os mensalistas.
+              </p>
+              <button
+                disabled={actionLoading}
+                onClick={handleOpenConfirmations}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
+              >
+                Abrir Confirmações
+              </button>
+            </div>
+          )}
+
+          {nextMatch.status === 'confirmando' && (
+            <div className="space-y-2.5">
+              <div className="text-zinc-400 text-[11px] leading-relaxed">
+                As confirmações de presença estão abertas ({confirmedCount} confirmados).
+                {confirmedCount >= 15 ? (
+                  <span className="text-emerald-400 font-bold block mt-1">✔ Quórum mínimo atingido! O sorteio de times já está liberado.</span>
+                ) : (
+                  <span className="text-zinc-555 font-medium block mt-1">Compartilhe e divulgue o link para incentivar as presenças de hoje.</span>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handleShareMatchOnWhatsApp}
+                  className="flex-1 bg-[#128C7E] hover:bg-[#075e54] text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Divulgar Racha</span>
+                </button>
+                {confirmedCount >= 15 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
+                    }}
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
+                  >
+                    Sorteio de Times
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {nextMatch.status === 'aguardando_reservas' && (
+            <div className="space-y-3">
+              <p className="text-[#a1a1aa] text-[11px] leading-relaxed font-sans">
+                Apenas {confirmedCount} atletas confirmados. Faltam <span className="text-amber-400 font-bold font-mono text-xs">{15 - confirmedCount}</span> jogadores. Convocar reservas da fila de prioridade:
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!showReserveSuggestions) {
+                      await fetchReservesOrder();
+                    }
+                    setShowReserveSuggestions(!showReserveSuggestions);
+                  }}
+                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 select-none hover:scale-[1.01] active:scale-95"
+                >
+                  <span>Convocar Reservas</span>
+                  {showReserveSuggestions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShareMatchOnWhatsApp}
+                  className="bg-[#128C7E] hover:bg-[#075e54] text-white font-black px-3.5 py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.01] active:scale-95"
+                  title="Divulgar link"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {showReserveSuggestions && (
+                <div className="pt-3 border-t border-zinc-90 w-full space-y-2 mt-2 animate-fadeIn bg-zinc-950/80 p-2.5 rounded-lg border border-zinc-900 animate-fadeIn">
+                  <div className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold">
+                    Fila de Prioridade do Banco:
+                  </div>
+                  {loadingReserves ? (
+                    <div className="text-[10px] text-zinc-500 font-mono animate-pulse py-1">
+                      Buscando fila de prioridade do banco...
+                    </div>
+                  ) : priorityReserves.filter(r => !confirmedPlayers.some(p => p.playerId === r.id)).length === 0 ? (
+                    <div className="text-[10px] text-zinc-500 font-mono py-1">
+                      Nenhum reserva pendente disponível para convocação.
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      {priorityReserves
+                        .filter(r => !confirmedPlayers.some(p => p.playerId === r.id))
+                        .slice(0, 4)
+                        .map((reserve: any, idx) => (
+                          <div key={reserve.id} className="flex items-center justify-between bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-805 text-[10px]">
+                            <span className="font-semibold text-zinc-200 truncate">
+                              {idx + 1}. {reserve.name}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={actionLoading}
+                              onClick={() => handleAdminTogglePresence(reserve.id, 'confirmado')}
+                              className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded text-[9px] uppercase transition cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
+                            >
+                              Convocar
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {nextMatch.status === 'fechada' && (
+            <div className="space-y-2.5">
+              <p className="text-emerald-400 text-[11px] leading-relaxed font-semibold">
+                ✔ Presenças fechadas! Todos os {confirmedCount} atletas confirmados para este racha.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
+                }}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
+              >
+                Realizar Sorteio de Times
+              </button>
+            </div>
+          )}
+
+          {nextMatch.status === 'sorteada' && (
+            <div className="space-y-2.5">
+              <p className="text-sky-450 text-[11px] leading-relaxed font-semibold">
+                ✔ Sorteio realizado de forma balanceada!
+              </p>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
+                  }}
+                  className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 hover:text-white text-zinc-400 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer"
+                >
+                  Ver Times
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'calendar' }));
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
+                >
+                  Gravar Placar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {nextMatch.status === 'cancelada' && (
+            <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-[10px] font-mono">
+              Esta racha foi marcado como cancelado.
+            </div>
+          )}
         </div>
       )}
 
@@ -1456,12 +1751,12 @@ export default function DashboardStatus({
       )}
 
       {loading ? (
-        <div className="flex flex-col items-center justify-center p-12 text-zinc-500 font-mono gap-2 text-xs order-2">
+        <div className="flex flex-col items-center justify-center p-12 text-zinc-500 font-mono gap-2 text-xs order-3">
           <Clock className="w-6 h-6 text-emerald-400 animate-spin" />
           <span>Lendo informações da próxima rodada...</span>
         </div>
       ) : nextMatch ? (
-        <div className="flex flex-col gap-6 order-2 w-full">
+        <div className="flex flex-col gap-6 order-3 w-full">
           
           {/* Próximo Racha Panel */}
           <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 space-y-4 flex flex-col justify-between shadow-lg">
@@ -1502,16 +1797,6 @@ export default function DashboardStatus({
                   </span>
                 </div>
                 
-                {/* 2. Indicador Visual do Estado da Rodada */}
-                <div className="flex items-center gap-2 mt-1 px-2.5 py-1 bg-zinc-950/40 border border-zinc-900 rounded-lg text-[10.5px] font-mono font-extrabold w-fit text-zinc-300 select-none">
-                  {nextMatch.status === 'agendada' && <span>🗓 Status: Rodada Agendada</span>}
-                  {nextMatch.status === 'confirmando' && <span className="text-emerald-450 flex items-center gap-1">🟢 Status: Confirmações Abertas</span>}
-                  {nextMatch.status === 'aguardando_reservas' && <span className="text-amber-400 flex items-center gap-1">🟡 Status: Aguardando Reservas</span>}
-                  {nextMatch.status === 'fechada' && <span className="text-purple-400">✅ Status: Racha Fechado</span>}
-                  {nextMatch.status === 'sorteada' && <span className="text-sky-400">⚽ Status: Times Sorteados</span>}
-                  {nextMatch.status === 'encerrada' && <span className="text-emerald-400">🏁 Status: Finalizado</span>}
-                  {nextMatch.status === 'cancelada' && <span className="text-rose-400">❌ Status: Cancelado</span>}
-                </div>
               </div>
 
               {/* Racha Technical Info */}
@@ -1657,16 +1942,16 @@ export default function DashboardStatus({
                 <div className="space-y-4 mt-4 pt-4 border-t border-zinc-900/40">
                   <div className="grid grid-cols-2 gap-2">
                     <button
-                      disabled={nextMatch.status === 'agendada' || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading || (currentUserCategory !== 'reserva' && isDeadlineExpired && myPresence !== 'confirmado')}
+                      disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
                       onClick={() => handleRsvpHolder('confirmado')}
                       className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
-                        nextMatch.status === 'agendada' || (currentUserCategory === 'reserva' && !areReservesReleased)
+                        !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
                           ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed opacity-40'
-                          : (currentUserCategory !== 'reserva' && isDeadlineExpired && myPresence !== 'confirmado')
-                            ? 'bg-zinc-800 border border-zinc-750 text-zinc-500 cursor-not-allowed opacity-50'
+                          : actionLoading
+                            ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
                             : myPresence === 'confirmado'
-                              ? 'bg-emerald-600/30 border border-emerald-400 text-emerald-300 cursor-pointer lg:hover:brightness-110'
-                              : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow shadow-emerald-500/5 cursor-pointer'
+                              ? 'bg-emerald-600 border border-emerald-400 text-white shadow shadow-emerald-500/15 cursor-pointer hover:bg-emerald-500 active:scale-95'
+                              : 'bg-zinc-900 hover:bg-emerald-500/10 border border-zinc-800 text-zinc-400 hover:text-emerald-400 cursor-pointer active:scale-95'
                       }`}
                     >
                       <CheckCircle2 className="w-4 h-4" />
@@ -1674,14 +1959,16 @@ export default function DashboardStatus({
                     </button>
 
                     <button
-                      disabled={nextMatch.status === 'agendada' || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
+                      disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
                       onClick={() => handleRsvpHolder('cancelado')}
                       className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
-                        nextMatch.status === 'agendada' || (currentUserCategory === 'reserva' && !areReservesReleased)
+                        !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
                           ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed opacity-40'
-                          : myPresence === 'cancelado'
-                            ? 'bg-rose-950/40 border border-rose-400 text-rose-400 cursor-pointer lg:hover:brightness-110'
-                            : 'bg-zinc-905 border border-zinc-800 hover:bg-zinc-850 hover:text-white text-zinc-400 cursor-pointer'
+                          : actionLoading
+                            ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
+                            : myPresence === 'cancelado'
+                              ? 'bg-rose-600 border border-rose-500 text-white shadow shadow-rose-500/15 cursor-pointer hover:bg-rose-500 active:scale-95'
+                              : 'bg-zinc-900 hover:bg-rose-500/10 border border-zinc-800 text-zinc-400 hover:text-rose-400 cursor-pointer active:scale-95'
                       }`}
                     >
                       <X className="w-4 h-4" />
@@ -1700,109 +1987,138 @@ export default function DashboardStatus({
                         <button
                           type="button"
                           onClick={() => setShowPresenceListDetail(!showPresenceListDetail)}
-                          className="w-full bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-900 p-2 text-xs text-zinc-400 hover:text-white rounded flex items-center justify-between font-mono cursor-pointer transition"
+                          className="w-full bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-900 p-3 text-xs text-zinc-400 hover:text-white rounded-xl flex flex-col sm:flex-row sm:items-center justify-between font-mono cursor-pointer transition gap-1.5"
                         >
-                          <span className="flex items-center gap-1.5">
-                            <Users2 className="w-4 h-4 text-emerald-400" />
-                            <span>{nextMatch && (nextMatch.status !== 'agendada' && nextMatch.status !== 'confirmando') ? 'Lista de Chamada' : 'Lista de Confirmações'} ({confirmedCount} confirmados)</span>
-                          </span>
-                          <span>{showPresenceListDetail ? '▲ Esconder' : '▼ Expandir'}</span>
+                          <div className="flex flex-col items-start gap-1">
+                            <span className="flex items-center gap-1.5 text-white font-bold font-sans">
+                              <Users2 className="w-4 h-4 text-emerald-400" />
+                              <span>{nextMatch && (nextMatch.status !== 'agendada' && nextMatch.status !== 'confirmando') ? 'Lista de Chamada' : 'Lista de Confirmações'}</span>
+                            </span>
+                            <span className="text-[10px] text-zinc-500 pl-5">
+                              ({confirmedCount} confirmados)
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider self-end sm:self-auto text-emerald-400">
+                            <span>{showPresenceListDetail ? 'Esconder' : 'Expandir'}</span>
+                            {showPresenceListDetail ? (
+                              <ChevronUp className="w-4 h-4" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4" />
+                            )}
+                          </div>
                         </button>
 
                         {showPresenceListDetail && (
-                          <div className="mt-2 bg-zinc-950 border border-zinc-900 p-2.5 rounded max-h-96 overflow-y-auto space-y-2 font-mono text-[11px] animate-fadeIn">
+                          <div className="mt-2 bg-zinc-950 border border-zinc-900 p-2.5 rounded-xl space-y-2 font-mono text-[11px] animate-fadeIn">
                             {presences.length === 0 ? (
                               <div className="text-center italic text-zinc-600 py-3">Nenhuma presença declarada ainda.</div>
                             ) : (
                               <div className="space-y-2.5">
                                 {/* Bulk action selection bar for admins */}
-                                {isAdmin && presences.length > 0 && (
-                                  <div className="bg-[#0b120f] border border-emerald-500/15 rounded-xl p-3 flex flex-col gap-2.5 mb-2 font-mono">
-                                    <div className="flex items-center justify-between">
-                                      <label className="flex items-center gap-2 text-[10px] font-sans font-bold text-zinc-300 cursor-pointer select-none">
-                                        <input
-                                          type="checkbox"
-                                          checked={selectedPlayerIds.length === presences.length && presences.length > 0}
-                                          onChange={handleToggleSelectAll}
-                                          className="accent-emerald-500 w-4.5 h-4.5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer"
-                                        />
-                                        <span className="uppercase tracking-wider">Selecionar Todos ({presences.length})</span>
-                                      </label>
-                                      {selectedPlayerIds.length > 0 && (
-                                        <button
-                                          type="button"
-                                          onClick={() => setSelectedPlayerIds([])}
-                                          className="text-[9px] font-sans font-extrabold text-[#94a3b8] hover:text-white uppercase tracking-wider transition"
-                                        >
-                                          Limpar
-                                        </button>
-                                      )}
+                                {isAdmin && presences.length > 0 && nextMatch && (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') && (
+                                  <div className="bg-[#0b120f] border border-emerald-500/15 rounded-xl p-3 flex flex-col gap-2 mb-2 font-mono">
+                                    <div className="text-[10px] uppercase font-bold tracking-wider text-[#94a3b8]">
+                                      Ações de Confirmação em Lote
+                                    </div>
+                                    <div className="text-[9px] text-[#64748b] leading-tight flex justify-between">
+                                      <span>Vagas Disponíveis: <strong>{missingCount} de {maxPlayersLimit}</strong></span>
+                                      <span>Status da Rodada: <strong className="text-emerald-450 capitalize">{nextMatch.status.replace('_', ' ')}</strong></span>
                                     </div>
 
-                                    {selectedPlayerIds.length > 0 && (
-                                      <div className="flex items-center justify-between gap-2 border-t border-zinc-900/60 pt-2.5 mt-0.5 animate-fadeIn">
-                                        <span className="text-[10px] text-zinc-400 font-sans">
-                                          Com os <strong className="text-emerald-400">{selectedPlayerIds.length}</strong> atletas:
-                                        </span>
-                                        <div className="flex items-center gap-1.5">
-                                          <button
-                                            type="button"
-                                            disabled={actionLoading}
-                                            onClick={() => handleBulkTogglePresence('confirmado')}
-                                            className="bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-1.5 rounded-lg text-[9px] font-sans font-black uppercase tracking-wider transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                          >
-                                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                                            <span>Confirmar</span>
-                                          </button>
-                                          <button
-                                            type="button"
-                                            disabled={actionLoading}
-                                            onClick={() => handleBulkTogglePresence('cancelado')}
-                                            className="bg-rose-500 hover:bg-rose-455 text-white px-3 py-1.5 rounded-lg text-[9px] font-sans font-bold uppercase tracking-wider transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
-                                          >
-                                            <X className="w-3.5 h-3.5" />
-                                            <span>Falta</span>
-                                          </button>
-                                        </div>
+                                    {nextMatch.status === 'confirmando' && (
+                                      <div className="mt-1">
+                                        <button
+                                          type="button"
+                                          disabled={actionLoading || missingCount <= 0}
+                                          onClick={handleConfirmMensalistasInBulk}
+                                          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-sans font-bold py-2 px-3 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 border border-emerald-500/10 cursor-pointer"
+                                        >
+                                          <Users className="w-3.5 h-3.5" />
+                                          <span>Confirmar Mensalistas Pendentes</span>
+                                        </button>
+                                        <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
+                                          * Confirma apenas mensalistas/mensalistas goleiros que estão pendentes, respeitando o limite do racha ({maxPlayersLimit} no total).
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {nextMatch.status === 'aguardando_reservas' && (
+                                      <div className="mt-1">
+                                        <button
+                                          type="button"
+                                          disabled={actionLoading || missingCount <= 0}
+                                          onClick={handleConfirmReservesInBulk}
+                                          className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 font-sans font-black py-2 px-3 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                                        >
+                                          <Users2 className="w-3.5 h-3.5" />
+                                          <span>Confirmar Reservas Convocados</span>
+                                        </button>
+                                        <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
+                                          * Confirma apenas reservas da fila que já se disponibilizaram para o racha, seguindo a ordem da fila de prioridade.
+                                        </p>
                                       </div>
                                     )}
                                   </div>
                                 )}
 
-                                {presences.map((p: any) => (
-                                  <div key={p.playerId} className="flex justify-between items-center py-2 border-b border-zinc-900 last:border-b-0">
-                                    <div className="flex flex-col gap-0.5 min-w-0 pr-2">
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="font-extrabold text-[#e2e8f0] truncate text-[11px] font-sans">
-                                          {p.name}
-                                        </span>
-                                        {p.isGoleiro && (
-                                          <span className="text-[8.5px] px-1 py-0 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-md font-sans font-bold shrink-0 uppercase tracking-widest leading-none">
-                                            GK
+                                {presences.map((p: any) => {
+                                  // Look up the matching registered athlete to fetch real-time category and primary position
+                                  const matchingPlayer = players.find((pl: any) => pl.id === p.playerId);
+                                  
+                                  const playerCat = matchingPlayer ? matchingPlayer.category : (p.category || 'reserva');
+                                  const catLabel = CATEGORY_LABELS[playerCat] || 'Reserva';
+                                  
+                                  const playerPos = matchingPlayer ? matchingPlayer.primaryPosition : (p.isGoleiro ? 'goleiro' : '');
+                                  const posLabel = playerPos && POSITION_LABELS[playerPos] ? POSITION_LABELS[playerPos] : '';
+                                  
+                                  const displayLegend = posLabel ? `${catLabel} • ${posLabel}` : catLabel;
+
+                                  return (
+                                    <div 
+                                      key={p.playerId} 
+                                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-zinc-900 last:border-b-0 gap-3 sm:gap-2"
+                                    >
+                                      <div className="flex items-center gap-2.5 min-w-0">
+                                        <div className="flex flex-col gap-0.5 min-w-0">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            <span className="font-extrabold text-[#e2e8f0] truncate text-xs sm:text-[11px] font-sans">
+                                              {p.name}
+                                            </span>
+                                            {p.isGoleiro && (
+                                              <span className="text-[8.5px] px-1 py-0 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 rounded-md font-sans font-bold shrink-0 uppercase tracking-widest leading-none">
+                                                GK
+                                              </span>
+                                            )}
+                                          </div>
+                                          <span className="text-[9px] text-zinc-500 font-sans uppercase font-bold tracking-widest">
+                                            {displayLegend}
                                           </span>
-                                        )}
+                                        </div>
                                       </div>
-                                      <span className="text-[9px] text-zinc-500 font-sans uppercase font-bold tracking-widest">
-                                        {p.role === 'mensalista' || p.role === 'mensalista_goleiro' ? 'Mensalista' : 'Mensalista / Convidado'}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 flex-shrink-0">
-                                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-zinc-900/40 ${
-                                        p.presenceStatus === 'confirmado' ? 'text-emerald-400 border border-emerald-500/10' : p.presenceStatus === 'cancelado' ? 'text-rose-500 border border-rose-500/10' : 'text-[#94a3b8] border border-zinc-805'
-                                      }`}>
-                                        {p.presenceStatus === 'confirmado' ? 'Vou' : p.presenceStatus === 'cancelado' ? 'Falta' : 'Pendente'}
-                                      </span>
+                                    <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+                                      <div className="flex items-center gap-1 font-mono text-[10px]">
+                                        <span className="text-zinc-500 sm:hidden">Status: </span>
+                                        <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-900/40 border ${
+                                          p.presenceStatus === 'confirmado' 
+                                            ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' 
+                                            : p.presenceStatus === 'cancelado' 
+                                              ? 'text-rose-500 border-rose-500/20 bg-rose-500/5' 
+                                              : 'text-[#94a3b8] border-zinc-805'
+                                        }`}>
+                                          {p.presenceStatus === 'confirmado' ? 'Confirmado' : p.presenceStatus === 'cancelado' ? 'Não Vai' : 'Pendente'}
+                                        </span>
+                                      </div>
                                       {isAdmin && (
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2.5 items-center">
                                           {p.presenceStatus !== 'confirmado' && (
                                             <button
                                               type="button"
                                               disabled={actionLoading}
                                               onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                              className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                              className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
                                               title="Aprovar participação"
                                             >
-                                              <Check className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
+                                              <Check className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
                                             </button>
                                           )}
                                           {p.presenceStatus !== 'cancelado' && (
@@ -1810,17 +2126,18 @@ export default function DashboardStatus({
                                               type="button"
                                               disabled={actionLoading}
                                               onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                              className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                              className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
                                               title="Remover / Cancelar"
                                             >
-                                              <X className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
+                                              <X className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
                                             </button>
                                           )}
                                         </div>
                                       )}
                                     </div>
                                   </div>
-                                ))}
+                                );
+                              })}
                               </div>
                             )}
                           </div>
@@ -1836,43 +2153,53 @@ export default function DashboardStatus({
                         Reservas na Prioridade {areReservesReleased && `(${confirmedPlayers.filter(p=>p.category === 'reserva').length})`}
                       </div>
                       {!areReservesReleased ? (
-                        <div className="text-zinc-500 italic text-[11px] py-1.5 text-center border border-dashed border-zinc-900/50 rounded-lg bg-zinc-950/20 font-sans leading-relaxed">
-                          ⏳ Reserva: aguardando liberação das confirmações dos mensalistas.
+                        <div className="text-zinc-500 italic text-[11px] py-2 text-center font-sans">
+                          ⏳ Reservas aguardando liberação das confirmações dos mensalistas.
                         </div>
                       ) : (
                         <div className="space-y-1">
                           {presences.filter(p => p.category === 'reserva').map((p, idx) => (
-                            <div key={p.playerId} className="flex justify-between items-center py-2.5 gap-1.5 border-b border-zinc-900/40 last:border-0">
-                              <div className="flex items-center min-w-0">
+                            <div 
+                              key={p.playerId} 
+                              className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-zinc-900 last:border-b-0 gap-3 sm:gap-2"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
                                 {isAdmin && (
                                   <input
                                     type="checkbox"
                                     checked={selectedPlayerIds.includes(p.playerId)}
                                     onChange={() => handleToggleSelectPlayer(p.playerId)}
-                                    className="accent-emerald-500 w-4.5 h-4.5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer mr-3 flex-shrink-0"
+                                    className="accent-emerald-500 w-5 h-5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer flex-shrink-0"
                                   />
                                 )}
-                                <span className={`${p.presenceStatus === 'confirmado' ? 'text-[#4ade80] font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-650 line-through' : 'text-zinc-400'} truncate text-xs sm:text-[11px]`}>
-                                  {idx + 1}. {p.name} (Reserva)
+                                <span className={`${p.presenceStatus === 'confirmado' ? 'text-[#4ade80] font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-600 line-through' : 'text-zinc-350'} truncate text-xs sm:text-[11px] font-sans font-medium`}>
+                                  {idx + 1}. {p.name}
                                 </span>
                               </div>
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider bg-zinc-900/40 ${
-                                  p.presenceStatus === 'confirmado' ? 'text-[#4ade80] border border-emerald-500/10' : p.presenceStatus === 'cancelado' ? 'text-rose-500 border border-rose-500/10' : 'text-[#a78bfa] border border-[#a78bfa]/10'
-                                }`}>
-                                  {p.presenceStatus === 'confirmado' ? 'Vou' : p.presenceStatus === 'cancelado' ? 'Falta' : 'Fila'}
-                                </span>
+                              <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+                                <div className="flex items-center gap-1 font-mono text-[10px]">
+                                  <span className="text-zinc-500 sm:hidden">Status: </span>
+                                  <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-900/40 border ${
+                                    p.presenceStatus === 'confirmado' 
+                                      ? 'text-emerald-450 border-emerald-500/20 bg-emerald-500/5' 
+                                      : p.presenceStatus === 'cancelado' 
+                                        ? 'text-rose-500 border-rose-500/20 bg-rose-500/5' 
+                                        : 'text-[#a78bfa] border-[#a78bfa]/20 bg-purple-500/5'
+                                  }`}>
+                                    {p.presenceStatus === 'confirmado' ? 'Vou' : p.presenceStatus === 'cancelado' ? 'Falta' : 'Fila'}
+                                  </span>
+                                </div>
                                 {isAdmin && (
-                                  <div className="flex gap-2">
+                                  <div className="flex gap-2.5 items-center">
                                     {p.presenceStatus !== 'confirmado' && (
                                       <button
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                        className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                        className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
                                         title="Aprovar participação"
                                       >
-                                        <Check className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
+                                        <Check className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
                                       </button>
                                     )}
                                     {p.presenceStatus !== 'cancelado' && (
@@ -1880,10 +2207,10 @@ export default function DashboardStatus({
                                         type="button"
                                         disabled={actionLoading}
                                         onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                        className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-10.5 h-10.5 sm:w-8.5 sm:h-8.5 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                        className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
                                         title="Não vai / Cancelar"
                                       >
-                                        <X className="w-5.5 h-5.5 sm:w-4 sm:h-4 stroke-[3]" />
+                                        <X className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
                                       </button>
                                     )}
                                   </div>
@@ -1898,180 +2225,9 @@ export default function DashboardStatus({
                 </div>
               </div>
 
-                {/* AREA DO ADMINISTRADOR: FLOW OPERATIONAL CONTROL CENTER */}
-                {isAdmin && (
-                  <div className="mt-3.5 pt-3.5 border-t border-zinc-900/40 space-y-3">
-                    <div className="flex items-center gap-1.5 text-zinc-400 font-mono text-[9px] uppercase tracking-widest font-black">
-                      <Shield className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Área do Administrador</span>
-                    </div>
-
-                    {nextMatch.status === 'agendada' && (
-                      <div className="space-y-2.5">
-                        <p className="text-zinc-400 text-[11px] leading-relaxed">
-                          A rodada está criada. O próximo passo é abrir as confirmações para os mensalistas.
-                        </p>
-                        <button
-                          disabled={actionLoading}
-                          onClick={handleOpenConfirmations}
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
-                        >
-                          Abrir Confirmações
-                        </button>
-                      </div>
-                    )}
-
-                    {nextMatch.status === 'confirmando' && (
-                      <div className="space-y-2.5">
-                        <div className="text-zinc-450 text-[11px] leading-relaxed">
-                          As confirmações de presença estão abertas ({confirmedCount} confirmados).
-                          {confirmedCount >= 15 ? (
-                            <span className="text-emerald-400 font-bold block mt-1">✔ Quórum mínimo atingido! O sorteio de times já está liberado.</span>
-                          ) : (
-                            <span className="text-zinc-500 font-medium block mt-1">Compartilhe e divulgue o link para incentivar as presenças de hoje.</span>
-                          )}
-                        </div>
-                        <div className="flex flex-col sm:flex-row gap-2">
-                          <button
-                            onClick={handleShareMatchOnWhatsApp}
-                            className="flex-1 bg-[#128C7E] hover:bg-[#075e54] text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer shadow-md"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                            <span>Divulgar Racha</span>
-                          </button>
-                          {confirmedCount >= 15 && (
-                            <button
-                              onClick={() => {
-                                window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
-                              }}
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
-                            >
-                              Sorteio de Times
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-
-                    {nextMatch.status === 'aguardando_reservas' && (
-                      <div className="space-y-3">
-                        <p className="text-zinc-400 text-[11px] leading-relaxed font-sans">
-                          Apenas {confirmedCount} atletas confirmados. Faltam <span className="text-amber-400 font-bold font-mono text-xs">{15 - confirmedCount}</span> jogadores. Convocar reservas da fila de prioridade:
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={async () => {
-                              if (!showReserveSuggestions) {
-                                await fetchReservesOrder();
-                              }
-                              setShowReserveSuggestions(!showReserveSuggestions);
-                            }}
-                            className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 select-none hover:scale-[1.01] active:scale-95"
-                          >
-                            <span>Convocar Reservas</span>
-                            {showReserveSuggestions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                          </button>
-                          <button
-                            onClick={handleShareMatchOnWhatsApp}
-                            className="bg-[#128C7E] hover:bg-[#075e54] text-white font-black px-3.5 py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.01] active:scale-95"
-                            title="Divulgar link"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-
-                        {showReserveSuggestions && (
-                          <div className="pt-3 border-t border-zinc-90 w-full space-y-2 mt-2 animate-fadeIn bg-zinc-950/80 p-2.5 rounded-lg border border-zinc-900">
-                            <div className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold">
-                              Fila de Prioridade do Banco:
-                            </div>
-                            {loadingReserves ? (
-                              <div className="text-[10px] text-zinc-500 font-mono animate-pulse py-1">
-                                Buscando fila de prioridade do banco...
-                              </div>
-                            ) : priorityReserves.filter(r => !confirmedPlayers.some(p => p.playerId === r.id)).length === 0 ? (
-                              <div className="text-[10px] text-zinc-500 font-mono py-1">
-                                Nenhum reserva pendente disponível para convocação.
-                              </div>
-                            ) : (
-                              <div className="space-y-1.5">
-                                {priorityReserves
-                                  .filter(r => !confirmedPlayers.some(p => p.playerId === r.id))
-                                  .slice(0, 4)
-                                  .map((reserve: any, idx) => (
-                                    <div key={reserve.id} className="flex items-center justify-between bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-805 text-[10px]">
-                                      <span className="font-semibold text-zinc-200 truncate">
-                                        {idx + 1}. {reserve.name}
-                                      </span>
-                                      <button
-                                        disabled={actionLoading}
-                                        onClick={() => handleAdminTogglePresence(reserve.id, 'confirmado')}
-                                        className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded text-[9px] uppercase transition cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
-                                      >
-                                        Convocar
-                                      </button>
-                                    </div>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {nextMatch.status === 'fechada' && (
-                      <div className="space-y-2.5">
-                        <p className="text-emerald-400 text-[11px] leading-relaxed font-semibold">
-                          ✔ Presenças fechadas! Todos os {confirmedCount} atletas confirmados para este racha.
-                        </p>
-                        <button
-                          onClick={() => {
-                            window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
-                          }}
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
-                        >
-                          Realizar Sorteio de Times
-                        </button>
-                      </div>
-                    )}
-
-                    {nextMatch.status === 'sorteada' && (
-                      <div className="space-y-2.5">
-                        <p className="text-sky-450 text-[11px] leading-relaxed font-semibold">
-                          ✔ Sorteio realizado de forma balanceada!
-                        </p>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => {
-                              window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
-                            }}
-                            className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 hover:text-white text-zinc-400 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer"
-                          >
-                            Ver Times
-                          </button>
-                          <button
-                            onClick={() => {
-                              window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'calendar' }));
-                            }}
-                            className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
-                          >
-                            Gravar Placar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {nextMatch.status === 'cancelada' && (
-                      <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-[10px] font-mono">
-                        Esta racha foi marcado como cancelado.
-                      </div>
-                    )}
-                  </div>
-                )}
-
-              </div>
             </div>
           </div>
+        </div>
       ) : (
         <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-8 text-center space-y-4 shadow-xl order-3">
           <Calendar className="w-10 h-10 text-zinc-600 mx-auto" />

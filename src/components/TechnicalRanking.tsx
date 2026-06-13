@@ -5,6 +5,7 @@ import {
   Users, Users2, Flame, UserCheck, Calendar, Activity, Zap, Compass 
 } from 'lucide-react';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
+import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
 interface TechnicalRankingProps {
   players: Player[];
@@ -223,34 +224,47 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
       )}
 
       {/* THREE PRIMARY SUBTABS */}
-      <div className="flex flex-col sm:flex-row bg-[#111815] p-1.5 rounded-xl border border-zinc-850 text-xs gap-1">
+      <ResponsiveTabsContainer 
+        activeTabId={`tab-rnk-${rankingSubTab}`} 
+        noBorder={true}
+        className="bg-[#111815] p-1.5 rounded-xl border border-zinc-850 text-xs gap-1"
+      >
         <button
+          id="tab-rnk-racha"
           onClick={() => setRankingSubTab('racha')}
-          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] ${
+          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] whitespace-nowrap flex-shrink-0 ${
             rankingSubTab === 'racha'
               ? 'bg-emerald-600 text-white shadow'
               : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
           }`}
         >
           <Activity className="w-3.5 h-3.5" />
-          <span>Ranking do Racha</span>
+          <span>
+            <span className="hidden md:inline">Ranking do Racha</span>
+            <span className="md:hidden">Racha</span>
+          </span>
         </button>
 
         <button
+          id="tab-rnk-overall"
           onClick={() => setRankingSubTab('overall')}
-          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] ${
+          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] whitespace-nowrap flex-shrink-0 ${
             rankingSubTab === 'overall'
               ? 'bg-emerald-600 text-white shadow'
               : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
           }`}
         >
           <Award className="w-3.5 h-3.5" />
-          <span>Notas Técnicas (Overall)</span>
+          <span>
+            <span className="hidden md:inline">Notas Técnicas (Overall)</span>
+            <span className="md:hidden">Notas / Overall</span>
+          </span>
         </button>
 
         <button
+          id="tab-rnk-hall"
           onClick={() => setRankingSubTab('hall')}
-          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] ${
+          className={`flex-1 py-2 px-3 rounded-lg font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px] whitespace-nowrap flex-shrink-0 ${
             rankingSubTab === 'hall'
               ? 'bg-emerald-600 text-white shadow'
               : 'text-zinc-400 hover:text-white hover:bg-zinc-900/30'
@@ -259,7 +273,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
           <Trophy className="w-3.5 h-3.5" />
           <span>Hall da Fama</span>
         </button>
-      </div>
+      </ResponsiveTabsContainer>
 
 
       {/* ==================================================== */}
@@ -272,12 +286,12 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-zinc-950/40 p-4 rounded-xl border border-zinc-900/40 font-mono text-xs">
             
             {/* Season Selector */}
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col md:flex-row md:items-center gap-2">
               <span className="text-zinc-500 whitespace-nowrap">📅 Consultar Época:</span>
               <select
                 value={selectedSeason}
                 onChange={(e) => setSelectedSeason(e.target.value)}
-                className="bg-zinc-950 border border-zinc-850 rounded-lg px-2.5 py-1.5 text-zinc-300 focus:outline-none cursor-pointer flex-1 text-xs"
+                className="bg-zinc-950 border border-zinc-850 rounded-lg px-2.5 py-1.5 text-zinc-300 focus:outline-none cursor-pointer w-full md:flex-1 text-xs"
               >
                 <option value="active">Temporada Ativa</option>
                 <option value="all">Histórico Geral (Todas)</option>
@@ -290,10 +304,10 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
             </div>
 
             {/* View level filters */}
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-1.5 w-full">
+            <div className="grid grid-cols-2 md:flex md:flex-wrap gap-1.5 w-full">
               <button
                 onClick={() => setRachaViewMode('individual')}
-                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition flex-1 text-center ${
+                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition w-full md:flex-1 text-center ${
                   rachaViewMode === 'individual'
                     ? 'bg-zinc-800 border-zinc-700 text-white'
                     : 'bg-zinc-950 border-zinc-900 text-zinc-400 hover:text-zinc-200'
@@ -304,7 +318,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               <button
                 onClick={() => setRachaViewMode('goalkeepers')}
-                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition flex-1 text-center ${
+                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition w-full md:flex-1 text-center ${
                   rachaViewMode === 'goalkeepers'
                     ? 'bg-zinc-800 border-zinc-700 text-white'
                     : 'bg-zinc-950 border-zinc-900 text-zinc-400 hover:text-zinc-200'
@@ -315,7 +329,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               <button
                 onClick={() => setRachaViewMode('affinities')}
-                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition flex-1 text-center ${
+                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition w-full md:flex-1 text-center ${
                   rachaViewMode === 'affinities'
                     ? 'bg-zinc-800 border-zinc-700 text-white'
                     : 'bg-zinc-950 border-zinc-900 text-zinc-400 hover:text-zinc-200'
@@ -326,7 +340,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               <button
                 onClick={() => setRachaViewMode('streaks')}
-                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition flex-1 text-center ${
+                className={`py-1.5 px-3 rounded-lg border text-[11px] font-bold transition w-full md:flex-1 text-center ${
                   rachaViewMode === 'streaks'
                     ? 'bg-zinc-800 border-zinc-700 text-white'
                     : 'bg-zinc-950 border-zinc-900 text-zinc-400 hover:text-zinc-200'
@@ -354,13 +368,14 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               {/* INDIVIDUAL WORKERS TAB */}
               {rachaViewMode === 'individual' && (
-                <div className="rounded-xl border border-zinc-900 overflow-hidden bg-zinc-950/10 shadow-lg">
+                <div className="rounded-xl border border-zinc-900 overflow-hidden bg-zinc-950/10 shadow-lg" id="ranking-individual-container">
                   <div className="bg-zinc-900/40 px-4 py-3 border-b border-zinc-900 text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider flex justify-between items-center">
                     <span>Ranking individual de atletas</span>
-                    <span className="text-[9px] text-[#22c55e] lowercase font-normal italic">Ordenação Oficial: Vitórias &gt; Aproveit. &gt; Presenças</span>
+                    <span className="text-[9px] text-[#22c55e] lowercase font-normal italic hidden sm:inline">Ordenação Oficial: Vitórias &gt; Aproveit. &gt; Presenças</span>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs font-mono text-zinc-300">
                       <thead>
                         <tr className="border-b border-zinc-900 bg-zinc-950/40 text-[10px] text-zinc-500 uppercase">
@@ -370,7 +385,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                           <th className="py-3 px-2 text-center text-emerald-400">V</th>
                           <th className="py-3 px-2 text-center text-sky-400">% Aprov</th>
                           <th className="py-3 px-2 text-center text-amber-500">Seq Atu</th>
-                          <th className="py-3 px-2 text-center text-rose-400">Max Seq</th>
+                          <th className="py-3 px-2 text-center text-rose-450">Max Seq</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-zinc-900/60">
@@ -390,7 +405,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                             <td className="py-3 px-2">
                               <div className="flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 flex-shrink-0">
-                                  <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" />
+                                  <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 </div>
                                 <div className="min-w-0">
                                   <span className="font-sans font-bold text-white group-hover:text-emerald-400 transition block truncate">{player.name}</span>
@@ -400,7 +415,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                             </td>
                             <td className="py-3 px-2 text-center text-zinc-400 font-bold">{player.presences}</td>
                             <td className="py-3 px-2 text-center text-emerald-400 font-black text-xs">{player.vitorias}</td>
-                            <td className="py-3 px-2 text-center text-sky-450 font-bold">{player.aproveitamento}%</td>
+                            <td className="py-3 px-2 text-center text-sky-455 font-bold">{player.aproveitamento}%</td>
                             <td className="py-3 px-2 text-center">
                               <span className={`inline-flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded ${
                                 player.currentStreak > 0 ? 'bg-amber-500/10 text-amber-400 font-bold' : 'text-zinc-650'
@@ -415,18 +430,86 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Card Layout */}
+                  <div className="block md:hidden border-t border-zinc-900 divide-y divide-[#16231d]">
+                    {(rachaStats.individual || []).map((player: any) => {
+                      const getMedal = (rank: number) => {
+                        if (rank === 1) return '🥇';
+                        if (rank === 2) return '🥈';
+                        if (rank === 3) return '🥉';
+                        return null;
+                      };
+                      const medal = getMedal(player.rank);
+
+                      return (
+                        <div key={player.playerId} className="p-4 bg-zinc-950/20 hover:bg-[#101915]/40 transition" id={`player-card-${player.playerId}`}>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div className="flex flex-col items-center justify-center font-mono font-bold shrink-0">
+                                {medal ? (
+                                  <span className="text-base leading-none mb-0.5">{medal}</span>
+                                ) : null}
+                                <span className="text-[11px] text-zinc-500">#{player.rank}</span>
+                              </div>
+                              <div className="w-9 h-9 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 shrink-0">
+                                <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-sans font-bold text-sm text-white block truncate">{player.name}</span>
+                                <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider font-mono">
+                                  {POSITION_LABELS[player.primaryPosition]}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className={`inline-flex items-center gap-0.5 text-[10px] font-mono px-2 py-0.5 rounded ${
+                                player.currentStreak > 0 ? 'bg-amber-500/15 text-amber-400 font-bold' : 'bg-zinc-900 text-zinc-500'
+                              }`}>
+                                {player.currentStreak > 0 && <Flame className="w-3.5 h-3.5 text-amber-500" />}
+                                {player.currentStreak}V Atu
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-zinc-900/50 font-mono text-center">
+                            <div className="bg-zinc-900/30 p-2 rounded-lg border border-zinc-900">
+                              <span className="block text-[9px] text-zinc-500 uppercase tracking-wider">Jogos</span>
+                              <span className="text-[13px] font-black text-white">{player.presences}</span>
+                            </div>
+                            <div className="bg-zinc-900/30 p-2 rounded-lg border border-zinc-900">
+                              <span className="block text-[9px] text-emerald-500 uppercase tracking-wider">Vitórias</span>
+                              <span className="text-[13px] font-black text-emerald-400">{player.vitorias}</span>
+                            </div>
+                            <div className="bg-zinc-900/30 p-2 rounded-lg border border-zinc-900">
+                              <span className="block text-[9px] text-sky-500 uppercase tracking-wider">Aproveit.</span>
+                              <span className="text-[13px] font-black text-sky-400">{player.aproveitamento}%</span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500 mt-2.5 px-1">
+                            <span>Histórico de invencibilidade:</span>
+                            <span className="text-rose-450 font-semibold">Máximo de {player.maxStreak} seguidos</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                 </div>
               )}
 
               {/* GOALKEEPERS ONLY VIEW */}
               {rachaViewMode === 'goalkeepers' && (
-                <div className="rounded-xl border border-zinc-900 overflow-hidden bg-zinc-950/10 shadow-lg">
+                <div className="rounded-xl border border-zinc-900 overflow-hidden bg-zinc-950/10 shadow-lg" id="ranking-goleiros-container">
                   <div className="bg-zinc-900/40 px-4 py-3 border-b border-zinc-900 text-zinc-400 text-xs font-mono font-bold uppercase tracking-wider flex justify-between items-center">
                     <span>🏆 Ranking de Paredões (Goleiros)</span>
                     <span className="text-[10px] text-emerald-400 uppercase">🧤 Posição Goleiro</span>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs font-mono text-zinc-300">
                       <thead>
                         <tr className="border-b border-zinc-900 bg-zinc-950/40 text-[10px] text-zinc-500 uppercase">
@@ -455,7 +538,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               </td>
                               <td className="py-3 px-2 font-sans font-bold text-white flex items-center gap-2">
                                 <div className="w-7 h-7 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 flex-shrink-0">
-                                  <img src={keeper.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={keeper.name} className="w-full h-full object-cover" />
+                                  <img src={keeper.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={keeper.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 </div>
                                 <span className="truncate">{keeper.name}</span>
                               </td>
@@ -469,6 +552,67 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Card Layout */}
+                  <div className="block md:hidden border-t border-zinc-900 divide-y divide-[#16231d]">
+                    {(rachaStats.goalkeepers || []).length === 0 ? (
+                      <div className="text-center py-6 text-zinc-500 italic text-xs font-mono">
+                        Nenhum atleta atuando como goleiro com dados salvos.
+                      </div>
+                    ) : (
+                      (rachaStats.goalkeepers || []).map((keeper: any) => {
+                        const getMedal = (rank: number) => {
+                          if (rank === 1) return '🥇';
+                          if (rank === 2) return '🥈';
+                          if (rank === 3) return '🥉';
+                          return null;
+                        };
+                        const medal = getMedal(keeper.rank);
+
+                        return (
+                          <div key={keeper.playerId} className="p-4 bg-zinc-950/20 hover:bg-[#101915]/40 transition animate-fadeIn" id={`keeper-card-${keeper.playerId}`}>
+                            <div className="flex items-center gap-2.5">
+                              <div className="flex flex-col items-center justify-center font-mono font-bold shrink-0">
+                                {medal ? (
+                                  <span className="text-base leading-none mb-0.5">{medal}</span>
+                                ) : null}
+                                <span className="text-[11px] text-zinc-500">#{keeper.rank}</span>
+                              </div>
+                              <div className="w-9 h-9 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 shrink-0">
+                                <img src={keeper.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={keeper.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="min-w-0">
+                                <span className="font-sans font-bold text-sm text-white block truncate">{keeper.name}</span>
+                                <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider font-mono">🧤 Paredão Principal</span>
+                              </div>
+                            </div>
+
+                            {/* Stats Grid */}
+                            <div className="grid grid-cols-3 gap-2 mt-3.5 pt-3 border-t border-zinc-900/50 font-mono text-center">
+                              <div className="bg-zinc-900/30 p-2 rounded-lg border border-zinc-900">
+                                <span className="block text-[9px] text-zinc-500 uppercase tracking-wider">Jogos</span>
+                                <span className="text-[13px] font-black text-white">{keeper.presences}</span>
+                              </div>
+                              <div className="bg-zinc-900/30 p-2 rounded-lg border border-zinc-900">
+                                <span className="block text-[9px] text-emerald-500 uppercase tracking-wider">Vitórias</span>
+                                <span className="text-[13px] font-black text-emerald-400">{keeper.vitorias}</span>
+                              </div>
+                              <div className="bg-zinc-900/30 p-2 rounded-lg border border-zinc-900">
+                                <span className="block text-[9px] text-sky-500 uppercase tracking-wider">Aproveit.</span>
+                                <span className="text-[13px] font-black text-sky-400">{keeper.aproveitamento}%</span>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-between items-center text-[10px] font-mono text-zinc-500 mt-2.5 px-1">
+                              <span>Melhor Sequência:</span>
+                              <span className="text-rose-450 font-semibold">{keeper.maxStreak} vitórias seguidas</span>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
                 </div>
               )}
 
@@ -538,13 +682,14 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
               )}
 
               {rachaViewMode === 'streaks' && (
-                <div className="rounded-xl border border-zinc-900 overflow-hidden bg-zinc-950/10 shadow-lg animate-fadeIn">
+                <div className="rounded-xl border border-zinc-900 overflow-hidden bg-zinc-950/10 shadow-lg animate-fadeIn" id="ranking-sequencias-container">
                   <div className="bg-[#1f2937]/30 px-4 py-3 border-b border-zinc-900 text-purple-400 text-xs font-mono font-bold uppercase tracking-wider flex items-center gap-2">
                     <Flame className="w-4 h-4 text-[#8b5cf6]" />
                     <span>Maiores Sequências Históricas de Vitórias</span>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  {/* Desktop Table View */}
+                  <div className="hidden md:block overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs font-mono text-zinc-300">
                       <thead>
                         <tr className="border-b border-zinc-900 bg-zinc-950/40 text-[10px] text-zinc-500 uppercase">
@@ -573,7 +718,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               <td className="py-3 px-2">
                                 <div className="flex items-center gap-2">
                                   <div className="w-7 h-7 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 flex-shrink-0">
-                                    <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" />
+                                    <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                   </div>
                                   <div className="min-w-0">
                                     <span className="font-sans font-bold text-white group-hover:text-purple-400 transition block truncate">{player.name}</span>
@@ -582,7 +727,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                                 </div>
                               </td>
                               <td className="py-3 px-2 text-center">
-                                <span className="text-amber-500 font-extrabold text-xs">
+                                <span className="text-amber-505 font-extrabold text-xs">
                                   {player.currentStreak}V
                                 </span>
                               </td>
@@ -596,6 +741,56 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Mobile Card Layout */}
+                  <div className="block md:hidden border-t border-zinc-900 divide-y divide-[#16231d]">
+                    {[...(rachaStats.individual || [])]
+                      .sort((a, b) => b.maxStreak - a.maxStreak || b.currentStreak - a.currentStreak)
+                      .map((player: any, idx: number) => {
+                        const getMedal = (index: number) => {
+                          if (index === 0) return '🥇';
+                          if (index === 1) return '🥈';
+                          if (index === 2) return '🥉';
+                          return null;
+                        };
+                        const medal = getMedal(idx);
+
+                        return (
+                          <div key={player.playerId} className="p-4 bg-zinc-950/20 hover:bg-[#101915]/40 transition font-mono" id={`streak-card-${player.playerId}`}>
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="flex flex-col items-center justify-center font-bold shrink-0">
+                                  {medal ? (
+                                    <span className="text-base leading-none mb-0.5">{medal}</span>
+                                  ) : null}
+                                  <span className="text-[11px] text-zinc-500">#{idx + 1}</span>
+                                </div>
+                                <div className="w-9 h-9 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 shrink-0">
+                                  <img src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="font-sans font-bold text-sm text-white block truncate">{player.name}</span>
+                                  <span className="text-[9px] text-zinc-500 uppercase">{POSITION_LABELS[player.primaryPosition]}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Streaks Grid */}
+                            <div className="grid grid-cols-2 gap-3 mt-3.5 pt-3 border-t border-zinc-900/50 text-center">
+                              <div className="bg-amber-500/5 p-2 rounded-lg border border-amber-500/20">
+                                <span className="block text-[9px] text-amber-555 uppercase tracking-wider">🔥 Seq. Atual</span>
+                                <span className="text-sm font-black text-amber-400">{player.currentStreak}V</span>
+                              </div>
+                              <div className="bg-purple-500/5 p-2 rounded-lg border border-purple-500/20">
+                                <span className="block text-[9px] text-purple-450 uppercase tracking-wider">👑 Histórico Max</span>
+                                <span className="text-sm font-black text-purple-400">{player.maxStreak}V</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
                 </div>
               )}
 

@@ -5,6 +5,7 @@ import {
   Sliders, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle2,
   ListOrdered, HelpCircle, Activity, Hourglass, CalendarRange
 } from 'lucide-react';
+import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
 interface CalendarManagerProps {
   currentUser: User;
@@ -357,7 +358,10 @@ ${bestDuoStr}
 *Racha do Fofim* - Acesse para ver as estatísticas completas! \u26BD`;
 
       const encoded = encodeURIComponent(text);
-      window.open(`https://api.whatsapp.com/send?text=${encoded}`, '_blank');
+      console.log("RAW MESSAGE:", text);
+      console.log("ENCODED:", encoded);
+      console.log("WHATSAPP URL:", `https://wa.me/?text=${encoded}`);
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
     } catch (err) {
       const text = `\uD83C\uDFC6 *Resultado do Racha* (${item.date.split('-').reverse().join('/')})
 
@@ -367,7 +371,12 @@ Time ${matchResult.champions.join(', ')}
 \uD83D\uDD35 Azul: ${matchResult.winsBlue} vitórias | \uD83D\uDD34 Vermelho: ${matchResult.winsRed} vitórias | \uD83D\uDFE2 Verde: ${matchResult.winsGreen} vitórias.
 
 Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26BD`;
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+
+      const encoded = encodeURIComponent(text);
+      console.log("RAW MESSAGE (FALLBACK):", text);
+      console.log("ENCODED (FALLBACK):", encoded);
+      console.log("WHATSAPP URL (FALLBACK):", `https://wa.me/?text=${encoded}`);
+      window.open(`https://wa.me/?text=${encoded}`, '_blank');
     } finally {
       setActionLoading(false);
     }
@@ -375,30 +384,36 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
   const handleShareMatchOnWhatsApp = (match: any) => {
     const formattedDate = match.date.split('-').reverse().join('/');
-    const textMsg = `⚽ *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* ⚽\n` +
-      `📅 *Data:* ${formattedDate} às ${match.time}\n` +
-      `📍 *Local:* ${match.location}\n\n` +
-      `👥 *Confirmados (${match.confirmedCount}/15):*\n\n` +
-      `⚠️ *Vagas em aberto:* ${match.vacancies} vagas disponíveis!\n\n` +
+    const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
+      `\uD83D\uDCC5 *Data:* ${formattedDate} às ${match.time}\n` +
+      `\uD83D\uDCCD *Local:* ${match.location}\n\n` +
+      `\uD83D\uDC65 *Confirmados (${match.confirmedCount}/15):*\n\n` +
+      `\u26A0\uFE0F *Vagas em aberto:* ${match.vacancies} vagas disponíveis!\n\n` +
       `Por favor, atualizem seus status de presença no app oficial:\n` +
-      `👉 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `\uD83D\uDC49 Acesse e confirme: https://racha-do-fofim.com\n\n` +
       `Abraços e bom racha!`;
       
     const escapedMsg = encodeURIComponent(textMsg);
-    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+    console.log("RAW MESSAGE (MATCH SHARE):", textMsg);
+    console.log("ENCODED (MATCH SHARE):", escapedMsg);
+    console.log("WHATSAPP URL (MATCH SHARE):", `https://wa.me/?text=${escapedMsg}`);
+    window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
   };
 
   const handleConvocarReservas = (match: any) => {
     const formattedDate = match.date.split('-').reverse().join('/');
-    const textMsg = `⚽ *RACHA DO FOFIM - CONVOCAÇÃO DE RESERVAS!* ⚽\n` +
-      `📅 *Data:* ${formattedDate} às ${match.time}\n` +
-      `📍 *Local:* ${match.location}\n\n` +
-      `⚠️ Atenção reservas da fila de prioridade: O prazo de confirmação de mensalistas encerrou e ainda temos *${15 - match.confirmedCount} vagas em aberto*!\n\n` +
+    const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCAÇÃO DE RESERVAS!* \u26BD\n` +
+      `\uD83D\uDCC5 *Data:* ${formattedDate} às ${match.time}\n` +
+      `\uD83D\uDCCD *Local:* ${match.location}\n\n` +
+      `\u26A0\uFE0F Atenção reservas da fila de prioridade: O prazo de confirmação de mensalistas encerrou e ainda temos *${15 - match.confirmedCount} vagas em aberto*!\n\n` +
       `Por favor, os próximos da fila de reservas acessem o app para registrar presença:\n` +
-      `👉 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `\uD83D\uDC49 Acesse e confirme: https://racha-do-fofim.com\n\n` +
       `Abraços!`;
     const escapedMsg = encodeURIComponent(textMsg);
-    window.open(`https://api.whatsapp.com/send?text=${escapedMsg}`, '_blank');
+    console.log("RAW MESSAGE (RESERVES):", textMsg);
+    console.log("ENCODED (RESERVES):", escapedMsg);
+    console.log("WHATSAPP URL (RESERVES):", `https://wa.me/?text=${escapedMsg}`);
+    window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
   };
 
   // REMOVE MATCH
@@ -602,42 +617,57 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     <div className="space-y-6" id="calendar-manager-panel">
       
       {/* Sub Tabs menu */}
-      <div className="flex border-b border-zinc-900 pb-px gap-1">
+      <ResponsiveTabsContainer activeTabId={`tab-cal-${activeSubTab}`} className="gap-1">
         <button
+          id="tab-cal-matches"
           onClick={() => setActiveSubTab('matches')}
-          className={`px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider transition ${
+          className={`px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === 'matches'
-              ? 'border-b-2 border-emerald-400 text-white'
+              ? 'border-b-2 border-emerald-400 text-white bg-emerald-500/5'
               : 'text-zinc-500 hover:text-white'
           }`}
         >
-          📅 Agenda de Rachas
+          <span>📅 </span>
+          <span>
+            <span className="hidden md:inline">Agenda de Rachas</span>
+            <span className="md:hidden">Agenda</span>
+          </span>
         </button>
 
         {isAdmin && (
           <button
+            id="tab-cal-recurrence"
             onClick={() => setActiveSubTab('recurrence')}
-            className={`px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider transition ${
+            className={`px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 ${
               activeSubTab === 'recurrence'
-                ? 'border-b-2 border-emerald-400 text-white'
+                ? 'border-b-2 border-emerald-400 text-white bg-emerald-500/5'
                 : 'text-zinc-500 hover:text-white'
             }`}
           >
-            ⚙️ Recorrência & Temporadas
+            <span>⚙️ </span>
+            <span>
+              <span className="hidden md:inline">Recorrência & Temporadas</span>
+              <span className="md:hidden">Recorrência</span>
+            </span>
           </button>
         )}
 
         <button
+          id="tab-cal-reserves"
           onClick={() => setActiveSubTab('reserves')}
-          className={`px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider transition ${
+          className={`px-4 py-2 text-xs font-bold font-mono uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 ${
             activeSubTab === 'reserves'
-              ? 'border-b-2 border-emerald-400 text-white'
+              ? 'border-b-2 border-emerald-400 text-white bg-emerald-500/5'
               : 'text-zinc-500 hover:text-white'
           }`}
         >
-          📋 Fila de Reservas
+          <span>📋 </span>
+          <span>
+            <span className="hidden md:inline">Fila de Reservas</span>
+            <span className="md:hidden">Reservas</span>
+          </span>
         </button>
-      </div>
+      </ResponsiveTabsContainer>
 
       {/* SUCCESS / ERROR NOTIFICATIONS */}
       {successMsg && (

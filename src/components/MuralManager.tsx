@@ -854,7 +854,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   // Share Actions
   const handleShareWhatsApp = (post: MuralPost) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?public=true#post-${post.id}`;
-    const text = `🏆 *Mural do Racha do Fofim* 🏆
+    const text = `\uD83C\uDFC6 *Mural do Racha do Fofim* \uD83C\uDFC6
 Confira a nossa publicação no Mural:
 
 *"${post.title}"*
@@ -864,7 +864,14 @@ Postado por: ${post.authorName}
 Veja o conteúdo completo e assista o vídeo/foto aqui:
 ${shareUrl}`;
 
-    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+    const escapedMsg = encodeURIComponent(text);
+    const url = `https://wa.me/?text=${escapedMsg}`;
+
+    console.log("RAW MESSAGE (MURAL):", text);
+    console.log("ENCODED (MURAL):", escapedMsg);
+    console.log("WHATSAPP URL (MURAL):", url);
+
+    window.open(url, '_blank');
   };
 
   const handleCopyLink = (post: MuralPost) => {

@@ -74,7 +74,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         const sorted = data.sort((a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime());
         setMatches(sorted);
         // Default to active match
-        const active = sorted.find((m: Match) => m.status === 'confirmando' || m.status === 'agendada');
+        const active = sorted.find((m: Match) => ['confirmando', 'aguardando_reservas', 'fechada', 'sorteada', 'agendada'].includes(m.status));
         if (active) {
           setSelectedMatch(active);
         } else if (sorted.length > 0) {
@@ -97,7 +97,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       const ratingsRes = await fetch('/api/evaluations/summary');
 
       if (presRes.ok && playersRes.ok && ratingsRes.ok) {
-        const presList = await presRes.json();
+        const presData = await presRes.json();
         const playersList = await playersRes.json();
         const ratingsSummary = await ratingsRes.json();
 
@@ -109,8 +109,9 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         setPlayerOveralls(ratingsMap);
 
         // Filter only confirmed status
+        const presList = presData.presences || [];
         const confirmedIds: string[] = presList
-          .filter((p: any) => p.status === 'confirmado')
+          .filter((p: any) => p.presenceStatus === 'confirmado')
           .map((p: any) => p.playerId);
 
         const filtered = playersList.filter((p: Player) => confirmedIds.includes(p.id));
@@ -316,7 +317,13 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   const handleShareWhatsApp = () => {
     const msg = getShareMessage();
     if (!msg) return;
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+    const escapedMsg = encodeURIComponent(msg);
+    const url = `https://wa.me/?text=${escapedMsg}`;
+    
+    console.log("RAW MESSAGE (TEAMS):", msg);
+    console.log("ENCODED (TEAMS):", escapedMsg);
+    console.log("WHATSAPP URL (TEAMS):", url);
+
     window.open(url, '_blank');
   };
 

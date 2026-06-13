@@ -9,6 +9,7 @@ import {
   Shield, Check, X, Users, AlertCircle, Sparkles, Clock, Ban, 
   Search, Filter, Edit2, History, UserCheck, RefreshCw, UserCog, CheckCircle2, AlertTriangle, ArrowRight, Phone, Award, Sparkle
 } from 'lucide-react';
+import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
 interface UserApprovalListProps {
   currentUser: User;
@@ -34,6 +35,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [selectedRole, setSelectedRole] = useState<UserRole>('jogador');
   const [selectedPlayerId, setSelectedPlayerId] = useState<string>('');
+  const [inlineUpdatingId, setInlineUpdatingId] = useState<string | null>(null);
 
   // Pending users custom initial roles configuration
   const [initialRoles, setInitialRoles] = useState<Record<string, UserRole>>({});
@@ -225,6 +227,36 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
     }
   };
 
+  const handleInlineRoleAndLink = async (userId: string, role: UserRole, playerId: string) => {
+    setError('');
+    setSuccessMsg('');
+    setInlineUpdatingId(userId);
+    try {
+      const res = await fetch('/api/users/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId, 
+          action: 'update_role', 
+          role,
+          adminName: currentUser.name,
+          selectedPlayerId: playerId || ""
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao atualizar dados inline.');
+
+      setSuccessMsg('Alteração inline realizada com sucesso!');
+      setTimeout(() => setSuccessMsg(''), 3000);
+      await fetchData();
+    } catch (err: any) {
+      setError(err.message || 'Erro ao processar alteração.');
+    } finally {
+      setInlineUpdatingId(null);
+    }
+  };
+
   const getRoleLabel = (r: UserRole) => {
     switch (r) {
       case 'admin': return 'Administrador';
@@ -316,8 +348,9 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
       )}
 
       {/* Tabs navigation */}
-      <div className="flex border-b border-zinc-900 pb-px overflow-x-auto no-scrollbar gap-1.5">
+      <ResponsiveTabsContainer activeTabId={`tab-sub-${activeSubTab}`}>
         <button
+          id="tab-sub-users"
           onClick={() => setActiveSubTab('users')}
           className={`px-4 py-2.5 rounded-t-lg text-xs font-display font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap lg:gap-2.5 ${
             activeSubTab === 'users'
@@ -326,10 +359,15 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>Acesso de Contas ({users.length})</span>
+          <span>
+            <span className="hidden md:inline">Acesso de Contas</span>
+            <span className="md:hidden">Contas</span>
+            {` (${users.length})`}
+          </span>
         </button>
         
         <button
+          id="tab-sub-approvals"
           onClick={() => setActiveSubTab('approvals')}
           className={`px-4 py-2.5 rounded-t-lg text-xs font-display font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap relative ${
             activeSubTab === 'approvals'
@@ -338,13 +376,18 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
           }`}
         >
           <UserCheck className="w-4 h-4" />
-          <span>Pendentes Liberar ({pendingUsers.length})</span>
+          <span>
+            <span className="hidden md:inline">Pendentes Liberar</span>
+            <span className="md:hidden">Pendentes</span>
+            {` (${pendingUsers.length})`}
+          </span>
           {pendingUsers.length > 0 && (
             <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full animate-ping" />
           )}
         </button>
 
         <button
+          id="tab-sub-audits"
           onClick={() => setActiveSubTab('audits')}
           className={`px-4 py-2.5 rounded-t-lg text-xs font-display font-black uppercase tracking-wider border-b-2 transition-all cursor-pointer flex items-center gap-2 whitespace-nowrap ${
             activeSubTab === 'audits'
@@ -353,9 +396,13 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
           }`}
         >
           <History className="w-4 h-4" />
-          <span>Registro de Auditoria ({audits.length})</span>
+          <span>
+            <span className="hidden md:inline">Registro de Auditoria</span>
+            <span className="md:hidden">Auditoria</span>
+            {` (${audits.length})`}
+          </span>
         </button>
-      </div>
+      </ResponsiveTabsContainer>
 
       {/* Subtab Contents */}
 
@@ -468,16 +515,67 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
 
                       {/* Explicit Bind Details */}
                       <div className="mt-1 flex items-center gap-2 p-2 rounded-lg bg-zinc-950 border border-zinc-900/80 text-[11px]">
-                        <span className="text-zinc-500 font-mono uppercase text-[9px] tracking-wide shrink-0">⚽ Vínculo Esportivo:</span>
+                        <span className="text-zinc-500 font-mono uppercase text-[9px] tracking-wide shrink-0">⚽ Estado de Vínculo:</span>
                         {linkedPlayer ? (
                           <div className="flex items-center gap-1.5 text-zinc-300 truncate">
                             <span className="font-bold text-emerald-400 truncate">{linkedPlayer.name}</span>
-                            <span className="text-zinc-600">({linkedPlayer.category})</span>
+                            <span className="text-zinc-650 font-mono text-[10px]">({linkedPlayer.category})</span>
                           </div>
                         ) : (
-                          <span className="text-zinc-600 italic">Nenhum Atleta Vinculado</span>
+                          <span className="text-zinc-650 italic">Ficha não associada</span>
                         )}
                       </div>
+
+                      {/* Painel Administrativo Rápido (Inline) */}
+                      {currentUser.role === 'admin' && !isRoot && (
+                        <div className="mt-2.5 pt-2.5 border-t border-zinc-900/65 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fadeIn">
+                          {/* Nível de Acesso (Delegar permissão) */}
+                          <div className="flex flex-col gap-1 text-left">
+                            <label className="text-[9px] text-zinc-500 uppercase font-mono tracking-wider font-extrabold">Cargo / Acesso:</label>
+                            <select
+                              value={user.role}
+                              disabled={inlineUpdatingId === user.id}
+                              onChange={async (e) => {
+                                const newRole = e.target.value as UserRole;
+                                await handleInlineRoleAndLink(user.id, newRole, user.playerId || '');
+                              }}
+                              className="w-full bg-[#0d1310] border border-zinc-900 hover:border-zinc-800 rounded-lg text-xs text-zinc-200 p-2 focus:outline-none focus:border-emerald-555 cursor-pointer font-bold leading-none"
+                            >
+                              <option value="jogador">Jogador</option>
+                              <option value="auxiliar">Auxiliar</option>
+                              <option value="admin">Administrador</option>
+                            </select>
+                          </div>
+
+                          {/* Vínculo de Jogador */}
+                          <div className="flex flex-col gap-1 text-left">
+                            <label className="text-[9px] text-zinc-500 uppercase font-mono tracking-wider font-extrabold">Ficha do Atleta:</label>
+                            <select
+                              value={user.playerId || ''}
+                              disabled={inlineUpdatingId === user.id}
+                              onChange={async (e) => {
+                                const newPlayerId = e.target.value;
+                                await handleInlineRoleAndLink(user.id, user.role, newPlayerId);
+                              }}
+                              className="w-full bg-[#0d1310] border border-zinc-900 hover:border-zinc-800 rounded-lg text-xs text-zinc-200 p-2 focus:outline-none focus:border-emerald-555 cursor-pointer"
+                            >
+                              <option value="">-- Sem Vínculo (Não associado) --</option>
+                              {players.map(p => (
+                                <option key={p.id} value={p.id}>
+                                  {p.name} ({p.category === 'mensalista' ? 'Mensalista' : p.category === 'mensalista_goleiro' ? 'Goleiro' : 'Reserva'})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {inlineUpdatingId === user.id && (
+                            <div className="col-span-1 sm:col-span-2 text-[10px] text-emerald-400 font-mono flex items-center justify-center gap-1.5 my-1 bg-emerald-500/5 py-1 px-2 rounded border border-emerald-500/10">
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Sincronizando privilégios...</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between gap-2 border-t border-zinc-900/60 pt-2 text-[10px] text-zinc-650 font-mono">
