@@ -214,10 +214,14 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
           </span>
         </div>
         <div className="flex items-center gap-1.5">
-          {metrics && metrics.evalCount > 0 && (
-            <div className="flex items-center gap-0.5 bg-emerald-550/10 px-2 py-0.5 rounded border border-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold">
-              <Star className="w-3 h-3 fill-emerald-400" />
+          {metrics && metrics.evalCount > 0 ? (
+            <div className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold">
+              <Star className="w-3" />
               <span>{metrics.overall.toFixed(1)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1 bg-zinc-800/20 px-2 py-0.5 rounded border border-zinc-700/30 text-zinc-400 text-[10px] font-mono font-bold">
+              <span>⚪ Não avaliado</span>
             </div>
           )}
           <span className={`text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1 font-medium ${STATUS_COLORS[player.status]}`}>

@@ -14,7 +14,8 @@ export interface User {
   role: UserRole;
   status: UserStatus;
   createdAt: string;
-  playerId?: string;
+  playerId: string;
+  athlete_id: string;
 }
 
 export type PlayerCategory = 'mensalista' | 'mensalista_goleiro' | 'reserva';
@@ -160,6 +161,7 @@ export interface Match {
   confirmationDeadlineDaysBefore?: number;
   reservesReleased?: boolean;
   reservesReleasedAt?: string;
+  maxPlayers?: number;
 }
 
 export type PresenceStatus = 'confirmado' | 'nao_confirmado' | 'cancelado';
@@ -275,6 +277,7 @@ export interface TeamDraw {
   captainsConfigured: boolean;
   affinitiesRecorded?: boolean;
   winsRecorded?: boolean;
+  redrawCount?: number;
 }
 
 export interface MatchResult {

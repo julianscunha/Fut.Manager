@@ -24,6 +24,95 @@ interface DrawManagerProps {
   currentUser: { id: string; name: string; role: 'admin' | 'auxiliar' | 'jogador' };
 }
 
+const POS_SQUAD_ORDER: Record<string, number> = {
+  goleiro: 1,
+  zagueiro: 2,
+  lateral: 3,
+  meio_campo: 4,
+  volante: 5,
+  atacante: 6,
+};
+
+const getAbbreviation = (pos: string) => {
+  switch (pos) {
+    case 'goleiro': return 'GK';
+    case 'zagueiro': return 'ZAG';
+    case 'lateral': return 'LAT';
+    case 'meio_campo': return 'MEI';
+    case 'volante': return 'VOL';
+    case 'atacante': return 'ATA';
+    default: return pos.toUpperCase().slice(0, 3);
+  }
+};
+
+export function computeTacticalAssignments(players: Player[]): Record<string, { position: string; isAdapted: boolean }> {
+  const positions = ['goleiro', 'zagueiro', 'lateral', 'meio_campo', 'volante', 'atacante'];
+  const bestAssignment: Record<string, string> = {};
+  let bestScore = -Infinity;
+
+  function backtrack(playerIndex: number, currentAssigned: Record<string, string>, usedPositionsCount: Record<string, number>) {
+    if (playerIndex === players.length) {
+      let score = 0;
+      const uniquePositions = new Set<string>();
+
+      for (const p of players) {
+        const assigned = currentAssigned[p.id];
+        uniquePositions.add(assigned);
+
+        if (assigned === p.primaryPosition) {
+          score += 10;
+        } else if (p.secondaryPositions && p.secondaryPositions.includes(assigned as any)) {
+          score += 6;
+        } else if (assigned === 'goleiro') {
+          score -= 50;
+        } else {
+          score += 1;
+        }
+      }
+
+      score += uniquePositions.size * 5;
+
+      if (score > bestScore) {
+        bestScore = score;
+        for (const p of players) {
+          bestAssignment[p.id] = currentAssigned[p.id];
+        }
+      }
+      return;
+    }
+
+    const player = players[playerIndex];
+    let candidatePositions = [...positions];
+    if (player.primaryPosition !== 'goleiro' && (!player.secondaryPositions || !player.secondaryPositions.includes('goleiro'))) {
+      candidatePositions = candidatePositions.filter(pos => pos !== 'goleiro');
+    }
+
+    for (const pos of candidatePositions) {
+      currentAssigned[player.id] = pos;
+      usedPositionsCount[pos] = (usedPositionsCount[pos] || 0) + 1;
+
+      backtrack(playerIndex + 1, currentAssigned, usedPositionsCount);
+
+      usedPositionsCount[pos]--;
+      delete currentAssigned[player.id];
+    }
+  }
+
+  if (players.length > 0) {
+    backtrack(0, {}, {});
+  }
+
+  const result: Record<string, { position: string; isAdapted: boolean }> = {};
+  for (const p of players) {
+    const pos = bestAssignment[p.id] || p.primaryPosition;
+    result[p.id] = {
+      position: pos,
+      isAdapted: pos !== p.primaryPosition
+    };
+  }
+  return result;
+}
+
 export default function DrawManager({ currentUser }: DrawManagerProps) {
   const isEditor = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
 
@@ -35,6 +124,10 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Sorting state for left sidebar
+  const [orderingMode, setOrderingMode] = useState<'posicao' | 'confirmacao' | 'nome'>('posicao');
+  const [confirmedPresenceOrder, setConfirmedPresenceOrder] = useState<string[]>([]);
 
   // Draw config state
   const [captainsConfigured, setCaptainsConfigured] = useState(false);
@@ -56,13 +149,31 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   // Fetch verified player ratings & overalls when match is selected
   useEffect(() => {
     if (selectedMatch) {
-      fetchConfirmedPlayers(selectedMatch.id);
-      fetchActiveDraw(selectedMatch.id);
+      if (selectedMatch.status === 'cancelada') {
+        setConfirmedPlayers([]);
+        setActiveDraw(null);
+        setCaptainsConfigured(false);
+        setCaptains({ Azul: '', Vermelho: '', Verde: '' });
+        setIsSharedGoalkeepers(false);
+      } else {
+        fetchConfirmedPlayers(selectedMatch.id);
+        fetchActiveDraw(selectedMatch.id);
+      }
     } else {
       setConfirmedPlayers([]);
       setActiveDraw(null);
     }
   }, [selectedMatch]);
+
+  // Auto-hide success or balanced banner messages after 6 seconds
+  useEffect(() => {
+    if (successMsg) {
+      const timer = setTimeout(() => {
+        setSuccessMsg('');
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMsg]);
 
   const fetchMatches = async () => {
     try {
@@ -116,6 +227,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
 
         const filtered = playersList.filter((p: Player) => confirmedIds.includes(p.id));
         setConfirmedPlayers(filtered);
+        setConfirmedPresenceOrder(confirmedIds);
       }
     } catch (err) {
       setErrorMsg('Falha ao carregar lista de atletas confirmados.');
@@ -182,6 +294,14 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
 
   const handleMovePlayer = async (playerId: string, targetTeamName: 'Azul' | 'Vermelho' | 'Verde') => {
     if (!activeDraw) return;
+
+    if (captainsConfigured) {
+      const isCaptain = Object.values(captains).includes(playerId);
+      if (isCaptain) {
+        setErrorMsg("Não é possível mover manualmente um atleta marcado como capitão. Remova ou altere sua função de capitão para poder movê-lo.");
+        return;
+      }
+    }
 
     try {
       setErrorMsg('');
@@ -266,6 +386,41 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     return confirmedPlayers.find((x) => x.id === pid);
   };
 
+  const getSortedTeamPlayers = (playerIds: string[], teamName: string, captainPlayerId?: string) => {
+    const teamPlayers = playerIds
+      .map(pid => getPlayerObj(pid))
+      .filter((p): p is Player => !!p);
+
+    const tacticalAssignments = computeTacticalAssignments(teamPlayers);
+
+    return [...teamPlayers].sort((a, b) => {
+      const isCapA = captainsConfigured && (captainPlayerId === a.id || captains[teamName] === a.id);
+      const isCapB = captainsConfigured && (captainPlayerId === b.id || captains[teamName] === b.id);
+
+      if (isCapA && !isCapB) return -1;
+      if (!isCapA && isCapB) return 1;
+
+      const posA = tacticalAssignments[a.id]?.position || 'atacante';
+      const posB = tacticalAssignments[b.id]?.position || 'atacante';
+
+      const POS_ORDER: Record<string, number> = {
+        goleiro: 1,
+        zagueiro: 2,
+        lateral: 3,
+        volante: 4,
+        meio_campo: 5,
+        atacante: 6,
+      };
+
+      const valA = POS_ORDER[posA] || 99;
+      const valB = POS_ORDER[posB] || 99;
+
+      if (valA !== valB) return valA - valB;
+
+      return a.name.localeCompare(b.name);
+    });
+  };
+
   // Prepare standard WhatsApp message
   const getShareMessage = () => {
     if (!activeDraw || !selectedMatch) return '';
@@ -275,55 +430,56 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     };
 
-    let text = `\u26BD *RACHA DO FOFIM - ESCALAÇÕES* \u26BD\n`;
-    text += `\uD83D\uDCC5 *Partida:* ${formatDate(selectedMatch.date)} às ${selectedMatch.time}\n`;
-    text += `\uD83D\uDCCD *Quadra:* ${selectedMatch.location}\n`;
-    text += `\u2696\uFE0F *Diferença Técnica:* ${activeDraw.maxDifference.toFixed(1)} de Rating\n\n`;
+    let text = `⚽ RACHA DO FOFIM - ESCALAÇÃO OFICIAL ⚽\n\n`;
+    text += `📅 Data: ${formatDate(selectedMatch.date)} às ${selectedMatch.time}\n`;
+    text += `📍 Local: ${selectedMatch.location}\n\n`;
+    text += `Diferença Técnica: ${activeDraw.maxDifference.toFixed(1)}\n\n`;
 
     activeDraw.teams.forEach((t) => {
       const teamOverall = t.name === 'Azul' ? activeDraw.overallBlue : t.name === 'Vermelho' ? activeDraw.overallRed : activeDraw.overallGreen;
       // Use color circle depending on team name
-      const colorIcon = t.name === 'Azul' ? '\uD83D\uDD35' : t.name === 'Vermelho' ? '\uD83D\uDD34' : '\uD83D\uDFE2';
-      text += `${colorIcon} *TIME ${t.name.toUpperCase()}* (Média: ${teamOverall.toFixed(1)})\n`;
+      const colorIcon = t.name === 'Azul' ? '🔵' : t.name === 'Vermelho' ? '🔴' : '🟢';
+      text += `${colorIcon} TIME ${t.name.toUpperCase()} (Média ${teamOverall.toFixed(1)})\n`;
       
-      t.playerIds.forEach((pid, i) => {
-        const p = getPlayerObj(pid);
-        if (p) {
-          const isCap = t.captainPlayerId === pid || captains[t.name] === pid;
-          const labelPos = p.primaryPosition === 'goleiro' ? 'GK' : p.primaryPosition.toUpperCase().slice(0,3);
-          const points = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
-          text += `${i + 1}. ${isCap ? '\uD83D\uDC51 ' : ''}${p.name} (_${labelPos}_ - \u2B50 ${points})\n`;
-        }
+      const sortedTeamPlayers = getSortedTeamPlayers(t.playerIds, t.name, t.captainPlayerId);
+      const teamPlayers = t.playerIds.map(pid => getPlayerObj(pid)).filter((p): p is Player => !!p);
+      const tacticalAssignments = computeTacticalAssignments(teamPlayers);
+
+      sortedTeamPlayers.forEach((p) => {
+        const isCap = captainsConfigured && (t.captainPlayerId === p.id || captains[t.name] === p.id);
+        const assignment = tacticalAssignments[p.id] || { position: p.primaryPosition, isAdapted: false };
+        const labelPos = getAbbreviation(assignment.position);
+        const isAdapted = assignment.isAdapted;
+        const points = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
+        
+        const prefix = isCap ? '(C) ' : '';
+        const adaptSuffix = isAdapted ? ' (Adaptado)' : '';
+        text += `${prefix}${p.name} - ${labelPos}${adaptSuffix} ⭐ ${points}\n`;
       });
       text += `\n`;
     });
 
-    if (activeDraw.isSharedGoalkeepers) {
-      text += `\uD83D\uDCA1 *Observação:* Goleiros compartilhados jogam revezadamente para garantir o lazer de todos!\n`;
-    }
-
-    text += `\uD83D\uDCA5 Venha calibrado! Por favor, chegue 15 minutos antes.`;
+    text += `Chegue com 15 minutos de antecedência.`;
     return text;
   };
 
-  const handleCopyToClipboard = () => {
+  const handleCopyToClipboard = async () => {
     const msg = getShareMessage();
     if (!msg) return;
-    navigator.clipboard.writeText(msg);
-    setSuccessMsg('Escalação copiada para a área de transferência! Envie no WhatsApp.');
-    setTimeout(() => setSuccessMsg(''), 4000);
+    try {
+      await navigator.clipboard.writeText(msg);
+      console.log("Escalação enviada ao clipboard:", msg);
+      setSuccessMsg('Escalação copiada para a área de transferência! Envie no WhatsApp.');
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err) {
+      setErrorMsg('Falha ao copiar escalação.');
+    }
   };
 
   const handleShareWhatsApp = () => {
     const msg = getShareMessage();
     if (!msg) return;
-    const escapedMsg = encodeURIComponent(msg);
-    const url = `https://wa.me/?text=${escapedMsg}`;
-    
-    console.log("RAW MESSAGE (TEAMS):", msg);
-    console.log("ENCODED (TEAMS):", escapedMsg);
-    console.log("WHATSAPP URL (TEAMS):", url);
-
+    const url = `https://wa.me/?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank');
   };
 
@@ -395,9 +551,18 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       )}
 
       {successMsg && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-xl text-xs flex items-center gap-2">
-          <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500 flex-shrink-0" />
-          <span>{successMsg}</span>
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-xl text-xs flex items-center justify-between gap-2 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500 flex-shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMsg('')}
+            className="text-emerald-400 hover:text-emerald-300 p-1 rounded-lg focus:outline-none transition cursor-pointer font-black"
+            title="Fechar"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -411,6 +576,21 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
             <h3 className="text-sm font-semibold text-white">Atletas Confirmados ({confirmedPlayers.length})</h3>
           </div>
 
+          {confirmedPlayers.length > 0 && (
+            <div className="flex flex-col gap-1.5 bg-zinc-950/40 p-2.5 rounded-lg border border-zinc-900">
+              <label className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Ordenação da Lista</label>
+              <select
+                value={orderingMode}
+                onChange={(e) => setOrderingMode(e.target.value as any)}
+                className="w-full bg-zinc-950 text-xs text-white p-2 rounded-lg border border-zinc-850 focus:outline-none focus:border-emerald-500 cursor-pointer text-zinc-300 font-sans"
+              >
+                <option value="posicao">Por posição (padrão)</option>
+                <option value="confirmacao">Por ordem de confirmação</option>
+                <option value="nome">Por nome</option>
+              </select>
+            </div>
+          )}
+
           {confirmedPlayers.length === 0 ? (
             <div className="text-center py-8">
               <p className="text-xs text-zinc-500 font-mono">Nenhum jogador confirmado para este racha.</p>
@@ -418,35 +598,59 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
-              {confirmedPlayers.map((p) => {
-                const overall = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
-                return (
-                  <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/50 border border-zinc-900 text-xs">
-                    <div className="flex items-center gap-2">
-                      <img 
-                        src={p.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50'} 
-                        referrerPolicy="no-referrer"
-                        className="w-6 h-6 rounded-full object-cover" 
-                      />
-                      <div>
-                        <p className="font-bold text-white line-clamp-1">{p.name}</p>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded border ${getPositionBadgeColor(p.primaryPosition)}`}>
-                          {getPositionLabel(p.primaryPosition)}
-                        </span>
+              {[...confirmedPlayers]
+                .sort((a, b) => {
+                  if (orderingMode === 'posicao') {
+                    const POSITION_ORDER: Record<string, number> = {
+                      goleiro: 1,
+                      zagueiro: 2,
+                      lateral: 3,
+                      meio_campo: 4,
+                      volante: 5,
+                      atacante: 6,
+                    };
+                    const orderA = POSITION_ORDER[a.primaryPosition] || 99;
+                    const orderB = POSITION_ORDER[b.primaryPosition] || 99;
+                    if (orderA !== orderB) return orderA - orderB;
+                    return a.name.localeCompare(b.name);
+                  } else if (orderingMode === 'confirmacao') {
+                    const idxA = confirmedPresenceOrder.indexOf(a.id);
+                    const idxB = confirmedPresenceOrder.indexOf(b.id);
+                    // fallback to 999 if not found, to keep them at the end
+                    return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
+                  } else {
+                    return a.name.localeCompare(b.name);
+                  }
+                })
+                .map((p) => {
+                  const overall = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
+                  return (
+                    <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/50 border border-zinc-900 text-xs">
+                      <div className="flex items-center gap-2">
+                        <img 
+                          src={p.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50'} 
+                          referrerPolicy="no-referrer"
+                          className="w-6 h-6 rounded-full object-cover" 
+                        />
+                        <div>
+                          <p className="font-bold text-white line-clamp-1">{p.name}</p>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border ${getPositionBadgeColor(p.primaryPosition)}`}>
+                            {getPositionLabel(p.primaryPosition)}
+                          </span>
+                        </div>
                       </div>
+                      {/* Performance points bubble */}
+                      <span className="font-extrabold text-[11px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-900/30">
+                        ⭐ {overall}
+                      </span>
                     </div>
-                    {/* Performance points bubble */}
-                    <span className="font-extrabold text-[11px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-900/30">
-                      ⭐ {overall}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           )}
 
           {/* Draw Strategy Settings */}
-          {isEditor && (
+          {isEditor && selectedMatch?.status !== 'cancelada' && (
             <div className="pt-4 border-t border-zinc-850 space-y-4">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-zinc-400">Definir Capitães (Opcional)</span>
@@ -463,42 +667,66 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO AZUL</label>
                     <select
-                      value={captains.Azul}
+                      value={captains.Azul || ''}
                       onChange={(e) => setCaptains({ ...captains, Azul: e.target.value })}
                       className="w-full bg-zinc-950 text-xs text-white p-2 rounded border border-zinc-850"
                     >
                       <option value="">Selecione...</option>
-                      {confirmedPlayers.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
+                      {confirmedPlayers.map(p => {
+                        const isSelectedOther = captains.Vermelho === p.id ? 'Vermelho' : captains.Verde === p.id ? 'Verde' : null;
+                        if (isSelectedOther) {
+                          return (
+                            <option key={p.id} value={p.id} disabled>
+                              🔒 {p.name} (já definido como Capitão {isSelectedOther})
+                            </option>
+                          );
+                        }
+                        return <option key={p.id} value={p.id}>{p.name}</option>;
+                      })}
                     </select>
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO VERMELHO</label>
                     <select
-                      value={captains.Vermelho}
+                      value={captains.Vermelho || ''}
                       onChange={(e) => setCaptains({ ...captains, Vermelho: e.target.value })}
                       className="w-full bg-zinc-950 text-xs text-white p-2 rounded border border-zinc-850"
                     >
                       <option value="">Selecione...</option>
-                      {confirmedPlayers.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
+                      {confirmedPlayers.map(p => {
+                        const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Verde === p.id ? 'Verde' : null;
+                        if (isSelectedOther) {
+                          return (
+                            <option key={p.id} value={p.id} disabled>
+                              🔒 {p.name} (já definido como Capitão {isSelectedOther})
+                            </option>
+                          );
+                        }
+                        return <option key={p.id} value={p.id}>{p.name}</option>;
+                      })}
                     </select>
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO VERDE</label>
                     <select
-                      value={captains.Verde}
+                      value={captains.Verde || ''}
                       onChange={(e) => setCaptains({ ...captains, Verde: e.target.value })}
                       className="w-full bg-zinc-950 text-xs text-white p-2 rounded border border-zinc-850"
                     >
                       <option value="">Selecione...</option>
-                      {confirmedPlayers.map(p => (
-                        <option key={p.id} value={p.id}>{p.name}</option>
-                      ))}
+                      {confirmedPlayers.map(p => {
+                        const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Vermelho === p.id ? 'Vermelho' : null;
+                        if (isSelectedOther) {
+                          return (
+                            <option key={p.id} value={p.id} disabled>
+                              🔒 {p.name} (já definido como Capitão {isSelectedOther})
+                            </option>
+                          );
+                        }
+                        return <option key={p.id} value={p.id}>{p.name}</option>;
+                      })}
                     </select>
                   </div>
                 </div>
@@ -518,11 +746,27 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 />
               </div>
 
+              {activeDraw && (
+                <div className="bg-zinc-950/40 p-3 rounded-lg border border-zinc-900 flex flex-col gap-1.5 text-xs font-mono">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-400">Re-sorteios utilizados:</span>
+                    <span className={`font-bold ${activeDraw.redrawCount && activeDraw.redrawCount >= 2 ? 'text-rose-400 font-black' : 'text-emerald-400 font-black'}`}>
+                      {activeDraw.redrawCount || 0} / 2
+                    </span>
+                  </div>
+                  {activeDraw.redrawCount && activeDraw.redrawCount >= 2 && (
+                    <p className="p-2 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] rounded leading-relaxed text-center mt-1">
+                      ⚠️ O limite de 2 re-sorteios para esta partida foi atingido para garantir a governança e transparência do sorteio.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {/* Action Button */}
               <button
                 onClick={handleGenerateDraw}
-                disabled={loading || confirmedPlayers.length === 0}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
+                disabled={loading || confirmedPlayers.length === 0 || selectedMatch?.status === 'cancelada' || (activeDraw && activeDraw.redrawCount && activeDraw.redrawCount >= 2 ? true : false)}
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-850 disabled:text-zinc-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
               >
                 <Sparkles className="w-4 h-4 text-emerald-400" />
                 <span>{activeDraw ? 'Sortear Novamente' : 'Realizar Sorteio'}</span>
@@ -534,7 +778,37 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         {/* Right Side: Visualizing teams with responsive metrics */}
         <div className="lg:col-span-8 space-y-6">
           
-          {activeDraw ? (
+          {selectedMatch?.status === 'cancelada' ? (
+            <div className="space-y-6 animate-fadeIn">
+              {/* Alert message indicating that match is cancelled and no draw is available */}
+              <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-xs flex items-center gap-2.5 font-mono">
+                <ShieldAlert className="w-5 h-5 text-rose-500 flex-shrink-0 animate-pulse" />
+                <span>Esta rodada foi cancelada. Não há sorteio disponível.</span>
+              </div>
+
+              {/* Present clean empty squads */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {['Azul', 'Vermelho', 'Verde'].map((teamName) => {
+                  const teamColor = teamName === 'Azul' ? 'border-blue-600 bg-blue-950/2' : teamName === 'Vermelho' ? 'border-red-600 bg-red-950/2' : 'border-emerald-600 bg-emerald-950/2';
+                  const teamHeaderColor = teamName === 'Azul' ? 'bg-blue-600/10 text-blue-400 border-blue-900/30' : teamName === 'Vermelho' ? 'bg-red-600/10 text-red-400 border-red-900/30' : 'bg-emerald-600/10 text-emerald-400 border-emerald-900/30';
+                  
+                  return (
+                    <div key={teamName} className={`rounded-xl border border-zinc-850 p-3 bg-[#0c120f] flex flex-col justify-between shadow ${teamColor}`}>
+                      <div>
+                        <div className={`p-2 rounded-lg border flex items-center justify-between mb-3 text-xs font-black ${teamHeaderColor}`}>
+                          <span>TIME {teamName.toUpperCase()}</span>
+                          <span className="font-mono text-[11px]">⭐ 0.0</span>
+                        </div>
+                        <div className="space-y-1.5 min-h-[140px] flex flex-col items-center justify-center text-zinc-650">
+                          <span className="text-[10px] font-mono">Time Vazio</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : activeDraw ? (
             <div className="space-y-6">
               
               {/* Balance metrics widget bar */}
@@ -584,21 +858,39 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
 
                         {/* Player lists inside columns */}
                         <div className="space-y-1.5 min-h-[140px]">
-                          {team.playerIds.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-8 text-zinc-650">
-                              <span className="text-[10px] font-mono">Time Vazio</span>
-                            </div>
-                          ) : (
-                            team.playerIds.map((pid) => {
-                              const p = getPlayerObj(pid);
-                              if (!p) return null;
+                          {(() => {
+                            if (team.playerIds.length === 0) {
+                              return (
+                                <div className="flex flex-col items-center justify-center py-8 text-zinc-650">
+                                  <span className="text-[10px] font-mono">Time Vazio</span>
+                                </div>
+                              );
+                            }
+
+                            const teamPlayers = team.playerIds
+                              .map(pid => getPlayerObj(pid))
+                              .filter((p): p is Player => !!p);
+
+                            const tacticalAssignments = computeTacticalAssignments(teamPlayers);
+
+                            const sortedTeamPlayers = getSortedTeamPlayers(team.playerIds, team.name, team.captainPlayerId);
+
+                            return sortedTeamPlayers.map((p) => {
                               const overall = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
-                              const isCap = team.captainPlayerId === p.id || captains[team.name] === p.id;
+                              const isCap = captainsConfigured && (team.captainPlayerId === p.id || captains[team.name] === p.id);
                               
+                              const assignment = tacticalAssignments[p.id] || { position: p.primaryPosition, isAdapted: false };
+                              const assignedPos = assignment.position;
+                              const isAdapted = assignment.isAdapted;
+
                               return (
                                 <div 
                                   key={p.id} 
-                                  className={`p-2 bg-zinc-950/60 border border-zinc-900 hover:border-zinc-800 rounded-lg text-xs flex items-center justify-between transition relative ${
+                                  className={`p-2 rounded-lg text-xs flex items-center justify-between transition relative border ${
+                                    isCap 
+                                      ? 'border-amber-500/45 bg-gradient-to-r from-amber-500/5 to-transparent shadow-[0_0_8px_rgba(245,158,11,0.06)]' 
+                                      : 'border-zinc-900 bg-zinc-950/60 hover:border-zinc-800'
+                                  } ${
                                     selectedPlayerToMove?.playerId === p.id ? 'ring-1 ring-emerald-500' : ''
                                   }`}
                                 >
@@ -606,44 +898,62 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                                     <img 
                                       src={p.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50'} 
                                       referrerPolicy="no-referrer"
-                                      className="w-6.5 h-6.5 rounded-full object-cover border border-zinc-800 flex-shrink-0" 
+                                      className={`w-6.5 h-6.5 rounded-full object-cover border flex-shrink-0 ${
+                                        isCap ? 'border-amber-500/40' : 'border-zinc-800'
+                                      }`} 
                                     />
                                     <div className="truncate">
                                       <div className="flex items-center gap-1">
                                         <p className="font-bold text-white leading-none truncate max-w-[90px] md:max-w-none">{p.name.split(' ')[0]} {p.name.split(' ')[1] || ''}</p>
                                         {isCap && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
                                       </div>
-                                      <span className="text-[9px] text-zinc-500 uppercase font-mono font-bold">
-                                        {p.primaryPosition === 'goleiro' ? 'GK' : p.primaryPosition.toUpperCase().slice(0,3)}
-                                      </span>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <span className={`text-[9px] px-1.5 py-0.2 rounded border font-mono font-bold leading-none ${getPositionBadgeColor(assignedPos)}`}>
+                                          {getAbbreviation(assignedPos)}
+                                        </span>
+                                        {isAdapted && (
+                                          <span className="text-[8px] bg-amber-500/15 border border-amber-500/30 text-amber-400 px-1 py-0.2 rounded font-black font-mono tracking-wider uppercase leading-none">
+                                            adaptado
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
                                   </div>
-
+ 
                                   {/* Right side move button or info */}
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="font-bold text-[10.5px] text-zinc-400 font-mono">
+                                  <div className="flex items-center gap-1.5 font-mono">
+                                    <span className="font-bold text-[10.5px] text-zinc-400">
                                       {overall}
                                     </span>
                                     {isEditor && (
-                                      <button
-                                        onClick={() => {
-                                          if (selectedPlayerToMove?.playerId === p.id) {
-                                            setSelectedPlayerToMove(null);
-                                          } else {
-                                            setSelectedPlayerToMove({ playerId: p.id, currentTeam: team.name });
-                                          }
-                                        }}
-                                        className="p-1 text-zinc-500 hover:text-white rounded-md bg-zinc-900 border border-zinc-850 transition cursor-pointer"
-                                        title="Mover Jogador"
-                                      >
-                                        <ArrowLeftRight className="w-3 h-3 text-emerald-500" />
-                                      </button>
+                                      isCap ? (
+                                        <div 
+                                          className="p-1 text-zinc-600 rounded bg-zinc-950/40 border border-zinc-900/30 cursor-not-allowed"
+                                          title="Capitães estão travados no time. Remova a função de capitão para poder movê-lo."
+                                        >
+                                          <Lock className="w-3 h-3 text-zinc-500" />
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => {
+                                            if (selectedPlayerToMove?.playerId === p.id) {
+                                              setSelectedPlayerToMove(null);
+                                            } else {
+                                              setSelectedPlayerToMove({ playerId: p.id, currentTeam: team.name });
+                                            }
+                                          }}
+                                          className="p-1 text-zinc-500 hover:text-white rounded-md bg-zinc-900 border border-zinc-850 transition cursor-pointer"
+                                          title="Mover Jogador"
+                                        >
+                                          <ArrowLeftRight className="w-3 h-3 text-emerald-500" />
+                                        </button>
+                                      )
                                     )}
                                   </div>
                                 </div>
                               );
-                            })
-                          )}
+                            });
+                          })()}
                         </div>
                       </div>
 

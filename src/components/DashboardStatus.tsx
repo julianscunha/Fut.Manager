@@ -817,17 +817,50 @@ export default function DashboardStatus({
     }
   };
 
+  const handleMassClearConfirmations = async () => {
+    if (!nextMatch) return;
+    if (!window.confirm('Tem certeza que deseja limpar de forma definitiva todas as confirmações e convocações desta rodada cancelada? Esta ação restaurará todos os atletas para o estado "sem resposta" nesta rodada.')) {
+      return;
+    }
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch(`/api/matches/${nextMatch.id}/clear-presences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          responsibleId: currentUser.id,
+          responsibleName: currentUser.name,
+          responsibleEmail: currentUser.email
+        })
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Falha ao limpar confirmações.');
+      }
+      const result = await res.json();
+      setSuccessMsg(`Limpeza em massa efetuada com sucesso! ${result.numPresencesRemoved || 0} confirmações removidas e ${result.numAlertsRemoved || 0} convocações de reservas revertidas.`);
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao efetuar limpeza.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleShareMatchOnWhatsApp = () => {
     if (!nextMatch) return;
     const formattedDate = nextMatch.date.split('-').reverse().join('/');
     const confirmedList = confirmedPlayers.map((p, idx) => `\uD83D\uDC49 ${idx + 1}. ${p.name}`).join('\n');
     const absentList = cancelPlayers.map(p => `\u274C ${p.name}`).join('\n');
-    const vacanciesCount = Math.max(0, 15 - confirmedCount);
+    const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
+    const vacanciesCount = Math.max(0, maxPlayersLimit - confirmedCount);
     
     const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
       `\uD83D\uDCC5 *Data:* ${formattedDate} às ${nextMatch.time}\n` +
       `\uD83D\uDCCD *Local:* ${nextMatch.location}\n\n` +
-      `\uD83D\uDC65 *Confirmados (${confirmedCount}/15):*\n${confirmedList || '_Nenhum jogador confirmado ainda_'}\n\n` +
+      `\uD83D\uDC65 *Confirmados (${confirmedCount}/${maxPlayersLimit}):*\n${confirmedList || '_Nenhum jogador confirmado ainda_'}\n\n` +
       `\u274C *Não Vão (${cancelPlayers.length}):*\n${absentList || '_Nenhuma recusa registrada_'}\n\n` +
       `\u26A0\uFE0F *Vagas em aberto:* ${vacanciesCount} vagas disponíveis!\n\n` +
       `Por favor, atualizem seus status de presença no app oficial:\n` +
@@ -1070,7 +1103,7 @@ export default function DashboardStatus({
       return 'cancelada';
     }
     if (nextMatch.status === 'confirmando') {
-      if (confirmedCount >= 15) {
+      if (confirmedCount >= maxPlayersLimit) {
         return 'racha_fechado';
       }
       return 'confirmacoes_abertas';
@@ -1199,8 +1232,8 @@ export default function DashboardStatus({
           {nextMatch.status === 'confirmando' && (
             <div className="space-y-2.5">
               <div className="text-zinc-400 text-[11px] leading-relaxed">
-                As confirmações de presença estão abertas ({confirmedCount} confirmados).
-                {confirmedCount >= 15 ? (
+                As confirmações de presença estão abertas ({confirmedCount} de {maxPlayersLimit} confirmados).
+                {confirmedCount >= maxPlayersLimit ? (
                   <span className="text-emerald-400 font-bold block mt-1">✔ Quórum mínimo atingido! O sorteio de times já está liberado.</span>
                 ) : (
                   <span className="text-zinc-555 font-medium block mt-1">Compartilhe e divulgue o link para incentivar as presenças de hoje.</span>
@@ -1215,7 +1248,7 @@ export default function DashboardStatus({
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Divulgar Racha</span>
                 </button>
-                {confirmedCount >= 15 && (
+                {confirmedCount >= maxPlayersLimit && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1233,7 +1266,7 @@ export default function DashboardStatus({
           {nextMatch.status === 'aguardando_reservas' && (
             <div className="space-y-3">
               <p className="text-[#a1a1aa] text-[11px] leading-relaxed font-sans">
-                Apenas {confirmedCount} atletas confirmados. Faltam <span className="text-amber-400 font-bold font-mono text-xs">{15 - confirmedCount}</span> jogadores. Convocar reservas da fila de prioridade:
+                Apenas {confirmedCount} atletas confirmados. Faltam <span className="text-amber-400 font-bold font-mono text-xs">{maxPlayersLimit - confirmedCount}</span> jogadores. Convocar reservas da fila de prioridade:
               </p>
               <div className="flex gap-2">
                 <button
@@ -1345,8 +1378,18 @@ export default function DashboardStatus({
           )}
 
           {nextMatch.status === 'cancelada' && (
-            <div className="p-2 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-[10px] font-mono">
-              Esta racha foi marcado como cancelado.
+            <div className="space-y-3">
+              <div className="p-2.5 bg-rose-500/10 border border-rose-500/20 rounded-lg text-rose-400 text-[10px] font-mono leading-normal">
+                Este racha foi marcado como cancelado.
+              </div>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={handleMassClearConfirmations}
+                className="w-full bg-red-950/40 hover:bg-red-950/80 border border-red-500/30 text-rose-300 font-bold py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 disabled:opacity-50"
+              >
+                Limpar Confirmações
+              </button>
             </div>
           )}
         </div>

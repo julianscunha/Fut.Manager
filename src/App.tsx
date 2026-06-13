@@ -206,7 +206,11 @@ export default function App() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': currentUser?.id || '',
+          'x-user-role': currentUser?.role || ''
+        },
         body: JSON.stringify({
           ...formData,
           responsibleName: currentUser?.name || 'Administrador'
@@ -244,7 +248,13 @@ export default function App() {
         setErrorMsg('');
         setSuccessMsg('');
         try {
-          const res = await fetch(`/api/players/${id}`, { method: 'DELETE' });
+          const res = await fetch(`/api/players/${id}`, { 
+            method: 'DELETE',
+            headers: {
+              'x-user-id': currentUser?.id || '',
+              'x-user-role': currentUser?.role || ''
+            }
+          });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Erro ao inativar jogador.');
 
@@ -262,7 +272,13 @@ export default function App() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/players/${id}/restore`, { method: 'POST' });
+      const res = await fetch(`/api/players/${id}/restore`, { 
+        method: 'POST',
+        headers: {
+          'x-user-id': currentUser?.id || '',
+          'x-user-role': currentUser?.role || ''
+        }
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Falha ao reativar.');
 

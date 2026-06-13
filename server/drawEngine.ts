@@ -174,15 +174,20 @@ export function runSmartDraw({
     }
 
     // Average overall rating of the team (or total rating sum)
-    const bOverall = teamBluePlayers.length > 0 ? (bSum / teamBluePlayers.length) : 3.5;
-    const rOverall = teamRedPlayers.length > 0 ? (rSum / teamRedPlayers.length) : 3.5;
-    const gOverall = teamGreenPlayers.length > 0 ? (gSum / teamGreenPlayers.length) : 3.5;
+    // If goalkeepers are shared, they count towards the team size as well
+    const bCount = (isSharedGoalkeepers && goalkeepers.length > 0) ? (teamBluePlayers.length + 1) : teamBluePlayers.length;
+    const rCount = (isSharedGoalkeepers && goalkeepers.length > 0) ? (teamRedPlayers.length + 1) : teamRedPlayers.length;
+    const gCount = (isSharedGoalkeepers && goalkeepers.length > 0) ? (teamGreenPlayers.length + 1) : teamGreenPlayers.length;
+
+    const bOverall = bCount > 0 ? (bSum / bCount) : 3.5;
+    const rOverall = rCount > 0 ? (rSum / rCount) : 3.5;
+    const gOverall = gCount > 0 ? (gSum / gCount) : 3.5;
 
     const maxRating = Math.max(bOverall, rOverall, gOverall);
     const minRating = Math.min(bOverall, rOverall, gOverall);
     const diff = maxRating - minRating;
 
-    // Skip if difference is too large (we want difference <= 0.4 ideally, if not we fall back to lowest available)
+    // Skip if difference is too large (we want difference <= 0.6 ideally, if not we fall back to lowest available)
     if (diff > 0.6) continue;
 
     // Calculate Teammate Affinity Penalty (Priority 5)
@@ -217,16 +222,23 @@ export function runSmartDraw({
 
     if (fitness < bestFitness) {
       bestFitness = fitness;
+      const bRounded = Math.round(bOverall * 10) / 10;
+      const rRounded = Math.round(rOverall * 10) / 10;
+      const gRounded = Math.round(gOverall * 10) / 10;
+      const maxRounded = Math.max(bRounded, rRounded, gRounded);
+      const minRounded = Math.min(bRounded, rRounded, gRounded);
+      const diffRounded = Math.round((maxRounded - minRounded) * 10) / 10;
+
       bestDraw = {
         teams: [
           { name: 'Azul', captainPlayerId: captains.Azul, playerIds: teamBluePlayers },
           { name: 'Vermelho', captainPlayerId: captains.Vermelho, playerIds: teamRedPlayers },
           { name: 'Verde', captainPlayerId: captains.Verde, playerIds: teamGreenPlayers }
         ],
-        overallBlue: Math.round(bOverall * 10) / 10,
-        overallRed: Math.round(rOverall * 10) / 10,
-        overallGreen: Math.round(gOverall * 10) / 10,
-        maxDifference: Math.round(diff * 10) / 10
+        overallBlue: bRounded,
+        overallRed: rRounded,
+        overallGreen: gRounded,
+        maxDifference: diffRounded
       };
     }
   }
@@ -256,17 +268,31 @@ export function runSmartDraw({
       else listGreen.push(p.id);
     });
 
-    const bSum = listBlue.reduce((sum, pid) => sum + (playerOveralls[pid] || 3.5), 0);
-    const rSum = listRed.reduce((sum, pid) => sum + (playerOveralls[pid] || 3.5), 0);
-    const gSum = listGreen.reduce((sum, pid) => sum + (playerOveralls[pid] || 3.5), 0);
+    let bSum = listBlue.reduce((sum, pid) => sum + (playerOveralls[pid] || 3.5), 0);
+    let rSum = listRed.reduce((sum, pid) => sum + (playerOveralls[pid] || 3.5), 0);
+    let gSum = listGreen.reduce((sum, pid) => sum + (playerOveralls[pid] || 3.5), 0);
 
-    const bOverall = listBlue.length > 0 ? (bSum / listBlue.length) : 3.5;
-    const rOverall = listRed.length > 0 ? (rSum / listRed.length) : 3.5;
-    const gOverall = listGreen.length > 0 ? (gSum / listGreen.length) : 3.5;
+    if (isSharedGoalkeepers && goalkeepers.length > 0) {
+      const avgGkRating = goalkeepers.reduce((sum, g) => sum + (playerOveralls[g.id] || 3.5), 0) / goalkeepers.length;
+      bSum += avgGkRating;
+      rSum += avgGkRating;
+      gSum += avgGkRating;
+    }
 
-    const maxRating = Math.max(bOverall, rOverall, gOverall);
-    const minRating = Math.min(bOverall, rOverall, gOverall);
-    const diff = maxRating - minRating;
+    const bCount = (isSharedGoalkeepers && goalkeepers.length > 0) ? (listBlue.length + 1) : listBlue.length;
+    const rCount = (isSharedGoalkeepers && goalkeepers.length > 0) ? (listRed.length + 1) : listRed.length;
+    const gCount = (isSharedGoalkeepers && goalkeepers.length > 0) ? (listGreen.length + 1) : listGreen.length;
+
+    const bOverall = bCount > 0 ? (bSum / bCount) : 3.5;
+    const rOverall = rCount > 0 ? (rSum / rCount) : 3.5;
+    const gOverall = gCount > 0 ? (gSum / gCount) : 3.5;
+
+    const bRounded = Math.round(bOverall * 10) / 10;
+    const rRounded = Math.round(rOverall * 10) / 10;
+    const gRounded = Math.round(gOverall * 10) / 10;
+    const maxRounded = Math.max(bRounded, rRounded, gRounded);
+    const minRounded = Math.min(bRounded, rRounded, gRounded);
+    const diffRounded = Math.round((maxRounded - minRounded) * 10) / 10;
 
     bestDraw = {
       teams: [
@@ -274,10 +300,10 @@ export function runSmartDraw({
         { name: 'Vermelho', captainPlayerId: captains.Vermelho, playerIds: listRed },
         { name: 'Verde', captainPlayerId: captains.Verde, playerIds: listGreen }
       ],
-      overallBlue: Math.round(bOverall * 10) / 10,
-      overallRed: Math.round(rOverall * 10) / 10,
-      overallGreen: Math.round(gOverall * 10) / 10,
-      maxDifference: Math.round(diff * 10) / 10
+      overallBlue: bRounded,
+      overallRed: rRounded,
+      overallGreen: gRounded,
+      maxDifference: diffRounded
     };
   }
 

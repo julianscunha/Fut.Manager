@@ -567,6 +567,28 @@ async function startServer() {
       return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
     }
 
+    // Automatically seek matching athlete folder or create a new one
+    let matchingPlayer = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === normalizedEmail);
+    if (!matchingPlayer) {
+      const newPlayerId = 'player-' + Date.now();
+      matchingPlayer = {
+        id: newPlayerId,
+        name: name.trim(),
+        phone: '(85) 99999-9999',
+        email: normalizedEmail,
+        photoOriginal: '',
+        playerCardUrl: '',
+        favoriteTeamId: 'out',
+        category: 'reserva',
+        status: 'disponivel',
+        primaryPosition: 'meio_campo',
+        secondaryPositions: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      db.players.push(matchingPlayer);
+    }
+
     const newUserId = 'user-' + Date.now();
     const newUser: User = {
       id: newUserId,
@@ -574,7 +596,9 @@ async function startServer() {
       email: normalizedEmail,
       role: 'jogador', // default role
       status: 'pending', // Waiting admin approval
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      playerId: matchingPlayer.id,
+      athlete_id: matchingPlayer.id
     };
 
     db.users.push(newUser);
@@ -739,7 +763,17 @@ async function startServer() {
     }
 
     if (userId === 'user-admin') {
-      return res.status(400).json({ error: 'Incapaz de modificar o Administrador raiz.' });
+      if (action === 'reject') {
+        return res.status(400).json({ error: 'Erro de Segurança: O Administrador raiz não pode ser excluído, rejeitado ou inativado.' });
+      }
+      if (action === 'update_role') {
+        if (role && role !== 'admin') {
+          return res.status(400).json({ error: 'Erro de Segurança: O papel de ADMIN não pode ser removido do Administrador raiz.' });
+        }
+        if (selectedPlayerId !== undefined && !selectedPlayerId) {
+          return res.status(400).json({ error: 'Erro de Segurança: O Administrador raiz não pode ser desvinculado de uma ficha de atleta.' });
+        }
+      }
     }
 
     // Safety check: Prevent removing/demoting the last active administrator
@@ -950,6 +984,20 @@ async function startServer() {
 
   // Jogadores: Criar Jogador
   app.post('/api/players', (req, res) => {
+    const reqUserId = req.headers['x-user-id'] as string;
+    const reqUserRole = req.headers['x-user-role'] as string;
+
+    const db = readDb();
+
+    if (!reqUserId) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    const requestingUser = db.users.find(u => u.id === reqUserId);
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem cadastrar novos atletas manualmente.' });
+    }
+
     const playerData = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'>;
     const { responsibleName } = req.body as { responsibleName?: string };
 
@@ -957,7 +1005,6 @@ async function startServer() {
       return res.status(400).json({ error: 'Nome, categoria, status e posição principal são obrigatórios.' });
     }
 
-    const db = readDb();
     const formattedPhone = playerData.phone || '(85) 99999-9999';
 
     const newPlayer: Player = {
@@ -1033,7 +1080,22 @@ async function startServer() {
     const updateData = req.body as Partial<Player>;
     const { responsibleName } = req.body as any;
 
+    const reqUserId = req.headers['x-user-id'] as string;
+    const reqUserRole = req.headers['x-user-role'] as string;
+
     const db = readDb();
+
+    if (!reqUserId) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    const requestingUser = db.users.find(u => u.id === reqUserId);
+    if (!requestingUser) {
+      return res.status(401).json({ error: 'Usuário solicitante inválido ou inexistente.' });
+    }
+
+    const isRequestingAdmin = requestingUser.role === 'admin';
+
     const index = db.players.findIndex((p) => p.id === id);
 
     if (index === -1) {
@@ -1041,6 +1103,22 @@ async function startServer() {
     }
 
     const existingPlayer = db.players[index];
+
+    // 1. Permission Check: Admin can edit any, non-admin can only edit their own profile
+    if (!isRequestingAdmin) {
+      const isEditingSelf = requestingUser.playerId === id || requestingUser.athlete_id === id;
+      if (!isEditingSelf) {
+        return res.status(403).json({ error: 'Acesso Proibido: Você só tem permissão para editar sua própria ficha de atleta.' });
+      }
+
+      // 2. Prevent common users from editing restricted admin-only attributes of the player card
+      if (updateData.category && updateData.category !== existingPlayer.category) {
+        return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem alterar a categoria de um atleta.' });
+      }
+      if (updateData.status && updateData.status !== existingPlayer.status) {
+        return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem alterar o status de disponibilidade de um atleta.' });
+      }
+    }
 
     const categoryChanged = updateData.category && updateData.category !== existingPlayer.category;
     if (categoryChanged) {
@@ -1165,7 +1243,20 @@ async function startServer() {
   app.delete('/api/players/:id', (req, res) => {
     const { id } = req.params;
 
+    const reqUserId = req.headers['x-user-id'] as string;
+    const reqUserRole = req.headers['x-user-role'] as string;
+
     const db = readDb();
+
+    if (!reqUserId) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    const requestingUser = db.users.find(u => u.id === reqUserId);
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem inativar ou remover atletas.' });
+    }
+
     const index = db.players.findIndex((p) => p.id === id);
 
     if (index === -1) {
@@ -1215,8 +1306,8 @@ async function startServer() {
       const db = readDb();
       const maxMensalistas = db.recurrentConfig?.maxMensalistas || 12;
       
-      // Active mensalistas are those who are not soft-deleted and whose categories are 'mensalista' or 'mensalista_goleiro'
-      const activeMensalistas = db.players.filter(p => !p.deletedAt && (p.category === 'mensalista' || p.category === 'mensalista_goleiro'));
+      // Active mensalistas are those who are not soft-deleted and whose category is 'mensalista'
+      const activeMensalistas = db.players.filter(p => !p.deletedAt && p.category === 'mensalista');
       const activeCount = activeMensalistas.length;
       
       const isBelowLimit = activeCount < maxMensalistas;
@@ -1739,7 +1830,7 @@ async function startServer() {
   app.put('/api/matches/:id', (req, res) => {
     try {
       const { id } = req.params;
-      const { date, time, location, durationMinutes, status, confirmationDeadlineDaysBefore } = req.body;
+      const { date, time, location, durationMinutes, status, confirmationDeadlineDaysBefore, clearPresences, responsibleId, responsibleName, responsibleEmail } = req.body;
 
       const db = readDb();
       const index = db.matches.findIndex((m) => m.id === id);
@@ -1796,6 +1887,54 @@ async function startServer() {
           actionUrl: 'calendar',
           matchId: updatedMatch.id
         });
+
+        // 1. Invalidar/remover o sorteio associado automatically upon match cancellation
+        const drawExists = (db.draws || []).some((d: any) => d.matchId === id);
+        if (drawExists) {
+          db.draws = (db.draws || []).filter((d: any) => d.matchId !== id);
+          
+          if (!db.userAudits) db.userAudits = [];
+          db.userAudits.push({
+            id: 'audit-draw-invalidate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            timestamp: new Date().toISOString(),
+            userId: responsibleId || 'system',
+            userName: responsibleName || 'Administrador',
+            userEmail: responsibleEmail || 'admin@racha.fofim',
+            action: 'Sorteio Invalidado',
+            previousRole: '',
+            newRole: '',
+            previousStatus: '',
+            newStatus: '',
+            performedBy: responsibleName || 'Administrador',
+            details: `Sorteio invalidado automaticamente em função do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
+          });
+        }
+
+        if (clearPresences) {
+          const presencesToClear = (db.presences || []).filter((p: any) => p.matchId === id && (p.status === 'confirmado' || p.status === 'cancelado'));
+          const numPresencesRemoved = presencesToClear.length;
+          db.presences = (db.presences || []).filter((p: any) => p.matchId !== id);
+
+          const alertsToClear = (db.reserveAlerts || []).filter((a: any) => a.matchId === id);
+          const numAlertsRemoved = alertsToClear.length;
+          db.reserveAlerts = (db.reserveAlerts || []).filter((a: any) => a.matchId !== id);
+
+          if (!db.userAudits) db.userAudits = [];
+          db.userAudits.push({
+            id: 'audit-massclear-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+            timestamp: new Date().toISOString(),
+            userId: responsibleId || 'system',
+            userName: responsibleName || 'Atleta',
+            userEmail: responsibleEmail || 'atleta@racha.fofim',
+            action: 'Limpeza em Massa de Confirmações',
+            previousRole: '',
+            newRole: '',
+            previousStatus: '',
+            newStatus: '',
+            performedBy: responsibleName || 'Atleta',
+            details: `Cancelamento de presença em massa efetuado juntamente com o cancelamento da partida do dia ${updatedMatch.date.split('-').reverse().join('/')} (${updatedMatch.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocações de reservas revertidas.`
+          });
+        }
       }
 
       // RESUMPTION POLICY: Se o administrador confirma ou agenda a partida manualmente, reativamos a recorrência
@@ -1816,6 +1955,60 @@ async function startServer() {
       return res.json(updatedMatch);
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao atualizar partida.' });
+    }
+  });
+
+  app.post('/api/matches/:id/clear-presences', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { responsibleId, responsibleName, responsibleEmail } = req.body;
+
+      const db = readDb();
+      const matchIndex = db.matches.findIndex((m: any) => m.id === id);
+      if (matchIndex === -1) {
+        return res.status(404).json({ error: 'Partida não encontrada.' });
+      }
+
+      const match = db.matches[matchIndex];
+
+      const presencesToClear = (db.presences || []).filter((p: any) => p.matchId === id && (p.status === 'confirmado' || p.status === 'cancelado'));
+      const numPresencesRemoved = presencesToClear.length;
+      db.presences = (db.presences || []).filter((p: any) => p.matchId !== id);
+
+      const alertsToClear = (db.reserveAlerts || []).filter((a: any) => a.matchId === id);
+      const numAlertsRemoved = alertsToClear.length;
+      db.reserveAlerts = (db.reserveAlerts || []).filter((a: any) => a.matchId !== id);
+
+      // Invalidate and delete any associated draw
+      const hadDraw = (db.draws || []).some((d: any) => d.matchId === id);
+      db.draws = (db.draws || []).filter((d: any) => d.matchId !== id);
+
+      if (!db.userAudits) db.userAudits = [];
+      db.userAudits.push({
+        id: 'audit-massclear-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        timestamp: new Date().toISOString(),
+        userId: responsibleId || 'system',
+        userName: responsibleName || 'Administrador',
+        userEmail: responsibleEmail || 'admin@racha.fofim',
+        action: 'Limpeza em Massa de Confirmações',
+        previousRole: '',
+        newRole: '',
+        previousStatus: '',
+        newStatus: '',
+        performedBy: responsibleName || 'Atleta',
+        details: `Limpeza em massa de confirmações efetuada para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocações de reservas revertidas.${hadDraw ? ' Sorteio associado invalidado automaticamente.' : ''}`
+      });
+
+      writeDb(db);
+      return res.json({ 
+        message: 'Confirmações e convocações limpas de forma definitiva!', 
+        numPresencesRemoved, 
+        numAlertsRemoved,
+        match: db.matches[matchIndex]
+      });
+    } catch (err) {
+      console.error('[Clear Presences Error]', err);
+      return res.status(500).json({ error: 'Erro ao limpar confirmações.' });
     }
   });
 
@@ -3007,11 +3200,11 @@ async function startServer() {
     }
   });
 
-  // Trigger a new smart draw for a specific match
-  app.post('/api/matches/:matchId/draw', (req, res) => {
+   // Trigger a new smart draw for a specific match
+   app.post('/api/matches/:matchId/draw', (req, res) => {
     try {
       const { matchId } = req.params;
-      const { captainsConfigured, captains, isSharedGoalkeepers } = req.body;
+      const { captainsConfigured, captains, isSharedGoalkeepers, responsibleName } = req.body;
 
       const db = readDb();
       const match = db.matches.find(m => m.id === matchId);
@@ -3019,9 +3212,32 @@ async function startServer() {
         return res.status(404).json({ error: 'Partida não encontrada.' });
       }
 
-      // Filter confirmed players
-      const confirmedPresences = db.presences.filter(p => p.matchId === matchId && p.status === 'confirmado');
-      const confirmedPlayerIds = confirmedPresences.map(p => p.playerId);
+      // Check current redraw count limit
+      const previousDraw = (db.draws || []).find(d => d.matchId === matchId);
+      const redrawCount = previousDraw ? (previousDraw.redrawCount || 0) + 1 : 0;
+
+      if (previousDraw && (previousDraw.redrawCount || 0) >= 2) {
+        return res.status(400).json({ error: 'Limite de re-sorteios atingido (máximo de 2 re-sorteios por partida).' });
+      }
+
+      // Validate captain uniqueness if configured
+      if (captainsConfigured && captains) {
+        const capitaes = [
+          captains.Azul,
+          captains.Vermelho,
+          captains.Verde
+        ].filter(Boolean);
+
+        if (new Set(capitaes).size !== capitaes.length) {
+          return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitão de mais de um time." });
+        }
+      }
+
+      // Filter confirmed players (using getComputedPresences to accurately include only promoted reserves)
+      const computedPresences = getComputedPresences(db, matchId);
+      const confirmedPlayerIds = computedPresences
+        .filter(cp => cp.presenceStatus === 'confirmado')
+        .map(cp => cp.playerId);
       const confirmedPlayers = db.players.filter(p => confirmedPlayerIds.includes(p.id) && !p.deletedAt);
 
       if (confirmedPlayers.length === 0) {
@@ -3056,8 +3272,28 @@ async function startServer() {
         overallGreen: drawResult.overallGreen,
         maxDifference: drawResult.maxDifference,
         isSharedGoalkeepers: !!isSharedGoalkeepers,
-        captainsConfigured: !!captainsConfigured
+        captainsConfigured: !!captainsConfigured,
+        redrawCount
       };
+
+      // Write audit log entry for re-sort after previous generation
+      if (redrawCount > 0) {
+        db.userAudits = db.userAudits || [];
+        db.userAudits.push({
+          id: 'audit-redraw-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          timestamp: new Date().toISOString(),
+          userId: 'system',
+          userName: 'Sistema de Sorteio',
+          userEmail: 'sistema@racha.fofim',
+          action: `Re-sorteio de Times (Sequência: #${redrawCount} / 2)`,
+          previousRole: '',
+          newRole: '',
+          previousStatus: '',
+          newStatus: '',
+          performedBy: responsibleName || 'Administrador',
+          details: `Re-sorteio de times efetuado para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). Sequência do re-sorteio: ${redrawCount}/2.`
+        });
+      }
 
       // Remove previous draw for the same match if any
       db.draws = (db.draws || []).filter(d => d.matchId !== matchId);
@@ -3107,6 +3343,23 @@ async function startServer() {
 
       const drawObj = db.draws[drawIndex];
 
+      // Validate captains
+      const capitaes = teams.map(t => t.captainPlayerId).filter(Boolean);
+      if (new Set(capitaes).size !== capitaes.length) {
+        return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitão de mais de um time." });
+      }
+
+      if (drawObj.captainsConfigured) {
+        // Ensure that each captain (if non-empty) is STILL inside their respective team's playerIds
+        const captainsMatch = teams.every(t => {
+          if (!t.captainPlayerId) return true;
+          return t.playerIds.includes(t.captainPlayerId);
+        });
+        if (!captainsMatch) {
+          return res.status(400).json({ error: "Um atleta marcado como capitão não pode ser movido para outro time enquanto mantiver a função de capitão." });
+        }
+      }
+
       // Recompute overalls for the modified groups
       const playerOveralls: Record<string, number> = {};
       db.players.forEach((p) => {
@@ -3124,9 +3377,10 @@ async function startServer() {
         
         if (drawObj.isSharedGoalkeepers && goalkeepers.length > 0) {
           // If shared, average gk rating is added to rating computation too
-          const confGkIds = db.presences
-            .filter(p => p.matchId === drawObj.matchId && p.status === 'confirmado')
-            .map(p => p.playerId);
+          const computedPres = getComputedPresences(db, drawObj.matchId);
+          const confGkIds = computedPres
+            .filter(cp => cp.presenceStatus === 'confirmado')
+            .map(cp => cp.playerId);
           const activeGks = goalkeepers.filter(g => confGkIds.includes(g.id));
           if (activeGks.length > 0) {
             const avgGkRating = activeGks.reduce((s, g) => s + (playerOveralls[g.id] || 3.5), 0) / activeGks.length;
@@ -3182,6 +3436,68 @@ async function startServer() {
       const drawObj = (db.draws || []).find(d => d.id === drawId);
       if (!drawObj) {
         return res.status(404).json({ error: 'Sorteio não encontrado.' });
+      }
+
+      // Validate that captains configured in the draw do not have duplicates
+      const drawCaptains = drawObj.teams.map(t => t.captainPlayerId).filter(Boolean);
+      if (new Set(drawCaptains).size !== drawCaptains.length) {
+        return res.status(400).json({ error: "Não foi possível consolidar o sorteio. Um mesmo atleta não pode ser definido como capitão de mais de um time. Ajuste a seleção de capitães e tente novamente." });
+      }
+
+      // Check that each captain belongs to their respective team
+      const captainBelongsProblems = drawObj.teams.some(t => {
+        return t.captainPlayerId && !t.playerIds.includes(t.captainPlayerId);
+      });
+      if (captainBelongsProblems) {
+        return res.status(400).json({ error: "Não foi possível consolidar o sorteio. Cada capitão deve pertencer ao respectivo time no sorteio. Ajuste a seleção de capitães e tente novamente." });
+      }
+
+      // Mathematical consistency check for overalls (Rule 4)
+      const playerOveralls: Record<string, number> = {};
+      db.players.forEach((p) => {
+        const metrics = computePlayerMetrics(p.id, p.primaryPosition, db.evaluations, db.evaluationHistory);
+        playerOveralls[p.id] = metrics.overall;
+      });
+
+      const goalkeepers = db.players.filter(p => p.primaryPosition === 'goleiro' && !p.deletedAt);
+
+      const computedAllOveralls = drawObj.teams.map(t => {
+        let count = t.playerIds.length;
+        if (count === 0) return 3.5;
+        let sum = t.playerIds.reduce((s, pid) => s + (playerOveralls[pid] || 3.5), 0);
+        
+        if (drawObj.isSharedGoalkeepers && goalkeepers.length > 0) {
+          const computedPres = getComputedPresences(db, drawObj.matchId);
+          const confGkIds = computedPres
+            .filter(cp => cp.presenceStatus === 'confirmado')
+            .map(cp => cp.playerId);
+          const activeGks = goalkeepers.filter(g => confGkIds.includes(g.id));
+          if (activeGks.length > 0) {
+            const avgGkRating = activeGks.reduce((s, g) => s + (playerOveralls[g.id] || 3.5), 0) / activeGks.length;
+            sum += avgGkRating;
+            count += 1;
+          }
+        }
+        
+        return Math.round((sum / count) * 10) / 10;
+      });
+
+      const bOverallCalc = computedAllOveralls[0] || 3.5;
+      const rOverallCalc = computedAllOveralls[1] || 3.5;
+      const gOverallCalc = computedAllOveralls[2] || 3.5;
+
+      const diffBlue = Math.abs(drawObj.overallBlue - bOverallCalc);
+      const diffRed = Math.abs(drawObj.overallRed - rOverallCalc);
+      const diffGreen = Math.abs(drawObj.overallGreen - gOverallCalc);
+
+      if (diffBlue > 0.01 || diffRed > 0.01 || diffGreen > 0.01) {
+        console.error('[Consolidation Error - Overalls Mismatch]', {
+          stored: { blue: drawObj.overallBlue, red: drawObj.overallRed, green: drawObj.overallGreen },
+          calculated: { blue: bOverallCalc, red: rOverallCalc, green: gOverallCalc }
+        });
+        return res.status(400).json({
+          error: `Divergência técnica detectada! As médias calculadas para os times não condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os índices técnicos antes da consolidação.`
+        });
       }
 
       // Initialize collections if they don't exist

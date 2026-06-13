@@ -45,7 +45,9 @@ const DEFAULT_ADMINS = {
   email: 'admin@racha.com',
   role: 'admin' as const,
   status: 'approved' as const,
-  createdAt: new Date().toISOString()
+  createdAt: new Date().toISOString(),
+  playerId: 'player-admin',
+  athlete_id: 'player-admin'
 };
 
 function ensureDbExists() {
@@ -90,6 +92,21 @@ function ensureDbExists() {
       },
       reserveAlerts: [],
       players: [
+        {
+          id: 'player-admin',
+          name: 'Administrador do Fofim',
+          phone: '(85) 99999-9999',
+          email: 'admin@racha.com',
+          photoOriginal: '',
+          playerCardUrl: '',
+          favoriteTeamId: 'out',
+          category: 'mensalista',
+          status: 'disponivel',
+          primaryPosition: 'meio_campo',
+          secondaryPositions: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        },
         {
           id: 'player-1',
           name: 'Fofim Magalhães',
@@ -424,10 +441,54 @@ export function readDb(): DatabaseSchema {
 
   // Migration: Automatically link Users and Players using IDs (if there is an email match and user.playerId is not defined)
   db.users.forEach((u: any) => {
+    // 1. Maintain syncing between the legacy playerId field and the new athlete_id field
+    if (u.athlete_id && !u.playerId) {
+      u.playerId = u.athlete_id;
+      updated = true;
+    }
+    if (u.playerId && !u.athlete_id) {
+      u.athlete_id = u.playerId;
+      updated = true;
+    }
+
+    // 2. Solid correlation: If the user lacks an athlete link, try email/ID matching, or create a brand new athlete card.
     if (!u.playerId) {
-      const matchPl = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === u.email.toLowerCase().trim());
-      if (matchPl) {
-        u.playerId = matchPl.id;
+      // Find matching player by email
+      let matchPl = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === u.email.toLowerCase().trim());
+      if (!matchPl && u.id === 'user-admin') {
+        // Special match for admin by ID/name
+        matchPl = db.players.find((p: any) => p.id === 'player-admin');
+      }
+
+      if (!matchPl) {
+        // Automatically create a new athlete record for this user
+        const newPlId = u.id === 'user-admin' ? 'player-admin' : ('player-' + Date.now() + '-' + Math.floor(Math.random() * 1000));
+        matchPl = {
+          id: newPlId,
+          name: u.name,
+          phone: '(85) 99999-9999',
+          email: u.email,
+          photoOriginal: '',
+          playerCardUrl: '',
+          favoriteTeamId: 'out',
+          category: u.role === 'admin' ? 'mensalista' : 'reserva',
+          status: 'disponivel',
+          primaryPosition: 'meio_campo',
+          secondaryPositions: [],
+          createdAt: u.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        db.players.push(matchPl);
+        updated = true;
+      }
+
+      u.playerId = matchPl.id;
+      u.athlete_id = matchPl.id;
+      updated = true;
+    } else {
+      // Final sanity alignment check to ensure both fields contain the exact same reference
+      if (u.athlete_id !== u.playerId) {
+        u.athlete_id = u.playerId;
         updated = true;
       }
     }

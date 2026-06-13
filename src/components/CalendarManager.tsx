@@ -269,14 +269,33 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
     }
   };
 
+  const [cancelMatchId, setCancelMatchId] = useState<string | null>(null);
+  const [clearPresencesOnCancel, setClearPresencesOnCancel] = useState<boolean>(true);
+
   // UPDATE MATCH STATUS ('agendada' | 'confirmando' | 'encerrada' | 'cancelada')
-  const handleUpdateMatchStatus = async (matchId: string, nextStatus: MatchStatus) => {
+  const handleUpdateMatchStatus = async (
+    matchId: string, 
+    nextStatus: MatchStatus, 
+    options?: { clearPresences?: boolean }
+  ) => {
+    if (nextStatus === 'cancelada' && !options) {
+      setCancelMatchId(matchId);
+      setClearPresencesOnCancel(true);
+      return;
+    }
+
     setActionLoading(true);
     try {
       const response = await fetch(`/api/matches/${matchId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus })
+        body: JSON.stringify({ 
+          status: nextStatus,
+          clearPresences: options?.clearPresences,
+          responsibleId: currentUser.id,
+          responsibleName: currentUser.name,
+          responsibleEmail: currentUser.email
+        })
       });
       if (!response.ok) {
         const bodyErr = await response.json();
@@ -285,7 +304,7 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
 
       let extraMsg = '';
       if (nextStatus === 'cancelada') {
-        extraMsg = ' Partida cancelada. Conforme regras, a recorrência automática foi pausada até confirmação manual.';
+        extraMsg = ' Partida cancelada. ' + (options?.clearPresences ? 'Confirmações e convocações limpas!' : '') + ' Conforme regras, a recorrência automática foi pausada até confirmação manual.';
       } else if (nextStatus === 'agendada' || nextStatus === 'confirmando') {
         extraMsg = ' Partida reativada. A recorrência normal voltou ao fluxo ativo.';
       }
@@ -1749,6 +1768,68 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
             </div>
           )}
 
+        </div>
+      )}
+
+      {/* CANCEL MATCH MODAL WITH DUAL RULES */}
+      {cancelMatchId && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn font-sans">
+          <div className="bg-[#121214] border border-red-500/20 max-w-md w-full rounded-2xl p-6 space-y-4 shadow-2xl relative animate-scaleUp">
+            <div className="flex items-start gap-4 font-sans">
+              <div className="p-3 bg-red-500/10 rounded-full flex-shrink-0 text-red-500 border border-red-500/20">
+                <AlertTriangle className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold font-display uppercase text-white tracking-wider">
+                  Cancelar Rodada
+                </h3>
+                <p className="text-zinc-400 text-xs font-mono leading-relaxed">
+                  Tem certeza que deseja cancelar esta rodada?
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-zinc-950/80 p-4 rounded-xl border border-zinc-900 space-y-3">
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={clearPresencesOnCancel}
+                  onChange={(e) => setClearPresencesOnCancel(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-zinc-800 bg-zinc-900 text-emerald-600 focus:ring-emerald-500/20 focus:ring-offset-0 focus:outline-none"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-xs font-bold text-zinc-200 block">
+                    Limpar confirmações e convocações
+                  </span>
+                  <span className="text-[10px] text-zinc-500 block leading-relaxed">
+                    Marque para remover todas as confirmações, convocações automáticas de reservas, e restaurar todos os atletas para estado "sem resposta".
+                  </span>
+                </div>
+              </label>
+            </div>
+
+            <div className="flex gap-3 pt-2 font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setCancelMatchId(null)}
+                className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer text-center uppercase text-[10.5px] tracking-wider"
+              >
+                Voltar
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={async () => {
+                  const mId = cancelMatchId;
+                  setCancelMatchId(null);
+                  await handleUpdateMatchStatus(mId, 'cancelada', { clearPresences: clearPresencesOnCancel });
+                }}
+                className="flex-1 bg-red-600 hover:bg-red-500 text-white py-2.5 rounded-xl border border-red-400 shadow shadow-red-500/30 transition cursor-pointer text-center uppercase text-[10.5px] tracking-wider disabled:opacity-50"
+              >
+                {actionLoading ? 'Processando...' : '💥 Sim, Cancelar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
