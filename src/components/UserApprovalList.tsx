@@ -334,16 +334,34 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
 
       {/* Live System Messages */}
       {error && (
-        <div className="p-4 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center gap-3 animate-slideDown">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500" />
-          <span className="font-mono font-bold">{error}</span>
+        <div className="p-4 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center justify-between gap-3 animate-slideDown">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-500" />
+            <span className="font-mono font-bold">{error}</span>
+          </div>
+          <button
+            onClick={() => setError('')}
+            className="p-1 text-rose-450 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-4 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-xl text-xs flex items-center gap-3 animate-slideDown">
-          <Sparkles className="w-5 h-5 flex-shrink-0 text-emerald-400" />
-          <span className="font-sans font-bold">{successMsg}</span>
+        <div className="p-4 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 rounded-xl text-xs flex items-center justify-between gap-3 animate-slideDown">
+          <div className="flex items-center gap-3">
+            <Sparkles className="w-5 h-5 flex-shrink-0 text-emerald-400" />
+            <span className="font-sans font-bold">{successMsg}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMsg('')}
+            className="p-1 text-emerald-400 hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 

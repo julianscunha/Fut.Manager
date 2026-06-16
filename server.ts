@@ -82,6 +82,19 @@ async function startServer() {
     return null;
   }
 
+  function getAuthenticatedUser(req: express.Request, dbInstance?: any): User | null {
+    const reqUserId = req.headers['x-user-id'] as string;
+    if (!reqUserId) {
+      return null;
+    }
+    const db = dbInstance || readDb();
+    const user = db.users.find((u: any) => u.id === reqUserId);
+    if (!user) {
+      return null;
+    }
+    return user;
+  }
+
   function getMatchDeadlineInfo(match: any, deadlineDays: number) {
     if (!match.date) {
       return {
@@ -251,7 +264,7 @@ async function startServer() {
 
     // Sort: mensalistas first, reserves second!
     mergedList.sort((a: any, b: any) => {
-      const catOrder: Record<string, number> = { mensalista_goleiro: 1, mensalista: 2, reserva: 3 };
+      const catOrder: Record<string, number> = { mensalista: 1, reserva: 2 };
       const catDiff = (catOrder[a.category] || 99) - (catOrder[b.category] || 99);
       if (catDiff !== 0) return catDiff;
       return a.name.localeCompare(b.name);
@@ -265,44 +278,39 @@ async function startServer() {
     let mutated = false;
 
     db.matches.forEach((m: any) => {
-      // If cancelled, state is CANCELADA
-      if (m.status === 'cancelada') {
-        return;
-      }
+      const oldStatus = m.status;
+      const oldLifecycle = m.lifecycleState;
 
-      // If results are recorded, state is FINALIZADA ('encerrada')
-      const hasResults = (db.results || []).some((r: any) => r.matchId === m.id);
-      if (hasResults || m.status === 'encerrada') {
-        if (m.status !== 'encerrada') {
-          m.status = 'encerrada';
-          mutated = true;
+      // Determine computed state
+      let computedLifecycle = oldLifecycle || 'SCHEDULED';
+      
+      // If it was already archived or if it was marked as cancelled, it's ARCHIVED
+      if (oldLifecycle === 'ARCHIVED' || oldStatus === 'cancelada') {
+        computedLifecycle = 'ARCHIVED';
+      } else if (oldLifecycle === 'MATCH_FINISHED' || oldStatus === 'encerrada') {
+        computedLifecycle = 'MATCH_FINISHED';
+      } else {
+        const hasResults = (db.results || []).some((r: any) => r.matchId === m.id);
+        if (hasResults) {
+          computedLifecycle = 'MATCH_FINISHED';
+        } else {
+          const matchDraw = (db.draws || []).find((d: any) => d.matchId === m.id);
+          if (matchDraw || oldStatus === 'sorteada') {
+            computedLifecycle = 'DRAW_COMPLETED';
+          } else {
+            const computedList = getComputedPresences(db, m.id);
+            const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
+            const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
+
+            if (confirmedCount >= limit || oldStatus === 'fechada') {
+              computedLifecycle = 'CHECKIN_CLOSED';
+            } else if (oldStatus === 'agendada') {
+              computedLifecycle = 'SCHEDULED';
+            } else {
+              computedLifecycle = 'CHECKIN_OPEN';
+            }
+          }
         }
-        return;
-      }
-
-      // If draw exists and is locked ('affinitiesRecorded' or lock confirmed), state is SORTEADA
-      const matchDraw = (db.draws || []).find((d: any) => d.matchId === m.id);
-      const isDrawLocked = matchDraw && (matchDraw.affinitiesRecorded === true);
-      if (isDrawLocked || m.status === 'sorteada') {
-        if (m.status !== 'sorteada') {
-          m.status = 'sorteada';
-          mutated = true;
-        }
-        return;
-      }
-
-      // Count confirmed presences
-      const computedList = getComputedPresences(db, m.id);
-      const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
-      const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
-
-      // If limit confirmados, state is FECHADA
-      if (confirmedCount >= limit) {
-        if (m.status !== 'fechada') {
-          m.status = 'fechada';
-          mutated = true;
-        }
-        return;
       }
 
       // Check if deadline is expired to trigger automatic reserves release
@@ -316,20 +324,37 @@ async function startServer() {
         mutated = true;
       }
 
-      if (m.status !== 'agendada') {
-        // Only set to aguardando_reservas if reserves are actually released and we need more athletes
+      // Sync the old text status with computedLifecycle to guarantee backward-compatibility
+      let targetStatus = m.status;
+      if (computedLifecycle === 'ARCHIVED') {
+        targetStatus = oldStatus === 'cancelada' ? 'cancelada' : 'encerrada';
+      } else if (computedLifecycle === 'MATCH_FINISHED') {
+        targetStatus = 'encerrada';
+      } else if (computedLifecycle === 'DRAW_COMPLETED') {
+        targetStatus = 'sorteada';
+      } else if (computedLifecycle === 'CHECKIN_CLOSED') {
+        targetStatus = 'fechada';
+      } else if (computedLifecycle === 'CHECKIN_OPEN') {
+        const computedList = getComputedPresences(db, m.id);
+        const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
+        const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
         if (m.reservesReleased === true && confirmedCount < limit) {
-          if (m.status !== 'aguardando_reservas') {
-            m.status = 'aguardando_reservas';
-            mutated = true;
-          }
+          targetStatus = 'aguardando_reservas';
         } else {
-          // Otherwise keep status as confirmando (CONFIRMACOES_ABERTAS)
-          if (m.status !== 'confirmando') {
-            m.status = 'confirmando';
-            mutated = true;
-          }
+          targetStatus = 'confirmando';
         }
+      } else if (computedLifecycle === 'SCHEDULED') {
+        targetStatus = 'agendada';
+      }
+
+      if (m.status !== targetStatus) {
+        m.status = targetStatus;
+        mutated = true;
+      }
+
+      if (m.lifecycleState !== computedLifecycle) {
+        m.lifecycleState = computedLifecycle;
+        mutated = true;
       }
     });
 
@@ -833,6 +858,16 @@ async function startServer() {
         const initialCategory = playerCategory || 'reserva';
         const initialPosition = primaryPosition || 'atacante';
 
+        if (initialCategory === 'mensalista' && initialPosition !== 'goleiro') {
+          const activeMonthlyLimit = db.financeConfig?.maxMensalistas ?? db.recurrentConfig?.maxMensalistas ?? 12;
+          const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
+          if (currentActiveMonthly >= activeMonthlyLimit) {
+            return res.status(400).json({
+              error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
+            });
+          }
+        }
+
         const newPlayer: Player = {
           id: newPlId,
           name: db.users[userIndex].name,
@@ -984,17 +1019,14 @@ async function startServer() {
 
   // Jogadores: Criar Jogador
   app.post('/api/players', (req, res) => {
-    const reqUserId = req.headers['x-user-id'] as string;
-    const reqUserRole = req.headers['x-user-role'] as string;
-
     const db = readDb();
+    const requestingUser = getAuthenticatedUser(req, db);
 
-    if (!reqUserId) {
+    if (!requestingUser) {
       return res.status(401).json({ error: 'Não autenticado.' });
     }
 
-    const requestingUser = db.users.find(u => u.id === reqUserId);
-    if (!requestingUser || requestingUser.role !== 'admin') {
+    if (requestingUser.role !== 'admin') {
       return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem cadastrar novos atletas manualmente.' });
     }
 
@@ -1003,6 +1035,16 @@ async function startServer() {
 
     if (!playerData.name || !playerData.category || !playerData.status || !playerData.primaryPosition) {
       return res.status(400).json({ error: 'Nome, categoria, status e posição principal são obrigatórios.' });
+    }
+
+    if (playerData.category === 'mensalista' && playerData.primaryPosition !== 'goleiro') {
+      const activeMonthlyLimit = db.financeConfig?.maxMensalistas ?? db.recurrentConfig?.maxMensalistas ?? 12;
+      const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
+      if (currentActiveMonthly >= activeMonthlyLimit) {
+        return res.status(400).json({
+          error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
+        });
+      }
     }
 
     const formattedPhone = playerData.phone || '(85) 99999-9999';
@@ -1074,24 +1116,162 @@ async function startServer() {
     return res.status(201).json({ message: 'Jogador cadastrado com sucesso!', player: newPlayer });
   });
 
+  // Jogadores: Gerar 10 Jogadores Aleatórios
+  app.post('/api/players/generate-random-10', (req, res) => {
+    const db = readDb();
+    const requestingUser = getAuthenticatedUser(req, db);
+
+    if (!requestingUser) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    if (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar') {
+      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores e auxiliares podem gerar atletas aleatórios.' });
+    }
+
+    const firstNames = [
+      "Gabriel", "Lucas", "Mateus", "Guilherme", "Felipe", "Thiago", "Arthur", "Matheus", "Gustavo", "Vinicius", 
+      "Rodrigo", "Daniel", "Rafael", "Bruno", "Eduardo", "Diego", "Vitor", "Leonardo", "Marcelo", "Alexandre",
+      "Carlos", "Marcos", "João", "André", "Renato", "Enzo", "Pedro", "Caio", "Luiz", "Ricardo"
+    ];
+    const lastNames = [
+      "Silva", "Santos", "Souza", "Oliveira", "Pereira", "Lima", "Carvalho", "Ferreira", "Ribeiro", "Almeida", 
+      "Costa", "Gomes", "Martins", "Araújo", "Rodrigues", "Nascimento", "Barbosa", "Cardoso", "Melo", "Teixeira",
+      "Cavalcante", "Nunes", "Mendes", "Pinheiro", "Pinto", "Guedes", "Rocha", "Fonseca", "Alves", "Vieira"
+    ];
+
+    const unsplashPhotos = [
+      "https://images.unsplash.com/photo-1544698310-74ea9d1c8258?w=150",
+      "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=150",
+      "https://images.unsplash.com/photo-1518063319789-7217e6706b04?w=150",
+      "https://images.unsplash.com/photo-1526232761682-d7100d14fc6e?w=150",
+      "https://images.unsplash.com/photo-1504305754058-2f08ccd89a0a?w=150",
+      "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=150",
+      "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=150",
+      "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=150",
+      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+      "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+      "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150",
+      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150"
+    ];
+
+    const teams = ["fla", "pal", "spa", "cor", "flu", "vas", "gre", "int", "cam", "cru", "san", "bot"];
+
+    const categories: PlayerCategory[] = [
+      "mensalista",
+      "mensalista",
+      "mensalista",
+      "mensalista",
+      "mensalista",
+      "mensalista",
+      "reserva",
+      "reserva",
+      "reserva",
+      "reserva"
+    ];
+
+    const positions: PlayerPosition[] = [
+      "goleiro",
+      "zagueiro",
+      "lateral",
+      "volante",
+      "meio_campo",
+      "atacante",
+      "meio_campo",
+      "atacante",
+      "zagueiro",
+      "lateral"
+    ];
+
+    const newlyCreated: Player[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const fn = firstNames[Math.floor(Math.random() * firstNames.length)];
+      let ln = lastNames[Math.floor(Math.random() * lastNames.length)];
+      // Prevent duplicate full names if possible
+      let fullName = `${fn} ${ln}`;
+      let attempt = 0;
+      while (db.players.some(p => p.name.toLowerCase() === fullName.toLowerCase()) && attempt < 10) {
+        ln = lastNames[Math.floor(Math.random() * lastNames.length)];
+        fullName = `${fn} ${ln}`;
+        attempt++;
+      }
+
+      const cleanEmail = `${fn.toLowerCase()}.${ln.toLowerCase()}@racha.fofim.com`.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const cleanPhone = `(85) 9${Math.floor(8000 + Math.random() * 1999)}-${Math.floor(1000 + Math.random() * 8999)}`;
+      const photo = unsplashPhotos[i % unsplashPhotos.length];
+      const team = teams[Math.floor(Math.random() * teams.length)];
+      const cat = categories[i];
+      const pos = positions[i];
+
+      let secPos: PlayerPosition[] = [];
+      if (pos === "zagueiro") secPos = ["volante"];
+      else if (pos === "lateral") secPos = ["meio_campo"];
+      else if (pos === "volante") secPos = ["zagueiro", "meio_campo"];
+      else if (pos === "meio_campo") secPos = ["atacante"];
+      else if (pos === "atacante") secPos = ["meio_campo"];
+
+      const pid = 'player-gen-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+
+      const randomizedPlayer: Player = {
+        id: pid,
+        name: fullName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        photoOriginal: photo,
+        playerCardUrl: '',
+        favoriteTeamId: team,
+        category: cat,
+        status: 'disponivel',
+        primaryPosition: pos,
+        secondaryPositions: secPos,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        currentStreak: 0,
+        maxStreak: 0,
+        adminNotes: 'Atleta simulado de demonstração gerado automaticamente.'
+      };
+
+      db.players.push(randomizedPlayer);
+      newlyCreated.push(randomizedPlayer);
+
+      // Audit logs
+      if (!db.userAudits) db.userAudits = [];
+      db.userAudits.push({
+        id: 'audit-pgen-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        timestamp: new Date().toISOString(),
+        userId: 'system',
+        userName: fullName,
+        userEmail: cleanEmail,
+        action: 'Criação de Atleta',
+        previousRole: '',
+        newRole: '',
+        previousStatus: '',
+        newStatus: '',
+        performedBy: requestingUser.name,
+        details: `Atleta ${fullName} gerado automaticamente por simulação.`
+      });
+    }
+
+    writeDb(db);
+
+    return res.status(201).json({
+      message: '10 atletas gerados com sucesso!',
+      players: newlyCreated
+    });
+  });
+
   // Jogadores: Atualizar Jogador
   app.put('/api/players/:id', (req, res) => {
     const { id } = req.params;
     const updateData = req.body as Partial<Player>;
     const { responsibleName } = req.body as any;
 
-    const reqUserId = req.headers['x-user-id'] as string;
-    const reqUserRole = req.headers['x-user-role'] as string;
-
     const db = readDb();
+    const requestingUser = getAuthenticatedUser(req, db);
 
-    if (!reqUserId) {
-      return res.status(401).json({ error: 'Não autenticado.' });
-    }
-
-    const requestingUser = db.users.find(u => u.id === reqUserId);
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Usuário solicitante inválido ou inexistente.' });
+      return res.status(401).json({ error: 'Não autenticado.' });
     }
 
     const isRequestingAdmin = requestingUser.role === 'admin';
@@ -1121,6 +1301,25 @@ async function startServer() {
     }
 
     const categoryChanged = updateData.category && updateData.category !== existingPlayer.category;
+
+    const targetCategory = updateData.category !== undefined ? updateData.category : existingPlayer.category;
+    const targetPrimaryPosition = updateData.primaryPosition !== undefined ? updateData.primaryPosition : existingPlayer.primaryPosition;
+
+    const isTargetPayingMensalista = targetCategory === 'mensalista' && targetPrimaryPosition !== 'goleiro';
+    const wasPayingMensalista = existingPlayer.category === 'mensalista' && existingPlayer.primaryPosition !== 'goleiro';
+
+    const becamePayingMensalista = !wasPayingMensalista && isTargetPayingMensalista;
+
+    if (becamePayingMensalista) {
+      const activeMonthlyLimit = db.financeConfig?.maxMensalistas ?? db.recurrentConfig?.maxMensalistas ?? 12;
+      const otherActivePayingMensalistas = db.players.filter(p => p.id !== existingPlayer.id && !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
+      if (otherActivePayingMensalistas >= activeMonthlyLimit) {
+        return res.status(400).json({
+          error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
+        });
+      }
+    }
+
     if (categoryChanged) {
       const transition = {
         id: 'category-transition-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
@@ -1243,17 +1442,14 @@ async function startServer() {
   app.delete('/api/players/:id', (req, res) => {
     const { id } = req.params;
 
-    const reqUserId = req.headers['x-user-id'] as string;
-    const reqUserRole = req.headers['x-user-role'] as string;
-
     const db = readDb();
+    const requestingUser = getAuthenticatedUser(req, db);
 
-    if (!reqUserId) {
+    if (!requestingUser) {
       return res.status(401).json({ error: 'Não autenticado.' });
     }
 
-    const requestingUser = db.users.find(u => u.id === reqUserId);
-    if (!requestingUser || requestingUser.role !== 'admin') {
+    if (requestingUser.role !== 'admin') {
       return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem inativar ou remover atletas.' });
     }
 
@@ -1275,6 +1471,16 @@ async function startServer() {
     const { id } = req.params;
 
     const db = readDb();
+    const requestingUser = getAuthenticatedUser(req, db);
+
+    if (!requestingUser) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    if (requestingUser.role !== 'admin') {
+      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem reativar atletas.' });
+    }
+
     const index = db.players.findIndex((p) => p.id === id);
 
     if (index === -1) {
@@ -1304,14 +1510,14 @@ async function startServer() {
   app.get('/api/mensalista-alerts', (req, res) => {
     try {
       const db = readDb();
-      const maxMensalistas = db.recurrentConfig?.maxMensalistas || 12;
+      const maxMensalistas = db.financeConfig?.maxMensalistas ?? db.recurrentConfig?.maxMensalistas ?? 12;
       
-      // Active mensalistas are those who are not soft-deleted and whose category is 'mensalista'
-      const activeMensalistas = db.players.filter(p => !p.deletedAt && p.category === 'mensalista');
+      // Active mensalistas are those who are not soft-deleted, whose category is 'mensalista', and whose primaryPosition is not 'goleiro'
+      const activeMensalistas = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro');
       const activeCount = activeMensalistas.length;
       
       const isBelowLimit = activeCount < maxMensalistas;
-      const availableVacancies = maxMensalistas - activeCount;
+      const availableVacancies = Math.max(0, maxMensalistas - activeCount);
 
       // Filter non-deleted reserves
       const reserves = db.players.filter(p => !p.deletedAt && p.category === 'reserva');
@@ -1840,6 +2046,10 @@ async function startServer() {
       }
 
       const previousStatus = db.matches[index].status;
+      if (previousStatus === 'sorteada' && status && status !== 'sorteada' && status !== 'encerrada') {
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, não é permitido reabrir confirmações ou cancelar a rodada.' });
+      }
+
       const dateChanged = date && date !== db.matches[index].date;
       const timeChanged = time && time !== db.matches[index].time;
       const deadlineDaysChanged = confirmationDeadlineDaysBefore !== undefined && parseInt(confirmationDeadlineDaysBefore) !== db.matches[index].confirmationDeadlineDaysBefore;
@@ -1970,6 +2180,9 @@ async function startServer() {
       }
 
       const match = db.matches[matchIndex];
+      if (match.status === 'sorteada' || match.status === 'encerrada') {
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, as presenças não podem ser limpas.' });
+      }
 
       const presencesToClear = (db.presences || []).filter((p: any) => p.matchId === id && (p.status === 'confirmado' || p.status === 'cancelado'));
       const numPresencesRemoved = presencesToClear.length;
@@ -2023,6 +2236,9 @@ async function startServer() {
       }
 
       const match = db.matches[index];
+      if (match.status === 'sorteada' || match.status === 'encerrada') {
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, as reservas não podem ser liberadas.' });
+      }
       match.reservesReleased = true;
       match.reservesReleasedAt = new Date().toISOString();
       
@@ -2348,10 +2564,11 @@ async function startServer() {
       if (!player) return;
 
       const isChurrasco = event.type === 'churrasco';
-      const isMensalista = player.category === 'mensalista' || player.category === 'mensalista_goleiro';
+      const isGoalkeeper = player.primaryPosition === 'goleiro';
+      const isMensalista = player.category === 'mensalista';
 
       let billAmount = 0;
-      if (isChurrasco && isMensalista) {
+      if (isChurrasco && (isGoalkeeper || isMensalista)) {
         const paidAdults = Math.max(0, pt.adultsCount - 1);
         billAmount = (paidAdults * event.adultPrice) + (pt.childrenCount * event.childPrice);
       } else {
@@ -2658,10 +2875,11 @@ async function startServer() {
       }
 
       const isChurrasco = event.type === 'churrasco';
-      const isMensalista = player.category === 'mensalista' || player.category === 'mensalista_goleiro';
+      const isGoalkeeper = player.primaryPosition === 'goleiro';
+      const isMensalista = player.category === 'mensalista';
 
       let billAmount = 0;
-      if (isChurrasco && isMensalista) {
+      if (isChurrasco && (isGoalkeeper || isMensalista)) {
         const paidAdults = Math.max(0, adults - 1);
         billAmount = (paidAdults * event.adultPrice) + (children * event.childPrice);
       } else {
@@ -2780,6 +2998,10 @@ async function startServer() {
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
         return res.status(404).json({ error: 'Partida não existe.' });
+      }
+
+      if (match.status === 'sorteada' || match.status === 'encerrada') {
+        return res.status(400).json({ error: 'Após o sorteio estar completo, a lista de atletas confirmados está travada.' });
       }
 
       let resolvedPlayerId = playerId;
@@ -2987,6 +3209,10 @@ async function startServer() {
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
         return res.status(404).json({ error: 'Partida não existe.' });
+      }
+
+      if (match.status === 'sorteada' || match.status === 'encerrada') {
+        return res.status(400).json({ error: 'Após o sorteio estar completo, a lista de atletas confirmados está travada.' });
       }
 
       const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
@@ -3212,6 +3438,10 @@ async function startServer() {
         return res.status(404).json({ error: 'Partida não encontrada.' });
       }
 
+      if (match.status === 'sorteada' || match.status === 'encerrada') {
+        return res.status(400).json({ error: 'O sorteio já foi realizado para esta partida e não é permitido gerar novo sorteio ou executar novo re-sorteio.' });
+      }
+
       // Check current redraw count limit
       const previousDraw = (db.draws || []).find(d => d.matchId === matchId);
       const redrawCount = previousDraw ? (previousDraw.redrawCount || 0) + 1 : 0;
@@ -3298,6 +3528,9 @@ async function startServer() {
       // Remove previous draw for the same match if any
       db.draws = (db.draws || []).filter(d => d.matchId !== matchId);
       db.draws.push(newDraw);
+
+      // Force instant match status sync to transition status to 'sorteada'
+      syncMatchStatuses(db);
 
       notify(db, {
         category: 'sorteio',
@@ -3686,7 +3919,8 @@ async function startServer() {
         isSharedGoalkeepers: draw.isSharedGoalkeepers
       };
 
-      // Transition match state to encerrada
+      // Transition match state to MATCH_FINISHED
+      match.lifecycleState = 'MATCH_FINISHED';
       match.status = 'encerrada';
 
       // Safe initialization of collections
@@ -4045,6 +4279,68 @@ async function startServer() {
         // Clean previous auto post for this match if it exists
         db.muralPosts = db.muralPosts.filter(p => !(p.matchId === matchId && p.origin === 'automatic'));
         db.muralPosts.push(automaticPost);
+        
+        // --- ATOMIC TRANSITION SEQUENCE ---
+        
+        // 1. Generate Historical Snapshot
+        const snapParticipantIds = new Set<string>();
+        draw.teams.forEach(t => t.playerIds.forEach(pid => snapParticipantIds.add(pid)));
+        
+        const snapPlayerMap = new Map<string, string>();
+        const playerPosMap = new Map<string, string>();
+        db.players.forEach(p => {
+          snapPlayerMap.set(p.id, p.name);
+          playerPosMap.set(p.id, p.primaryPosition);
+        });
+
+        const currentStatsAfterMatch = computeStatsForSeason({
+          players: db.players,
+          matches: db.matches,
+          presences: db.presences,
+          results: db.results || [],
+          seasonId: match.seasonId
+        });
+
+        const snapshot = {
+          id: 'snapshot-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+          matchId,
+          date: match.date,
+          location: match.location,
+          participants: Array.from(snapParticipantIds),
+          teams: draw.teams,
+          positions: Array.from(snapParticipantIds).map(pid => ({
+            playerId: pid,
+            name: snapPlayerMap.get(pid) || pid,
+            position: playerPosMap.get(pid) || 'não definida'
+          })),
+          captains: draw.teams.reduce((acc, t) => {
+            if (t.captainPlayerId) {
+              acc[t.name] = {
+                playerId: t.captainPlayerId,
+                name: snapPlayerMap.get(t.captainPlayerId) || t.captainPlayerId
+              };
+            }
+            return acc;
+          }, {} as Record<string, { playerId: string; name: string }>),
+          score: {
+            winsBlue: parseInt(winsBlue),
+            winsRed: parseInt(winsRed),
+            winsGreen: parseInt(winsGreen)
+          },
+          winners: champions,
+          losers: (['Azul', 'Vermelho', 'Verde'] as const).filter(c => !champions.includes(c)),
+          derivedStats: currentStatsAfterMatch
+        };
+
+        db.snapshots = db.snapshots || [];
+        db.snapshots = db.snapshots.filter((s: any) => s.matchId !== matchId);
+        db.snapshots.push(snapshot);
+
+        // 2. Promote the lifecycleState of this round to ARCHIVED (operational cycle ended)
+        match.lifecycleState = 'ARCHIVED';
+
+        // 3. Clear the transient draw/operational states for this match
+        db.draws = (db.draws || []).filter(d => d.matchId !== matchId);
       } catch (autoErr) {
         console.error('[Error generating automatic mural post]', autoErr);
       }
@@ -4215,10 +4511,11 @@ async function startServer() {
 
   app.get('/api/finances', (req, res) => {
     try {
-      const email = (req.query.email as string || '').toLowerCase().trim();
-      const role = req.query.role as string || 'jogador';
-
       const db = readDb(); // readDb triggers automatic monthly billing generation!
+      const user = getAuthenticatedUser(req, db);
+
+      const email = user ? user.email.toLowerCase().trim() : (req.query.email as string || '').toLowerCase().trim();
+      const role = user ? user.role : (req.query.role as string || 'jogador');
 
       // Compute general financial health stats (Totals - anonymous)
       const totalExpected = db.bills.reduce((sum, b) => sum + b.amount, 0);
@@ -4297,14 +4594,15 @@ async function startServer() {
 
   app.post('/api/finances/config', (req, res) => {
     try {
-      const { monthlyFee, chargeDateRule, effectiveDate } = req.body;
+      const { monthlyFee, chargeDateRule, effectiveDate, maxMensalistas } = req.body;
       const db = readDb();
 
       if (!db.financeConfig) {
         db.financeConfig = {
           monthlyFee: 100,
           chargeDateRule: 'primeiro_jogo',
-          history: [{ date: '2026-01-01', amount: 100 }]
+          history: [{ date: '2026-01-01', amount: 100 }],
+          maxMensalistas: 12
         };
       }
 
@@ -4317,6 +4615,26 @@ async function startServer() {
 
       if (chargeDateRule !== 'primeiro_jogo' && chargeDateRule !== 'ultimo_jogo') {
         return res.status(400).json({ error: 'Forma de geração inválida. Escolha entre Primeiro Jogo ou Último Jogo.' });
+      }
+
+      const parsedMax = parseInt(maxMensalistas);
+      if (isNaN(parsedMax) || parsedMax <= 0) {
+        return res.status(400).json({ error: 'A quantidade máxima de mensalistas deve ser um número inteiro maior que zero.' });
+      }
+
+      db.financeConfig.maxMensalistas = parsedMax;
+      if (!db.recurrentConfig) {
+        db.recurrentConfig = {
+          dayOfWeek: 6,
+          time: '20:00',
+          location: 'Arena Green Society (Quadra Principal)',
+          durationMinutes: 120,
+          confirmationDeadlineDaysBefore: 2,
+          active: true,
+          maxMensalistas: parsedMax
+        };
+      } else {
+        db.recurrentConfig.maxMensalistas = parsedMax;
       }
 
       const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
@@ -4348,7 +4666,7 @@ async function startServer() {
         previousStatus: '',
         newStatus: '',
         performedBy: 'Administrador',
-        details: `Parâmetros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (Vigência: ${targetEffectiveDate}). Nova regra de geração: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do Mês' : 'Último Jogo do Mês'}.`
+        details: `Parâmetros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (Vigência: ${targetEffectiveDate}). Nova regra de geração: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do Mês' : 'Último Jogo do Mês'}. Limite de mensalistas: ${parsedMax}.`
       });
 
       writeDb(db);

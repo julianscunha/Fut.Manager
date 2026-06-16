@@ -68,9 +68,8 @@ export function runSmartDraw({
     if (sortedGks[2]) assignedGks.Verde = sortedGks[2].id;
   }
 
-  // Pre-arrange captains if any
-  const captainIds = new Set(Object.values(captains).filter(Boolean) as string[]);
-  const remainingField = fieldPlayers.filter(p => !captainIds.has(p.id));
+  // Pre-arrange captains if any -> Deprecated: Captain selection is purely administrative and visual, having zero impact on balance
+  const remainingField = [...fieldPlayers];
 
   let bestDraw: {
     teams: DrawTeam[];
@@ -103,11 +102,6 @@ export function runSmartDraw({
       if (assignedGks.Vermelho) teamRedPlayers.push(assignedGks.Vermelho);
       if (assignedGks.Verde) teamGreenPlayers.push(assignedGks.Verde);
     }
-
-    // Pre-seed captains
-    if (captains.Azul) teamBluePlayers.push(captains.Azul);
-    if (captains.Vermelho) teamRedPlayers.push(captains.Vermelho);
-    if (captains.Verde) teamGreenPlayers.push(captains.Verde);
 
     // Distribute remaining field players in snake/round-robin order to teams
     // Target size for each team is: 5 players
@@ -231,9 +225,9 @@ export function runSmartDraw({
 
       bestDraw = {
         teams: [
-          { name: 'Azul', captainPlayerId: captains.Azul, playerIds: teamBluePlayers },
-          { name: 'Vermelho', captainPlayerId: captains.Vermelho, playerIds: teamRedPlayers },
-          { name: 'Verde', captainPlayerId: captains.Verde, playerIds: teamGreenPlayers }
+          { name: 'Azul', captainPlayerId: captains.Azul && teamBluePlayers.includes(captains.Azul) ? captains.Azul : undefined, playerIds: teamBluePlayers },
+          { name: 'Vermelho', captainPlayerId: captains.Vermelho && teamRedPlayers.includes(captains.Vermelho) ? captains.Vermelho : undefined, playerIds: teamRedPlayers },
+          { name: 'Verde', captainPlayerId: captains.Verde && teamGreenPlayers.includes(captains.Verde) ? captains.Verde : undefined, playerIds: teamGreenPlayers }
         ],
         overallBlue: bRounded,
         overallRed: rRounded,
@@ -255,11 +249,7 @@ export function runSmartDraw({
       if (assignedGks.Verde) listGreen.push(assignedGks.Verde);
     }
 
-    if (captains.Azul) listBlue.push(captains.Azul);
-    if (captains.Vermelho) listRed.push(captains.Vermelho);
-    if (captains.Verde) listGreen.push(captains.Verde);
-
-    // Simply distribute Remaining players round-robin sorted by rating
+    // Simply distribute Remaining players round-robin sorted by rating (excluding captains pre-seeding as it was deprecated to safeguard balancing and goalkeeper duplication)
     const sortedField = [...remainingField].sort((a,b) => (playerOveralls[b.id] || 3.5) - (playerOveralls[a.id] || 3.5));
     sortedField.forEach((p, idx) => {
       const mode = idx % 3;
@@ -296,9 +286,9 @@ export function runSmartDraw({
 
     bestDraw = {
       teams: [
-        { name: 'Azul', captainPlayerId: captains.Azul, playerIds: listBlue },
-        { name: 'Vermelho', captainPlayerId: captains.Vermelho, playerIds: listRed },
-        { name: 'Verde', captainPlayerId: captains.Verde, playerIds: listGreen }
+        { name: 'Azul', captainPlayerId: captains.Azul && listBlue.includes(captains.Azul) ? captains.Azul : undefined, playerIds: listBlue },
+        { name: 'Vermelho', captainPlayerId: captains.Vermelho && listRed.includes(captains.Vermelho) ? captains.Vermelho : undefined, playerIds: listRed },
+        { name: 'Verde', captainPlayerId: captains.Verde && listGreen.includes(captains.Verde) ? captains.Verde : undefined, playerIds: listGreen }
       ],
       overallBlue: bRounded,
       overallRed: rRounded,

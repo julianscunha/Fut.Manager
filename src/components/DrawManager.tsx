@@ -144,12 +144,22 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   // Load matches on start
   useEffect(() => {
     fetchMatches();
+
+    const handleStatusRefresh = () => {
+      fetchMatches();
+    };
+    window.addEventListener('match-status-changed', handleStatusRefresh);
+    window.addEventListener('set-active-tab', handleStatusRefresh);
+    return () => {
+      window.removeEventListener('match-status-changed', handleStatusRefresh);
+      window.removeEventListener('set-active-tab', handleStatusRefresh);
+    };
   }, []);
 
   // Fetch verified player ratings & overalls when match is selected
   useEffect(() => {
     if (selectedMatch) {
-      if (selectedMatch.status === 'cancelada') {
+      if (selectedMatch.status === 'cancelada' || selectedMatch.status === 'encerrada') {
         setConfirmedPlayers([]);
         setActiveDraw(null);
         setCaptainsConfigured(false);
@@ -285,6 +295,10 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       setActiveDraw(draw);
       setSuccessMsg('Times balanceados com inteligência! Ajuste ou compartilhe.');
       setSelectedPlayerToMove(null);
+      if (selectedMatch) {
+        setSelectedMatch({ ...selectedMatch, status: 'sorteada' });
+        setMatches(prev => prev.map(m => m.id === selectedMatch.id ? { ...m, status: 'sorteada' } : m));
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao realizar balanceamento.');
     } finally {
@@ -292,16 +306,58 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     }
   };
 
+  const handleToggleCaptain = async (playerId: string, teamName: 'Azul' | 'Vermelho' | 'Verde') => {
+    if (!activeDraw) return;
+    try {
+      setErrorMsg('');
+      const updatedTeams = activeDraw.teams.map((t) => {
+        if (t.name === teamName) {
+          // If this player is already captain, remove them. Otherwise, set them as captain of this team!
+          return {
+            ...t,
+            captainPlayerId: t.captainPlayerId === playerId ? undefined : playerId
+          };
+        }
+        // If this player is being made captain of this team, make sure they are not captain of another team
+        let capId = t.captainPlayerId;
+        if (capId === playerId) {
+          capId = undefined;
+        }
+        return {
+          ...t,
+          captainPlayerId: capId
+        };
+      });
+
+      const res = await fetch(`/api/draws/${activeDraw.id}/update-manual`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teams: updatedTeams })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Falha ao atualizar capitão.');
+      }
+
+      const updatedDraw = await res.json();
+      setActiveDraw(updatedDraw);
+
+      // Notify or update captains state
+      const caps: Record<string, string> = { Azul: '', Vermelho: '', Verde: '' };
+      updatedDraw.teams.forEach((t: any) => {
+        if (t.captainPlayerId) {
+          caps[t.name] = t.captainPlayerId;
+        }
+      });
+      setCaptains(caps);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao definir capitão.');
+    }
+  };
+
   const handleMovePlayer = async (playerId: string, targetTeamName: 'Azul' | 'Vermelho' | 'Verde') => {
     if (!activeDraw) return;
-
-    if (captainsConfigured) {
-      const isCaptain = Object.values(captains).includes(playerId);
-      if (isCaptain) {
-        setErrorMsg("Não é possível mover manualmente um atleta marcado como capitão. Remova ou altere sua função de capitão para poder movê-lo.");
-        return;
-      }
-    }
 
     try {
       setErrorMsg('');
@@ -394,12 +450,6 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     const tacticalAssignments = computeTacticalAssignments(teamPlayers);
 
     return [...teamPlayers].sort((a, b) => {
-      const isCapA = captainsConfigured && (captainPlayerId === a.id || captains[teamName] === a.id);
-      const isCapB = captainsConfigured && (captainPlayerId === b.id || captains[teamName] === b.id);
-
-      if (isCapA && !isCapB) return -1;
-      if (!isCapA && isCapB) return 1;
-
       const posA = tacticalAssignments[a.id]?.position || 'atacante';
       const posB = tacticalAssignments[b.id]?.position || 'atacante';
 
@@ -544,9 +594,18 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
 
       {/* Internal Alerts */}
       {errorMsg && (
-        <div className="p-3 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center gap-2">
-          <ShieldAlert className="w-4.5 h-4.5 text-rose-500 flex-shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="p-3 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShieldAlert className="w-4.5 h-4.5 text-rose-500 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            onClick={() => setErrorMsg('')}
+            className="text-rose-450 hover:text-rose-300 p-1 rounded-lg focus:outline-none transition cursor-pointer font-black text-sm"
+            title="Fechar"
+          >
+            ✕
+          </button>
         </div>
       )}
 
@@ -657,6 +716,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 <input
                   type="checkbox"
                   checked={captainsConfigured}
+                  disabled={selectedMatch?.status === 'sorteada'}
                   onChange={(e) => setCaptainsConfigured(e.target.checked)}
                   className="accent-emerald-500 h-3.5 w-3.5"
                 />
@@ -668,21 +728,34 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO AZUL</label>
                     <select
                       value={captains.Azul || ''}
-                      onChange={(e) => setCaptains({ ...captains, Azul: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (activeDraw) {
+                          handleToggleCaptain(val, 'Azul');
+                        } else {
+                          setCaptains({ ...captains, Azul: val });
+                        }
+                      }}
                       className="w-full bg-zinc-950 text-xs text-white p-2 rounded border border-zinc-850"
                     >
                       <option value="">Selecione...</option>
-                      {confirmedPlayers.map(p => {
-                        const isSelectedOther = captains.Vermelho === p.id ? 'Vermelho' : captains.Verde === p.id ? 'Verde' : null;
-                        if (isSelectedOther) {
-                          return (
-                            <option key={p.id} value={p.id} disabled>
-                              🔒 {p.name} (já definido como Capitão {isSelectedOther})
-                            </option>
-                          );
-                        }
-                        return <option key={p.id} value={p.id}>{p.name}</option>;
-                      })}
+                      {(() => {
+                        const teamPlayerIds = activeDraw?.teams.find(t => t.name === 'Azul')?.playerIds;
+                        const playersList = teamPlayerIds
+                          ? confirmedPlayers.filter(p => teamPlayerIds.includes(p.id))
+                          : confirmedPlayers;
+                        return playersList.map(p => {
+                          const isSelectedOther = captains.Vermelho === p.id ? 'Vermelho' : captains.Verde === p.id ? 'Verde' : null;
+                          if (isSelectedOther) {
+                            return (
+                              <option key={p.id} value={p.id} disabled>
+                                🔒 {p.name} (já definido como Capitão {isSelectedOther})
+                              </option>
+                            );
+                          }
+                          return <option key={p.id} value={p.id}>{p.name}</option>;
+                        });
+                      })()}
                     </select>
                   </div>
 
@@ -690,21 +763,34 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO VERMELHO</label>
                     <select
                       value={captains.Vermelho || ''}
-                      onChange={(e) => setCaptains({ ...captains, Vermelho: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (activeDraw) {
+                          handleToggleCaptain(val, 'Vermelho');
+                        } else {
+                          setCaptains({ ...captains, Vermelho: val });
+                        }
+                      }}
                       className="w-full bg-zinc-950 text-xs text-white p-2 rounded border border-zinc-850"
                     >
                       <option value="">Selecione...</option>
-                      {confirmedPlayers.map(p => {
-                        const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Verde === p.id ? 'Verde' : null;
-                        if (isSelectedOther) {
-                          return (
-                            <option key={p.id} value={p.id} disabled>
-                              🔒 {p.name} (já definido como Capitão {isSelectedOther})
-                            </option>
-                          );
-                        }
-                        return <option key={p.id} value={p.id}>{p.name}</option>;
-                      })}
+                      {(() => {
+                        const teamPlayerIds = activeDraw?.teams.find(t => t.name === 'Vermelho')?.playerIds;
+                        const playersList = teamPlayerIds
+                          ? confirmedPlayers.filter(p => teamPlayerIds.includes(p.id))
+                          : confirmedPlayers;
+                        return playersList.map(p => {
+                          const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Verde === p.id ? 'Verde' : null;
+                          if (isSelectedOther) {
+                            return (
+                              <option key={p.id} value={p.id} disabled>
+                                🔒 {p.name} (já definido como Capitão {isSelectedOther})
+                              </option>
+                            );
+                          }
+                          return <option key={p.id} value={p.id}>{p.name}</option>;
+                        });
+                      })()}
                     </select>
                   </div>
 
@@ -712,21 +798,34 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO VERDE</label>
                     <select
                       value={captains.Verde || ''}
-                      onChange={(e) => setCaptains({ ...captains, Verde: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (activeDraw) {
+                          handleToggleCaptain(val, 'Verde');
+                        } else {
+                          setCaptains({ ...captains, Verde: val });
+                        }
+                      }}
                       className="w-full bg-zinc-950 text-xs text-white p-2 rounded border border-zinc-850"
                     >
                       <option value="">Selecione...</option>
-                      {confirmedPlayers.map(p => {
-                        const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Vermelho === p.id ? 'Vermelho' : null;
-                        if (isSelectedOther) {
-                          return (
-                            <option key={p.id} value={p.id} disabled>
-                              🔒 {p.name} (já definido como Capitão {isSelectedOther})
-                            </option>
-                          );
-                        }
-                        return <option key={p.id} value={p.id}>{p.name}</option>;
-                      })}
+                      {(() => {
+                        const teamPlayerIds = activeDraw?.teams.find(t => t.name === 'Verde')?.playerIds;
+                        const playersList = teamPlayerIds
+                          ? confirmedPlayers.filter(p => teamPlayerIds.includes(p.id))
+                          : confirmedPlayers;
+                        return playersList.map(p => {
+                          const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Vermelho === p.id ? 'Vermelho' : null;
+                          if (isSelectedOther) {
+                            return (
+                              <option key={p.id} value={p.id} disabled>
+                                🔒 {p.name} (já definido como Capitão {isSelectedOther})
+                              </option>
+                            );
+                          }
+                          return <option key={p.id} value={p.id}>{p.name}</option>;
+                        });
+                      })()}
                     </select>
                   </div>
                 </div>
@@ -741,6 +840,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 <input
                   type="checkbox"
                   checked={isSharedGoalkeepers}
+                  disabled={selectedMatch?.status === 'sorteada'}
                   onChange={(e) => setIsSharedGoalkeepers(e.target.checked)}
                   className="accent-emerald-500 h-3.5 w-3.5"
                 />
@@ -763,14 +863,25 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
               )}
 
               {/* Action Button */}
-              <button
-                onClick={handleGenerateDraw}
-                disabled={loading || confirmedPlayers.length === 0 || selectedMatch?.status === 'cancelada' || (activeDraw && activeDraw.redrawCount && activeDraw.redrawCount >= 2 ? true : false)}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-850 disabled:text-zinc-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
-              >
-                <Sparkles className="w-4 h-4 text-emerald-400" />
-                <span>{activeDraw ? 'Sortear Novamente' : 'Realizar Sorteio'}</span>
-              </button>
+              {selectedMatch?.lifecycleState === 'DRAW_COMPLETED' || selectedMatch?.status === 'sorteada' ? (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10.5px] rounded-lg leading-relaxed text-center font-mono">
+                  🔒 O sorteio oficial está ativo! Apenas trocas manuais de jogadores e alteração de capitães são permitidas. Re-sorteios estão desativados para preservar a governança.
+                </div>
+              ) : (selectedMatch?.lifecycleState === 'CHECKIN_CLOSED' || selectedMatch?.status === 'fechada') ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateDraw}
+                  disabled={loading || confirmedPlayers.length === 0 || selectedMatch?.status === 'cancelada' || (activeDraw && activeDraw.redrawCount && activeDraw.redrawCount >= 2 ? true : false)}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-850 disabled:text-zinc-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
+                >
+                  <Sparkles className="w-4 h-4 text-emerald-400" />
+                  <span>{activeDraw ? 'Sortear Novamente' : 'Realizar Sorteio'}</span>
+                </button>
+              ) : (
+                <div className="p-3 bg-zinc-900/60 border border-zinc-850 text-zinc-400 text-[10.5px] rounded-lg leading-relaxed text-center font-mono">
+                  ⏳ O sorteio estará disponível após o fechamento do check-in de presenças (estado CHECKIN_CLOSED). No momento, as presenças estão sendo confirmadas.
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -905,7 +1016,17 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                                     <div className="truncate">
                                       <div className="flex items-center gap-1">
                                         <p className="font-bold text-white leading-none truncate max-w-[90px] md:max-w-none">{p.name.split(' ')[0]} {p.name.split(' ')[1] || ''}</p>
-                                        {isCap && <Crown className="w-3 h-3 text-amber-400 flex-shrink-0" />}
+                                        {isEditor ? (
+                                          <button
+                                            onClick={() => handleToggleCaptain(p.id, team.name)}
+                                            className="focus:outline-none transition-transform active:scale-95 cursor-pointer ml-1"
+                                            title={isCap ? "Remover função de capitão" : "Definir como capitão deste time"}
+                                          >
+                                            <Crown className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${isCap ? 'text-amber-400 fill-amber-400/20' : 'text-zinc-700 hover:text-amber-400/50'}`} />
+                                          </button>
+                                        ) : (
+                                          isCap && <Crown className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+                                        )}
                                       </div>
                                       <div className="flex items-center gap-1.5 mt-0.5">
                                         <span className={`text-[9px] px-1.5 py-0.2 rounded border font-mono font-bold leading-none ${getPositionBadgeColor(assignedPos)}`}>
@@ -999,16 +1120,6 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                   <Share2 className="w-4 h-4 text-emerald-400" />
                   <span>WhatsApp</span>
                 </button>
-
-                {isEditor && (
-                  <button
-                    onClick={handleLockDraw}
-                    className="flex-1 py-3 px-4 bg-amber-600 hover:bg-amber-500 text-zinc-950 font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
-                  >
-                    <Check className="w-4 h-4" />
-                    <span>Consolidar Sorteio</span>
-                  </button>
-                )}
               </div>
             </div>
           ) : (

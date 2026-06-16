@@ -18,7 +18,7 @@ export interface User {
   athlete_id: string;
 }
 
-export type PlayerCategory = 'mensalista' | 'mensalista_goleiro' | 'reserva';
+export type PlayerCategory = 'mensalista' | 'reserva';
 
 export type PlayerStatus = 'disponivel' | 'indisponivel' | 'lesionado' | 'afastado';
 
@@ -119,7 +119,6 @@ export const POSITION_LABELS: Record<PlayerPosition, string> = {
 
 export const CATEGORY_LABELS: Record<PlayerCategory, string> = {
   mensalista: 'Mensalista',
-  mensalista_goleiro: 'Mensalista Goleiro',
   reserva: 'Reserva'
 };
 
@@ -150,6 +149,8 @@ export interface Season {
 
 export type MatchStatus = 'agendada' | 'confirmando' | 'aguardando_reservas' | 'fechada' | 'sorteada' | 'encerrada' | 'cancelada';
 
+export type MatchLifecycleState = 'SCHEDULED' | 'CHECKIN_OPEN' | 'CHECKIN_CLOSED' | 'DRAW_COMPLETED' | 'MATCH_FINISHED' | 'ARCHIVED';
+
 export interface Match {
   id: string;
   seasonId: string;
@@ -158,6 +159,7 @@ export interface Match {
   location: string;
   durationMinutes: number;
   status: MatchStatus;
+  lifecycleState?: MatchLifecycleState;
   confirmationDeadlineDaysBefore?: number;
   reservesReleased?: boolean;
   reservesReleasedAt?: string;
@@ -196,6 +198,7 @@ export interface FinanceConfig {
   monthlyFee: number;
   chargeDateRule: 'primeiro_jogo' | 'ultimo_jogo';
   history: FinanceHistoryEntry[];
+  maxMensalistas?: number;
 }
 
 export interface CategoryTransition {

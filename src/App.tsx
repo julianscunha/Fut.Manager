@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, Player, POSITION_LABELS, CATEGORY_LABELS, FAVORITE_TEAMS } from './types';
 import AuthScreens from './components/AuthScreens';
+import { authFetch } from './lib/authFetch';
 import DashboardStatus from './components/DashboardStatus';
 import PlayerCard from './components/PlayerCard';
 import PlayerForm from './components/PlayerForm';
@@ -106,7 +107,7 @@ export default function App() {
       const isAdminOrAux = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
       const url = `/api/players?includeDeleted=${isAdminOrAux ? 'true' : 'false'}`;
       
-      const res = await fetch(url);
+      const res = await authFetch(url);
       if (!res.ok) throw new Error('Não foi possível carregar o roster de atletas.');
       const data = await res.json();
       setPlayers(data);
@@ -123,7 +124,7 @@ export default function App() {
   const fetchMensalistaAlerts = async () => {
     if (!currentUser) return;
     try {
-      const res = await fetch('/api/mensalista-alerts');
+      const res = await authFetch('/api/mensalista-alerts');
       if (res.ok) {
         const data = await res.json();
         setMensalistaAlerts(data);
@@ -137,9 +138,8 @@ export default function App() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/players/${playerId}`, {
+      const res = await authFetch(`/api/players/${playerId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           category: 'mensalista',
           responsibleName: currentUser?.name || 'Administrador'
@@ -148,6 +148,7 @@ export default function App() {
       if (res.ok) {
         setSuccessMsg('Atleta promovido a mensalista com sucesso!');
         await fetchPlayers();
+        setTimeout(() => setSuccessMsg(''), 5000);
       } else {
         const data = await res.json();
         setErrorMsg(data.error || 'Erro ao promover atleta.');
@@ -162,7 +163,7 @@ export default function App() {
     if (!currentUser) return;
     if (currentUser.role !== 'admin' && currentUser.role !== 'auxiliar') return;
     try {
-      const res = await fetch('/api/users');
+      const res = await authFetch('/api/users');
       if (res.ok) {
         const usersList: User[] = await res.json();
         const pending = usersList.filter((u) => u.status === 'pending');
@@ -190,8 +191,14 @@ export default function App() {
       }
     };
     window.addEventListener('set-active-tab', handleSetActiveTabEvent);
+    const handleMensalistasUpdated = () => {
+      fetchPlayers();
+      fetchMensalistaAlerts();
+    };
+    window.addEventListener('mensalistas-updated', handleMensalistasUpdated);
     return () => {
       window.removeEventListener('set-active-tab', handleSetActiveTabEvent);
+      window.removeEventListener('mensalistas-updated', handleMensalistasUpdated);
     };
   }, []);
 
@@ -204,13 +211,8 @@ export default function App() {
       const url = isEdit ? `/api/players/${editingPlayer.id}` : '/api/players';
       const method = isEdit ? 'PUT' : 'POST';
 
-      const res = await fetch(url, {
+      const res = await authFetch(url, {
         method,
-        headers: { 
-          'Content-Type': 'application/json',
-          'x-user-id': currentUser?.id || '',
-          'x-user-role': currentUser?.role || ''
-        },
         body: JSON.stringify({
           ...formData,
           responsibleName: currentUser?.name || 'Administrador'
@@ -232,6 +234,27 @@ export default function App() {
     }
   };
 
+  const handleGenerateRandomPlayers = async () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    setLoading(true);
+    try {
+      const res = await authFetch('/api/players/generate-random-10', {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erro ao gerar atletas aleatórios.');
+
+      setSuccessMsg('10 atletas simulados foram cadastrados com sucesso!');
+      await fetchPlayers();
+      setTimeout(() => setSuccessMsg(''), 5005);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao interagir com o servidor.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleEditClick = (player: Player) => {
     setEditingPlayer(player);
     setIsFormOpen(true);
@@ -248,12 +271,8 @@ export default function App() {
         setErrorMsg('');
         setSuccessMsg('');
         try {
-          const res = await fetch(`/api/players/${id}`, { 
-            method: 'DELETE',
-            headers: {
-              'x-user-id': currentUser?.id || '',
-              'x-user-role': currentUser?.role || ''
-            }
+          const res = await authFetch(`/api/players/${id}`, { 
+            method: 'DELETE'
           });
           const data = await res.json();
           if (!res.ok) throw new Error(data.error || 'Erro ao inativar jogador.');
@@ -272,12 +291,8 @@ export default function App() {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/players/${id}/restore`, { 
-        method: 'POST',
-        headers: {
-          'x-user-id': currentUser?.id || '',
-          'x-user-role': currentUser?.role || ''
-        }
+      const res = await authFetch(`/api/players/${id}/restore`, { 
+        method: 'POST'
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Falha ao reativar.');
@@ -614,16 +629,34 @@ export default function App() {
 
         {/* Action confirmation notifications */}
         {errorMsg && (
-          <div className="p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center gap-2.5">
-            <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
-            <span>{errorMsg}</span>
+          <div className="p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+            <button
+              onClick={() => setErrorMsg('')}
+              className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-center gap-2.5">
-            <Sparkles className="w-4.5 h-4.5 flex-shrink-0" />
-            <span>{successMsg}</span>
+          <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2.5">
+              <Sparkles className="w-4.5 h-4.5 flex-shrink-0" />
+              <span>{successMsg}</span>
+            </div>
+            <button
+              onClick={() => setSuccessMsg('')}
+              className="p-1 text-[#4ade80] hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
@@ -672,80 +705,27 @@ export default function App() {
                   </div>
                   
                   {isEditor && (
-                    <button
-                      id="btn-new-player"
-                      onClick={() => { setEditingPlayer(null); setIsFormOpen(true); }}
-                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 transition cursor-pointer"
-                    >
-                      <PlusCircle className="w-4" />
-                      <span>Cadastrar Atleta</span>
-                    </button>
+                    <div className="flex gap-2 flex-wrap">
+                      <button
+                        id="btn-generate-10-players"
+                        onClick={handleGenerateRandomPlayers}
+                        disabled={loading}
+                        className="px-4 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-[#1a1c1a] text-zinc-300 hover:text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg transition cursor-pointer disabled:opacity-50"
+                      >
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        <span>Gerar 10 Atletas</span>
+                      </button>
+                      <button
+                        id="btn-new-player"
+                        onClick={() => { setEditingPlayer(null); setIsFormOpen(true); }}
+                        className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 transition cursor-pointer"
+                      >
+                        <PlusCircle className="w-4" />
+                        <span>Cadastrar Atleta</span>
+                      </button>
+                    </div>
                   )}
                 </div>
-
-                {/* Mensalista Vacancies Alert and Promotion suggestions card */}
-                {mensalistaAlerts && mensalistaAlerts.isBelowLimit && (
-                  <div className="bg-[#091512] border border-emerald-500/20 rounded-xl p-4 md:p-5 space-y-3.5 shadow-lg shadow-emerald-500/5 mt-2 transition animate-fadeIn">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-900/60">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 bg-[#22c55e]/10 rounded-lg text-[#22c55e] mt-0.5">
-                          <PlusCircle className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h3 className="font-display font-bold text-sm text-white">Existe vaga disponível para um novo mensalista!</h3>
-                          <p className="text-xs text-zinc-400 mt-0.5">
-                            Existem <strong className="text-emerald-400">{mensalistaAlerts.activeCount}</strong> de no máximo <strong className="text-zinc-500">{mensalistaAlerts.maxMensalistas}</strong> mensalistas ativos. Há <strong className="text-emerald-400">{mensalistaAlerts.availableVacancies} {mensalistaAlerts.availableVacancies === 1 ? 'vaga' : 'vagas'}</strong> {mensalistaAlerts.availableVacancies === 1 ? 'disponível' : 'disponíveis'}.
-                          </p>
-                        </div>
-                      </div>
-                      <div className="bg-emerald-500/5 text-[10px] text-emerald-400 px-2.5 py-1 rounded-full border border-emerald-500/10 font-mono font-bold self-start sm:self-center uppercase tracking-wider">
-                        Há vaga ativa
-                      </div>
-                    </div>
-
-                    {/* Suggestions list */}
-                    {mensalistaAlerts.suggestedReserves && mensalistaAlerts.suggestedReserves.length > 0 ? (
-                      <div className="space-y-2">
-                        <span className="block text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-widest leading-none">
-                          Sugestão de Promoção (Reservas Ativos por Presença):
-                        </span>
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                          {mensalistaAlerts.suggestedReserves.slice(0, 4).map((res: any) => (
-                            <div key={res.id} className="bg-zinc-950/65 p-3 rounded-lg border border-zinc-900/60 flex items-center justify-between text-xs gap-3">
-                              <div className="space-y-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-bold text-white truncate">{res.name}</span>
-                                  {res.status !== 'disponivel' && (
-                                    <span className="text-[9px] bg-amber-500/10 text-amber-500 px-1.5 py-0.25 rounded uppercase font-mono font-bold">
-                                      {res.status === 'lesionado' ? 'Lesionado' : 'Ausente'}
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-3">
-                                  <span>Presenças: <strong className="text-emerald-400">{res.presences}</strong></span>
-                                  <span>Tempo: <strong className="text-zinc-400">{res.daysInGroup}d</strong></span>
-                                </div>
-                              </div>
-
-                              {isEditor && (
-                                <button
-                                  type="button"
-                                  onClick={() => handleQuickPromote(res.id)}
-                                  className="px-3 py-1.5 bg-[#14231b] hover:bg-emerald-600 border border-emerald-500/15 text-emerald-400 hover:text-white rounded-lg text-[10px] font-bold font-mono transition uppercase cursor-pointer"
-                                >
-                                  Promover Atleta
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[11px] font-mono text-zinc-600 italic">Nenhum jogador da categoria "Reserva" elegível no momento.</p>
-                    )}
-                  </div>
-                )}
 
                 {/* Filter and Search Bar */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[#111815] p-3.5 rounded-xl border border-zinc-850/80">

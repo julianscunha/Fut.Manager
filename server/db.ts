@@ -37,6 +37,7 @@ interface DatabaseSchema {
   notificationPreferences?: NotificationPreferences[];
   userAudits?: any[];
   deadlineAudits?: any[];
+  snapshots?: any[];
 }
 
 const DEFAULT_ADMINS = {
@@ -145,7 +146,7 @@ function ensureDbExists() {
           photoOriginal: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
           playerCardUrl: '',
           favoriteTeamId: 'spa',
-          category: 'mensalista_goleiro',
+          category: 'mensalista',
           status: 'disponivel',
           primaryPosition: 'goleiro',
           secondaryPositions: [],
@@ -497,6 +498,13 @@ export function readDb(): DatabaseSchema {
   db.players = db.players.map((p: any) => {
     let mutated = false;
 
+    // Migrate 'mensalista_goleiro' category to 'mensalista' with primaryPosition 'goleiro'
+    if (p.category === 'mensalista_goleiro') {
+      p.category = 'mensalista';
+      p.primaryPosition = 'goleiro';
+      mutated = true;
+    }
+
     // Ensure athlete has a phone field
     if (!p.phone) {
       p.phone = '(85) 99999-9999';
@@ -653,8 +661,8 @@ export function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
       // Check if we already generated for this competence
       const alreadyGenerated = db.competences.some(c => c.competence === compKey && c.generated);
       if (!alreadyGenerated) {
-        // Find active mensalistas (category === 'mensalista' and not deleted)
-        let eligiblePlayers = db.players.filter(p => !p.deletedAt && p.category === 'mensalista');
+        // Find active mensalistas (category === 'mensalista' and not deleted and not goalkeeper)
+        let eligiblePlayers = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro');
 
         // Prevent retroactive charges for newly-promoted players (i.e. if the charge date is before their promotion date)
         eligiblePlayers = eligiblePlayers.filter(p => {

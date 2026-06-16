@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, Image as ImageIcon, Calendar, MapPin, Clock, Eye } from 'lucide-react';
+import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, Image as ImageIcon, Calendar, MapPin, Clock, Eye, X } from 'lucide-react';
 import { User } from '../types';
 
 interface AuthScreensProps {
@@ -243,16 +243,34 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
         
         {/* Alerts */}
         {errorMsg && (
-          <div className="p-3.5 bg-rose-500/15 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-start gap-2.5">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span className="leading-normal">{errorMsg}</span>
+          <div className="p-3.5 bg-rose-500/15 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center justify-between gap-2.5">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="leading-normal">{errorMsg}</span>
+            </div>
+            <button
+              onClick={() => setErrorMsg('')}
+              className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 
         {successMsg && (
-          <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-start gap-2.5">
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span className="leading-normal">{successMsg}</span>
+          <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-center justify-between gap-2.5">
+            <div className="flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span className="leading-normal">{successMsg}</span>
+            </div>
+            <button
+              onClick={() => setSuccessMsg('')}
+              className="p-1 text-[#4ade80] hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+              title="Fechar"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
         )}
 

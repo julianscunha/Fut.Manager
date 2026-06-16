@@ -3,7 +3,7 @@ import { User, Season, Match, MatchStatus } from '../types';
 import { 
   Calendar, Clock, MapPin, Plus, Trash2, Edit, Check, Play, RefreshCw,
   Sliders, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle2,
-  ListOrdered, HelpCircle, Activity, Hourglass, CalendarRange
+  ListOrdered, HelpCircle, Activity, Hourglass, CalendarRange, X
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
@@ -620,7 +620,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
       case 'fechada':
         return <span className="bg-purple-500/15 border border-purple-500/30 text-purple-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">FECHADA</span>;
       case 'sorteada':
-        return <span className="bg-sky-500/15 border border-sky-500/30 text-sky-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">SORTEADA</span>;
+        return <span className="bg-sky-500/15 border border-sky-500/30 text-sky-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">SORTEIO REALIZADO</span>;
       case 'encerrada':
         return <span className="bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">FINALIZADA</span>;
       case 'cancelada':
@@ -690,16 +690,34 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
       {/* SUCCESS / ERROR NOTIFICATIONS */}
       {successMsg && (
-        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-mono flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4" />
-          <span>{successMsg}</span>
+        <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-mono flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{successMsg}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMsg('')}
+            className="p-1 text-emerald-400 hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {errorMsg && (
-        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-mono flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-rose-400" />
-          <span>{errorMsg}</span>
+        <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-xs text-rose-400 font-mono flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            onClick={() => setErrorMsg('')}
+            className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -1189,9 +1207,9 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                                 <button
                                   onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }))}
                                   className="bg-sky-600 hover:bg-sky-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Visualizar as equipes sorteadas"
+                                  title="Visualizar o sorteio já realizado"
                                 >
-                                  Visualizar Times
+                                  Visualizar Sorteio
                                 </button>
 
                                 <button

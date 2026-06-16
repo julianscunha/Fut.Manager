@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User, Player, Bill, PaymentRecord, RecurrentConfig } from '../types';
+import { authFetch } from '../lib/authFetch';
 import { 
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,
-  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle, History
+  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle, History, X
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
@@ -81,7 +82,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     setErrorMsg('');
     try {
       const url = `/api/finances?email=${encodeURIComponent(currentUser.email)}&role=${currentUser.role}`;
-      const res = await fetch(url);
+      const res = await authFetch(url);
       if (!res.ok) throw new Error('Não foi possível sincronizar o módulo financeiro.');
       const data = await res.json();
       
@@ -113,15 +114,33 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     fetchFinanceData();
   }, [currentUser]);
 
+  const monthlyFeeLimitVal = financeConfig?.maxMensalistas ?? recurrentConfig?.maxMensalistas ?? 12;
+  const mensalistasAtivosList = players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro');
+  const activeMensalistasCount = mensalistasAtivosList.length;
+  const exceedsLimit = activeMensalistasCount > monthlyFeeLimitVal;
+
+  let indicatorColorClass = "text-emerald-400";
+  let indicatorBgClass = "bg-[#0d1612] border-emerald-950/40";
+  let statusText = "Abaixo do Limite";
+  
+  if (activeMensalistasCount === monthlyFeeLimitVal - 1) {
+    indicatorColorClass = "text-amber-400";
+    indicatorBgClass = "bg-[#1a120a] border-amber-950/30";
+    statusText = "Última Vaga";
+  } else if (activeMensalistasCount >= monthlyFeeLimitVal) {
+    indicatorColorClass = "text-rose-400";
+    indicatorBgClass = "bg-[#1d0e11] border-rose-950/35";
+    statusText = exceedsLimit ? "Limite Ultrapassado" : "Limite Atingido";
+  }
+
   // Handle immediate payment confirmation by player
   const handleConfirmPayment = async (billId: string) => {
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/finances/pay', {
+      const res = await authFetch('/api/finances/pay', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ billId, email: currentUser.email, role: currentUser.role })
       });
       const data = await res.json();
@@ -143,9 +162,8 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/finances/toggle', {
+      const res = await authFetch('/api/finances/toggle', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ billId, email: currentUser.email, role: currentUser.role })
       });
       const data = await res.json();
@@ -173,9 +191,8 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/finances/bills', {
+      const res = await authFetch('/api/finances/bills', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           playerId: newBillPlayerId,
           competence: newBillCompetence,
@@ -212,7 +229,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         setErrorMsg('');
         setSuccessMsg('');
         try {
-          const res = await fetch(`/api/finances/bills/${billId}`, {
+          const res = await authFetch(`/api/finances/bills/${billId}`, {
             method: 'DELETE'
           });
           const data = await res.json();
@@ -236,18 +253,20 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     const fee = (e.currentTarget.elements.namedItem('monthlyFee') as HTMLInputElement).value;
     const rule = (e.currentTarget.elements.namedItem('chargeDateRule') as HTMLSelectElement).value;
     const effectiveDate = (e.currentTarget.elements.namedItem('effectiveDate') as HTMLInputElement).value;
+    const maxMensalistas = (e.currentTarget.elements.namedItem('maxMensalistas') as HTMLInputElement).value;
 
     setActionLoading(true);
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch('/api/finances/config', {
+      const response = await authFetch('/api/finances/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           monthlyFee: parseFloat(fee),
           chargeDateRule: rule,
-          effectiveDate
+          effectiveDate,
+          maxMensalistas: parseInt(maxMensalistas)
         })
       });
 
@@ -256,6 +275,9 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
 
       setSuccessMsg('Configurações financeiras e regras de cobrança salvas com sucesso!');
       await fetchFinanceData();
+      if (typeof (window as any).dispatchevent === 'function' || window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('mensalistas-updated'));
+      }
       setTimeout(() => setSuccessMsg(''), 4000);
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao atualizar.');
@@ -270,7 +292,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/finances/trigger-sync', {
+      const res = await authFetch('/api/finances/trigger-sync', {
         method: 'POST'
       });
       const data = await res.json();
@@ -429,6 +451,39 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         </div>
       </div>
 
+      {/* SUCCESS / ERROR NOTIFICATIONS */}
+      {errorMsg && (
+        <div className="p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center justify-between gap-2.5 animate-slideDown">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            onClick={() => setErrorMsg('')}
+            className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {successMsg && (
+        <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-center justify-between gap-2.5 animate-slideDown">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4.5 h-4.5 flex-shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMsg('')}
+            className="p-1 text-[#4ade80] hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* HEALTH METRICS CARDS (SAÚDE FINANCEIRA - ANONYMOUS GLOBAL TOTALS FOR ALL) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" id="anon-health-dashboard">
         
@@ -501,42 +556,36 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         <button
           id="tab-fin-my"
           onClick={() => setActiveTab('my')}
-          className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+          className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0 min-w-[130px] ${
             activeTab === 'my'
               ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
               : 'border-transparent text-zinc-400 hover:text-white'
           }`}
         >
-          <CreditCard className="w-3.5 h-3.5" />
-          <span>
-            <span className="hidden md:inline">Minhas Cobranças</span>
-            <span className="md:hidden">Cobranças</span>
-          </span>
+          <CreditCard className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="font-semibold">Minhas Cobranças</span>
           {myPendingTotal > 0 && (
-            <span className="bg-rose-500 text-white font-extrabold px-1.5 py-0.5 rounded-full text-[9px]">
+            <span className="bg-rose-500 text-white font-extrabold px-1.5 py-0.5 rounded-full text-[9px] flex-shrink-0">
               R$ {myPendingTotal}
             </span>
           )}
         </button>
 
-        {/* Admin Debtoes Summary */}
+        {/* Admin Debtors Summary */}
         {isAdmin && (
           <button
             id="tab-fin-admin_overview"
             onClick={() => setActiveTab('admin_overview')}
-            className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0 min-w-[130px] ${
               activeTab === 'admin_overview'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
                 : 'border-transparent text-zinc-400 hover:text-white'
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>
-              <span className="hidden md:inline">Controle de Inadimplência</span>
-              <span className="md:hidden">Inadimplência</span>
-            </span>
+            <ShieldAlert className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="font-semibold">Inadimplência</span>
             {debtorsList.length > 0 && (
-              <span className="bg-amber-500 text-zinc-950 font-extrabold px-1.5 py-0.5 rounded-full text-[9px]">
+              <span className="bg-amber-500 text-zinc-950 font-extrabold px-1.5 py-0.5 rounded-full text-[9px] flex-shrink-0">
                 {debtorsList.length}
               </span>
             )}
@@ -548,17 +597,14 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
           <button
             id="tab-fin-ledger"
             onClick={() => setActiveTab('ledger')}
-            className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0 min-w-[130px] ${
               activeTab === 'ledger'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
                 : 'border-transparent text-zinc-400 hover:text-white'
             }`}
           >
-            <FileText className="w-3.5 h-3.5" />
-            <span>
-              <span className="hidden md:inline">Livro Caixa do Grupo</span>
-              <span className="md:hidden">Livro Caixa</span>
-            </span>
+            <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="font-semibold">Livro Caixa</span>
           </button>
         )}
 
@@ -567,17 +613,14 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
           <button
             id="tab-fin-config"
             onClick={() => setActiveTab('config')}
-            className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-3 border-b-2 whitespace-nowrap transition cursor-pointer flex items-center justify-center gap-1.5 flex-shrink-0 min-w-[130px] ${
               activeTab === 'config'
                 ? 'border-emerald-500 text-emerald-400 bg-emerald-500/5'
                 : 'border-transparent text-zinc-400 hover:text-white'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" />
-            <span>
-              <span className="hidden md:inline">Parâmetros de Rodada</span>
-              <span className="md:hidden">Parâmetros</span>
-            </span>
+            <Sliders className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="font-semibold">Parâmetros</span>
           </button>
         )}
       </ResponsiveTabsContainer>
@@ -789,10 +832,10 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       {/* TAB 3: ADMIN LEDGER - LIVRO CAIXA DO GRUPO */}
       {!loading && activeTab === 'ledger' && isAdmin && (
         <div className="space-y-4">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 bg-[#111815] p-3.5 rounded-xl border border-zinc-850/80 font-mono text-xs">
+          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3 bg-[#111815] p-3.5 rounded-xl border border-zinc-850/80 font-mono text-xs">
             
             {/* Search filter player */}
-            <div className="relative w-full md:w-initial md:flex-1">
+            <div className="relative w-full md:flex-1">
               <input
                 type="text"
                 value={searchPlayerQuery}
@@ -830,7 +873,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
             </div>
 
             {/* EXPORTS SELECTION */}
-            <div className="flex gap-1.5 w-full md:w-auto">
+            <div className="flex w-full md:w-auto gap-2">
               <button
                 onClick={exportToExcel}
                 className="flex-1 md:flex-initial px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 rounded-lg font-bold border border-zinc-800 text-xs flex items-center justify-center gap-1 cursor-pointer transition"
@@ -858,85 +901,187 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
               <p className="text-xs text-zinc-650 mt-1">Experimente remover os termos buscados ou reescrever as palavras.</p>
             </div>
           ) : (
-            <div className="bg-zinc-950/40 rounded-xl border border-zinc-900 overflow-hidden font-mono text-xs">
-              <div className="overflow-x-auto min-w-full">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-zinc-900/60 text-zinc-400 border-b border-zinc-850 text-[10px] uppercase">
-                      <th className="p-3">Jogador</th>
-                      <th className="p-3">Competência</th>
-                      <th className="p-3">Valor</th>
-                      <th className="p-3">Vencimento</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-center">Ações de Auditoria</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-900">
-                    {filteredLedgerBills.map((bill) => {
-                      const ply = players.find(p => p.id === bill.playerId);
-                      return (
-                        <tr key={bill.id} className="hover:bg-zinc-900/20 text-zinc-300">
-                          <td className="p-3 font-semibold text-white">
-                            <div className="flex items-center gap-2">
-                              {ply?.photoOriginal && (
-                                <img 
-                                  src={ply.photoOriginal} 
-                                  alt="atleta" 
-                                  referrerPolicy="no-referrer"
-                                  className="w-5 h-5 rounded-full object-cover flex-shrink-0" 
-                                />
-                              )}
-                              <span>{ply ? ply.name : 'Jogador Desconhecido'}</span>
+            <div id="ledger-records-container">
+              {/* MOBILE VIEWS - CARDS LAYOUT (block md:hidden) */}
+              <div className="block md:hidden space-y-3">
+                {filteredLedgerBills.map((bill) => {
+                  const ply = players.find(p => p.id === bill.playerId);
+                  return (
+                    <div 
+                      key={bill.id} 
+                      className={`bg-zinc-950/40 p-4 rounded-xl border flex flex-col gap-3 transition font-mono ${
+                        bill.status === 'pago' 
+                          ? 'border-emerald-500/10' 
+                          : 'border-rose-500/15 bg-rose-500/[0.01]'
+                      }`}
+                    >
+                      {/* Top Row: Athlete link details & Competence */}
+                      <div className="flex justify-between items-center gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {ply?.photoOriginal ? (
+                            <img 
+                              src={ply.photoOriginal} 
+                              alt="atleta" 
+                              referrerPolicy="no-referrer"
+                              className="w-6 h-6 rounded-full object-cover flex-shrink-0" 
+                            />
+                          ) : (
+                            <div className="w-6 h-6 rounded-full bg-zinc-850 flex items-center justify-center text-[10px] text-zinc-400 font-bold flex-shrink-0 font-mono">
+                              {ply ? ply.name.substring(0, 2).toUpperCase() : 'JD'}
                             </div>
-                          </td>
-                          <td className="p-3">
-                            <span className="bg-zinc-900 px-2 py-0.5 rounded border border-zinc-850 text-zinc-400 text-[10px]">
-                              {bill.competence}
-                            </span>
-                          </td>
-                          <td className="p-3 text-white font-extrabold">
+                          )}
+                          <span className="font-semibold text-white text-xs truncate">
+                            {ply ? ply.name : 'Jogador Desconhecido'}
+                          </span>
+                        </div>
+                        
+                        <span className="bg-zinc-900 px-2 py-0.5 rounded border border-zinc-850 text-zinc-400 text-[10px] flex-shrink-0">
+                          {bill.competence}
+                        </span>
+                      </div>
+
+                      {/* Info grid row: Amount & Due date */}
+                      <div className="grid grid-cols-2 gap-2 py-2 border-t border-b border-zinc-900/60 my-0.5">
+                        <div>
+                          <span className="text-[9px] text-zinc-500 uppercase block">Valor</span>
+                          <span className="text-sm font-black text-white font-mono">
                             R$ {bill.amount.toFixed(2)}
-                          </td>
-                          <td className="p-3">
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] text-zinc-500 uppercase block">Vencimento</span>
+                          <span className="text-xs text-zinc-300 font-mono">
                             {bill.dueDate.split('-').reverse().join('/')}
-                          </td>
-                          <td className="p-3">
-                            <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border ${
-                              bill.status === 'pago' 
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                                : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-                            }`}>
-                              {bill.status === 'pago' ? 'PAGO' : 'PENDENTE'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="flex items-center justify-center gap-1.5">
-                              <button
-                                onClick={() => handleTogglePaymentAdmin(bill.id)}
-                                className={`px-2 py-1 rounded font-bold text-[10px] uppercase transition cursor-pointer border ${
-                                  bill.status === 'pago'
-                                    ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black border-amber-500/20'
-                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent'
-                                }`}
-                                title={bill.status === 'pago' ? 'Marcar como Pendente' : 'Marcar como Quitado'}
-                              >
-                                {bill.status === 'pago' ? 'Estornar' : 'Efetivar Baixa'}
-                              </button>
-                              
-                              <button
-                                onClick={() => handleDeleteBill(bill.id)}
-                                className="p-1 text-zinc-500 hover:text-rose-400 transition cursor-pointer"
-                                title="Excluir cobrança permanentemente"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Bottom line: status, paidAt & actions */}
+                      <div className="flex justify-between items-center gap-2">
+                        <div>
+                          <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded border ${
+                            bill.status === 'pago' 
+                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/20' 
+                              : 'bg-rose-500/15 text-rose-400 border-rose-500/20'
+                          }`}>
+                            {bill.status === 'pago' ? 'PAGO ✅' : 'PENDENTE ⏳'}
+                          </span>
+                          {bill.status === 'pago' && bill.paidAt && (
+                            <div className="text-[8px] text-zinc-500 mt-0.5 italic">
+                              Pago: {bill.paidAt.split('T')[0].split('-').reverse().join('/')}
                             </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          )}
+                        </div>
+
+                        {/* Fast actions */}
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => handleTogglePaymentAdmin(bill.id)}
+                            className={`px-3 py-1.5 rounded font-black text-[10px] uppercase transition cursor-pointer border ${
+                              bill.status === 'pago'
+                                ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-500 hover:text-black border-amber-500/20'
+                                : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent'
+                            }`}
+                            title={bill.status === 'pago' ? 'Marcar como Pendente' : 'Marcar como Quitado'}
+                          >
+                            {bill.status === 'pago' ? 'Estornar' : 'Baixa'}
+                          </button>
+                          
+                          <button
+                            onClick={() => handleDeleteBill(bill.id)}
+                            className="p-2 bg-zinc-900 hover:bg-rose-955/40 hover:border-rose-900 border border-zinc-800 text-zinc-500 hover:text-rose-450 rounded-lg transition overflow-hidden flex items-center justify-center cursor-pointer"
+                            title="Excluir cobrança permanentemente"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* DESKTOP VIEW - TABLE LAYOUT (hidden md:block) */}
+              <div className="hidden md:block bg-zinc-950/40 rounded-xl border border-zinc-900 overflow-hidden font-mono text-xs">
+                <div className="overflow-x-auto min-w-full">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-zinc-900/60 text-zinc-400 border-b border-zinc-850 text-[10px] uppercase">
+                        <th className="p-3">Jogador</th>
+                        <th className="p-3">Competência</th>
+                        <th className="p-3">Valor</th>
+                        <th className="p-3">Vencimento</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-center">Ações de Auditoria</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900">
+                      {filteredLedgerBills.map((bill) => {
+                        const ply = players.find(p => p.id === bill.playerId);
+                        return (
+                          <tr key={bill.id} className="hover:bg-zinc-900/20 text-zinc-300 font-mono">
+                            <td className="p-3 font-semibold text-white">
+                              <div className="flex items-center gap-2">
+                                {ply?.photoOriginal && (
+                                  <img 
+                                    src={ply.photoOriginal} 
+                                    alt="atleta" 
+                                    referrerPolicy="no-referrer"
+                                    className="w-5 h-5 rounded-full object-cover flex-shrink-0" 
+                                  />
+                                )}
+                                <span>{ply ? ply.name : 'Jogador Desconhecido'}</span>
+                              </div>
+                            </td>
+                            <td className="p-3">
+                              <span className="bg-zinc-900 px-2 py-0.5 rounded border border-zinc-850 text-zinc-400 text-[10px]">
+                                {bill.competence}
+                              </span>
+                            </td>
+                            <td className="p-3 text-white font-extrabold">
+                              R$ {bill.amount.toFixed(2)}
+                            </td>
+                            <td className="p-3">
+                              {bill.dueDate.split('-').reverse().join('/')}
+                            </td>
+                            <td className="p-3">
+                              <span className={`inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border ${
+                                bill.status === 'pago' 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                              }`}>
+                                {bill.status === 'pago' ? 'PAGO' : 'PENDENTE'}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <button
+                                  onClick={() => handleTogglePaymentAdmin(bill.id)}
+                                  className={`px-2 py-1 rounded font-bold text-[10px] uppercase transition cursor-pointer border ${
+                                    bill.status === 'pago'
+                                      ? 'bg-amber-500/10 hover:bg-amber-500 text-amber-400 hover:text-black border-amber-500/20'
+                                      : 'bg-emerald-600 hover:bg-emerald-500 text-white border-transparent'
+                                  }`}
+                                  title={bill.status === 'pago' ? 'Marcar como Pendente' : 'Marcar como Quitado'}
+                                >
+                                  {bill.status === 'pago' ? 'Estornar' : 'Efetivar Baixa'}
+                                </button>
+                                
+                                <button
+                                  onClick={() => handleDeleteBill(bill.id)}
+                                  className="p-1 text-zinc-500 hover:text-rose-400 transition cursor-pointer"
+                                  title="Excluir cobrança permanentemente"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -945,37 +1090,58 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
 
       {/* TAB 4: RECURRENCE FINANCE CONFIGS (CONFIGURAR MENSALIDADE) */}
       {!loading && activeTab === 'config' && isAdmin && (
-        <div className="max-w-xl bg-[#09090b] p-5 rounded-xl border border-zinc-900 font-mono text-xs">
-          <div className="flex items-center gap-2 pb-3 mb-4 border-b border-zinc-900/60">
+        <div className="max-w-xl bg-[#09090b] p-5 rounded-xl border border-zinc-900 font-mono text-xs space-y-5 animate-fadeIn">
+          <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/60">
             <Sliders className="w-4 h-4 text-emerald-400" />
             <h3 className="font-display font-medium text-white text-sm">Parâmetros Financeiros do Grupo</h3>
           </div>
 
           {/* Status Atual do Grupo */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="grid grid-cols-3 gap-2.5">
             <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block mb-1">Mensalidade Atual</span>
-              <span className="text-base font-extrabold text-emerald-400 font-sans">
+              <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Mensalidade Atual</span>
+              <span className="text-sm font-extrabold text-emerald-400 font-sans">
                 R$ {parseFloat(financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100).toFixed(2)}
               </span>
             </div>
             <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
-              <span className="text-[10px] text-zinc-500 uppercase font-bold block mb-1">Cobrança Gerada</span>
-              <span className="text-[11px] font-bold text-zinc-300">
+              <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Cobrança Gerada</span>
+              <span className="text-[10px] font-bold text-zinc-300">
                 {(financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule) === 'ultimo_jogo' 
-                  ? 'Último Jogo do Mês' 
-                  : 'Primeiro Jogo do Mês'}
+                  ? 'Último Jogo' 
+                  : 'Primeiro Jogo'}
+              </span>
+            </div>
+            <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
+              <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Limite Mensalistas</span>
+              <span className="text-sm font-extrabold text-white font-sans">
+                {monthlyFeeLimitVal} atletas
               </span>
             </div>
           </div>
-          
-          <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40 mb-5">
+
+          {/* Indicador de Capacidade de Mensalistas */}
+          <div className="border border-zinc-900 rounded-xl p-3 flex items-center justify-between gap-3 bg-[#0d0d0f] transition">
+            <div className="flex items-center gap-2.5">
+              <Users className="w-4 h-4 text-zinc-400" />
+              <div>
+                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Mensalistas pagantes ativos</span>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-base font-extrabold font-sans text-white">
+                {activeMensalistasCount} <span className="text-zinc-600 text-xs font-normal font-sans">/ {monthlyFeeLimitVal}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40">
             <h4 className="font-display font-semibold text-white text-xs uppercase mb-3 text-emerald-400">Alterar Mensalidade / Regras</h4>
             <form onSubmit={handleSaveRecurrentFinConfig} className="space-y-4">
               
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-500 uppercase block font-bold">Novo Valor (R$)</label>
+                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Novo Valor (R$)</label>
                   <input
                     type="number"
                     name="monthlyFee"
@@ -984,33 +1150,51 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                     step="0.01"
                     defaultValue={financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100}
                     placeholder="Exemplo: 100"
-                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] text-zinc-500 uppercase block font-bold">Data de Vigência</label>
+                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Data de Vigência</label>
                   <input
                     type="date"
                     name="effectiveDate"
                     required
                     defaultValue={new Date().toISOString().split('T')[0]}
-                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500"
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
                   />
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Qtd Máxima de Mensalistas</label>
+                  <input
+                    type="number"
+                    name="maxMensalistas"
+                    required
+                    min="1"
+                    defaultValue={financeConfig?.maxMensalistas ?? recurrentConfig?.maxMensalistas ?? 12}
+                    placeholder="Exemplo: 12"
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Forma de Geração (Gatilho)</label>
+                  <select
+                    name="chargeDateRule"
+                    defaultValue={financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule ?? 'primeiro_jogo'}
+                    className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none cursor-pointer font-sans"
+                  >
+                    <option value="primeiro_jogo">No Primeiro Jogo do Mês</option>
+                    <option value="ultimo_jogo">No Último Jogo do Mês</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="space-y-1">
-                <label className="text-[10px] text-zinc-500 uppercase block font-bold">Forma de Geração (Gatilho de Rodada)</label>
-                <select
-                  name="chargeDateRule"
-                  defaultValue={financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule ?? 'primeiro_jogo'}
-                  className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none cursor-pointer"
-                >
-                  <option value="primeiro_jogo">No Primeiro Jogo do Mês</option>
-                  <option value="ultimo_jogo">No Último Jogo do Mês</option>
-                </select>
-                <span className="text-[9px] text-zinc-650 mt-1 block leading-normal">
+                <span className="text-[9px] text-zinc-650 mt-1 block leading-normal leading-relaxed">
                   As parcelas dos mensalistas serão geradas de forma prospectiva quando os rachas ocorrerem. Alterações de valor não afetam cobranças já geradas em meses anteriores.
                 </span>
               </div>
@@ -1018,7 +1202,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
               <button
                 type="submit"
                 disabled={actionLoading}
-                className="w-full bg-[#10b981] hover:bg-emerald-500 disabled:opacity-40 text-zinc-950 font-extrabold rounded-lg py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer"
+                className="w-full bg-[#10b981] hover:bg-emerald-500 disabled:opacity-40 text-zinc-950 font-extrabold rounded-lg py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer font-mono"
               >
                 {actionLoading ? 'Processando...' : 'Aplicar Reajuste / Salvar Parâmetros'}
               </button>

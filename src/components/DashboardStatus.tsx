@@ -1,12 +1,92 @@
 import React, { useState, useEffect } from 'react';
-import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS } from '../types';
+import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS, Player } from '../types';
 import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
 import { 
   Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check, 
   Users, Users2, Shield, Sparkles, X, ChevronDown, ChevronUp, BellRing,
   CheckCircle2, AlertTriangle, ArrowDownAZ, VolumeX, Flame, Gift, Compass, Settings,
-  Baby, User as UserIcon, Share2
+  Baby, User as UserIcon, Share2, Crown
 } from 'lucide-react';
+
+const getAbbreviation = (pos: string) => {
+  switch (pos) {
+    case 'goleiro': return 'GK';
+    case 'zagueiro': return 'ZAG';
+    case 'lateral': return 'LAT';
+    case 'meio_campo': return 'MEI';
+    case 'volante': return 'VOL';
+    case 'atacante': return 'ATA';
+    default: return pos.toUpperCase().slice(0, 3);
+  }
+};
+
+function computeTacticalAssignments(playersList: Player[]): Record<string, { position: string; isAdapted: boolean }> {
+  const positions = ['goleiro', 'zagueiro', 'lateral', 'meio_campo', 'volante', 'atacante'];
+  const bestAssignment: Record<string, string> = {};
+  let bestScore = -Infinity;
+
+  function backtrack(playerIndex: number, currentAssigned: Record<string, string>, usedPositionsCount: Record<string, number>) {
+    if (playerIndex === playersList.length) {
+      let score = 0;
+      const uniquePositions = new Set<string>();
+
+      for (const p of playersList) {
+        const assigned = currentAssigned[p.id];
+        uniquePositions.add(assigned);
+
+        if (assigned === p.primaryPosition) {
+          score += 10;
+        } else if (p.secondaryPositions && p.secondaryPositions.includes(assigned as any)) {
+          score += 6;
+        } else if (assigned === 'goleiro') {
+          score -= 50;
+        } else {
+          score += 1;
+        }
+      }
+
+      score += uniquePositions.size * 5;
+
+      if (score > bestScore) {
+        bestScore = score;
+        for (const p of playersList) {
+          bestAssignment[p.id] = currentAssigned[p.id];
+        }
+      }
+      return;
+    }
+
+    const player = playersList[playerIndex];
+    let candidatePositions = [...positions];
+    if (player.primaryPosition !== 'goleiro' && (!player.secondaryPositions || !player.secondaryPositions.includes('goleiro'))) {
+      candidatePositions = candidatePositions.filter(pos => pos !== 'goleiro');
+    }
+
+    for (const pos of candidatePositions) {
+      currentAssigned[player.id] = pos;
+      usedPositionsCount[pos] = (usedPositionsCount[pos] || 0) + 1;
+
+      backtrack(playerIndex + 1, currentAssigned, usedPositionsCount);
+
+      usedPositionsCount[pos]--;
+      delete currentAssigned[player.id];
+    }
+  }
+
+  if (playersList.length > 0) {
+    backtrack(0, {}, {});
+  }
+
+  const result: Record<string, { position: string; isAdapted: boolean }> = {};
+  for (const p of playersList) {
+    const pos = bestAssignment[p.id] || p.primaryPosition;
+    result[p.id] = {
+      position: pos,
+      isAdapted: pos !== p.primaryPosition
+    };
+  }
+  return result;
+}
 
 interface DashboardStatusProps {
   currentUser: User;
@@ -57,6 +137,7 @@ export default function DashboardStatus({
   const [winsBlueInput, setWinsBlueInput] = useState<string>('0');
   const [winsRedInput, setWinsRedInput] = useState<string>('0');
   const [winsGreenInput, setWinsGreenInput] = useState<string>('0');
+  const [showDashboardPlacarModal, setShowDashboardPlacarModal] = useState(false);
 
   // Financial Stats
   const [finData, setFinData] = useState<any>(null);
@@ -133,34 +214,96 @@ export default function DashboardStatus({
 
       if (matches && matches.length > 0) {
         // Find most recent scheduled or active match (closest to today)
-        const activeMatches = matches.filter((m: any) => ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status));
+        const activeMatches = matches.filter((m: any) => 
+          ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status) &&
+          m.lifecycleState !== 'ARCHIVED' &&
+          m.lifecycleState !== 'MATCH_FINISHED'
+        );
         // Since matches is sorted by date ascending, the first active match is the closest to today chronologically
-        const targetMatch = activeMatches.length > 0 ? activeMatches[0] : matches[matches.length - 1];
+        const targetMatch = activeMatches.length > 0 ? activeMatches[0] : null;
         
         setNextMatch(targetMatch);
 
-        // Fetch draw details if match status is 'sorteada'
-        if (targetMatch && targetMatch.status === 'sorteada') {
+        // Fetch draw details if match exists (unconditionally, to verify if there's any active draw)
+        if (targetMatch) {
           try {
             const drawRes = await fetch(`/api/matches/${targetMatch.id}/draw`);
             if (drawRes.ok) {
               const drawDetails = await drawRes.json();
               setMatchDraw(drawDetails);
+            } else {
+              setMatchDraw(null);
             }
           } catch (err) {
             console.error('Falha ao ler sorteio no dashboard:', err);
+            setMatchDraw(null);
           }
         } else {
           setMatchDraw(null);
         }
 
-        // Fetch presences for this match
-        const presRes = await fetch(`/api/matches/${targetMatch.id}/presences`);
-        if (presRes.ok) {
-          const presData = await presRes.json();
-          setPresences(presData.presences || []);
+        // Fetch presences for this match if there's an active targetMatch
+        if (targetMatch) {
+          const presRes = await fetch(`/api/matches/${targetMatch.id}/presences`);
+          if (presRes.ok) {
+            const presData = await presRes.json();
+            setPresences(presData.presences || []);
+            
+            // Audit athlete link 
+            let linkedAthleteCategory = 'reserva';
+            let linkedPlayerId = currentUser.playerId || null;
+            try {
+              const playersRes = await fetch('/api/players');
+              if (playersRes.ok) {
+                const playersList = await playersRes.json();
+                setPlayers(playersList || []);
+                const matchingPlayer = playersList.find((p: any) => {
+                  if (currentUser.playerId && p.id === currentUser.playerId) return true;
+                  if (p.email && currentUser.email && p.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) return true;
+                  return false;
+                });
+                if (matchingPlayer) {
+                  // If the user matches an active athlete profile
+                  linkedAthleteCategory = matchingPlayer.category; // e.g. 'mensalista'
+                  linkedPlayerId = matchingPlayer.id;
+                } else {
+                  // If they are an administrator with NO linked athlete profile, default to 'mensalista' to let them interact as non-reserva
+                  if (currentUser.role === 'admin' || currentUser.role === 'auxiliar') {
+                    linkedAthleteCategory = 'mensalista';
+                  }
+                }
+              }
+            } catch (pErr) {
+              console.error('Erro ao verificar vinculo de atleta:', pErr);
+            }
+
+            setResolvedPlayerId(linkedPlayerId);
+            setCurrentUserCategory(linkedAthleteCategory);
+
+            // Find current user's presence
+            const myPresRecord = (presData.presences || []).find((pr: any) => {
+              if (linkedPlayerId && pr.playerId === linkedPlayerId) {
+                return true;
+              }
+              if (pr.email && currentUser.email && pr.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
+                return true;
+              }
+              if (pr.playerId === currentUser.id) {
+                return true;
+              }
+              return false;
+            });
+            if (myPresRecord) {
+              setMyPresence(myPresRecord.presenceStatus);
+            } else {
+              setMyPresence('nao_confirmado');
+            }
+          }
+        } else {
+          // No next match active - default state
+          setPresences([]);
+          setMyPresence('nao_confirmado');
           
-          // Audit athlete link 
           let linkedAthleteCategory = 'reserva';
           let linkedPlayerId = currentUser.playerId || null;
           try {
@@ -174,11 +317,9 @@ export default function DashboardStatus({
                 return false;
               });
               if (matchingPlayer) {
-                // If the user matches an active athlete profile
-                linkedAthleteCategory = matchingPlayer.category; // e.g. 'mensalista' or 'mensalista_goleiro'
+                linkedAthleteCategory = matchingPlayer.category;
                 linkedPlayerId = matchingPlayer.id;
               } else {
-                // If they are an administrator with NO linked athlete profile, default to 'mensalista' to let them interact as non-reserva
                 if (currentUser.role === 'admin' || currentUser.role === 'auxiliar') {
                   linkedAthleteCategory = 'mensalista';
                 }
@@ -190,25 +331,6 @@ export default function DashboardStatus({
 
           setResolvedPlayerId(linkedPlayerId);
           setCurrentUserCategory(linkedAthleteCategory);
-
-          // Find current user's presence
-          const myPresRecord = (presData.presences || []).find((pr: any) => {
-            if (linkedPlayerId && pr.playerId === linkedPlayerId) {
-              return true;
-            }
-            if (pr.email && currentUser.email && pr.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim()) {
-              return true;
-            }
-            if (pr.playerId === currentUser.id) {
-              return true;
-            }
-            return false;
-          });
-          if (myPresRecord) {
-            setMyPresence(myPresRecord.presenceStatus);
-          } else {
-            setMyPresence('nao_confirmado');
-          }
         }
       } else {
         setNextMatch(null);
@@ -894,7 +1016,7 @@ export default function DashboardStatus({
   const handleConfirmMensalistasInBulk = async () => {
     if (!nextMatch) return;
     const pendingMensalistas = presences.filter(p => {
-      const isMensalista = p.category === 'mensalista' || p.category === 'mensalista_goleiro';
+      const isMensalista = p.category === 'mensalista';
       return isMensalista && p.presenceStatus === 'nao_confirmado';
     });
     const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
@@ -1169,6 +1291,88 @@ export default function DashboardStatus({
 
   const hasAdminPendencies = adminPendenciesList.length > 0;
 
+  const getAllStarTeam = () => {
+    const individualStats = stats?.individual || [];
+    if (individualStats.length === 0) return [];
+
+    const selected: any[] = [];
+    const usedIds = new Set<string>();
+
+    const findBestFor = (posGroup: string[], label: string) => {
+      const found = individualStats.find((p: any) => 
+        !usedIds.has(p.playerId) && 
+        posGroup.includes(p.primaryPosition || '') &&
+        p.presences > 0
+      );
+      if (found) {
+        usedIds.add(found.playerId);
+        selected.push({ ...found, slotLabel: label });
+        return true;
+      }
+      return false;
+    };
+
+    // 1. GK
+    findBestFor(['goleiro'], 'GK');
+    // 2. ZAG
+    findBestFor(['zagueiro', 'lateral'], 'ZAG');
+    // 3. VOL
+    findBestFor(['volante'], 'VOL');
+    // 4. MEI
+    findBestFor(['meio_campo'], 'MEI');
+    // 5. ATA
+    findBestFor(['atacante'], 'ATA');
+
+    // Fill remaining if needed
+    const slots = ['GK', 'ZAG', 'VOL', 'MEI', 'ATA'];
+    const filledSlots = selected.map(s => s.slotLabel);
+    const missingSlots = slots.filter(s => !filledSlots.includes(s));
+
+    for (const slot of missingSlots) {
+      const leftover = individualStats.find((p: any) => !usedIds.has(p.playerId) && p.presences > 0);
+      if (leftover) {
+        usedIds.add(leftover.playerId);
+        selected.push({ ...leftover, slotLabel: slot });
+      }
+    }
+
+    // In case still under 5, load any available
+    if (selected.length < 5) {
+      for (const slot of slots) {
+        if (!selected.some(s => s.slotLabel === slot)) {
+          const anyLeftover = individualStats.find((p: any) => !usedIds.has(p.playerId));
+          if (anyLeftover) {
+            usedIds.add(anyLeftover.playerId);
+            selected.push({ ...anyLeftover, slotLabel: slot });
+          }
+        }
+      }
+    }
+
+    const order = { 'GK': 1, 'ZAG': 2, 'VOL': 3, 'MEI': 4, 'ATA': 5 };
+    return selected.sort((a, b) => (order[a.slotLabel as keyof typeof order] || 99) - (order[b.slotLabel as keyof typeof order] || 99));
+  };
+
+  const allStarTeam = getAllStarTeam();
+
+  const getBestKeeper = () => {
+    const individualStats = stats?.individual || [];
+    if (individualStats.length === 0) return null;
+    const keepers = individualStats.filter((p: any) => p.primaryPosition === 'goleiro' && p.presences > 0);
+    if (keepers.length === 0) return null;
+    return [...keepers].sort((a: any, b: any) => {
+      if (b.aproveitamento !== a.aproveitamento) {
+        return b.aproveitamento - a.aproveitamento;
+      }
+      if (b.presences !== a.presences) {
+        return b.presences - a.presences;
+      }
+      return b.maxStreak - a.maxStreak;
+    })[0];
+  };
+
+  const bestKeeper = getBestKeeper();
+
   return (
     <div className="flex flex-col gap-6 animate-fadeIn" id="dashboard-status-wrapper">
 
@@ -1351,8 +1555,8 @@ export default function DashboardStatus({
 
           {nextMatch.status === 'sorteada' && (
             <div className="space-y-2.5">
-              <p className="text-sky-450 text-[11px] leading-relaxed font-semibold">
-                ✔ Sorteio realizado de forma balanceada!
+              <p className="text-zinc-300 text-[11px] leading-relaxed">
+                Sorteio realizado. Os times podem ser ajustados manualmente até o início da partida.
               </p>
               <div className="flex gap-2">
                 <button
@@ -1360,18 +1564,22 @@ export default function DashboardStatus({
                   onClick={() => {
                     window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
                   }}
-                  className="flex-1 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 hover:text-white text-zinc-400 font-bold py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer"
+                  className="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
                 >
-                  Ver Times
+                  Gerenciar Times
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'calendar' }));
+                    setWinsBlueInput('0');
+                    setWinsRedInput('0');
+                    setWinsGreenInput('0');
+                    setShowDashboardPlacarModal(true);
                   }}
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-1.5"
                 >
-                  Gravar Placar
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>Gravar Placar</span>
                 </button>
               </div>
             </div>
@@ -1419,7 +1627,7 @@ export default function DashboardStatus({
       )}
 
       {/* Admin Reserve Queue substitution prompts */}
-      {reserveAlerts.length > 0 && (currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
+      {reserveAlerts.length > 0 && nextMatch?.status !== 'sorteada' && (currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
         <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 animate-pulse order-4">
           <div className="flex items-center gap-2 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider">
             <BellRing className="w-4 h-4 animate-bounce text-amber-400" />
@@ -1801,8 +2009,190 @@ export default function DashboardStatus({
       ) : nextMatch ? (
         <div className="flex flex-col gap-6 order-3 w-full">
           
-          {/* Próximo Racha Panel */}
-          <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 space-y-4 flex flex-col justify-between shadow-lg">
+          {matchDraw && matchDraw.teams ? (
+            /* Simplified Próxima Rodada Card (Sorteio realizado) */
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-4 space-y-3 flex flex-col justify-between shadow-lg">
+              <div className="space-y-3">
+                
+                <div className="flex flex-col gap-1 pb-2 border-b border-zinc-900/40">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <Calendar className="w-4 h-4 text-sky-400" />
+                      <h3 className="font-display font-extrabold text-white text-xs uppercase tracking-wide">
+                        Próxima Rodada
+                      </h3>
+                    </div>
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase bg-sky-500/15 border-sky-500/30 text-sky-400 font-extrabold">
+                      SORTEIO REALIZADO
+                    </span>
+                  </div>
+                </div>
+
+                {/* Simplified Info Grid */}
+                <div className="space-y-2.5 bg-zinc-950/60 border border-zinc-900/60 p-3 rounded-lg">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-0.5">
+                      <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Data</span>
+                      <span className="text-xs font-semibold text-white flex items-center gap-1 font-mono">
+                        <Calendar className="w-3 h-3 text-sky-400" />
+                        {nextMatch.date.split('-').reverse().join('/')}
+                      </span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Horário</span>
+                      <span className="text-xs font-semibold text-white flex items-center gap-1 font-mono">
+                        <Clock className="w-3 h-3 text-sky-400" />
+                        {nextMatch.time} ({nextMatch.durationMinutes || 120} min)
+                      </span>
+                    </div>
+                    <div className="space-y-0.5 sm:col-span-2">
+                      <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Local</span>
+                      <span className="text-xs font-semibold text-white flex items-center gap-1 font-mono">
+                        <MapPin className="w-3 h-3 text-sky-400 block flex-shrink-0" />
+                        <span className="truncate">{nextMatch.location}</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Sport-inspired soccer tactic boards */}
+                  {matchDraw && matchDraw.teams && (
+                    <div className="pt-1.5 space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider font-mono">
+                          Visualização Tática das Equipes
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+                        {matchDraw.teams.map((team: any) => {
+                          const teamPlayers = team.playerIds
+                            .map((pid: string) => players.find(p => p.id === pid))
+                            .filter(Boolean);
+
+                          const teamOverall = team.name === 'Azul'
+                            ? matchDraw.overallBlue
+                            : team.name === 'Vermelho'
+                              ? matchDraw.overallRed
+                              : matchDraw.overallGreen;
+
+                          const themeStyles = team.name === 'Azul'
+                            ? {
+                                border: 'border-sky-500/20',
+                                header: 'bg-sky-500/10 text-sky-400 border-sky-500/25',
+                                pitchBg: 'from-sky-950/20 via-zinc-950 to-sky-950/20',
+                                pitchLines: 'border-sky-500/10'
+                              }
+                            : team.name === 'Vermelho'
+                              ? {
+                                  border: 'border-red-500/20',
+                                  header: 'bg-red-500/10 text-red-400 border-red-500/25',
+                                  pitchBg: 'from-red-950/20 via-zinc-950 to-red-950/20',
+                                  pitchLines: 'border-red-500/10'
+                                }
+                              : {
+                                  border: 'border-emerald-500/20',
+                                  header: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25',
+                                  pitchBg: 'from-emerald-950/20 via-zinc-950 to-emerald-950/20',
+                                  pitchLines: 'border-emerald-500/10'
+                                };
+
+                          // Calculate tactical assignments
+                          const assignments = computeTacticalAssignments(teamPlayers);
+
+                          // Group into the vertical tiers of the football field
+                          const gks = teamPlayers.filter(p => assignments[p.id]?.position === 'goleiro');
+                          const defs = teamPlayers.filter(p => ['zagueiro', 'lateral'].includes(assignments[p.id]?.position));
+                          const mids = teamPlayers.filter(p => ['volante', 'meio_campo'].includes(assignments[p.id]?.position));
+                          const atts = teamPlayers.filter(p => assignments[p.id]?.position === 'atacante');
+
+                          const renderPlayerToken = (p: any) => {
+                            const assignment = assignments[p.id] || { position: p.primaryPosition, isAdapted: false };
+                            const isCap = team.captainPlayerId === p.id;
+
+                            return (
+                              <div key={p.id} className="flex flex-col items-center gap-0.5 group select-none relative w-12">
+                                <div className="relative">
+                                  <img 
+                                    src={p.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50'} 
+                                    referrerPolicy="no-referrer"
+                                    className={`w-6.5 h-6.5 rounded-full object-cover border shadow transition-transform group-hover:scale-105 ${
+                                      isCap 
+                                        ? 'border-amber-400 ring-1 ring-amber-400/20' 
+                                        : 'border-zinc-500'
+                                    }`} 
+                                  />
+                                  {isCap && (
+                                    <div className="absolute -top-1 -right-1 bg-amber-500 text-black rounded-full p-0.5 shadow">
+                                      <Crown className="w-1.5 h-1.5 fill-black" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="text-center w-full">
+                                  <p className="text-[8px] font-black text-white tracking-tight drop-shadow-[0_1px_1px_rgba(0,0,0,0.85)] leading-none truncate w-full">
+                                    {p.name.split(' ')[0].slice(0, 10)}
+                                  </p>
+                                  <span className="text-[6.5px] font-mono uppercase bg-black/60 px-0.5 py-0.1 rounded text-zinc-400 border border-zinc-800 leading-none font-bold mt-0.5 inline-block">
+                                    {getAbbreviation(assignment.position)}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          };
+
+                          return (
+                            <div key={team.name} className={`flex flex-col rounded-lg border p-1.5 bg-zinc-950/40 relative shadow-sm transition hover:border-zinc-800 ${themeStyles.border}`}>
+                              {/* Header team panel */}
+                              <div className={`px-1.5 py-0.5 rounded border text-[9.5px] font-black uppercase tracking-wider flex items-center justify-between mb-1.5 ${themeStyles.header}`}>
+                                <div className="flex items-center gap-1">
+                                  <span>Time {team.name}</span>
+                                  <span className="text-[7.5px] font-mono font-medium text-zinc-400">({teamPlayers.length})</span>
+                                </div>
+                                {teamOverall && (
+                                  <span className="font-mono text-[9px]">★ {teamOverall.toFixed(1)}</span>
+                                )}
+                              </div>
+
+                              {/* Soccer Field Viewport - Fixed height of 170px to shrink vertical space by 45% */}
+                              <div className={`relative w-full h-[170px] bg-gradient-to-b ${themeStyles.pitchBg} border border-zinc-950 rounded-lg overflow-hidden p-1 flex flex-col justify-between shadow-[inset_0_1.5px_4px_rgba(0,0,0,0.85)]`}>
+                                {/* Field Lines */}
+                                <div className={`absolute inset-1 border ${themeStyles.pitchLines} pointer-events-none rounded`} />
+                                <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full border ${themeStyles.pitchLines} pointer-events-none`} />
+                                <div className={`absolute top-1/2 left-1 right-1 h-[1px] bg-zinc-800/15 pointer-events-none`} />
+                                <div className={`absolute top-1 left-1/4 right-1/4 h-7 border-b border-x ${themeStyles.pitchLines} pointer-events-none`} />
+                                <div className={`absolute bottom-1 left-1/4 right-1/4 h-7 border-t border-x ${themeStyles.pitchLines} pointer-events-none`} />
+
+                                {/* Row 4: ATT (Top) */}
+                                <div className="flex justify-around items-center z-10 min-h-[30px] h-[34px]">
+                                  {atts.length > 0 ? atts.map(renderPlayerToken) : <div className="w-1" />}
+                                </div>
+
+                                {/* Row 3: MID (Middle-upper) */}
+                                <div className="flex justify-around items-center z-10 min-h-[30px] h-[34px]">
+                                  {mids.length > 0 ? mids.map(renderPlayerToken) : <div className="w-1" />}
+                                </div>
+
+                                {/* Row 2: DEF (Middle-lower) */}
+                                <div className="flex justify-around items-center z-10 min-h-[30px] h-[34px]">
+                                  {defs.length > 0 ? defs.map(renderPlayerToken) : <div className="w-1" />}
+                                </div>
+
+                                {/* Row 1: GK (Bottom) */}
+                                <div className="flex justify-around items-center z-10 min-h-[30px] h-[34px]">
+                                  {gks.length > 0 ? gks.map(renderPlayerToken) : <div className="text-[7px] font-mono text-zinc-650 uppercase select-none tracking-wider font-bold">Sem GK</div>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Próximo Racha Panel */
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 space-y-4 flex flex-col justify-between shadow-lg">
             <div className="space-y-3.5">
               
               <div className="flex flex-col gap-1.5 pb-3 border-b border-zinc-900/40">
@@ -1834,7 +2224,7 @@ export default function DashboardStatus({
                      nextMatch.status === 'confirmando' ? 'CONFIRMAÇÕES ABERTAS' :
                      nextMatch.status === 'aguardando_reservas' ? 'AGUARDANDO RESERVAS' :
                      nextMatch.status === 'fechada' ? 'FECHADA' :
-                     nextMatch.status === 'sorteada' ? 'SORTEADA' :
+                     nextMatch.status === 'sorteada' ? 'SORTEIO REALIZADO' :
                      nextMatch.status === 'encerrada' ? 'FINALIZADA' :
                      nextMatch.status === 'cancelada' ? 'CANCELADA' : nextMatch.status}
                   </span>
@@ -1972,7 +2362,7 @@ export default function DashboardStatus({
                           {myPresence === 'confirmado' ? 'Confirmado' : myPresence === 'cancelado' ? 'Não Participará' : 'Pendente'}
                         </span>
                       </div>
-                      {nextMatch.status === 'confirmando' && (currentUserCategory === 'mensalista' || currentUserCategory === 'mensalista_goleiro') && (
+                      {nextMatch.status === 'confirmando' && (currentUserCategory === 'mensalista') && (
                         <div className="text-[10.5px] text-emerald-400/90 text-center font-sans font-semibold pt-1.5 border-t border-zinc-900/60">
                           Sua confirmação está disponível.
                         </div>
@@ -2270,13 +2660,14 @@ export default function DashboardStatus({
 
             </div>
           </div>
+          )}
         </div>
       ) : (
         <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-8 text-center space-y-4 shadow-xl order-3">
           <Calendar className="w-10 h-10 text-zinc-600 mx-auto" />
-          <h3 className="text-white font-display font-extrabold text-sm uppercase">Nenhuma Partida Agendada</h3>
+          <h3 className="text-white font-display font-extrabold text-sm uppercase">Nenhum racha ativo no momento</h3>
           <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
-            Não existem rodadas agendadas para a temporada ativa no momento. O administrador precisa gerar as partidas recorrentes ou criar uma rodada manualmente.
+            Agende uma nova rodada para iniciar o próximo ciclo.
           </p>
           {(currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
             <div className="pt-2 text-zinc-500 text-[11px] font-mono leading-relaxed">
@@ -2356,7 +2747,7 @@ export default function DashboardStatus({
 
         {/* Coluna Direita: Mural Destaque da Temporada */}
         <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 flex flex-col justify-between space-y-4 shadow-lg">
-          <div className="flex flex-col h-full justify-between space-y-3.5">
+          <div className="flex flex-col h-full justify-between space-y-4">
             <div>
               <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/40">
                 <Trophy className="w-5 h-5 text-amber-500 animate-pulse" />
@@ -2369,97 +2760,132 @@ export default function DashboardStatus({
               </p>
             </div>
 
-            {/* Compact grid of subset */}
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-              {/* 1. ÚLTIMO CAMPEÃO */}
-              <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[105px]">
-                <div>
-                  <span className="text-[11px] text-[#22c55e] uppercase tracking-wider font-extrabold block">🏆 Campeão</span>
-                  <h4 className="text-white text-[12px] font-black mt-0.5 uppercase truncate">
-                    {latestResult ? `Time ${latestResult.champions.join('/')}` : 'Sem dados'}
-                  </h4>
+            <div className="flex flex-col gap-4">
+              {/* 1. ALL-STAR TEAM DA TEMPORADA */}
+              <div className="w-full bg-[#0e1411]/60 border border-emerald-900/30 rounded-xl p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between border-b border-emerald-950/40 pb-1.5">
+                  <span className="text-[11px] text-amber-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                    ⭐ ALL-STAR TEAM DA TEMPORADA
+                  </span>
+                  <span className="text-[9px] text-zinc-500 font-sans font-bold">TOP 5 PERFORMANCE</span>
                 </div>
-                {latestResult ? (
-                  <div className="text-[11px] text-zinc-400 mt-1 leading-tight font-sans">
-                    🔵{latestResult.winsBlue} 🔴{latestResult.textRed || latestResult.winsRed} 🟢{latestResult.textGreen || latestResult.winsGreen}
+                {allStarTeam.length > 0 ? (
+                  <div className="space-y-1.5">
+                    {allStarTeam.map((p: any) => (
+                      <div key={p.playerId} className="flex justify-between items-center text-[11px]">
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="text-amber-400 font-extrabold w-8 text-left bg-zinc-900/50 px-1 py-0.5 rounded text-[10px] text-center border border-zinc-850">
+                            {p.slotLabel}
+                          </span>
+                          <span className="text-white font-sans font-extrabold truncate max-w-[130px] sm:max-w-[180px]">
+                            {p.name}
+                          </span>
+                        </div>
+                        <span className="text-emerald-400 font-extrabold font-mono">
+                          {p.vitorias}V ({p.aproveitamento}%)
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <span className="text-[11px] text-zinc-550 font-sans">Aguardando racha...</span>
+                  <div className="text-center italic text-zinc-550 font-sans py-2 text-[11px]">
+                    Dados insuficientes para cálculo do All-Star.
+                  </div>
                 )}
               </div>
 
-              {/* 2. MELHOR DUPLA */}
-              <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[105px]">
-                <div>
-                  <span className="text-[11px] text-[#38bdf8] uppercase tracking-wider font-extrabold block">👥 Duo</span>
-                  <h4 className="text-white text-[12px] font-bold mt-0.5 truncate">
-                    {stats && stats.duos && stats.duos.length > 0 
-                      ? `${stats.duos[0].playerAName.split(' ')[0]} + ${stats.duos[0].playerBName.split(' ')[0]}` 
-                      : 'Sem dados'}
-                  </h4>
+              {/* 2. TOP 5 ATLETAS */}
+              <div className="w-full bg-zinc-950/60 border border-zinc-900 rounded-lg p-3.5 font-mono">
+                <span className="text-[11px] text-amber-400 uppercase tracking-wider font-extrabold block mb-1.5">⭐ TOP 5 ATLETAS (VITÓRIAS)</span>
+                <div className="space-y-1">
+                  {stats && stats.individual && stats.individual.length > 0 ? (
+                    stats.individual.slice(0, 5).map((p: any, idx: number) => (
+                      <div key={p.playerId} className="flex justify-between items-center text-[11px] text-zinc-300">
+                        <span className="truncate max-w-[140px] font-sans">{idx + 1}. {p.name}</span>
+                        <span className="text-emerald-400 font-extrabold">{p.vitorias}V ({p.aproveitamento}%)</span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[11px] text-zinc-550 italic font-sans py-1 text-center font-bold">Nenhum atleta registrado.</p>
+                  )}
                 </div>
-                {stats && stats.duos && stats.duos.length > 0 ? (
-                  <div className="text-[11px] text-zinc-400 mt-1 leading-tight">
-                    💪 {stats.duos[0].winsCount}V ({Math.round(stats.duos[0].aproveitamento * 100)}%)
-                  </div>
-                ) : (
-                  <span className="text-[11px] text-zinc-550 font-sans">Sem dados...</span>
-                )}
               </div>
 
-              {/* 3. MELHOR TRIO */}
-              <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[105px]">
-                <div>
-                  <span className="text-[11px] text-purple-400 uppercase tracking-wider font-extrabold block">🚀 Trio</span>
-                  <h4 className="text-white text-[12px] font-bold mt-0.5 truncate">
-                    {stats && stats.trios && stats.trios.length > 0 
-                      ? `${stats.trios[0].playerAName.split(' ')[0]} + ...` 
-                      : 'Sem dados'}
-                  </h4>
-                </div>
-                {stats && stats.trios && stats.trios.length > 0 ? (
-                  <div className="text-[11px] text-zinc-400 mt-1 leading-tight">
-                    🔥 {stats.trios[0].winsCount}V ({Math.round(stats.trios[0].aproveitamento * 100)}%)
+              {/* 3. TERCEIRA LINHA - GRADE DE KPIs (4 cards menores idênticos) */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 text-[11px] font-mono">
+                {/* Duo */}
+                <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[110px] h-full">
+                  <div>
+                    <span className="text-[11px] text-[#38bdf8] uppercase tracking-wider font-extrabold block">🤝 Duo</span>
+                    <h4 className="text-white text-[11px] font-bold mt-0.5 truncate leading-tight">
+                      {stats && stats.duos && stats.duos.length > 0 
+                        ? `${stats.duos[0].playerAName.split(' ')[0]} + ${stats.duos[0].playerBName.split(' ')[0]}` 
+                        : 'Sem dados'}
+                    </h4>
                   </div>
-                ) : (
-                  <span className="text-[11px] text-zinc-550 font-sans">Sem dados...</span>
-                )}
-              </div>
-
-              {/* 4. LENDA DAS SEQUÊNCIAS */}
-              <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[105px]">
-                <div>
-                  <span className="text-[11px] text-[#a855f7] uppercase tracking-wider font-extrabold block">👑 Sequência</span>
-                  <h4 className="text-white text-[12px] font-bold mt-0.5 truncate">
-                    {streakRecordHolder && streakRecordHolder.maxStreak > 0 
-                      ? streakRecordHolder.name.split(' ')[0] 
-                      : 'Sem dados'}
-                  </h4>
-                </div>
-                {streakRecordHolder && streakRecordHolder.maxStreak > 0 ? (
-                  <div className="text-[11px] text-zinc-400 mt-1 leading-tight">
-                    🔥 Recorde: {streakRecordHolder.maxStreak}V
-                  </div>
-                ) : (
-                  <span className="text-[11px] text-zinc-550 font-sans">Sem dados...</span>
-                )}
-              </div>
-            </div>
-
-            {/* 5. TOP 5 ATLETAS */}
-            <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3.5 font-mono">
-              <span className="text-[11px] text-amber-400 uppercase tracking-wider font-extrabold block mb-1.5">⭐ Top 5 Atletas (Vitórias)</span>
-              <div className="space-y-1">
-                {stats && stats.individual && stats.individual.length > 0 ? (
-                  stats.individual.slice(0, 5).map((p: any, idx: number) => (
-                    <div key={p.playerId} className="flex justify-between items-center text-[11px] text-zinc-300">
-                      <span className="truncate max-w-[140px] font-sans">{idx + 1}. {p.name}</span>
-                      <span className="text-emerald-400 font-extrabold">{p.vitorias}V ({Math.round(p.aproveitamento * 100)}%)</span>
+                  {stats && stats.duos && stats.duos.length > 0 ? (
+                    <div className="text-[10px] text-zinc-400 mt-1 leading-tight font-sans">
+                      💪 {stats.duos[0].wonTogether || stats.duos[0].winsCount || 0}V ({stats.duos[0].aproveitamento}%)
                     </div>
-                  ))
-                ) : (
-                  <p className="text-[11px] text-zinc-550 italic font-sans py-1 text-center font-bold">Nenhum atleta registrado.</p>
-                )}
+                  ) : (
+                    <span className="text-[10px] text-zinc-550 font-sans">Sem dados...</span>
+                  )}
+                </div>
+
+                {/* Trio */}
+                <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[110px] h-full">
+                  <div>
+                    <span className="text-[11px] text-purple-400 uppercase tracking-wider font-extrabold block">🚀 Trio</span>
+                    <h4 className="text-white text-[11px] font-bold mt-0.5 truncate leading-tight">
+                      {stats && stats.trios && stats.trios.length > 0 
+                        ? `${stats.trios[0].playerAName.split(' ')[0]} + ...` 
+                        : 'Sem dados'}
+                    </h4>
+                  </div>
+                  {stats && stats.trios && stats.trios.length > 0 ? (
+                    <div className="text-[10px] text-zinc-400 mt-1 leading-tight font-sans">
+                      🔥 {stats.trios[0].wonTogether || stats.trios[0].winsCount || 0}V ({stats.trios[0].aproveitamento}%)
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-zinc-550 font-sans">Sem dados...</span>
+                  )}
+                </div>
+
+                {/* Sequência */}
+                <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[110px] h-full">
+                  <div>
+                    <span className="text-[11px] text-[#a855f7] uppercase tracking-wider font-extrabold block">👑 Sequência</span>
+                    <h4 className="text-white text-[11px] font-bold mt-0.5 truncate leading-tight">
+                      {streakRecordHolder && streakRecordHolder.maxStreak > 0 
+                        ? streakRecordHolder.name.split(' ')[0] 
+                        : 'Sem dados'}
+                    </h4>
+                  </div>
+                  {streakRecordHolder && streakRecordHolder.maxStreak > 0 ? (
+                    <div className="text-[10px] text-zinc-400 mt-1 leading-tight font-sans">
+                      🔥 Recorde: {streakRecordHolder.maxStreak}V
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-zinc-550 font-sans">Sem dados...</span>
+                  )}
+                </div>
+
+                {/* Goleiro Destaque */}
+                <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[110px] h-full">
+                  <div>
+                    <span className="text-[11px] text-rose-400 uppercase tracking-wider font-extrabold block">🧤 Goleiro</span>
+                    <h4 className="text-white text-[11px] font-bold mt-0.5 truncate leading-tight">
+                      {bestKeeper ? bestKeeper.name.split(' ')[0] : 'Sem dados'}
+                    </h4>
+                  </div>
+                  {bestKeeper ? (
+                    <div className="text-[10px] text-zinc-400 mt-1 leading-tight font-sans">
+                      🧤 {bestKeeper.vitorias}V/{bestKeeper.presences}J ({bestKeeper.aproveitamento}%)
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-zinc-550 font-sans">Sem dados suficientes.</span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -2591,6 +3017,97 @@ export default function DashboardStatus({
                 className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white py-2 rounded-lg border border-zinc-800 transition cursor-pointer text-center uppercase tracking-wider"
               >
                 Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDashboardPlacarModal && nextMatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn" id="dashboard-score-modal">
+          <div className="w-full max-w-md bg-[#0b0f0d] border border-emerald-900/30 rounded-2xl p-6 shadow-2xl space-y-4 font-mono text-zinc-300">
+            <div className="flex justify-between items-center border-b border-zinc-900 pb-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-emerald-400" />
+                <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">🏆 Gravar Placar do Racha</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDashboardPlacarModal(false)}
+                className="text-zinc-500 hover:text-white transition text-xs font-bold bg-zinc-900 hover:bg-zinc-850 p-1.5 rounded-lg border border-zinc-800"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="text-[11px] leading-relaxed font-sans text-zinc-400">
+              Registre a quantidade de vitórias de cada equipe e encerre oficialmente esta rodada do dia <span className="text-white font-semibold">{nextMatch.date.split('-').reverse().join('/')}</span>. Esta ação irá persistir os times de hoje e atualizar o ranking histórico.
+            </div>
+
+            <div className="grid grid-cols-3 gap-3 pt-2">
+              <div className="bg-blue-950/20 border border-blue-500/20 rounded-xl p-3 text-center space-y-2">
+                <label className="block text-[10px] font-black text-blue-400 uppercase tracking-widest">🔵 AZUL</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={winsBlueInput}
+                  onChange={(e) => setWinsBlueInput(e.target.value)}
+                  className="w-full bg-[#121815] text-center text-white border border-zinc-800 rounded-lg py-2.5 text-lg font-black focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+
+              <div className="bg-rose-950/20 border border-rose-500/20 rounded-xl p-3 text-center space-y-2 font-mono">
+                <label className="block text-[10px] font-black text-rose-400 uppercase tracking-widest">🔴 VERMELHO</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={winsRedInput}
+                  onChange={(e) => setWinsRedInput(e.target.value)}
+                  className="w-full bg-[#121815] text-center text-white border border-zinc-800 rounded-lg py-2.5 text-lg font-black focus:outline-none focus:border-rose-500 font-mono"
+                />
+              </div>
+
+              <div className="bg-emerald-950/25 border border-emerald-500/20 rounded-xl p-3 text-center space-y-2 font-mono">
+                <label className="block text-[10px] font-black text-emerald-400 uppercase tracking-widest">🟢 VERDE</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={winsGreenInput}
+                  onChange={(e) => setWinsGreenInput(e.target.value)}
+                  className="w-full bg-[#121815] text-center text-white border border-zinc-800 rounded-lg py-2.5 text-lg font-black focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+            </div>
+
+            {errorMsg && (
+              <p className="p-2.5 bg-rose-500/10 border border-rose-500/20 text-rose-400 text-[10px] rounded-lg text-center leading-relaxed">
+                ⚠️ {errorMsg}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-3 border-t border-zinc-900 text-xs uppercase tracking-wider font-extrabold font-mono">
+              <button
+                type="button"
+                onClick={() => setShowDashboardPlacarModal(false)}
+                className="flex-1 bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white py-3 rounded-xl border border-zinc-800 transition cursor-pointer text-center"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={async () => {
+                  try {
+                    await handleQuickSaveResult(nextMatch.id);
+                    setShowDashboardPlacarModal(false);
+                    window.dispatchEvent(new CustomEvent('match-status-changed'));
+                  } catch (err) {
+                    // error handled in handleQuickSaveResult
+                  }
+                }}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl transition cursor-pointer text-center flex items-center justify-center gap-1.5 shadow shadow-emerald-600/20 disabled:opacity-50"
+              >
+                {actionLoading ? 'Gravando...' : 'Gravar Placar'}
               </button>
             </div>
           </div>

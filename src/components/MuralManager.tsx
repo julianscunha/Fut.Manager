@@ -912,16 +912,34 @@ ${shareUrl}`;
 
       {/* Notifications */}
       {errorMsg && (
-        <div className="p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center gap-2.5">
-          <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
-          <span>{errorMsg}</span>
+        <div className="p-3.5 bg-rose-500/10 border border-rose-500/25 text-rose-400 rounded-xl text-xs flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="w-4.5 h-4.5 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            onClick={() => setErrorMsg('')}
+            className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-center gap-2.5">
-          <Check className="w-4.5 h-4.5 flex-shrink-0" />
-          <span>{successMsg}</span>
+        <div className="p-3.5 bg-emerald-500/15 border border-emerald-500/25 text-[#4ade80] rounded-xl text-xs flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <Check className="w-4.5 h-4.5 flex-shrink-0" />
+            <span>{successMsg}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMsg('')}
+            className="p-1 text-[#4ade80] hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            title="Fechar"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
