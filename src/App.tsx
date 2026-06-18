@@ -58,6 +58,7 @@ export default function App() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showSoftDeleted, setShowSoftDeleted] = useState(false);
+  const [sortBy, setSortBy] = useState<string>('name');
 
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -328,6 +329,27 @@ export default function App() {
     const matchesSoftDelete = showSoftDeleted ? isSoftDeleted : !isSoftDeleted;
 
     return matchesSearch && matchesCategory && matchesStatus && matchesSoftDelete;
+  });
+
+  // Sort logic for players
+  const positionOrder: Record<string, number> = {
+    goleiro: 1,
+    zagueiro: 2,
+    lateral: 3,
+    volante: 4,
+    meio_campo: 5,
+    atacante: 6,
+  };
+
+  const sortedPlayers = [...filteredPlayers].sort((a, b) => {
+    if (sortBy === 'position') {
+      const orderA = positionOrder[a.primaryPosition] || 99;
+      const orderB = positionOrder[b.primaryPosition] || 99;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+    }
+    return a.name.localeCompare(b.name, 'pt-BR');
   });
 
   return (
@@ -728,7 +750,7 @@ export default function App() {
                 </div>
 
                 {/* Filter and Search Bar */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[#111815] p-3.5 rounded-xl border border-zinc-850/80">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-[#111815] p-3.5 rounded-xl border border-zinc-850/80">
                   
                   {/* Search */}
                   <div className="relative md:col-span-2">
@@ -751,7 +773,6 @@ export default function App() {
                     >
                       <option value="all">Todas as Categorias</option>
                       <option value="mensalista">Mensalista</option>
-                      <option value="mensalista_goleiro">Mensalista Goleiro</option>
                       <option value="reserva">Reserva</option>
                     </select>
                   </div>
@@ -771,9 +792,21 @@ export default function App() {
                     </select>
                   </div>
 
+                  {/* Sort select */}
+                  <div>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="w-full bg-zinc-950 border border-zinc-850 text-xs text-emerald-450 rounded-lg px-3 py-2.5 focus:outline-none min-h-[38px] cursor-pointer font-semibold"
+                    >
+                      <option value="name" className="text-zinc-300">Ordenar por Nome</option>
+                      <option value="position" className="text-zinc-300">Ordenar por Posição</option>
+                    </select>
+                  </div>
+
                   {/* Toggle Active / Inactive if Editor */}
                   {isEditor && (
-                    <div className="md:col-span-4 flex justify-between items-center bg-zinc-950/40 p-2 rounded-lg border border-zinc-900/60 mt-1">
+                    <div className="md:col-span-5 flex justify-between items-center bg-zinc-950/40 p-2 rounded-lg border border-zinc-900/60 mt-1">
                       <span className="text-[11px] text-zinc-500 flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-zinc-600" />
                         <span>Registros deletados ficam arquivados logicamente (Soft Delete).</span>
@@ -798,7 +831,7 @@ export default function App() {
                     <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
                     <span className="text-xs text-zinc-500 font-mono">Consultando banco de dados...</span>
                   </div>
-                ) : filteredPlayers.length === 0 ? (
+                ) : sortedPlayers.length === 0 ? (
                   <div className="text-center py-16 rounded-xl border border-dashed border-zinc-850/80 bg-zinc-900/15 p-6">
                     <AlertCircle className="w-10 h-10 text-zinc-600 mx-auto mb-2.5" />
                     <p className="text-zinc-400 font-semibold text-sm">Nenhum jogador encontrado!</p>
@@ -806,7 +839,7 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {filteredPlayers.map((player) => (
+                    {sortedPlayers.map((player) => (
                       <PlayerCard
                         key={player.id}
                         player={player}

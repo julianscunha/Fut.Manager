@@ -6,7 +6,9 @@
       "email": "admin@racha.com",
       "role": "admin",
       "status": "approved",
-      "createdAt": "2026-06-03T17:27:56.559Z"
+      "createdAt": "2026-06-03T17:27:56.559Z",
+      "playerId": "player-admin",
+      "athlete_id": "player-admin"
     }
   ],
   "passwords": {
@@ -28,7 +30,10 @@
       "createdAt": "2026-06-03T17:40:00.981Z",
       "updatedAt": "2026-06-03T19:26:46.776Z",
       "photoOriginal": "data:image/jpeg;base64,/9j/4gIcSUNDX1BST0ZJTEUAAQEAAAIMbGNtcwIQAABtbnRyUkdCIFhZWiAH3AABABkAAwApADlhY3NwQVBQTAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9tYAAQAAAADTLWxjbXMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApkZXNjAAAA/AAAAF5jcHJ0AAABXAAAAAt3dHB0AAABaAAAABRia3B0AAABfAAAABRyWFlaAAABkAAAABRnWFlaAAABpAAAABRiWFlaAAABuAAAABRyVFJDAAABzAAAAEBnVFJDAAABzAAAAEBiVFJDAAABzAAAAEBkZXNjAAAAAAAAAANjMgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0ZXh0AAAAAEZCAABYWVogAAAAAAAA9tYAAQAAAADTLVhZWiAAAAAAAAADFgAAAzMAAAKkWFlaIAAAAAAAAG+iAAA49QAAA5BYWVogAAAAAAAAYpkAALeFAAAY2lhZWiAAAAAAAAAkoAAAD4QAALbPY3VydgAAAAAAAAAaAAAAywHJA2MFkghrC/YQPxVRGzQh8SmQMhg7kkYFUXdd7WtwegWJsZp8rGm/fdPD6TD////bAEMABAMDBAMDBAQDBAUEBAUGCgcGBgYGDQkKCAoPDRAQDw0PDhETGBQREhcSDg8VHBUXGRkbGxsQFB0fHRofGBobGv/bAEMBBAUFBgUGDAcHDBoRDxEaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGhoaGv/AABEIATYA+gMBIgACEQEDEQH/xAAdAAAABwEBAQAAAAAAAAAAAAAAAQIEBQYHAwgJ/8QASRAAAQMDAgMFBQUECQIDCQAAAQIDBAAFERIhBjFBBxMiUWEycYGRoRQjQlLBgpKx0QgVJDNicqKy8FPhFoPxFyY0NUNjc8LS/8QAHAEAAQUBAQEAAAAAAAAAAAAAAAIDBAUGAQcI/8QAPREAAgEDAQQIBAQEBAcAAAAAAAECAwQRIQUSMUEGEyJRYXGBwTKRobEUQtHhI1Jy8BUzgsIkJURiorLx/9oADAMBAAIRAxEAPwD0bkUM5owKMJOfdQAobilAZoDlRigAsetGNqMDpQxtQAVCjxtQxQAnFDFHRjkaABijAx60ANq6BGdqAEBJoYwDmoa93xu1vNt6w24tBWtZI2QCdgCedVC58ezyoxbK3KW44kFuSiLrAz57YpiVaEdGORpylwNHCTjIBwNycdPOolF7ZXcjHQtLidP4SMA759/wrHZcXii7u97d71c4bKRlXeO9zvny0b+/bamTEaWC4JNtmTY+dIluuaiQOSkK0pOffkHyqFO8eeyiTG272b+3Piuj7uSyfTvAD/GugWlfsEKB6g5rCrHO4phTXGXZCLxAQrWzhCVK7s7glJwoKHI86t1pvk6I84RMkPRkHC0OoGWiehAAA+m245GnIXilo0JlbuPBmkEUnFNoVwalkoyW30+2y6NKh6jzHrTsip8WpLKIrWDmRmk6ema64wKTjFdOHNXM++iCfOllOaQrw7ZoOBYosVzW5jrRB4dTXcHBeKGOlJDqfOgXB03rgA0jOaQQaUlQyaBI33oA54o80ekHNJ0DzNAD4KNGKJOKUBv6UkUGKUmgORoJpQB43oUKFAAoc6LnR1zIAowNqKlJ6UZOikjAO2aRLeEaFJfBH3balj4A13CcpOR0rP8AtAuEpbCrdHcwwcasDBUAfxHyGdvM7nkKZq1FTg2Lpwc5YMx4n4zmt3EuwUoK0pShbhGTkDyz5k/Oo5jtev1vTIemSHHW2SEsx0HGo+pJxjb/AIBvMXiM1LCUILQdQ2lEg6gPH5pJ5Zxvz3qoXvhJ+YnSzgnILelQ2wNjnz3qhm5J5yXlKnGSxg0CJ23Nx4zrt8kMNtp0pUAxqwogHAKiOWeuB8di5jdptt4jSgMKgKGxSlxRKseukYHrzFZnP4NduLAkXhlQkIShDisApeCAcOad8KPXHv23qU4a+ywJCGJER5xSRlDDOGcpx+UdPhmhVM6NnZW+6spGhpZt0tlElp5aW21fdyoToJYV7wMgehGPeKZIkXyHOCJTrNzZeGlidHbCS4P+mtHInbYcic4xyruZVkdfYDjLtrkuAoaV3ZGrI3Gvbf0x0qOKmoQuFvamKfblJILbigHGFg7KA9D5efupOsPIbilLiSdh4hkW24uRpTinoj6i9DXqK+7JBKkgnfAxjHMDYjY1r0dYkMNuowULSCD7680tXBd2mBXed1Oc0uFClYCn07KUk9NWMkeZNbV2d35662vuZLKg4wNz1xkjBT0IOR8qsrOum91kG4pOK3i2lNIIArupOP0ps6vTmrUgBFQHWmzrvOubrxwTXAqJrqAJaznnXMGlY91JwN966cYNRG/wpIeV0PKjIyKTig4LDxG5NDvyNq5A6kGufOgB6l/POld760wBIG1HrNGALEkAA7UOfLlQwTypQFNi8BgbUNhy50fSiAOd6AwHmi6bUeKGKDoB5UKGN6MCgAwMiuiQOm1JR1paRmgDokbHO4rJeNEFziQQm1lYVNbaOTvpCdaj8N+fv6VrqBsawrtBuCRxdczGJS6JLkRBA8WrQkFQ+AUPrUG8x1az3km1Tc8Ig46k3CQuQlCS0tROehTnYmrlaozKW8Brw6eQG/nVZitfZmWWkJwEjTj/AL1ZbYtS0hYGNsECqRts1VGO6iaXCZfbWktDOQR+nuqAunDEcvpkKabd0DVnGFI9QRvU8h0hKjqzj0prLnJZQvUCoHbGaVpzHJLOhwRLQthDbLxCynStp3SsL8iAdl+eUlKuhBqr3Vpi5TGHVthiQx4FhK8gtnyzvtsRncedRl4deDhVFxjVrwRkKGckennkVFM8VNMutibrbXkp7xIKkp9FHG23U59aHPeW6yvnQ3G3E5TLc8ZrrbjKgoOFK1tjfVj2h5frmtA4DuL8PiGJH7zWX3fs6ysYIODvgdCRioFviKyukyEXa2pWsYJWHCoDA3HhwduualuDZtse4kiP2d1U2QmQlSgEkIV02Ktzz54FO0IdXNNd5DrPeg9DbHcgbnNRj6smn8heQTyPl5VGLOSetaSJRHMpznNJxjlSzSTSgEkDyoiMk0rFCgDkRvRY866aaTjfFBxHPSACAK5aTnce6nBrmcfiwKAORTjrSa6kE52xRBCccqDhYRRgjpSRvSgN6bHBR5CgPWi+tGKAD2oZ8qLlSSfXagBQ5nNKG9ISedKHWgBScZ+Fdk8q4JIGd/nXdHKgBywDqHdo7xYB0I/MrB0j4nA+NeVeHJc/iP7PeL+lKrh9ndck889+t1SeR5eFJ+deqGlFBCgcFJyDWH3u2MpvPEkZhwQw9cnzqCSSnxHdI26kn41XXkfhedNfYs7DDco4101+eV65XyIlu5PxmFuuQUrZTknS9rWPXGAKmuFuNeHr4FMwX3GJSFYW063p3643rCb12Q8Ttz3JS+N7tLJGY6C+IelWoHIwFpUnTkacAjY74wWXC1v42tUtCOJIyLgUrwmbHxq04z48bEeRODkbjequVPEd5ST8C9hUe9uuLX2PVWhCs6N0ZwFedcpFqZkNKKEatG/n/HnVIuPEE22WRmW+wsMlAw6lQ3NYu92p3y+3FKLKq5y3vFoYtkRUp1KAcFRSnZKQRzNJinJ4SyPuSiss2642J6Mhx0hQbxuM1nnEds79lzQFeLIKAc6vhULw72r2G8vmDPvtxiXhCiAh6N9mXq6jmUk8tquDwdkR0OuuB0rGEYGknfqOXypXVyi8NYGd+M1vReUZxPR3P2h9jDoEYOJwfCrxAH4YSfrW19izLLt8jLjMaXYsZxawlI040BIyfMaxWMSmHoxuEWQ0XY4eBYWOYScrI+Y/j8dB7Er3cme1O2WpoK+zyo82RMWFEJDCG1aU4HPxhJyfMYp2lpVjnvINek5U5KPJZPTEge0aYKGKeyV6jTInzNaNcDNiMUgetLJBohjnXTgVJ6UfnRUAFsM0n1oyR76LJ35+VACelJ0nc5wKWR50R5UAICcZyc0KV6UKDmCaxijBxSjjFAJ2psWETjFGKIjPzpOQBzoAXmkKyeXLO/rRA896LWMmgBaTS0muad6WD50AGk7mnDe49aaJVmnDa8A70APGU94pKMgajjJ6Vhk+Sm63SXOQFstSHluJQ4khYClkgKB3ScdDyzW2tq1HbbkKwLiy+d1xRenXFYAuDufcFYH8Kr75rcRbbLx1zz3FoYt8WXELVwZQtpY9l05SfX/m9MlWy3xtTdqTFSVbFTIOf51nabzP40uAhQZao8Rv+8eSfEQPwoHn/i/jV9sE2z2FTdv7/uEMLLilv5KjqG2+N+tVCaawaebR24wgJdj261raS42nxqQRqHuI686aO8FFhhC7ZCiOBKRoQoBtQI5ALAyNts5rrfLrAut3U63cktsMtFfeteFWn48htR8G9oLkmL9huLShNjhOrvQPEk+yrHqPrmneAzub71RQL12CcMzUMOXmC3E7tYXojPLSonJJwoYA6b78q7PWWFYG0x7W5MW2EhJ798OqHpqwDWhX27JlqXqSBnGD5Vm81t1yU4pRGc4T60pScnxyJdGFNNpYKxeC9rmiNpTI7lK0OK5JUQUgn0CcmtU/o5cPPMxbxfbplc0IbtzS1Dkk/fOY+bQqittKE1UhLPeNtNBThKwkZydIJOw5bk7YOa9GcE2JPDvCttt4b7t7QqTJGCD37p1rznyyB+zT9tDfq7z5Fde1VTt3BcZEm+d96bE88U4kjGfOmernV4jNgOcHAyemdqOk52ogcV0BR5UVJ9rmNqUKDgQT50AOY6UYpKsbg70HAK9KTRgAE4GCeZos0AFRUZoqAJwUCN9jRAUDTYoHNO+/rRaMjcmgc4ok5oABR5mi7sbnJ+VK1YpXMUAICelLA2NHikjIzjrQGABPl1pY22zSM55jFGNs+tJFI7JURvnBHKsE7QbGh3iq8RJQPcyld6MHTlLg1ZB9CVD4Vu4V5VnHajbS8xGvDSQTDPcyNs/dKPhV8FEj9uoF7DfpeRY2M+rreZiU0Xzs3tLNxt0eJeLYl1Dc5BQtLrDeQC8Aj2wBuRzqy8RSlMocPEludhtpaC0z4IVKjqbJGFKwApAOU74PPGanHY7ciC4wVLS2tIUhQ5pI60dquz/D8F23zgZkF1KR3Smi8yEBWcBKfEkE48OCNhiqeChNYeho3GfxR18OHyf6mXMs8ASbqmXPv8ZboVqCZDryU55/i2FTdz4rsMSU0/a7tbZTritBS1JSteM79cnfpVs4gv8AIuLUtMGHFYRLcdcW6m2qDiluJQnVqcKUghKCPZOyvTdjwx2acPWZ9d2nwWpN6luF1TroDjicnJyojY+gwB6044xjFrJyPWcWseufsiNuPExMfWjUrUPDtTS3TNaip8AJwTvzAG+af3tLdxlOvR0oagxtspGyyDyHy50ns+tjd+4tjx3TrijLigN8oRufgTgfE0ii22kO1JLqpS7jVeF+zKzItVsmcQRXZk9SO/fjPPZjaicoCmsYJSMczgnmDWjtKKytaiVKUcknrTMrKiTnJNO2vC2AOeK0FKMYLCMfWqTqPMmc3mtWcCo11opUalznfNMJH61JTIzWBlq86TnfntSVKwoj1owcbUs4LBGKGQedJBzQ260AdOtF03896SSCNuVGPXlQJCPkTRelDOaFAA6UjPpSvOk5oAnc0k75oxzoY2psUEo4TSd9yeQpShnFDpQAjGQTvS2/ZwOQJowKMbb+tAoPpRAUZHOgBtScncCcUQpeNsUWnc9aS2KSBUdJbbdDzUhtDzDqShxtYylaSMEEeRFSB5U1lIUrdG5A36bedNSeg9BYZmM22tcKSERVrU7CdyYrjm5CQfYUeqk/UYPnUyy/ZJTKWJJYdeKcjS3jb3jlWedpXanGfu0Hh+0KZft/2tKZcsgKDjpylKGz0SFEZUPa5DYHMG3eH22FhBcQsHSvCif47is9UnTVRpM2Kt7m3owdeOHJZXfjL4rl+5pUmHbGlqkYDCUK2C1dfjvVDvnGbS3H4sN3SVDC3vyI66f8R6fOq5dbpciye4jrlpIwomRox8FVVHH7k6lX2SEvSCcrZaU5v6qNJck1owjFPVk9fOJCpluKwjuI6E4bZSfEr1J6D1NJ4T4wmcG3Fu7REpkuoWEPx1nSl5teymgfw7bg9CAd96rrcJ5k95LbX3y1DCVbkn9ajLg6+1dLKyndC5hQ9jkXFoIR8th71GkRbUsxZZ29OjUnClUXZk0n5ZPb3C3ENp4ttabjYpBfbSQl5pYCXY6zvocT0PkRsehqdzXkmyS7rwvc2bhY5aoUxCcFwJ1JcRndC0clpPkfhg71t1q7aLO7EZPEMObb5eMOqisGQxnzHi1gHyIOPM86t7e+pzWJvDIG2OiN5Zz3rWLqQ8OK9Oa7mvVGkHlTORsDURE7QeFZvhYvsVtZ20yQtg/6wB9akDITLRriLbkoP4mXA4PmkmrSnOE/haZiri2uLbStBx8019xir2yaCRsefxroUnPi2PqMUMYp/wAyJxE0YOaPFHzG1dAKhQ6UKAB5+lAb0Ohos0CQulIxS8athXQN7cqAJgbdKTzG/KgDj1ojy25+lNig17bUByolbnzoxzwaAFDlQ+lCgBua4LQrG1GBgYpjerxG4ftEq53DUWI6RhCPacWThKE56k7em56ViV07UuJ7qtwR5ibRHXyZhIAKU+XekayfM5HuFQq91ToaS4mi2TsG82unOjhRWjbf2wnk3afLi2lnvrtKj29nouS6Gwfdnc/DNU6f2s8KQshmXKuSx0iRVaT+0vSKwySVyH1PSFrfePtOurLiz+0cmmpGVEDnVTU2nLhCOD0Kz6C2+M3FRyfhiK939TU7h24q3RZeH0hXRc6UVfHQ2B/uqh8Udo/Ed8t70a5TkMxHvajRGQyhQH5jupQ9CrB6io4MaUnGd+ZqvXGNMvdyhWezN99OuD6Y0dPIFR/QAFSjyASSahSuq9Z7ueJo6Gwdk7OXWxppbuuXrjHm9PTBVIluk8UcRBbORa7K/GekkZ+8eUvLLQ/dUs+icVpjjq2Vd+1nQ6Mq6+v61oHEvZ/A7PeB7RbbYVSEm6pXMmKTpXKkKadwtQ6Dw6Up6DA5kk5w44v7MlTIyErKdQPlmk3VN0d2HcvqedXF/wD4lc1KyeU3p5Lh/fixrJmpfC0JbTnOMlNSTCXG4TaUtkJGNKT4RTOOl56QhstJJWQSNO+OvKrU3GIUlKWwpXIDGf8AnxqNHtDWMFeFnU+4AVKW+9kKWAQlCOunPL1PWiuvAr85lTVujKenOPIXFQhOVd6FAoCR1UVADHrWg2u1OSHmGktrkSXlaGWGU6luHyAHl8MVvvA3ADfDjaLhc0tv3pSMICTlERJ5pQeqzyKvgNsk2lrayrPC4d5BuL1WuvPkeSn2VjWh5BZebUUONq5oWCQUn3EEV1aYSplSHM6VJ0kg/Wrb2oWxq2doPEDEYAMuPokjHL7xAUf9WqqugADHzNVlSDpVHB8me72Vyr2zp18fHFP5pM4sEvNaXhhY8KweWR6eXX411bjoaVraT3axuFNkoPzGDTKXNjx7ixGSrVMkDdhAydA/Gr8oHLJ58qkkKCk5FJTaJLjFolInEt8gAJjXiYEj8Lqw8n5LBqaj9o95a/8Aio9vmj1bUyr5pOPpVSz50POpULuvTXZkykudhbMu8urQi2+eMP5rD+polv7S4rzqW7la5EcqOO8jupeSPUpOlWPnVutl1g3mMqRaZKJTKV6FqSCkpV5KSdwcb+udqwrVo3O+Ek/pU72RXcq4su0HVqZkQirH/wBxpQOfkpQq4sr+pVqdXPU8/wCkfRWysrOd1bZi48s5T7+OvDXj6M2I0nlRmiNX55QDPOjQkkk52pGQOdKS5gbUHDuhrbOK7d16U3TI0iuoljzFJDQf586QTk4BpdJ6jzzSToajg0dEoAmjFApCs0E0R26dKCDk+lJYuKyZz22yFt2CyxkqIS/PcWsefdt7fVw1kCClsEqxgDb3Vq/bkALbw4SrCvtkgY9C2jf6D51j2rvXUtJ5E5PuHPP/ADrWVv3i5foe89D4RWxoY5yln5neQ4Eo6DIGBmmMG4d5cXobjKxlAcZeSCUqH4kqPRQ+RHrUqBqVkhJHTKc4pYCiAkqIT5DlVZnJuWsR3RvIz3askAAe81rPYRwGwxBXxZObLk+5lbEAr37mIhXjUkdC4sYz+VIHU5z7h7hl/jLiODYohUhMhRVJdA/u2U7rV8sAepFerLXBYhNpjQWg1EiNIjR0JGyUJFXuyrfebrPyR5f052oqNGNhTestZeXJerWfQjOIeF4PE9sk2y5trVEkAZU0rSttSVBSHEHopKgCD6YOQSKxW6dkF+sq32oMQ32MD3qHoaB3hSSfaZzqBB56dQ3G+9ehkrLS1+HKAo7eVdyttwJOe6cQctrAzpPu6gjmP1wauq9pSuF2uJ5Jb3lW2fZ1XceULNwtenJ7oVYLyVk7JNueGnpjdNaXZOyy+3B0pmMItDWAVrlL1LH/AJaSTnHQkVsqLt9pdeitv6ZEfT341laWtQJTj82QDgdOvq5Q60w2Etb5OR1Kj5k9ah0tl0oPLk2Tam1q0liMUhjwxwla+FWVf1c2XJTiAl+Y8AXFj8o6IT/hHxzzqQkSSpJDRwDtnzrm68VJ0gnfnQaRqcAA2SMVbRjGEd2K0KiU5Te9J5Z5z7bo6GeOwkJ0lVsjKJ/ac/lWX3VVxRBcFiRGcmHCUqkOaUoz+LGPER5f+la128pKeOoyhsFWhkj4OOiszxnI23rGXul1U8z6Q6OdrY1v/SiOsFsVbITjUhSpEpxZckSljxPrPUnyHIDoBT5Kw27oUQNQynJxn3edLCPKoPiRfcGDKSfEwsqAPMgEZ+h+lQuLNCkloicKtyOdGCCcA71xW4M+EjBOQfSm5kYScE6z4U+/OBXMi1HKOF6uQhRFqQcKUNlac7dK79iMn/38hCQvLj8eUkEnOVFonHySarPEsgOOrbTqShvwgEc8Vz4SuirDxFaLkNhEmNOL9UasKH7pVU+0koVFLxM3t2g7qzq0Vzi16tHrc+/NIJrs+junXEZyEqIB8xXH+FbQ+bRG49aAPnQI+lFQAM0AUgb4+VFvgUMDyoEk/SRsd+lCiG559abFCvKjpOcHGaPOeVcyLSFdN6TnB91AnGcjnSdeKTkdijJe3d8pd4Ub5pImn44ax/tNZfBx3jywPEcDby/5/Cr928Sf7ZaAnJMSKp/5u/ySaosFGltRzjJx9M/rWSvnm4k/74H0D0TjubHorvy//KXtgdoGE5O9LUrSOWDyO1c0gqJA86krFZVcU8TWbh9rVm5SktOlPNDABW8v0w2lXxIqFCDm1FcWaevXhQpyq1HiMU2/JI27sM4WNm4VkcRzUFM29gFjI3TESTo/fVlfu0VpUVBQygDYnJPxpN8ddixo8ezwS+FENttNJ8LLYGAegwBjCcpzjGRUY7eLjbbey9d7HKW87Jcb0W9suJaaSnwurKj7KlDYjYJOT7JreUaUaNNQjyPl/aN9U2jdVLmpxk8+S5L0SRJLTlTg559aJrJSU5xjlUZDv7FyuBixosxshDq1OSGS1gIXpGUq3GrIUM42PnkCTSSFZxnNOlcdG0gasJAJOo4HM8sn4AfKuqM59f0pA367j0rpnG+3yoDIQwV5ztzp1GGELX55pqgHc+mKfoToY0+lAHnbt4Xq44i+SLU0nP8A5jhP8azQczWm9uyNPF8JZ5rhH6OGsxG2ccqxd+v+Kn5+x9I9GXnY1v5e7FYJqH4iaCo8XPIOqTy6FJ/lUyM53/jUXxBkQmCOkgf7VVBXE0aeo3hPFdsjqO5SNCvhtRxlBb4Ct9K9Xrtk/pTeCf7E+n2glQUPjRQ3R9owTt3az/pNGBWeRB3QuOOL70gkmo0FWpaUEjIx6VJvtlWpShp8hUa4pSF7YI91SKbwVtdZTPXthuAu/Dtmn5z9qgMOk+pQAfqDT7O3nVL7ILmLl2eW9sHLlvddhuDyAXrR/pcHyq5nka2tKW/BS70fNN9Q/DXdWljhJr6v2EqPupHWlGkk+tOkIGflR0k8jRaiOtAE9z5bUWk+dEKPNMikmJwQTSh8qKgTgEmgWgEbc81zNKCwtOU8vWuayTkYG+1IY4tDEO19SZPE5ZzsiCyyo+pKj/BVVNgaW05GM5OPLJ2+mKmOOJiZXF12fJC2xLUkf5UDT/8ArUWhJWpI21ED4VkLp79WTXefRmwaTt9n0qcuUU/Vo6t4S2V5929bt2A8HfZIL3Ftxb/tlxbLVvyN24oO6x/+RQ/dSn81ZPwfwovjriiDYUKU3EWC9PdRsW4yMayD+ZRIQn1XnpXriMGm2MRmkMx2wG2G0DCUNoGlKQOgAFWmy7fMnWa0Wi9zG9N9r9TQVhTfanrLwjyXq1nyXiQ9ytKblc2n5Uh1TLBRpip2bVpVryrnk6gkggAjBAO9RrvDtyjCYq0cRSY70gqVqdZB0rOCFZSfErIVlZBJBAwMCrOEEjI9rNRbF9ttxusq1QZX2ibESVSA2glDZCggpK+WoKOMeYUOaSBo8pcWeOqMpJtLhq/AY3CFfZEh0Qr+IsM6UtpUx3zqQGinVlXh1ajrOxyQASBtTN2yXqQw+h3iJSFOp0kstOIxuPZ8fh2yMDkMHJJNWZTaweWfcaQlsmuiBaMHP6Db6mlhJ5DIzSm0AbECuhTgDGN6ACSnSkdN+VOR7IFcQMq88V3zt60cAPPvb2nHElrX+aGsfJz/AL1lYPn0rX/6QDR/rKxvH8TLyPkUn9ax7zPrtWN2isXU/T7I+jOict7YlD1/9mdEqzzqL4gWEwGlKBwJCf4KqSTyqH4pURbowHJUxA/0qqAuJp3pqMoyw00/v4VJ+tcIToWsnlltwE9PZNc5LndxnDy251E2eSU90hZOVulPzSoU5jRjc54qJD5zxIUQSffUU/uVEcs7VLqWkRl6s7joN6h5CjgYTtSoDFXgbD2A3QplX20rOA+w3MbH+NtWhf8ApWn92tpOK8w9k90Nv4+saidKHpH2Vz1Q6ko+hUk/CvTytic861NhPeo47jwjpXb9TtJzX50n6rK9kczypByBSjjBpGasTIB9DRUWaOjIE5QzSaMb5pocFZpKielFR523rgpaBbacVxLoZJdXshoFZ36JGf0rsageKpn2Dhm8yc+JENaU/wCZXhH1VTc3hNkihTdapGmuLaXzeDzhNkqlSVvKc1KfWtZGc+0Sf1qYZGkOuHBAJSM1BAAzoycfj/n/ACq42Kxf+JL5ZLASUJuEgIfUnmlkZU6f3Eq+YrHpOpLTi/uz6Tc6dtSblpGKy/KKbf2Nz7FeGzYuDXLxIQU3LiDS8jIwURRkMj01ZU5+2nyrT1fdtJaT+FIAFcAAtSAw2EIQPA2BgIQBgD3AD6VEXriBcV+JbrC0xduILikmHH73LSGwdKpD6050spO226leBO522dOMbekoLgj5wvLmttS9nXn8U3nyXLySS+XkJ4lvr0BcS02QtO8SXQKTBaWTpYQM65LuNwhABI6qUAB1I78NcNw+FbUmBb1LfUo65El0feSHOqleQ3OEjYA+ZJNc4BtEdyddeJjKXdpUpSoTNxdTpVJQheHnkpGyEKdToQgbBtlPPUSbo5JajJQuQ42yhxwNoU4sIClnkkZIyfQV2mt978vTw/8Ao1XkqS6im/N97/RclxzlvuXTkdqJSQrG2RmlHcUlJxzp8gC0jClYGaXsTtTG5XWHZbdMud1fTGhRG9bzihnA5AADcknYAczSOHLxH4osltvNsblJgXJnvo4fZ7txSckDw5I3xkEEghSSDgiuZWccxe5Lc38aZxnxJFPMk9PWuqTtz+tZRZO2pF9E+PD4Pvzt3jlPdwGQCMFOVCQ+tKGoqmzgOJWTjI06qsPZvxrceN4FxmzbZDjQmZQZgzbfJcfjTuevuVOJSpxKFAJ70JCFknTkJyUxnGXAdnbVaak5LGPFcymf0gGsxbC+f+u83n3oSf0rEM71tfb5frMpq2WIXSIriBqSZKrch0KfbZ7sgrWkZ0DKk41YJ6ZwaxEq3xgVlNprFy/JHvfQuTlsaCfJy++fc7J23qE4sXpgwgesoH5IVUwg7Gq/xgrEaHg7h1Sse4AfrVZHVmwnoiFlu64qyOeKryZHdJjLzuHmzt7zUstwmM4Dj2T/AAqtqc0tRivmXAfXZJqTEgVZdrJcchyOVJ5KFR76MJJwBvR2uUVtFClbikyTk+Z5Cm1o8CpNOORNsuLlpuESfHGXYchuQgY5lCgrHxxivY6n2pSEyYiguPIQl5pQ6oWNSfoRXi1KtKgVHbOK9OdlN4N34BtyXFan7cpcBz3IOWz8UKT8qv8AZtTEnA8t6Z2u9Rp3K/K8Pyev3WPUuJVSfOhSM71enlorPzoZpGfnRajXMAWEHPPahRc+dcZclUSHJkNBJcaaUptKjspYB0p+JxTLaSyxyKbeELVJjtuFpyQyhwc0qcAI+ddRhWwUDt0IyazmPcGHHrbGuMdyNOeIdLb7RSXVDJKlA7bE5OfSpKW7KZ4htLs6awITLxdQwyFKcfkEaG0KUAEoRuSTudsY3zVXC/3njdLuWzVGOd7l3fYuR5Yqi9qcwROEHWyQkypTTQ9wJWf9o+dWd2+NRj/aEqLRyA42k7HIAByevn0qgdsTy1W21NNtlxsSHHFqHiScowACOp8W3oaXXrwlRk4vkTdh2lR7UoRmtFLPy1+6Mea/+ZxBz+9/Q1s3YvFQ9xvPmOAKNvtqg16LdcSjP7qVj4msMKjDlRn4zgdjoeQVNr9pAzg4PXnyNanwJxQvhe53hUaILhNlMMMQ424Dz5eUlCSRuEalpKlfhQFHniqKykuui33+x7B0ihP/AAyuocd1L5ySf0Nr7SZrz1shWW0RG73ep8lt9FlXsmbFaJLwdVkBtkHRlSvCpQS3uVVmj0+9dnFhlT+H7HxJaZU+GuLfXbpa2IURD69QZkxy0tSWlNOOaEtjKVII1HKdZ1i0WlvhcSXJMlV1u9x0OXG6uJCVS1AeFKUjZtlGSG2hskbnKiVGG7STAvMPhm0XZKVWmdOmvz9XIsxrfIcAPprUk/CtRKO92uZ4ZQrdX/Bisxer8ca8O7RYzrlL0l7WjiiNbIFrtFktXCkGFGbjNLuUz7fIQhCAkfcMYb1YGfE5jJJqr3Gy213i6RK4kuD9zgcJMN3G/wB5uQCiHyNbENhpIDbSQMOrSgalZaQSdW9t4ImypPBvCj95S4uU5ZILslJHiWr7OgqGPM/xNUHsoalcZRIFzvzLzVpi3Bd2eaebU0bpeXF94pxQVuWIoKGkbAKcbKtw2MplFPdXHz8MenMKVVxdScmo40045ecvLy3w01xlpjn/ANtFxd4aYch2UNcSXe4OxoEN0lX2ZkSUxUuyBn2y+othIwFKSojZCqm77x5Nk3q2WvhF+J9lVd0W6TdHmkqTKdaBcl9yknAaZbbcLju41lLadwoiHk9jMOFw7Jt9sv13jz5N1anu3ZKgZIQ33gSy30QlKXnSlW5DjinOZqTvnZ3a+IlcPRkvO2vhuzwnYCrNETpRJjLU2oslz2koV3SEuY3WkFJIC1ZWlW5vu/cQ6lipdmPDP7efd6tvBVO0N6R22cN8RK4O/rB7hqyPsssohNhT10dW40ZDrSD7YairXoTzWpefQvOErdJvfEl5i9kb07hfgpcSPbrhcZSXhLEpoq1iOy9uiQUOJbW6sDRgHGoCrRL4Lnm6XR3hrjK58M2u8PiRcYEKEwtfeltLa1x5CvFHK0oTnAVgjKcGrfY7fA4btcW2WSMINtgtlLDLaiSkbkqKjkqWSSorOSVEk5pcYPOZeomVzGFNRpPPcu7OrzlYbzw/bBlHEV44XXEd4amShY+yuxS/sEttlTjkniS5BWVQWEpy48lKz98sZU4sqTkAKItaIvGPHLTaZXf9mPCaW0ts26GpAvEhkDwpWtOW4SMacIb1OAbEpo+COznhngN1ubZmZM26NM/Z2LhcXu+ejMnOW2RgJZSolSlaACtSlFROdrp9o56tqdjHvI1SsnLsa44N/fzff8jM+0nhKx8KdmbsPhW1x7XFbuMd10NAlbyiVJK3XFErcX4vaWSawUHBz1G2wr0n2suJd7O7ynO6VMODfyeTXmcr8ZrMbWSVdeXuz2zoHOVTZc955xN/aI5SdsdarvFatXcJG2llxXxyn+VTyVakkHlVc4hUF3At/wDTg5/eWr/+aqYcTd1V2WV9z+7VvuU+Xoao7M0vtx1LHiS7v+6auwOUDzxj6Vm0d0JeYbzzUo/TFS6ZUXEt1ovFuf0qGBn0IqWdGpIPU1WIThwNyMVY4qg+hIz4sc803Iep6o5oaQ5lDm2fpWsdhV0ch3K78PyyP7QwmXHP5i2cKA/ZUD+zWRy1OsEhDCnEk8xTrhnjSfwveIN0RbVy0QXC53ZyCUEFK0g9MpJHlnFS7Wq6dRSKLbNmr6yqUFxa081qvrg9dHfOKSTjmaQ2+zIZafjKK2HmkOtKP4kKSFJPyIoZ2zWtXgfPjTTwxYUPjQzXMK8qGo+ZpRwsYqm8ZXV2Hdbe024UJbjl5IzsVqKk59SANvLJq4BVZv2nxnDebA+04Al+O9HUkjqhYUDn9sj4VWXueoeCwscdes+J1m3MPTre9LUXVrjOjUTucaNqaNTGpTTOggKROjnI5lPfJzVQuDd2XJYMRlH2GCVl9xSsK0KTpASOpKtJ9wNS0RnuZUdSu8S20lD68HGpQ3QD5jVgkemKoU2mzS8ixzrwiRCuKCfE44hlnb2nFLAAHxIqQ42iouthnR0ArfW6UxgMDxheU7k4A9+OZpozbWYLcB2WkBDOl8E7hTm+FfA7+8Cm/EXF1tahMtW50l3Ac1LIwepI+WaWtVh8wpTlQnGrHjFp/IwziKG7EVIjykKZkN5QtKhhSVYzhQO4OMEeYwRkb08sF2kIvkN5EhbTryH2gtBx4i1rHzLfL1PnT7im+s3960ImaHrlcI8lJUnwKcDGlxIBwfZDjgGR+IiqNNnqsttE5Skldukx31EbZQHAlW2/NKjTFKHUV4570erq+jtfZFSpjDcZJrxWfvg9tMXBKrFHdf1OHuk42OeVRce2WDtBjIt3ELL8iPGdUtCWpbkdQ1ILbjaiggqbWhRSpB2UDiutpbS5agzjUW/D7wKplwMm2Tnxb3PszkltSUL050OfhVjlzrXyisZPn9twnJReGs4N9kwXJDfeMsqKBgJ7to6QBsAMbYGMfCoF9brbqitSivOMqzmsUvfDfEt0fanIY4uXJatzDKZVsdkBpwpayMlrdSgslKlkEnGd9s6ZCjcUW/hjh1hqIzOdatERMtVwkKMgyC3lwrUpxKiQSAcjPP3VLnSjGnGalnPLuKqnVlKpKDjjHMsoeDrRyc02TkK9rO+1Rtwv0bh5MVV4RIWl5fdkwojjyAoYznG6UnOxVjPLnVc4d4/sspLbM3iESJUpwGKl+E5HWpBISnOW04UTk6VbpBAJPMxX5EtRym8l0ccW0dRJIO+KkGHu9QhSFYPQ1UuIuIk2ybGhsssupZbTLuzr8gR0w4alKbS4FKwlSy4k+DOdKTtkipKw3iHO1og3CFL0E/3MlC+RA5A5/En94eYoUlvYFulNQU8aP+/T1H7qlpeKuijknHXNcrjO7lDJykaiQT5Y6U7eGdYI3Tvv0qv3xK1210JJCkeNJ6g9KdGlqVftIuve8H3RjUcuoQMZ5+NJrBSsgqzvVx7QOJkOXFu3K8P2pLYCcclb5H0qlKPPpk1lNrPNaPl7nuvQKO5s+on/ADeyHTKxkHPXNVee/wB/fbxpOUtNtMc+oRk/VVWSL4iBnGSBVOsj32527TOaX3n3QfMZIH0AqqprizeVnqkMx+DPLYZrhYOy1+6dmN84lkILM1pxM22NrGC7EZS53588LCsp23LPkoGkSzphvYzshX616VZU0/8AdSxrjvM9y6nzbUjSofukireypqpvZPOuld/VsoUer5vL/wBOHj1yeToKgUJUkEggHcVYbcoEFKQB5VEKta7JNmWqQ4XXoEp2ItY/EW1lIPxAB+NSUGI6taS3qAJxUCosNo2dtJVYRqR4NJ/NEsmQ+zkFOpHuonJaHRnTpUOmK7uKjQ28TZzLJxyWsA/LnTZDMObu29LfR5sRHF5+IFNQlqSp03g3jsqvf9a8JJhuq1SLSsRiScksnKmz8BqT+yKumawLsy4os/DnFqIUm4PRU3Vn7LolxltfeagWzkjHtZGf8Vb2QUqKVZBGxzzzWusqnWUV3rQ+fektj+C2lPdXZn2l68frn5itVFqNJoah51NMwWMKxVU7Qrc7KtUS5Ro7s160PLdVGbGpTjK0aVkJHMpwlWB0CqsqQrqrbpR6ighSSQQeYOKjVIKpBwfMfpTdOakuR5uPaRYe8fSxMAbVpHdgKPdnO4KuXPzxnpVg4i4ytka3R5KJAKG0oU4oEDVhOcAef0rT+021zOK+z2/WuO685IDAlMN6jhbjWV6cdcp1D3kV89GXH4M1EtiVIjK0KQe6wrKVJIKShXhUCDuDVLO36uok5aNdxsrKnK+tpVafxJ4x4cnk2fijt+/reymA2ssBoaG3e+BVpJ35ZrMI3HjUCSpbMiTJbwfBqURv18R2NQ8Xh+yXsrQ1KYQ6r8baCw42cnmgkpOPQ8h8ajXezviYSlRoUZM1gqwiW28gMqT+YqKvD65qVTp0Ut1P5jE7e8jLPVOS/wC3tL6ZL7wVxHM4q49iXRxPdQLFDeUEgkgd4ChKfUknPw9KsfEUhqXD4lZSQoCAScDbI3xUH3dt7PrGIFuc+0SXtK5D52MlwA+LHRtOSE+8k7naNtExyVw9xNKdUSFxloR8AST81VX1cVJ70eCxj5noWyY/gbfqZ/FJSbS5afokvM96cI3ZDsdouaSl9pDgPvSD+tOuJLQ3Nb1IG6TlOM5G9UXs8lOXHguxSmQHFLt8fJ1Yz92mtXsUZUtgKmtlCk8xWtWMHiNV/wARjTgu9G3yhbZwCde7KyfpWiONJeRsQCRyzWc8T2jI76ISl1rxII2wRVi4P4jTdIgafUEyW9lCmo6aDUtdTtKS5FcJQVIPLKdqbuvrkD75ZcwQrC8KwR1Geuw3qwTowebJ2Jx5VWF5ZcKVciaU0JRxlcP2q+Sokq6wkyZMRtbTK1KUAW1KSpTa0A6XEFSEK0rBAKQRgioV3gvhxd4ZkPWeMh9mQJDbjIU0oOhzvNR0nB8WTy6kcjVpYVzwcfDNMbl90+hxHPIpO5F6tDkas4aKTRKPLIf1Kx4xnfzqPlMqeadSrTgpIpzJXrYbcBHKuTrg0JWNwobiliFoeauP7A6m/wASc7shmSnTj3KBz86rij79tq1ntTjBnS6BhLyh+9/6VkbgKj4flWW2wsVo+Xue7dBpN7Pq5/m9kKnzP6ts8+Xtllhak/5tJA+pFVrhFjubU8kjdLAB9+38q68ZSFs2ZqIpW819Ccf4E+NX8Ej4054aRi2y1EHcJTv7iaqY6Qybmfaq+RWZow08PeCK9IBoJSsE5UK833bKA7nbG9ejg7lSuW9Xezvzeh5X04/6f/V/tMB7WLfdOFLzNvz7cCVDvdycMZLLyu+B0pOFNlI6EDIJGTvzrnZ+HnZ7bZvb7q1L3MZl0obTnopQ3Ufp/GtJ7TYdvn2W3sz2kOvt3JD0Y43QEglzf8pGkHz8NRNnilLXeuAhbm+45Cot8o054jxZo+iNWvd2CnX4LsrTHDnp8vNMd222xrY2EW+PHjJHPumgCfeeZ+NC4palMqRLbbfT1S6gLH1p37AqKuT4SkjryFVkVlm1m1CLZQuI7g9YHWX4amIjMdxC0LDKcMLCgULKfZcRqABChqT0J5V6nsVzfvVitVznspYlzoTUh9pB8KVqSCrT6E7j0IrBOD+H08Ucb2hMiOzLt0JxUuc0+gLbU0BsgpOytThQMHb5V6IUtTi1KWdSjuTWq2dTcYNnhfTK6hWuY0uMo657s8vXRh5os0VCrUwBYhnFEo4Hiokq+NBW4pDFpneApKpjAUcpUsJIxzBOD9K+el1sZiSJEZQ/uHnEA/5VkfpX0CbWptSVp2UlQI+FZjeOwnhC7zXpbrt8iuvLUtaGLggo1KJJwFtqI3PLNV11QnVcXHka7o9tO22c6qr5xLdxhZ4Z/U8SXC2FlQlxspUk5Vp2I9aeIuwt7CH5fcuPgZ8OMnyJI3+Fes5H9HDgzn/WHEYT+JJlsEK+Pc7Uzu/YPwM9Y4lugWwQ5EJCktTlqLjruVKUe+xpDm5wCNJAAA2GKi9TPGJ8i6q7asd/NDOvHK0T7zxxOur9zkOyZSisqOw8/IAfpV0Tbpds4JurSmz3jyEsNHGxccUE6QfPJPyq48WdjbnCaYtyelQFxTNbYbZZUsqUpQUQQFJGwCSTk/OpifC/rJ+zRAnLMdwzXRjbDaTp/wBRB+FN729VhSS4subVr8DcXu/nEWk/FrH3aPQP9H23SFcG2JxbRVAaYS13hPPQnSP9tbkpoJVltIGfSsf/AKP63I3AVpiqUrDbZbWD56lH4c62RKcJIJzmtGnlHkFV5qNjKW13jZCvKqRILlguYmxQe7JHepzV8eGlHp8KgrpFS+yoFOQee1ca5jRbrRdG7pEbdaUFBQGRmml2g5SVtj5VQrBdHeH7h3Lh/sritgehrUG3ESmRuChQ2xyrq7RzgysRHjkhRAxtuaXdGS7FJByR0oXCOYMrWkEIV0p7hL8Y+6gCNjL762HqUimpfxHdH5RqAxvXW1qCHJEdRwOlRzzhZQ7jYt5SfUUIXFZKV2mIErh4uYyphxKufkf+5rEftaWnSAkrOelbhx84l3hOcQQSptJ5Yx4h/OsPYbTqW66rQ2gEqVzwBuT8qy21/wDOivD3Pc+gi/5dV/r9kU/imYbjf2mUoLaYbIBSfzrOT9AmrNYGyizrx+NxR92BVHhPLnypE1zOqS6XN+gJ2HyxWhW1vu7SwnqpGrl5mquTxDBu6a3pORQ79s46kZyW9vqK3+2SRNhQ32/EH47S0+upIP8AGsC4mHdS0KOd0EfJX/etH4C4jKOCUOuH+0QFuMMJIyXMbtkDqBqwTy8Jq2sJqOW3xPOOmNpVuoUlSWZKWMf1YX3SCvkiPxBfcMOrXCgNFgKCdnHdZK8HqNgM9cU+bQoJwCRtyOKaWyEliOhPtY5kDmTzPxNPVlKEHKgk1V1ajrTcmb2ws6ezrWFvDhFfu36ttnGTI7hKisHT5gcqql3nJwSFAhQ2I5GpW6SHW0FaVBafQ8vOqvw5YX+MuJhaY6ltwz9/McH/ANFkHCiD+ZWyU+p9DT1vSc5YRD2nfQtKMpzeEka12RWdUOwP3d9JS9dnAWc9I6CQk/tKKj7sVpCT586ZxkoQENx20ssNIShttPsoSkYSkD0AFOq2FKCpwUUfON7dSvbideX5n8lyXojpQrnn1o8n1+dO4IJOhWP1perFcQoYNArxy2poeOpc2OaZuO4zXQrxTF5Z3wPpSRcTjKeOg1CyHCc4BIp/J1EHcVHOKwD/ACqJMkw0WTP+0qIJtst4dQotty1LHoruyB+tRPAljVdBfpeCUx2WoyM+Zyo/QiuvHd7Kr6xDbJLMNCg4M83FAZ+Q0j51p3Ydw+ZnA700aVm4XB1WocsIOjB9xSah2sd+9cuSX7HoN1Udn0UVOWkpy+md77JEz2Yx025iTCJUgNOZT7jWqoK0gBXjA5Z22qlSoKbBfIrcfwpcZBWo8lK1HOauBUAkKSoAY5E1ep6s8xnxyd3CktknKRmo6Q0OYHhPPFd25SPEMqVgdNh9a4vEH2VEemr9KUIK3d7alxBwBnpin/B/ECm1/wBXT1YWn+7WTzpy6lLiSFpAz5dard0gKSvvWDhxBykj0pPB5A06dGE6MpIA1geXOoe2OFJWw7spJxg1y4S4h/rNjuXyBLZGFJI9oU9uUf7NIbmMjCFHCsCleIkjH2/st0SrGEL5HNRU/DcyQk8lo1b/AFqw3dkuR0Po/Ac5qAvYIcjuJ/EgpO9A9S+Iy/iydixXOMrGVhJQf2hmsc4vnfYeHHGGjpenLEdOk/hIys/u7ftVpPEr5kRJIzsHQ2cjY71inF0wXC/lhs5Ygo7pOORcO6z/AAH7NZfay/jxfh7nuXQvs2FWK/n/ANqG9uZ0Njbp8qv6U92wlG2yAn41ULaxqcaQDsVjar7Gt3fEuSAQjog8z76ppa6HoMd2CyyovcMG+TG3ZZU1b2gdWNlPEkeFPkNtz8quMeOhITpQAhIwkJ2CR5DyHpT5SQRuNgMAdAK4+FAwNhQ28YGY4y5JasLRgZSdKj1HX31D3BffKU2ThfLTnlT2ZNSyj2udUS4zxdru7Abf+zSgMMrBxqOMlJ9/SnacW2RriqqcfEir2/coU1LcJTiu8UEBtIyXCTgJSPM5GK3zgbhdPCNiTGfSg3SUQ9cXE4OXOjYPVKAcD1Kj1rPuy+1yJ09253lsEWpZai5Gcvkbq/ZSfmoeVa60dRxWlsqO7HfZ4j0p2m61b8LB6LV+fd6cyQYVgEnma7a9qbIVjbpXQHrVojCncHcYIpef+bU3So+lK1GugTufWiKudc9WKSV02LiKUramrq9qWpWAaaOr2502xyI0kr3NRcmSiKw7IeP3bKFOL9yRn9KePKJzvmqhxzM+zWJbSVYcluJaGPyjxK/gB8ah1JbqbLKzofia8KK/M0v1+mTKrtNLUaTc5epby3NWR+Yq1H9a9H/0RnZMvsWiQ5+0uBdJetJ3Ol5QdT/vNeVOMXnvssCA1kqkvZSgb6iSEDb0ya9f8DcQWns9iNMRkqfhuw0Mr7oDUmSgnKyNtlZPuwKb2csOU+813S2pFUqVHuy/b2LtxVZlTpWArSlKBlXkRn+dQM3iNxtCGoq/YAQkhA3xtn1FRd+4tufEI+y2KI4thw+JzQfqf0qT4c4IRHSmRdngXz+FPIH151cJY4HnGRtHVNluofCEuup9lRyBj3A71YIkeUUZlNtg+YKqmmozcdADZSUp8hj/ALUFvAbYCj/hNKOZI7ucDfT59TTSXFacSQoqbV0UkcqklS2dRCtAI5ikGTEJw5pTk+/NBwo7/f2qciRHUEOoOQpO2of85itJs10Yv1v8YA1pw4n8p8/dULMtEO4NlJUlGdwoHGKqqFXDgaeZLiDItpP3qmvwjzKenwri0OmitMlyO7Ef/vG/D7x0NVm8sf2BGrIUhZBq3RJUe6xI9xt7iX2VJwVJOdSf5ioy+w0hh7QMJXhYOOdKFQeJI84docpUVC8IwlLiFaQNt6wCZLbiOy1gh57vlYHIE53JPkPqSK9PdpfDr8mG87FQcHSpZAydjWUcGdjiZcp66cZNuJS46XI1vKtG2r2ncb4P5AR5k9Kz206blOL8Pc9c6LbUo2NpVdR81jv4P9CP4SXAWhmbNe0ulIKGyhfdoJ/M4RoKvIZ299XvOM74J3q6RkssNohxWWmowT3fdIbAQE/l08selVO/8PucPtv3C2IKrSPE/F5/Zh1WjyT1KPiKp3Se7lF7bdJoVq+5XjupvR54ef6oZOLIBqImytJ2OMU4kSUqSFIUlSVAEKScgjmCD5VXp8jfGrUT5c6ZjHLNnKahHQaXicRGUUq3SCazh+JPul8hs2ttTs+Q8A0kefPJPQDck9BVxuLobH3myceLPSrbwJw4ISV3i4MqbnyQUx0qJBaYI5kdFK9eSceZq0tqW88GE6QbRjaUnNvXkvH9uZebPDRaYLENtwvd0DrdIwXHCcqXj1P0xU9HO1QrByRUswvwjO21aKCwsI8TqTlUk5zeW9SQQquyVfWmjatzzrshXOnUMjlJ/wDWlZrilWxpYV610CX1gdaTrGK5FWc70gq2500KiLU4KaPuZBFLUvG+aavLznfltTbHYjV1Q3rN+OZQkXliIk+CK0Cr/OvxH5JCa0VWCcKISOp8h1rCeI733jd2uJOFyHFd1t5nCR8sVW3csQx3mz6LW/W3jqvhBfV6fbJkHabxXIVxLBXaHS2uG8lbCk7Y7s+E7+atR38q9R8JG4cb8F2fiKy3KLOXLZBmgRCC0+NnEKQleUkHp1GCNiK8azYEi538OFB7t4lMZZ5KSjnj1G6seRr025x852Wf0dOFpfC0UReIJM5cC3S1tpCCjWtx2QpPJzkEAKHM7jwYqRQapxjT58SFtlzu686y4b26vTRfPGTT7UOLLQVrttwtJUDvoZd2H+JCtxUgq9cfyVZcvVsQnyRFc/hWd8A/0v4s+XFt/apw5a+7fGlu7QdbQSrPJxCwdP8AmScegGSPQjF44CmpaUvv7cH0hbK1rw26k8ihYKkKHqDU6Et7hIzNWlOjLdnHDM7MnjoLKhxO0DjZJt5WkfArrsmTxQ6nTOuEV8/nRHU2r+JrV27Fw8613sOe8tvoQUr/AErsrhO1EJX9qeUg8lAAA0tqYxlGOGZxUg6C82UDqX85Hu0UrXeXwQ5J0r8wc7++te/8M2I50/aZC0jKkIWNWPPTjJ+Fcmk8LsFYQ33ik+0lbhBHvBxXcSDKMlRG4jjkuInvb8gBq2/a2pyxxHxbG+6+zouKNxpe0b+nhJNaNJv1mhkqg2xl8p/MkqGfrioG59okhSVN28x4KgN2yjSoe7Ox+FGH3nc+BWrTxjfOD35M2NZhCiPIUX4ypiO61YOFoCsaVA4OORpxbe1BXEVo7203pxEwsYDapSXSHM7qKFJ5ZCs4yKpXErrnEbmq+XZp5sHIbOrB94Ka72a32q+2ObYnY0aUppYLGCGlNpUN1JcHiRg5OU71X3cpwSaZb7OVOdRwkuJN3XiCY48DeJS5K8nQVqSED1CAAM89zVIb42td04l/qW0Tvt9xbQp1/Upam20jdWA2klwgc8YSPPpVBv8A2K8XsyC3Z7nK4xdVhLseU+WFIbOdKg8pWNsYycH0IOKvvAvYxA4VuFgu85c1m8WpsJkBD4BeeWMq1qAwppKVFACTg9TgYNU4qS3pSyaKO5FuKjjC9DQbNBWCtbrgUcEBQGxHoK58QXeLa7e8JakYUk6gdxjrt/znUtKuVvhsunvAQ2jWs9E1inE3ErTSDOuCTNnSNJiQEDZIJJC1+fTA/mKFFxjoR/ifErNhuDiFT7RIZUyYqy9DSs+IxFk6CR0woKSPTTXd9KGwVLxy61lbvFUmF2oQ5s9/vHZZ+yTDnwaVnASn0SrBz5g1fJcxzC1ukg9cdKaqUd1p956TsjaP4m03ZvtQ0flyft6HW3sovnEMGIoamS8XHhj8CBqPz2HxrVwsqUVK3JyazPs6eYXfZSVAfaTby4nf2Ul1OfmMVpbIBNWtrDdgea9JriVa93XwitPX+8eg+YOkY9KfsuHBCcZ9ajhsKcMq32OKsEZAmG15rsk0xbVkU5SoY/704hI6SoHO+9L7z1FNknnSwRSgJLWQcZO9IUo43oUKZFHFSs7cq4O0KFNvgOR4EBxNKVB4fujzftpjlKT5FRCc/WvP/GSy0xDiIJGvxFQ6ZUED5ZJ+VChVVca1Ypno3RvsbOuJx45f0joegOzDsC4f4jtTDl9jszbbKSlIiqBH3hSRqBG6CBnBB5+6q52wcNJ4c/ozWSyyg29PtbtqiIeQcpDqlrWtYJGcEqX0z4qFCrOaWcmE62bqpN6Z98HjwJDup2N914CtRxvjYbeRwoemfIbVpfZ32q3Hs/tb7Tkx563SJK2m7eqMiRGQpIBU5oWoFJJPJJGeuTihQpmKTepa33+Sze7ZxhemeGjxNDiQ49tAClGJKdjr+LCw6g+4OJq1cD9rpvzCXre06guJKlNvJAbdx0UkKOD6g0KFP05y3mjOtJo1O0To3FtoFwhIdiNhwtrQojUhY56VDmPXb3V2f4TZngf1g6qYUjKVO+0B5ahvQoVNQyQdw4UjWxlyVAkPslHtDIIIzywef0qCmKS33aLlGbfZcAKVJXuB/lxt8zQoUBkY32I1BQWWQElxBPLIx6g5yd6zS6PK4cfTcrepSZaEnfbSob7EeVChTFWEZRw0P0ZOE00PGO2VpEASZUJ1K8AKQ1gjPvJrM+Kv6RV1fkgWpgRW0q3WtIWv4DOPjQoVQUoRlUcXwRqqs5bieSuNdsFzZt5cMdMt99WCHXClo/5kjOR6ZqYjKkyrY3KvTok3Oc82gSE8my7kZSOmlOrHkSKFCn5QjFaIRSnKed5mVXpiG/xNIWrvQ21nuE4G2g4Tk59M/Gr9cbmpbUl6QDoZBGlPUjO/xNChTVTijZ7K0tW1z4nTsrlOK4xYLisrlIdaXjlugkfAaRW8tJ0p570KFTbT4WY3pIkrqD74r7yOwH1rq2MdetChU+Jk8skGDqTzp0g4NChTiOHVNL0n0oUKUcP/2Q==",
-      "playerCardUrl": ""
+      "playerCardUrl": "",
+      "phone": "(85) 99999-9999",
+      "currentStreak": 0,
+      "maxStreak": 0
     },
     {
       "id": "player-2",
@@ -46,7 +51,10 @@
       "createdAt": "2026-06-03T17:40:00.982Z",
       "updatedAt": "2026-06-03T18:17:56.399Z",
       "photoOriginal": "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150",
-      "playerCardUrl": ""
+      "playerCardUrl": "",
+      "phone": "(85) 99999-9999",
+      "currentStreak": 0,
+      "maxStreak": 0
     },
     {
       "id": "player-3",
@@ -54,14 +62,17 @@
       "email": "parede@racha.com",
       "photoUrl": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
       "favoriteTeamId": "spa",
-      "category": "mensalista_goleiro",
+      "category": "mensalista",
       "status": "disponivel",
       "primaryPosition": "goleiro",
       "secondaryPositions": [],
       "createdAt": "2026-06-03T17:40:00.982Z",
       "updatedAt": "2026-06-03T18:17:56.399Z",
       "photoOriginal": "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150",
-      "playerCardUrl": ""
+      "playerCardUrl": "",
+      "phone": "(85) 99999-9999",
+      "currentStreak": 0,
+      "maxStreak": 0
     },
     {
       "id": "player-4",
@@ -78,7 +89,10 @@
       "createdAt": "2026-06-03T17:40:00.982Z",
       "updatedAt": "2026-06-03T18:17:56.399Z",
       "photoOriginal": "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150",
-      "playerCardUrl": ""
+      "playerCardUrl": "",
+      "phone": "(85) 99999-9999",
+      "currentStreak": 0,
+      "maxStreak": 0
     },
     {
       "name": "test",
@@ -94,7 +108,426 @@
       ],
       "id": "player-1780512450830",
       "createdAt": "2026-06-03T18:47:30.830Z",
-      "updatedAt": "2026-06-03T18:47:52.578Z"
+      "updatedAt": "2026-06-03T18:47:52.578Z",
+      "phone": "(85) 99999-9999",
+      "currentStreak": 0,
+      "maxStreak": 0
+    },
+    {
+      "id": "player-admin",
+      "name": "Administrador do Fofim",
+      "phone": "(85) 99999-9999",
+      "email": "admin@racha.com",
+      "photoOriginal": "",
+      "playerCardUrl": "",
+      "favoriteTeamId": "out",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "meio_campo",
+      "secondaryPositions": [],
+      "createdAt": "2026-06-03T17:27:56.559Z",
+      "updatedAt": "2026-06-18T01:18:00.100Z",
+      "currentStreak": 0,
+      "maxStreak": 0
+    },
+    {
+      "id": "player-gen-1781745003652-17rz",
+      "name": "Marcelo Ribeiro",
+      "email": "marcelo.ribeiro@racha.fofim.com",
+      "phone": "(85) 99495-4083",
+      "photoOriginal": "https://images.unsplash.com/photo-1544698310-74ea9d1c8258?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "int",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "goleiro",
+      "secondaryPositions": [],
+      "createdAt": "2026-06-18T01:10:03.652Z",
+      "updatedAt": "2026-06-18T01:10:03.652Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003652-2fez",
+      "name": "Bruno Ferreira",
+      "email": "bruno.ferreira@racha.fofim.com",
+      "phone": "(85) 99281-9144",
+      "photoOriginal": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "int",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "zagueiro",
+      "secondaryPositions": [
+        "volante"
+      ],
+      "createdAt": "2026-06-18T01:10:03.652Z",
+      "updatedAt": "2026-06-18T01:10:03.652Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-sxjj",
+      "name": "João Fonseca",
+      "email": "joao.fonseca@racha.fofim.com",
+      "phone": "(85) 99081-3147",
+      "photoOriginal": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "cor",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "lateral",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-h6qh",
+      "name": "Marcos Pinto",
+      "email": "marcos.pinto@racha.fofim.com",
+      "phone": "(85) 98654-3327",
+      "photoOriginal": "https://images.unsplash.com/photo-1526232761682-d7100d14fc6e?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "san",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "volante",
+      "secondaryPositions": [
+        "zagueiro",
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-c0dq",
+      "name": "Guilherme Mendes",
+      "email": "guilherme.mendes@racha.fofim.com",
+      "phone": "(85) 99827-1041",
+      "photoOriginal": "https://images.unsplash.com/photo-1504305754058-2f08ccd89a0a?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "cor",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "meio_campo",
+      "secondaryPositions": [
+        "atacante"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:18:08.416Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente.",
+      "deletedAt": "2026-06-18T01:18:08.416Z"
+    },
+    {
+      "id": "player-gen-1781745003653-d814",
+      "name": "Felipe Lima",
+      "email": "felipe.lima@racha.fofim.com",
+      "phone": "(85) 99099-4503",
+      "photoOriginal": "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "cor",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "atacante",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-n54d",
+      "name": "Matheus Teixeira",
+      "email": "matheus.teixeira@racha.fofim.com",
+      "phone": "(85) 99149-4623",
+      "photoOriginal": "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "san",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "meio_campo",
+      "secondaryPositions": [
+        "atacante"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-r6gn",
+      "name": "Gabriel Silva",
+      "email": "gabriel.silva@racha.fofim.com",
+      "phone": "(85) 98827-4369",
+      "photoOriginal": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "fla",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "atacante",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-y6j0",
+      "name": "Daniel Pereira",
+      "email": "daniel.pereira@racha.fofim.com",
+      "phone": "(85) 98998-9518",
+      "photoOriginal": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "san",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "zagueiro",
+      "secondaryPositions": [
+        "volante"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745003653-y2n3",
+      "name": "Ricardo Nunes",
+      "email": "ricardo.nunes@racha.fofim.com",
+      "phone": "(85) 99548-6398",
+      "photoOriginal": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "san",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "lateral",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:10:03.653Z",
+      "updatedAt": "2026-06-18T01:10:03.653Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-b6yh",
+      "name": "Felipe Rocha",
+      "email": "felipe.rocha@racha.fofim.com",
+      "phone": "(85) 99167-9971",
+      "photoOriginal": "https://images.unsplash.com/photo-1544698310-74ea9d1c8258?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "int",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "goleiro",
+      "secondaryPositions": [],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-xv6u",
+      "name": "Gustavo Araújo",
+      "email": "gustavo.araujo@racha.fofim.com",
+      "phone": "(85) 98243-9276",
+      "photoOriginal": "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "cru",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "zagueiro",
+      "secondaryPositions": [
+        "volante"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-xjdl",
+      "name": "Ricardo Fonseca",
+      "email": "ricardo.fonseca@racha.fofim.com",
+      "phone": "(85) 98016-9051",
+      "photoOriginal": "https://images.unsplash.com/photo-1518063319789-7217e6706b04?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "fla",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "lateral",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-hcgl",
+      "name": "Guilherme Vieira",
+      "email": "guilherme.vieira@racha.fofim.com",
+      "phone": "(85) 98345-4179",
+      "photoOriginal": "https://images.unsplash.com/photo-1526232761682-d7100d14fc6e?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "vas",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "volante",
+      "secondaryPositions": [
+        "zagueiro",
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-6skw",
+      "name": "Lucas Cardoso",
+      "email": "lucas.cardoso@racha.fofim.com",
+      "phone": "(85) 99815-5603",
+      "photoOriginal": "https://images.unsplash.com/photo-1504305754058-2f08ccd89a0a?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "flu",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "meio_campo",
+      "secondaryPositions": [
+        "atacante"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-w90n",
+      "name": "Thiago Ferreira",
+      "email": "thiago.ferreira@racha.fofim.com",
+      "phone": "(85) 99686-1899",
+      "photoOriginal": "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "vas",
+      "category": "mensalista",
+      "status": "disponivel",
+      "primaryPosition": "atacante",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-vf28",
+      "name": "Matheus Ferreira",
+      "email": "matheus.ferreira@racha.fofim.com",
+      "phone": "(85) 98963-8275",
+      "photoOriginal": "https://images.unsplash.com/photo-1509048191080-d2984bad6ae5?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "vas",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "meio_campo",
+      "secondaryPositions": [
+        "atacante"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-xe56",
+      "name": "Bruno Rodrigues",
+      "email": "bruno.rodrigues@racha.fofim.com",
+      "phone": "(85) 98863-5014",
+      "photoOriginal": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "pal",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "atacante",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-bn2r",
+      "name": "Alexandre Nascimento",
+      "email": "alexandre.nascimento@racha.fofim.com",
+      "phone": "(85) 99157-4876",
+      "photoOriginal": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "cru",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "zagueiro",
+      "secondaryPositions": [
+        "volante"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
+    },
+    {
+      "id": "player-gen-1781745071543-rnno",
+      "name": "Carlos Gomes",
+      "email": "carlos.gomes@racha.fofim.com",
+      "phone": "(85) 99115-1928",
+      "photoOriginal": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150",
+      "playerCardUrl": "",
+      "favoriteTeamId": "pal",
+      "category": "reserva",
+      "status": "disponivel",
+      "primaryPosition": "lateral",
+      "secondaryPositions": [
+        "meio_campo"
+      ],
+      "createdAt": "2026-06-18T01:11:11.543Z",
+      "updatedAt": "2026-06-18T01:11:11.543Z",
+      "currentStreak": 0,
+      "maxStreak": 0,
+      "adminNotes": "Atleta simulado de demonstração gerado automaticamente."
     }
   ],
   "evaluations": [
@@ -228,286 +661,21 @@
       "time": "20:00",
       "location": "Arena Green Society (Quadra Principal)",
       "durationMinutes": 120,
-      "status": "cancelada"
+      "status": "encerrada",
+      "reservesReleased": true,
+      "reservesReleasedAt": "2026-06-18T00:59:37.842Z",
+      "lifecycleState": "ARCHIVED"
     },
     {
-      "id": "match-1780513842234-309",
+      "id": "match-1781745861757-h62irrv",
       "seasonId": "season-2026",
-      "date": "2026-06-09",
+      "date": "2026-06-26",
       "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
+      "location": "Arena Furacão",
       "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-530",
-      "seasonId": "season-2026",
-      "date": "2026-06-16",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-65",
-      "seasonId": "season-2026",
-      "date": "2026-06-23",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-348",
-      "seasonId": "season-2026",
-      "date": "2026-06-30",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-357",
-      "seasonId": "season-2026",
-      "date": "2026-07-07",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-131",
-      "seasonId": "season-2026",
-      "date": "2026-07-14",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-716",
-      "seasonId": "season-2026",
-      "date": "2026-07-21",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-305",
-      "seasonId": "season-2026",
-      "date": "2026-07-28",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-176",
-      "seasonId": "season-2026",
-      "date": "2026-08-04",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-508",
-      "seasonId": "season-2026",
-      "date": "2026-08-11",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-75",
-      "seasonId": "season-2026",
-      "date": "2026-08-18",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-994",
-      "seasonId": "season-2026",
-      "date": "2026-08-25",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-97",
-      "seasonId": "season-2026",
-      "date": "2026-09-01",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-815",
-      "seasonId": "season-2026",
-      "date": "2026-09-08",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-994b",
-      "seasonId": "season-2026",
-      "date": "2026-09-15",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-398",
-      "seasonId": "season-2026",
-      "date": "2026-09-22",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-559",
-      "seasonId": "season-2026",
-      "date": "2026-09-29",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-976",
-      "seasonId": "season-2026",
-      "date": "2026-10-06",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-544",
-      "seasonId": "season-2026",
-      "date": "2026-10-13",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-375",
-      "seasonId": "season-2026",
-      "date": "2026-10-20",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842234-167",
-      "seasonId": "season-2026",
-      "date": "2026-10-27",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-145",
-      "seasonId": "season-2026",
-      "date": "2026-11-03",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-17",
-      "seasonId": "season-2026",
-      "date": "2026-11-10",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-238",
-      "seasonId": "season-2026",
-      "date": "2026-11-17",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-793",
-      "seasonId": "season-2026",
-      "date": "2026-11-24",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-649",
-      "seasonId": "season-2026",
-      "date": "2026-12-01",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-649b",
-      "seasonId": "season-2026",
-      "date": "2026-12-08",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-722",
-      "seasonId": "season-2026",
-      "date": "2026-12-15",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-141",
-      "seasonId": "season-2026",
-      "date": "2026-12-22",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780513842235-368",
-      "seasonId": "season-2026",
-      "date": "2026-12-29",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
-    },
-    {
-      "id": "match-1780515898568",
-      "seasonId": "season-2026",
-      "date": "2026-06-04",
-      "time": "21:30",
-      "location": "Arena Green Society (Quadra Principal)",
-      "durationMinutes": 60,
-      "status": "agendada"
+      "status": "confirmando",
+      "confirmationDeadlineDaysBefore": 2,
+      "lifecycleState": "CHECKIN_OPEN"
     }
   ],
   "presences": [
@@ -523,22 +691,622 @@
       "matchId": "match-1",
       "playerId": "player-2",
       "status": "nao_confirmado"
+    },
+    {
+      "id": "pres-1781745990380",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-admin",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:30:05.379Z",
+      "manuallyApproved": false
+    },
+    {
+      "id": "pres-1781746084069-pix4",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745003652-2fez",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-lomi",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745003653-d814",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-x6wi",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745071543-b6yh",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-oka7",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-1",
+      "status": "cancelado",
+      "manuallyApproved": false
+    },
+    {
+      "id": "pres-1781746084069-33ag",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-3",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-5y9z",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745071543-hcgl",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-h94c",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745071543-xv6u",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-lsyx",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745003653-sxjj",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-9m9t",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-2",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-mjvy",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745071543-6skw",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-2jvu",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745003652-17rz",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084069-rgju",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745003653-h6qh",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.069Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084070-lcva",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745071543-xjdl",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.070Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084070-1c7c",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-1780512450830",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.070Z",
+      "manuallyApproved": true
+    },
+    {
+      "id": "pres-1781746084070-hu4l",
+      "matchId": "match-1781745861757-h62irrv",
+      "playerId": "player-gen-1781745071543-w90n",
+      "status": "confirmado",
+      "confirmedAt": "2026-06-18T01:28:04.070Z",
+      "manuallyApproved": true
     }
   ],
   "recurrentConfig": {
     "dayOfWeek": 2,
     "time": "21:30",
-    "location": "Arena Green Society (Quadra Principal)",
+    "location": "Arena Furacão",
     "durationMinutes": 60,
     "confirmationDeadlineDaysBefore": 2,
-    "active": true
+    "active": true,
+    "maxMensalistas": 12
   },
-  "reserveAlerts": [],
+  "reserveAlerts": [
+    {
+      "id": "alert-1781746195431",
+      "matchId": "match-1781745861757-h62irrv",
+      "cancelledPlayerId": "player-1",
+      "suggestedReservePlayerId": "player-4",
+      "createdAt": "2026-06-18T01:29:55.431Z",
+      "cleared": false
+    }
+  ],
   "reservesOrder": [
-    "player-4"
+    "player-4",
+    "player-gen-1781745003653-n54d",
+    "player-gen-1781745003653-r6gn",
+    "player-gen-1781745003653-y6j0",
+    "player-gen-1781745003653-y2n3",
+    "player-gen-1781745071543-vf28",
+    "player-gen-1781745071543-xe56",
+    "player-gen-1781745071543-bn2r",
+    "player-gen-1781745071543-rnno"
   ],
   "draws": [],
   "duoAffinities": [],
   "trioAffinities": [],
-  "results": []
+  "results": [],
+  "financeConfig": {
+    "monthlyFee": 100,
+    "chargeDateRule": "primeiro_jogo",
+    "history": [
+      {
+        "date": "2026-01-01",
+        "amount": 100
+      }
+    ]
+  },
+  "bills": [],
+  "payments": [],
+  "competences": [
+    {
+      "competence": "06/2026",
+      "monthlyFee": 100,
+      "chargeDateRule": "primeiro_jogo",
+      "generated": true,
+      "generatedDate": "2026-06-18T00:59:37.415Z"
+    }
+  ],
+  "categoryTransitions": [],
+  "events": [],
+  "eventParticipants": [],
+  "eventBills": [],
+  "muralPosts": [],
+  "muralCategories": [
+    {
+      "id": "partida",
+      "name": "Partida"
+    },
+    {
+      "id": "evento",
+      "name": "Evento"
+    },
+    {
+      "id": "resenha",
+      "name": "Resenha"
+    },
+    {
+      "id": "livre",
+      "name": "Livre"
+    }
+  ],
+  "muralHighlights": [],
+  "muralFiles": [],
+  "notifications": [
+    {
+      "id": "notif-bill-created-bill-player-1-06-2026",
+      "category": "financeiro",
+      "title": "💰 Nova Cobrança Gerada",
+      "message": "Foi gerada uma cobrança de mensalidade de R$ 100.00 referente à competência 06/2026 para o jogador Fofim Magalhães.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-1",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-overdue-bill-player-1-06-2026",
+      "category": "financeiro",
+      "title": "🚨 Cobrança Vencida",
+      "message": "Sua mensalidade de R$ 100.00 (06/2026) venceu em 04/06/2026.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-1",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-created-bill-player-2-06-2026",
+      "category": "financeiro",
+      "title": "💰 Nova Cobrança Gerada",
+      "message": "Foi gerada uma cobrança de mensalidade de R$ 100.00 referente à competência 06/2026 para o jogador João Silva.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-2",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-overdue-bill-player-2-06-2026",
+      "category": "financeiro",
+      "title": "🚨 Cobrança Vencida",
+      "message": "Sua mensalidade de R$ 100.00 (06/2026) venceu em 04/06/2026.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-2",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-created-bill-player-1780512450830-06-2026",
+      "category": "financeiro",
+      "title": "💰 Nova Cobrança Gerada",
+      "message": "Foi gerada uma cobrança de mensalidade de R$ 100.00 referente à competência 06/2026 para o jogador test.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-1780512450830",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-overdue-bill-player-1780512450830-06-2026",
+      "category": "financeiro",
+      "title": "🚨 Cobrança Vencida",
+      "message": "Sua mensalidade de R$ 100.00 (06/2026) venceu em 04/06/2026.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-1780512450830",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-created-bill-player-admin-06-2026",
+      "category": "financeiro",
+      "title": "💰 Nova Cobrança Gerada",
+      "message": "Foi gerada uma cobrança de mensalidade de R$ 100.00 referente à competência 06/2026 para o jogador Administrador do Fofim.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-admin",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-bill-overdue-bill-player-admin-06-2026",
+      "category": "financeiro",
+      "title": "🚨 Cobrança Vencida",
+      "message": "Sua mensalidade de R$ 100.00 (06/2026) venceu em 04/06/2026.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T00:59:37.430Z",
+      "targetUserId": "player-admin",
+      "actionUrl": "finance"
+    },
+    {
+      "id": "notif-1781744835425-169",
+      "category": "partida",
+      "title": "🔄 Partida Reaberta",
+      "message": "A partida do dia 06/06/2026 foi reaberta por um administrador.",
+      "status": "lida",
+      "createdAt": "2026-06-18T01:07:15.425Z",
+      "targetUserId": "all",
+      "actionUrl": "calendar",
+      "matchId": "match-1"
+    },
+    {
+      "id": "notif-1781745861757-195",
+      "category": "partida",
+      "title": "⚽ Nova Partida Agendada",
+      "message": "Uma nova partida foi agendada para o dia 26/06/2026 às 21:30 na localidade Arena Furacão.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T01:24:21.757Z",
+      "targetUserId": "all",
+      "actionUrl": "calendar",
+      "matchId": "match-1781745861757-h62irrv"
+    },
+    {
+      "id": "notif-1781746195431-29",
+      "category": "partida",
+      "title": "🏃 vaga de Reserva Convocada!",
+      "message": "Você foi convocado da lista de espera para o racha do dia 26/06/2026 devido ao cancelamento de Fofim Magalhães.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T01:29:55.431Z",
+      "targetUserId": "player-4",
+      "actionUrl": "calendar",
+      "matchId": "match-1781745861757-h62irrv"
+    },
+    {
+      "id": "notif-1781746195431-445",
+      "category": "partida",
+      "title": "👥 Vaga Aberta e Convocação",
+      "message": "O cancelamento da presença de Fofim Magalhães liberou uma vaga. O reserva Zeco Canela foi acionado.",
+      "status": "nao_lida",
+      "createdAt": "2026-06-18T01:29:55.431Z",
+      "targetUserId": "all",
+      "actionUrl": "calendar",
+      "matchId": "match-1781745861757-h62irrv"
+    }
+  ],
+  "notificationPreferences": [],
+  "userAudits": [
+    {
+      "id": "audit-pgen-1781745003652-obb9",
+      "timestamp": "2026-06-18T01:10:03.652Z",
+      "userId": "system",
+      "userName": "Marcelo Ribeiro",
+      "userEmail": "marcelo.ribeiro@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Marcelo Ribeiro gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003652-dyd9",
+      "timestamp": "2026-06-18T01:10:03.652Z",
+      "userId": "system",
+      "userName": "Bruno Ferreira",
+      "userEmail": "bruno.ferreira@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Bruno Ferreira gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-mwkj",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "João Fonseca",
+      "userEmail": "joao.fonseca@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta João Fonseca gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-4vwa",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Marcos Pinto",
+      "userEmail": "marcos.pinto@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Marcos Pinto gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-hkbd",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Guilherme Mendes",
+      "userEmail": "guilherme.mendes@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Guilherme Mendes gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-510a",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Felipe Lima",
+      "userEmail": "felipe.lima@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Felipe Lima gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-2quw",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Matheus Teixeira",
+      "userEmail": "matheus.teixeira@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Matheus Teixeira gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-9tsb",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Gabriel Silva",
+      "userEmail": "gabriel.silva@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Gabriel Silva gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-1lie",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Daniel Pereira",
+      "userEmail": "daniel.pereira@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Daniel Pereira gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745003653-mm0m",
+      "timestamp": "2026-06-18T01:10:03.653Z",
+      "userId": "system",
+      "userName": "Ricardo Nunes",
+      "userEmail": "ricardo.nunes@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Ricardo Nunes gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-ryui",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Felipe Rocha",
+      "userEmail": "felipe.rocha@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Felipe Rocha gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-cfgi",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Gustavo Araújo",
+      "userEmail": "gustavo.araujo@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Gustavo Araújo gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-s9kd",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Ricardo Fonseca",
+      "userEmail": "ricardo.fonseca@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Ricardo Fonseca gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-md64",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Guilherme Vieira",
+      "userEmail": "guilherme.vieira@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Guilherme Vieira gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-nbgy",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Lucas Cardoso",
+      "userEmail": "lucas.cardoso@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Lucas Cardoso gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-riai",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Thiago Ferreira",
+      "userEmail": "thiago.ferreira@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Thiago Ferreira gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-ia7e",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Matheus Ferreira",
+      "userEmail": "matheus.ferreira@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Matheus Ferreira gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-3f5r",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Bruno Rodrigues",
+      "userEmail": "bruno.rodrigues@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Bruno Rodrigues gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-jt5b",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Alexandre Nascimento",
+      "userEmail": "alexandre.nascimento@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Alexandre Nascimento gerado automaticamente por simulação."
+    },
+    {
+      "id": "audit-pgen-1781745071543-jwev",
+      "timestamp": "2026-06-18T01:11:11.543Z",
+      "userId": "system",
+      "userName": "Carlos Gomes",
+      "userEmail": "carlos.gomes@racha.fofim.com",
+      "action": "Criação de Atleta",
+      "previousRole": "",
+      "newRole": "",
+      "previousStatus": "",
+      "newStatus": "",
+      "performedBy": "Administrador do Fofim",
+      "details": "Atleta Carlos Gomes gerado automaticamente por simulação."
+    }
+  ]
 }

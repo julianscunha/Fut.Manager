@@ -240,8 +240,10 @@ export interface CompetenceConfig {
 export interface ReserveQueueAlert {
   id: string;
   matchId: string;
-  cancelledPlayerId: string;
+  cancelledPlayerId?: string;
   suggestedReservePlayerId?: string;
+  playerId?: string;
+  status?: string;
   createdAt: string;
   cleared: boolean;
 }

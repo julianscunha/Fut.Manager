@@ -107,6 +107,20 @@ export default function DashboardStatus({
   const [nextMatch, setNextMatch] = useState<any>(null);
   const [presences, setPresences] = useState<any[]>([]);
   const [reserveAlerts, setReserveAlerts] = useState<any[]>([]);
+  const [reserveQueue, setReserveQueue] = useState<{
+    vagasAbertas: number;
+    queue: { id: string; name: string; priority: number; primaryPosition?: string }[];
+    activeConvocation: {
+      id: string;
+      playerId: string;
+      playerName: string;
+      status: string;
+      createdAt: string;
+    } | null;
+    history: { id: string; playerId: string; playerName: string; status: string; updatedAt: string }[];
+    isGoleiroMissing?: boolean;
+    noGkReservesAvailable?: boolean;
+  } | null>(null);
   const [myPresence, setMyPresence] = useState<string>('nao_confirmado');
   const [resolvedPlayerId, setResolvedPlayerId] = useState<string | null>(currentUser.playerId || null);
   const [currentUserCategory, setCurrentUserCategory] = useState<string>('reserva');
@@ -145,6 +159,7 @@ export default function DashboardStatus({
   // Analytical Racha States
   const [stats, setStats] = useState<any>(null);
   const [latestResult, setLatestResult] = useState<any>(null);
+  const [nextMatchResult, setNextMatchResult] = useState<any>(null);
 
   // Active Events States
   const [activeEvents, setActiveEvents] = useState<any[]>([]);
@@ -220,7 +235,15 @@ export default function DashboardStatus({
           m.lifecycleState !== 'MATCH_FINISHED'
         );
         // Since matches is sorted by date ascending, the first active match is the closest to today chronologically
-        const targetMatch = activeMatches.length > 0 ? activeMatches[0] : null;
+        let targetMatch = activeMatches.length > 0 ? activeMatches[0] : null;
+        
+        if (!targetMatch) {
+          // Fallback to the latest match overall, if it is 'encerrada'
+          const endedMatches = matches.filter((m: any) => m.status === 'encerrada');
+          if (endedMatches.length > 0) {
+            targetMatch = endedMatches[endedMatches.length - 1];
+          }
+        }
         
         setNextMatch(targetMatch);
 
@@ -238,12 +261,41 @@ export default function DashboardStatus({
             console.error('Falha ao ler sorteio no dashboard:', err);
             setMatchDraw(null);
           }
+
+          // Fetch the results for this targetMatch specifically
+          try {
+            const resRes = await fetch('/api/results');
+            if (resRes.ok) {
+              const resData = await resRes.json();
+              const found = resData.find((r: any) => r.matchId === targetMatch.id);
+              setNextMatchResult(found || null);
+            } else {
+              setNextMatchResult(null);
+            }
+          } catch (resErr) {
+            console.error('Falha ao ler resultados no dashboard:', resErr);
+            setNextMatchResult(null);
+          }
         } else {
           setMatchDraw(null);
+          setNextMatchResult(null);
         }
 
-        // Fetch presences for this match if there's an active targetMatch
+        // Fetch presences and reserve queue for this match if there's an active targetMatch
         if (targetMatch) {
+          try {
+            const queueRes = await fetch(`/api/matches/${targetMatch.id}/reserve-queue`);
+            if (queueRes.ok) {
+              const qData = await queueRes.json();
+              setReserveQueue(qData);
+            } else {
+              setReserveQueue(null);
+            }
+          } catch (qErr) {
+            console.error('Falha ao ler fila de reservas:', qErr);
+            setReserveQueue(null);
+          }
+
           const presRes = await fetch(`/api/matches/${targetMatch.id}/presences`);
           if (presRes.ok) {
             const presData = await presRes.json();
@@ -719,6 +771,72 @@ export default function DashboardStatus({
     }
   };
 
+  // Summon the next reserve in the sequential waitlist
+  const handleSummonNextReserve = async () => {
+    if (!nextMatch) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/matches/${nextMatch.id}/reserve-queue/summon-next`, { method: 'POST' });
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.error || 'Erro ao realizar convocação.');
+
+      setSuccessMsg(resData.message || 'Próximo reserva convocado com sucesso!');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao convocar reserva.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleIgnoreReservePlayer = async (playerId: string) => {
+    if (!nextMatch) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/matches/${nextMatch.id}/reserve-queue/ignore-player`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId })
+      });
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.error || 'Erro ao ignorar jogador.');
+
+      setSuccessMsg('Jogador reserva ignorado. Sugerindo próximo da fila.');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao ignorar jogador.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // Respond to a pending convocacao (accept, refuse, or dispense)
+  const handleRespondReserveConvocation = async (alertId: string, status: 'confirmado' | 'recusado' | 'dispensado') => {
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const response = await fetch(`/api/reserve-alerts/${alertId}/respond`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      const resData = await response.json();
+      if (!response.ok) throw new Error(resData.error || 'Erro ao responder convocação.');
+
+      setSuccessMsg(resData.message || 'Resposta registrada com sucesso!');
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao processar resposta.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleAdminTogglePresence = async (playerId: string, status: 'confirmado' | 'cancelado') => {
     if (!nextMatch) return;
     setActionLoading(true);
@@ -1154,9 +1272,39 @@ export default function DashboardStatus({
   };
 
   // Aggregate stats from matching list
-  const confirmedPlayers = presences.filter(p => p.presenceStatus === 'confirmado');
-  const cancelPlayers = presences.filter(p => p.presenceStatus === 'cancelado');
-  const unconfirmedPlayers = presences.filter(p => p.presenceStatus === 'nao_confirmado');
+  const POSITION_ORDER = ['goleiro', 'zagueiro', 'volante', 'meio_campo', 'lateral', 'atacante'];
+
+  const sortPlayersByPositionAndName = (p1: any, p2: any) => {
+    const pl1 = players.find((pl: any) => pl.id === p1.playerId);
+    const pl2 = players.find((pl: any) => pl.id === p2.playerId);
+
+    const pos1 = pl1 ? pl1.primaryPosition : (p1.primaryPosition || '');
+    const pos2 = pl2 ? pl2.primaryPosition : (p2.primaryPosition || '');
+
+    const idx1 = POSITION_ORDER.indexOf(pos1);
+    const idx2 = POSITION_ORDER.indexOf(pos2);
+
+    const val1 = idx1 !== -1 ? idx1 : 999;
+    const val2 = idx2 !== -1 ? idx2 : 999;
+
+    if (val1 !== val2) {
+      return val1 - val2;
+    }
+
+    const name1 = (p1.name || '').toLowerCase().trim();
+    const name2 = (p2.name || '').toLowerCase().trim();
+    return name1.localeCompare(name2, 'pt-BR');
+  };
+
+  const confirmedPlayers = [...presences.filter(p => p.presenceStatus === 'confirmado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
+  const cancelPlayers = [...presences.filter(p => p.presenceStatus === 'cancelado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
+  const unconfirmedPlayers = [...presences.filter(p => p.presenceStatus === 'nao_confirmado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
+
+  const sortedPresencesForList = [
+    ...confirmedPlayers,
+    ...unconfirmedPlayers,
+    ...cancelPlayers
+  ];
 
   const confirmedCount = confirmedPlayers.length;
   const maxPlayersLimit = nextMatch && nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
@@ -1373,6 +1521,28 @@ export default function DashboardStatus({
 
   const bestKeeper = getBestKeeper();
 
+  const getMatchState = (): 'AGENDADO' | 'CONFIRMACOES_ABERTAS' | 'RACHA_FECHADO' | 'SORTEIO_REALIZADO' | 'PARTIDA_ENCERRADA' | null => {
+    if (!nextMatch) return null;
+    if (nextMatch.status === 'encerrada') {
+      return 'PARTIDA_ENCERRADA';
+    }
+    if (matchDraw && matchDraw.teams && matchDraw.teams.length > 0) {
+      return 'SORTEIO_REALIZADO';
+    }
+    if (confirmedCount >= maxPlayersLimit || nextMatch.status === 'fechada') {
+      return 'RACHA_FECHADO';
+    }
+    if (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') {
+      return 'CONFIRMACOES_ABERTAS';
+    }
+    if (nextMatch.status === 'agendada') {
+      return 'AGENDADO';
+    }
+    return null;
+  };
+
+  const matchState = getMatchState();
+
   return (
     <div className="flex flex-col gap-6 animate-fadeIn" id="dashboard-status-wrapper">
 
@@ -1418,7 +1588,7 @@ export default function DashboardStatus({
             </span>
           </div>
 
-          {nextMatch.status === 'agendada' && (
+          {matchState === 'AGENDADO' && (
             <div className="space-y-2.5">
               <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
                 A rodada está criada. O próximo passo é abrir as confirmações para os mensalistas.
@@ -1433,14 +1603,14 @@ export default function DashboardStatus({
             </div>
           )}
 
-          {nextMatch.status === 'confirmando' && (
+          {matchState === 'CONFIRMACOES_ABERTAS' && (
             <div className="space-y-2.5">
               <div className="text-zinc-400 text-[11px] leading-relaxed">
-                As confirmações de presença estão abertas ({confirmedCount} de {maxPlayersLimit} confirmados).
+                <strong>Aguardando confirmações</strong> ({confirmedCount} de {maxPlayersLimit} confirmados).
                 {confirmedCount >= maxPlayersLimit ? (
                   <span className="text-emerald-400 font-bold block mt-1">✔ Quórum mínimo atingido! O sorteio de times já está liberado.</span>
                 ) : (
-                  <span className="text-zinc-555 font-medium block mt-1">Compartilhe e divulgue o link para incentivar as presenças de hoje.</span>
+                  <span className="text-zinc-550 font-medium block mt-1">Compartilhe e divulgue o link para incentivar as presenças de hoje.</span>
                 )}
               </div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -1460,86 +1630,17 @@ export default function DashboardStatus({
                     }}
                     className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
                   >
-                    Sorteio de Times
+                    Realizar Sorteio
                   </button>
                 )}
               </div>
             </div>
           )}
 
-          {nextMatch.status === 'aguardando_reservas' && (
-            <div className="space-y-3">
-              <p className="text-[#a1a1aa] text-[11px] leading-relaxed font-sans">
-                Apenas {confirmedCount} atletas confirmados. Faltam <span className="text-amber-400 font-bold font-mono text-xs">{maxPlayersLimit - confirmedCount}</span> jogadores. Convocar reservas da fila de prioridade:
-              </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (!showReserveSuggestions) {
-                      await fetchReservesOrder();
-                    }
-                    setShowReserveSuggestions(!showReserveSuggestions);
-                  }}
-                  className="flex-1 bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 select-none hover:scale-[1.01] active:scale-95"
-                >
-                  <span>Convocar Reservas</span>
-                  {showReserveSuggestions ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleShareMatchOnWhatsApp}
-                  className="bg-[#128C7E] hover:bg-[#075e54] text-white font-black px-3.5 py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition flex items-center justify-center gap-1.5 cursor-pointer hover:scale-[1.01] active:scale-95"
-                  title="Divulgar link"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {showReserveSuggestions && (
-                <div className="pt-3 border-t border-zinc-90 w-full space-y-2 mt-2 animate-fadeIn bg-zinc-950/80 p-2.5 rounded-lg border border-zinc-900 animate-fadeIn">
-                  <div className="text-[9px] uppercase font-mono tracking-wider text-amber-400 font-bold">
-                    Fila de Prioridade do Banco:
-                  </div>
-                  {loadingReserves ? (
-                    <div className="text-[10px] text-zinc-500 font-mono animate-pulse py-1">
-                      Buscando fila de prioridade do banco...
-                    </div>
-                  ) : priorityReserves.filter(r => !confirmedPlayers.some(p => p.playerId === r.id)).length === 0 ? (
-                    <div className="text-[10px] text-zinc-500 font-mono py-1">
-                      Nenhum reserva pendente disponível para convocação.
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {priorityReserves
-                        .filter(r => !confirmedPlayers.some(p => p.playerId === r.id))
-                        .slice(0, 4)
-                        .map((reserve: any, idx) => (
-                          <div key={reserve.id} className="flex items-center justify-between bg-zinc-900 px-2.5 py-1.5 rounded-lg border border-zinc-805 text-[10px]">
-                            <span className="font-semibold text-zinc-200 truncate">
-                              {idx + 1}. {reserve.name}
-                            </span>
-                            <button
-                              type="button"
-                              disabled={actionLoading}
-                              onClick={() => handleAdminTogglePresence(reserve.id, 'confirmado')}
-                              className="bg-emerald-600/90 hover:bg-emerald-500 text-white font-black px-2 py-1 rounded text-[9px] uppercase transition cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
-                            >
-                              Convocar
-                            </button>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {nextMatch.status === 'fechada' && (
+          {matchState === 'RACHA_FECHADO' && (
             <div className="space-y-2.5">
-              <p className="text-emerald-400 text-[11px] leading-relaxed font-semibold">
-                ✔ Presenças fechadas! Todos os {confirmedCount} atletas confirmados para este racha.
+              <p className="text-amber-400 font-bold text-[11px] leading-relaxed">
+                ⚠ Próxima ação necessária: Realizar sorteio
               </p>
               <button
                 type="button"
@@ -1548,15 +1649,15 @@ export default function DashboardStatus({
                 }}
                 className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-2.5 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer shadow-md hover:scale-[1.01] active:scale-95"
               >
-                Realizar Sorteio de Times
+                Realizar Sorteio
               </button>
             </div>
           )}
 
-          {nextMatch.status === 'sorteada' && (
+          {matchState === 'SORTEIO_REALIZADO' && (
             <div className="space-y-2.5">
-              <p className="text-zinc-300 text-[11px] leading-relaxed">
-                Sorteio realizado. Os times podem ser ajustados manualmente até o início da partida.
+              <p className="text-emerald-400 font-bold text-[11px] leading-relaxed">
+                ✔ Times definidos
               </p>
               <div className="flex gap-2">
                 <button
@@ -1582,6 +1683,17 @@ export default function DashboardStatus({
                   <span>Gravar Placar</span>
                 </button>
               </div>
+            </div>
+          )}
+
+          {matchState === 'PARTIDA_ENCERRADA' && (
+            <div className="space-y-1">
+              <p className="text-zinc-400 font-semibold text-[11px]">
+                Partida concluída
+              </p>
+              <p className="text-zinc-650 text-[10px] font-mono leading-relaxed">
+                Todas as operações para esta rodada foram encerradas e os placares foram salvos de forma definitiva.
+              </p>
             </div>
           )}
 
@@ -1625,53 +1737,6 @@ export default function DashboardStatus({
           </button>
         </div>
       )}
-
-      {/* Admin Reserve Queue substitution prompts */}
-      {reserveAlerts.length > 0 && nextMatch?.status !== 'sorteada' && (currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
-        <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3 animate-pulse order-4">
-          <div className="flex items-center gap-2 text-amber-400 font-mono text-xs font-bold uppercase tracking-wider">
-            <BellRing className="w-4 h-4 animate-bounce text-amber-400" />
-            <span>Convocação de Reservas Recomendada ({reserveAlerts.length})</span>
-          </div>
-          <p className="text-[11px] text-zinc-400 leading-normal">
-            Um ou mais mensalistas confirmados cancelaram participação após a data limite. O sistema selecionou automaticamente o reserva prioritize disponível:
-          </p>
-          <div className="space-y-2">
-            {reserveAlerts.map((alert: any) => (
-              <div key={alert.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-zinc-950/80 border border-zinc-900 px-3.5 py-2.5 rounded-lg text-xs font-mono">
-                <div className="space-y-1">
-                  <div className="text-zinc-300">
-                    📉 <span className="text-rose-400 font-extrabold">{alert.cancelledPlayerName}</span> CANCELOU presença.
-                  </div>
-                  <div className="text-zinc-400 text-[11px]">
-                    👉 Próximo da Fila: <span className="text-emerald-400 font-extrabold">{alert.suggestedReservePlayerName || 'Nenhum reserva na prioridade'}</span>
-                  </div>
-                </div>
-                
-                {alert.suggestedReservePlayerId && (
-                  <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button
-                      disabled={actionLoading}
-                      onClick={() => handleSummonReserve(alert.id)}
-                      className="bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1.5 rounded font-bold text-[10px] uppercase tracking-wider transition cursor-pointer"
-                    >
-                      Convocação Direta
-                    </button>
-                    <button
-                      disabled={actionLoading}
-                      onClick={() => handleClearAlert(alert.id)}
-                      className="bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 text-zinc-400 px-2.5 py-1.5 rounded font-bold text-[10px] uppercase transition cursor-pointer"
-                    >
-                      Dispensar
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* SEÇÃO DE EVENTOS & CONFRATERNIZAÇÕES ATIVOS */}
       {activeEvents.length > 0 && (
         <div className="rounded-xl border border-zinc-850 bg-zinc-950/20 p-5 space-y-4 shadow-xl font-sans order-6" id="dashboard-active-events-panel">
@@ -2009,7 +2074,115 @@ export default function DashboardStatus({
       ) : nextMatch ? (
         <div className="flex flex-col gap-6 order-3 w-full">
           
-          {matchDraw && matchDraw.teams ? (
+          {matchState === 'PARTIDA_ENCERRADA' ? (
+            /* 🏆 STATE 5: RESUMO DE PLACAR DA PARTIDA ENCERRADA */
+            <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 space-y-4 flex flex-col justify-between shadow-lg" id="dashboard-resumo-da-partida">
+              <div className="space-y-4">
+                <div className="flex flex-col gap-1 pb-3 border-b border-zinc-900/40">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                       <Trophy className="w-5 h-5 text-amber-500" />
+                       <h3 className="font-display font-extrabold text-white text-sm uppercase tracking-wide">
+                         Resumo da Rodada
+                       </h3>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase bg-amber-500/15 border-amber-500/20 text-amber-400">
+                      Rodada Finalizada
+                    </span>
+                  </div>
+                </div>
+
+                {/* Scoreboard visual design */}
+                <div className="bg-zinc-950/70 border border-zinc-900/80 p-4 rounded-xl space-y-4">
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    {/* Time Azul */}
+                    <div className="bg-sky-950/15 border border-sky-500/10 p-3 rounded-lg flex flex-col items-center justify-between">
+                      <span className="text-[9px] text-sky-400 font-mono font-bold uppercase tracking-widest block">Time Azul</span>
+                      <span className="text-3xl font-display font-black text-white py-1">{nextMatchResult ? nextMatchResult.winsBlue : 0}</span>
+                      <span className="text-[8px] text-zinc-500 font-mono uppercase block">Vitórias</span>
+                    </div>
+
+                    {/* Time Vermelho */}
+                    <div className="bg-rose-950/15 border border-rose-500/10 p-3 rounded-lg flex flex-col items-center justify-between">
+                      <span className="text-[9px] text-rose-400 font-mono font-bold uppercase tracking-widest block">Time Vermelho</span>
+                      <span className="text-3xl font-display font-black text-white py-1">{nextMatchResult ? nextMatchResult.winsRed : 0}</span>
+                      <span className="text-[8px] text-zinc-500 font-mono uppercase block">Vitórias</span>
+                    </div>
+
+                    {/* Time Verde */}
+                    <div className="bg-emerald-950/15 border border-emerald-500/10 p-3 rounded-lg flex flex-col items-center justify-between">
+                      <span className="text-[9px] text-emerald-400 font-mono font-bold uppercase tracking-widest block">Time Verde</span>
+                      <span className="text-3xl font-display font-black text-white py-1">{nextMatchResult ? nextMatchResult.winsGreen : 0}</span>
+                      <span className="text-[8px] text-zinc-500 font-mono uppercase block">Vitórias</span>
+                    </div>
+                  </div>
+
+                  {/* Champion Announcement Banner */}
+                  {(() => {
+                    const winsList = [
+                      { name: 'Azul', wins: nextMatchResult?.winsBlue || 0, color: 'text-sky-400', bannerBg: 'bg-gradient-to-r from-sky-950/40 via-sky-900/20 to-zinc-950 shadow-sky-500/5', border: 'border-sky-500/20' },
+                      { name: 'Vermelho', wins: nextMatchResult?.winsRed || 0, color: 'text-rose-400', bannerBg: 'bg-gradient-to-r from-rose-950/40 via-rose-900/20 to-zinc-950 shadow-rose-500/5', border: 'border-rose-500/20' },
+                      { name: 'Verde', wins: nextMatchResult?.winsGreen || 0, color: 'text-emerald-400', bannerBg: 'bg-gradient-to-r from-emerald-950/40 via-emerald-900/20 to-zinc-950 shadow-emerald-400/5', border: 'border-emerald-500/20' }
+                    ];
+                    const maxWinsVal = Math.max(...winsList.map(w => w.wins));
+                    const isAnyWin = maxWinsVal > 0;
+
+                    if (!isAnyWin) {
+                      return (
+                        <div className="p-3 bg-zinc-900/40 border border-zinc-850/60 rounded-lg text-center font-mono text-[11px] text-zinc-400">
+                          ⚔️ Aguardando registro ou liberação do placar da rodada.
+                        </div>
+                      );
+                    }
+
+                    const roundWinners = winsList.filter(w => w.wins === maxWinsVal);
+                    if (roundWinners.length === 1) {
+                      return (
+                        <div className={`p-4 rounded-lg border flex items-center justify-between ${roundWinners[0].bannerBg} ${roundWinners[0].border}`}>
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-zinc-400 font-mono uppercase tracking-widest block font-bold">Destaque do Racha</span>
+                            <span className="text-[13px] font-display font-black text-white uppercase tracking-tight flex items-center gap-1.5">
+                              🏆 Time <span className={roundWinners[0].color}>{roundWinners[0].name}</span> é o Campeão!
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xl font-display font-black text-white block">{roundWinners[0].wins}</span>
+                            <span className="text-[8px] text-zinc-550 block font-mono uppercase block">Vitórias Totais</span>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="p-4 rounded-lg border border-zinc-850 bg-zinc-900/30 flex items-center justify-between">
+                          <div className="space-y-1">
+                            <span className="text-[9px] text-zinc-500 font-mono uppercase tracking-widest block font-bold">Destaque do Racha</span>
+                            <span className="text-[13px] font-display font-black text-white uppercase tracking-tight flex items-center gap-1.5">
+                              🤝 Rodada Empatada!
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs text-zinc-400 font-mono block">Mais de um time com {maxWinsVal} vitórias</span>
+                          </div>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+
+                {/* Technical facts */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-zinc-950/30 border border-zinc-900/60 p-3.5 rounded-xl font-mono text-[11px] text-zinc-400">
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] text-zinc-500 uppercase tracking-widest font-black block">Data do Evento</span>
+                    <span className="text-zinc-200 font-medium block">{nextMatch.date.split('-').reverse().join('/')}</span>
+                  </div>
+                  <div className="space-y-0.5">
+                    <span className="text-[8px] text-zinc-550 uppercase tracking-widest font-black block">Horário & Local</span>
+                    <span className="text-zinc-200 font-medium truncate block">{nextMatch.time} • {nextMatch.location}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : matchDraw && matchDraw.teams ? (
             /* Simplified Próxima Rodada Card (Sorteio realizado) */
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-4 space-y-3 flex flex-col justify-between shadow-lg">
               <div className="space-y-3">
@@ -2342,7 +2515,7 @@ export default function DashboardStatus({
                   </>
                 )}
 
-                {nextMatch.status !== 'agendada' && (
+                {matchState === 'CONFIRMACOES_ABERTAS' && nextMatch.status !== 'agendada' && (
                   currentUserCategory === 'reserva' && !areReservesReleased ? (
                     <div className="flex flex-col gap-1 p-3 rounded-lg border border-dashed border-zinc-850 bg-zinc-950/40 text-center font-mono text-[11px]">
                       <span className="text-zinc-400 font-bold">Sua Confirmação:</span>
@@ -2373,41 +2546,43 @@ export default function DashboardStatus({
 
                 {/* RSVP BUTTON ACTIONS */}
                 <div className="space-y-4 mt-4 pt-4 border-t border-zinc-900/40">
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
-                      onClick={() => handleRsvpHolder('confirmado')}
-                      className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
-                        !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
-                          ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed opacity-40'
-                          : actionLoading
-                            ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
-                            : myPresence === 'confirmado'
-                              ? 'bg-emerald-600 border border-emerald-400 text-white shadow shadow-emerald-500/15 cursor-pointer hover:bg-emerald-500 active:scale-95'
-                              : 'bg-zinc-900 hover:bg-emerald-500/10 border border-zinc-800 text-zinc-400 hover:text-emerald-400 cursor-pointer active:scale-95'
-                      }`}
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>Vou Jogar</span>
-                    </button>
+                  {matchState === 'CONFIRMACOES_ABERTAS' && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
+                        onClick={() => handleRsvpHolder('confirmado')}
+                        className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
+                          !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
+                            ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed opacity-40'
+                            : actionLoading
+                              ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
+                              : myPresence === 'confirmado'
+                                ? 'bg-emerald-600 border border-emerald-400 text-white shadow shadow-emerald-500/15 cursor-pointer hover:bg-emerald-500 active:scale-95'
+                                : 'bg-zinc-900 hover:bg-emerald-500/10 border border-zinc-800 text-zinc-400 hover:text-emerald-400 cursor-pointer active:scale-95'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Vou Jogar</span>
+                      </button>
 
-                    <button
-                      disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
-                      onClick={() => handleRsvpHolder('cancelado')}
-                      className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
-                        !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
-                          ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed opacity-40'
-                          : actionLoading
-                            ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
-                            : myPresence === 'cancelado'
-                              ? 'bg-rose-600 border border-rose-500 text-white shadow shadow-rose-500/15 cursor-pointer hover:bg-rose-500 active:scale-95'
-                              : 'bg-zinc-900 hover:bg-rose-500/10 border border-zinc-800 text-zinc-400 hover:text-rose-400 cursor-pointer active:scale-95'
-                      }`}
-                    >
-                      <X className="w-4 h-4" />
-                      <span>Não Vou</span>
-                    </button>
-                  </div>
+                      <button
+                        disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
+                        onClick={() => handleRsvpHolder('cancelado')}
+                        className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
+                          !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
+                            ? 'bg-zinc-900 border border-zinc-850 text-zinc-650 cursor-not-allowed opacity-40'
+                            : actionLoading
+                              ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
+                              : myPresence === 'cancelado'
+                                ? 'bg-rose-600 border border-rose-500 text-white shadow shadow-rose-500/15 cursor-pointer hover:bg-rose-500 active:scale-95'
+                                : 'bg-zinc-900 hover:bg-rose-500/10 border border-zinc-800 text-zinc-400 hover:text-rose-400 cursor-pointer active:scale-95'
+                        }`}
+                      >
+                        <X className="w-4 h-4" />
+                        <span>Não Vou</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* LIST OF CONFIRMED / CANCELLED IN THE MATCH */}
                   <div className="border-t border-zinc-900/40 pt-3">
@@ -2470,7 +2645,7 @@ export default function DashboardStatus({
                                           <span>Confirmar Mensalistas Pendentes</span>
                                         </button>
                                         <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
-                                          * Confirma apenas mensalistas/mensalistas goleiros que estão pendentes, respeitando o limite do racha ({maxPlayersLimit} no total).
+                                          * Confirma apenas mensalistas que estão pendentes, respeitando o limite do racha ({maxPlayersLimit} no total).
                                         </p>
                                       </div>
                                     )}
@@ -2494,7 +2669,7 @@ export default function DashboardStatus({
                                   </div>
                                 )}
 
-                                {presences.map((p: any) => {
+                                {sortedPresencesForList.map((p: any) => {
                                   // Look up the matching registered athlete to fetch real-time category and primary position
                                   const matchingPlayer = players.find((pl: any) => pl.id === p.playerId);
                                   
@@ -2580,81 +2755,130 @@ export default function DashboardStatus({
                   </div>
 
                   {/* RESERVES SECTION */}
-                  {nextMatch.status !== 'agendada' && (
-                    <div className="border-t border-zinc-900 pt-3 mt-3">
-                      <div className="text-[9px] text-zinc-500 uppercase font-black tracking-wider pb-1.5 border-b border-zinc-900/50 mb-1">
-                        Reservas na Prioridade {areReservesReleased && `(${confirmedPlayers.filter(p=>p.category === 'reserva').length})`}
-                      </div>
-                      {!areReservesReleased ? (
-                        <div className="text-zinc-500 italic text-[11px] py-2 text-center font-sans">
-                          ⏳ Reservas aguardando liberação das confirmações dos mensalistas.
+                  {matchState === 'CONFIRMACOES_ABERTAS' && confirmedCount < maxPlayersLimit && nextMatch.status !== 'agendada' && (() => {
+                    const activeConvocationPlayerId = reserveQueue?.activeConvocation?.playerId;
+                    const suggestedPlayer = activeConvocationPlayerId
+                      ? players.find(p => p.id === activeConvocationPlayerId)
+                      : (reserveQueue?.queue && reserveQueue.queue.length > 0 ? players.find(p => p.id === reserveQueue.queue[0].id) : null);
+
+                    return (
+                      <div className="border-t border-zinc-900 pt-4 mt-3">
+                        <div className="text-[10px] text-zinc-400 uppercase font-black tracking-wider pb-1.5 border-b border-zinc-900/50 mb-3 flex justify-between items-center">
+                          <span>Reservas na Prioridade</span>
+                          {reserveQueue?.activeConvocation && (
+                            <span className="text-[8px] font-mono tracking-widest font-extrabold uppercase px-2 py-0.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded animate-pulse">
+                              Convocado - Aguardando Resposta
+                            </span>
+                          )}
                         </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {presences.filter(p => p.category === 'reserva').map((p, idx) => (
-                            <div 
-                              key={p.playerId} 
-                              className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-zinc-900 last:border-b-0 gap-3 sm:gap-2"
-                            >
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                {isAdmin && (
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedPlayerIds.includes(p.playerId)}
-                                    onChange={() => handleToggleSelectPlayer(p.playerId)}
-                                    className="accent-emerald-500 w-5 h-5 rounded border-zinc-800 bg-[#070b09] text-emerald-500 cursor-pointer flex-shrink-0"
-                                  />
-                                )}
-                                <span className={`${p.presenceStatus === 'confirmado' ? 'text-[#4ade80] font-bold' : p.presenceStatus === 'cancelado' ? 'text-zinc-600 line-through' : 'text-zinc-350'} truncate text-xs sm:text-[11px] font-sans font-medium`}>
-                                  {idx + 1}. {p.name}
-                                </span>
+
+                        {suggestedPlayer ? (
+                          <div className="bg-zinc-950/40 border border-[#1f2937]/30 rounded-lg p-3.5 space-y-3 shadow-md">
+                            <div>
+                              <div className="text-[9px] text-zinc-500 uppercase font-bold tracking-widest mb-1.5">
+                                {reserveQueue?.activeConvocation ? 'Atleta Convocado' : 'Reserva Sugerido'}
                               </div>
-                              <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-                                <div className="flex items-center gap-1 font-mono text-[10px]">
-                                  <span className="text-zinc-500 sm:hidden">Status: </span>
-                                  <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-900/40 border ${
-                                    p.presenceStatus === 'confirmado' 
-                                      ? 'text-emerald-450 border-emerald-500/20 bg-emerald-500/5' 
-                                      : p.presenceStatus === 'cancelado' 
-                                        ? 'text-rose-500 border-rose-500/20 bg-rose-500/5' 
-                                        : 'text-[#a78bfa] border-[#a78bfa]/20 bg-purple-500/5'
-                                  }`}>
-                                    {p.presenceStatus === 'confirmado' ? 'Vou' : p.presenceStatus === 'cancelado' ? 'Falta' : 'Fila'}
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="font-extrabold text-[#e2e8f0] text-sm font-sans">
+                                  {suggestedPlayer.name}
+                                </span>
+                                {suggestedPlayer.primaryPosition === 'goleiro' && (
+                                  <span className="text-[8.5px] px-1.5 py-0.5 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 rounded-md font-sans font-bold shrink-0 uppercase tracking-widest leading-none">
+                                    GK
                                   </span>
-                                </div>
-                                {isAdmin && (
-                                  <div className="flex gap-2.5 items-center">
-                                    {p.presenceStatus !== 'confirmado' && (
-                                      <button
-                                        type="button"
-                                        disabled={actionLoading}
-                                        onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                        className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
-                                        title="Aprovar participação"
-                                      >
-                                        <Check className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
-                                      </button>
-                                    )}
-                                    {p.presenceStatus !== 'cancelado' && (
-                                      <button
-                                        type="button"
-                                        disabled={actionLoading}
-                                        onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                        className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
-                                        title="Não vai / Cancelar"
-                                      >
-                                        <X className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
-                                      </button>
-                                    )}
-                                  </div>
+                                )}
+                              </div>
+                              <div className="text-[10px] text-emerald-450 uppercase font-bold tracking-wider mt-1.5 font-mono">
+                                {getAbbreviation(suggestedPlayer.primaryPosition)} - {POSITION_LABELS[suggestedPlayer.primaryPosition as any] || suggestedPlayer.primaryPosition}
+                                {suggestedPlayer.secondaryPositions && suggestedPlayer.secondaryPositions.length > 0 && (
+                                  <span className="text-zinc-500 font-sans normal-case">
+                                    {' '}| SEC: {suggestedPlayer.secondaryPositions.map((pos: string) => `${getAbbreviation(pos)} - ${POSITION_LABELS[pos as any] || pos}`).join(', ')}
+                                  </span>
                                 )}
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+
+                            <div className="border-t border-zinc-900/60 pt-2 text-[11px] font-sans">
+                              <span className="text-zinc-500 uppercase font-extrabold tracking-wider text-[9px] block">Motivo:</span>
+                              <span className="text-zinc-300 font-medium">
+                                {reserveQueue?.isGoleiroMissing && suggestedPlayer.primaryPosition === 'goleiro'
+                                  ? 'Vaga de goleiro aberta por ausência confirmada.'
+                                  : 'Vaga aberta por desistência.'}
+                              </span>
+                            </div>
+
+                            <div className="pt-1.5 flex items-center justify-end gap-2">
+                              {reserveQueue?.activeConvocation ? (
+                                /* RESPONSE FLOW */
+                                (isAdmin || currentUser.playerId === reserveQueue.activeConvocation.playerId || currentUser.id === reserveQueue.activeConvocation.playerId || (resolvedPlayerId && resolvedPlayerId === reserveQueue.activeConvocation.playerId)) ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={actionLoading}
+                                      onClick={() => handleRespondReserveConvocation(reserveQueue.activeConvocation!.id, 'confirmado')}
+                                      className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition cursor-pointer active:scale-95 flex items-center gap-1"
+                                    >
+                                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                                      <span>Confirmar Presença</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={actionLoading}
+                                      onClick={() => handleRespondReserveConvocation(reserveQueue.activeConvocation!.id, 'recusado')}
+                                      className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition cursor-pointer active:scale-95 flex items-center gap-1"
+                                    >
+                                      <X className="w-3.5 h-3.5 stroke-[3]" />
+                                      <span>Não Vou / Recusar</span>
+                                    </button>
+                                    {isAdmin && (
+                                      <button
+                                        type="button"
+                                        disabled={actionLoading}
+                                        onClick={() => handleRespondReserveConvocation(reserveQueue.activeConvocation!.id, 'dispensado')}
+                                        className="bg-zinc-850 hover:bg-zinc-800 disabled:opacity-50 border border-zinc-700/50 text-zinc-300 px-3 py-1.5 rounded-lg font-black text-[10px] uppercase tracking-wider transition cursor-pointer active:scale-95"
+                                      >
+                                        Dispensar
+                                      </button>
+                                    )}
+                                  </>
+                                ) : (
+                                  <span className="text-zinc-500 italic text-[11px] font-sans bg-zinc-950/20 py-2 text-center rounded border border-zinc-900/60 block w-full">
+                                    ⌛ Aguardando retorno da convocação enviada...
+                                  </span>
+                                )
+                              ) : (
+                                /* SUGGESTION / ACTION FLOW */
+                                isAdmin && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={actionLoading}
+                                      onClick={handleSummonNextReserve}
+                                      className="bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-zinc-950 font-black px-4 py-2 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer active:scale-95"
+                                    >
+                                      Convocar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={actionLoading}
+                                      onClick={() => handleIgnoreReservePlayer(suggestedPlayer.id)}
+                                      className="bg-zinc-900 border border-zinc-800 text-zinc-300 hover:bg-zinc-800 hover:border-zinc-700 px-4 py-2 rounded-lg font-black text-[10px] uppercase tracking-wider transition cursor-pointer active:scale-95"
+                                    >
+                                      Ignorar
+                                    </button>
+                                  </>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-zinc-500 italic text-[11px] py-3 text-center bg-zinc-950/25 border border-zinc-900 rounded-lg">
+                            📭 Fila de reservas vazia ou todos os jogadores foram ignorados.
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

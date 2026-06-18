@@ -580,7 +580,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
                               <option value="">-- Sem Vínculo (Não associado) --</option>
                               {players.map(p => (
                                 <option key={p.id} value={p.id}>
-                                  {p.name} ({p.category === 'mensalista' ? 'Mensalista' : p.category === 'mensalista_goleiro' ? 'Goleiro' : 'Reserva'})
+                                  {p.name} ({p.category === 'mensalista' ? 'Mensalista' : 'Reserva'})
                                 </option>
                               ))}
                             </select>
@@ -951,10 +951,9 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
                     <label className="text-[10px] text-zinc-500 font-mono uppercase font-bold block">
                       Categoria do Atleta:
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {(['mensalista', 'mensalista_goleiro', 'reserva'] as PlayerCategory[]).map((cat) => {
+                    <div className="grid grid-cols-2 gap-2">
+                      {(['mensalista', 'reserva'] as PlayerCategory[]).map((cat) => {
                         let catLabel = 'Mensalista';
-                        if (cat === 'mensalista_goleiro') catLabel = 'Mensalista Goleiro';
                         if (cat === 'reserva') catLabel = 'Reserva';
 
                         return (
@@ -981,10 +980,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
                         Guia de Categorização Esportiva:
                       </p>
                       {playerCategory === 'mensalista' && (
-                        <p>⭐️ <strong>Mensalista</strong>: Participa da escala regular de faturamento mensal. Contribuinte fixo do racha com prioridade de sorteios.</p>
-                      )}
-                      {playerCategory === 'mensalista_goleiro' && (
-                        <p>🧤 <strong>Mensalista Goleiro</strong>: Isento automático das mensalidades e taxas recorrentes das cobrandas do racha.</p>
+                        <p>⭐️ <strong>Mensalista</strong>: Participa da escala regular de faturamento mensal. Contribuinte fixo do racha com prioridade de sorteios. {primaryPosition === 'goleiro' && <strong className="text-emerald-500">(Goleiro Isento de Mensalidade)</strong>}</p>
                       )}
                       {playerCategory === 'reserva' && (
                         <p>📋 <strong>Reserva</strong>: Jogador avulso convidado sob demanda. Isento de mensalidades fixas recorrentes do faturamento.</p>

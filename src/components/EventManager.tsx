@@ -5,7 +5,7 @@ import {
   Download, FileText, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw,
   ChevronDown, ChevronUp, Baby, User as UserIcon
 } from 'lucide-react';
-import { User, GrupalEvent, GrupalEventType, GrupalEventStatus, CATEGORY_LABELS } from '../types';
+import { User, GrupalEvent, GrupalEventType, GrupalEventStatus, CATEGORY_LABELS, PlayerCategory } from '../types';
 
 interface EventManagerProps {
   currentUser: User;
@@ -109,6 +109,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
 
   // Fetch player data to know category
   const [playerCategory, setPlayerCategory] = useState<string>('reserva');
+  const [playerPrimaryPosition, setPlayerPrimaryPosition] = useState<string>('atacante');
 
   const fetchPlayerInfo = async () => {
     try {
@@ -118,6 +119,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
         const meObj = playersList.find((p: any) => p.email === currentUser.email);
         if (meObj) {
           setPlayerCategory(meObj.category);
+          setPlayerPrimaryPosition(meObj.primaryPosition || 'atacante');
         }
       }
     } catch (err) {
@@ -525,12 +527,13 @@ export default function EventManager({ currentUser }: EventManagerProps) {
   // Live price calculations
   const getLiveEstimationText = (evt: any, adults: number, children: number) => {
     const isChurrasco = evt.type === 'churrasco';
-    const isMensalista = playerCategory === 'mensalista' || playerCategory === 'mensalista_goleiro';
+    const isGoalkeeper = playerPrimaryPosition === 'goleiro';
+    const isMensalista = playerCategory === 'mensalista';
 
     let breakdown = '';
     let total = 0;
 
-    if (isChurrasco && isMensalista) {
+    if (isChurrasco && (isGoalkeeper || isMensalista)) {
       const paidAdults = Math.max(0, adults - 1);
       const isFreeUser = adults > 0;
       total = (paidAdults * evt.adultPrice) + (children * evt.childPrice);
@@ -1368,7 +1371,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                             <span>{p.playerName}</span>
                           </td>
                           <td className="p-3 text-[10px] uppercase text-zinc-400">
-                            {CATEGORY_LABELS[p.category as 'mensalista' | 'mensalista_goleiro' | 'reserva'] || p.category}
+                            {CATEGORY_LABELS[p.category as PlayerCategory] || p.category}
                           </td>
                           <td className="p-3 text-center font-bold">{p.adultsCount}</td>
                           <td className="p-3 text-center text-zinc-450">{p.childrenCount}</td>

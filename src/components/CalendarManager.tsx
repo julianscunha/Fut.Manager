@@ -56,16 +56,16 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   // Form states: New Match
   const [showMatchForm, setShowMatchForm] = useState(false);
   const [newMatchDate, setNewMatchDate] = useState('');
-  const [newMatchTime, setNewMatchTime] = useState('20:00');
-  const [newMatchLocation, setNewMatchLocation] = useState('Arena Green Society (Quadra Principal)');
-  const [newMatchDuration, setNewMatchDuration] = useState('120');
+  const [newMatchTime, setNewMatchTime] = useState('21:30');
+  const [newMatchLocation, setNewMatchLocation] = useState('Arena Furacão');
+  const [newMatchDuration, setNewMatchDuration] = useState('60');
   const [newMatchDeadline, setNewMatchDeadline] = useState('2');
 
   // Form states: Recurrence Config
   const [recurDay, setRecurDay] = useState('6'); // Default to Saturday
-  const [recurTime, setRecurTime] = useState('20:00');
-  const [recurLocation, setRecurLocation] = useState('Arena Green Society (Quadra Principal)');
-  const [recurDuration, setRecurDuration] = useState('120');
+  const [recurTime, setRecurTime] = useState('21:30');
+  const [recurLocation, setRecurLocation] = useState('Arena Furacão');
+  const [recurDuration, setRecurDuration] = useState('60');
   const [recurDeadline, setRecurDeadline] = useState('2');
   const [recurActive, setRecurActive] = useState(true);
   const [recurMonthlyFee, setRecurMonthlyFee] = useState('100');

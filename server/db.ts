@@ -70,9 +70,9 @@ function ensureDbExists() {
           id: 'match-1',
           seasonId: 'season-2026',
           date: '2026-06-06',
-          time: '20:00',
-          location: 'Arena Green Society (Quadra Principal)',
-          durationMinutes: 120,
+          time: '21:30',
+          location: 'Arena Furacão',
+          durationMinutes: 60,
           status: 'confirmando'
         }
       ],
@@ -83,9 +83,9 @@ function ensureDbExists() {
       reservesOrder: ['player-4'],
       recurrentConfig: {
         dayOfWeek: 6, // Sábado
-        time: '20:00',
-        location: 'Arena Green Society (Quadra Principal)',
-        durationMinutes: 120,
+        time: '21:30',
+        location: 'Arena Furacão',
+        durationMinutes: 60,
         confirmationDeadlineDaysBefore: 2,
         active: true,
         monthlyFee: 100,
@@ -272,9 +272,9 @@ export function readDb(): DatabaseSchema {
         id: 'match-1',
         seasonId: 'season-2026',
         date: '2026-06-06',
-        time: '20:00',
-        location: 'Arena Green Society (Quadra Principal)',
-        durationMinutes: 120,
+        time: '21:30',
+        location: 'Arena Furacão',
+        durationMinutes: 60,
         status: 'confirmando'
       }
     ];
@@ -306,9 +306,9 @@ export function readDb(): DatabaseSchema {
   if (!db.recurrentConfig) {
     db.recurrentConfig = {
       dayOfWeek: 6, // Sábado
-      time: '20:00',
-      location: 'Arena Green Society (Quadra Principal)',
-      durationMinutes: 120,
+      time: '21:30',
+      location: 'Arena Furacão',
+      durationMinutes: 60,
       confirmationDeadlineDaysBefore: 2,
       active: true,
       maxMensalistas: 12

@@ -70,13 +70,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
     }
   }, [player]);
 
-  // Forçar goleiro se a categoria for Goleiro Mensalista e desmarcar goleiro da secundária
-  useEffect(() => {
-    if (category === 'mensalista_goleiro') {
-      setPrimaryPosition('goleiro');
-      setSecondaryPositions((prev) => prev.filter((p) => p !== 'goleiro'));
-    }
-  }, [category]);
+
 
   const formatPhoneStr = (v: string) => {
     const digits = v.replace(/\D/g, '');
@@ -293,7 +287,6 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
           >
             <option value="mensalista">Mensalista</option>
-            <option value="mensalista_goleiro">Mensalista Goleiro</option>
             <option value="reserva">Reserva</option>
           </select>
           
@@ -301,10 +294,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           <div className="bg-zinc-950/60 p-2.5 rounded-lg border border-zinc-885 text-[10px] text-zinc-500 leading-normal">
             <span className="font-bold text-zinc-400 block uppercase mb-1">Impacto Financeiro & Rodadas:</span>
             {category === 'mensalista' && (
-              <span>📝 <strong>Mensalista</strong>: Participa da apuração mensal, recebendo mensalidades fixas recorrentes. Prioridade no sorteio do racha.</span>
-            )}
-            {category === 'mensalista_goleiro' && (
-              <span>🧤 <strong>Mensalista Goleiro</strong>: Isento total das taxas de faturamento. Prioritário nas vagas fixas do sorteio.</span>
+              <span>📝 <strong>Mensalista</strong>: Participa da apuração mensal, recebendo mensalidades fixas recorrentes. Prioridade no sorteio do racha. {primaryPosition === 'goleiro' && <strong className="text-emerald-500">(Goleiro Isento de Mensalidade)</strong>}</span>
             )}
             {category === 'reserva' && (
               <span>📋 <strong>Reserva</strong>: Não cobrado por mensalidade regular. Sujeito apenas à taxa de presença unitária quando convocado.</span>
@@ -465,13 +455,8 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
           <label className="text-zinc-300 font-medium">Posição Principal *</label>
           <select
             value={primaryPosition}
-            disabled={category === 'mensalista_goleiro'}
             onChange={(e) => setPrimaryPosition(e.target.value as PlayerPosition)}
-            className={`w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition ${
-              category === 'mensalista_goleiro'
-                ? 'opacity-50 cursor-not-allowed bg-zinc-950 font-semibold'
-                : 'cursor-pointer'
-            }`}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
           >
             {Object.entries(POSITION_LABELS).map(([key, label]) => (
               <option key={key} value={key}>
@@ -482,7 +467,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
 
           {primaryPosition === 'goleiro' && (
             <span className="text-[9.5px] font-mono text-emerald-450 mt-1 bg-emerald-950/20 px-2 py-1 rounded border border-emerald-500/10">
-              🧤 Goleiros assumem regras de isenção de faturamento se Mensalistas Goleiros e regras de sorteio automatizadas.
+              🧤 Goleiros possuem isenção automática de mensalidade nas regras de faturamento e regras de sorteio especializadas.
             </span>
           )}
         </div>
