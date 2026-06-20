@@ -5,7 +5,8 @@ import { createServer as createViteServer } from 'vite';
 import { readDb, writeDb, generateMonthlyBillingsIfNeeded } from './server/db';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
-import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition } from './src/types';
+import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
+import { GoogleGenAI } from '@google/genai';
 
 async function startServer() {
   const app = express();
@@ -307,7 +308,19 @@ async function startServer() {
             const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
             const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
 
-            if (confirmedCount >= limit || oldStatus === 'fechada') {
+            // Debug logger for match status decisions
+            const debugLog = {
+              vagasNecessarias: limit,
+              confirmados: confirmedCount,
+              naoVai: computedList.filter((p: any) => p.presenceStatus === 'cancelado').length,
+              pendentes: computedList.filter((p: any) => p.presenceStatus === 'nao_confirmado' && p.category !== 'reserva').length,
+              reservasConvocados: computedList.filter((p: any) => p.presenceStatus === 'aguardando_resposta').length,
+              reservasConfirmados: computedList.filter((p: any) => p.presenceStatus === 'confirmado' && p.category === 'reserva').length,
+              statusAtual: oldStatus
+            };
+            console.log(`[DEBUG_MATCH_STATUS] Match ID: ${m.id}`, JSON.stringify(debugLog, null, 2));
+
+            if (confirmedCount >= limit) {
               computedLifecycle = 'CHECKIN_CLOSED';
             } else if (oldStatus === 'agendada') {
               computedLifecycle = 'SCHEDULED';
@@ -1009,6 +1022,123 @@ async function startServer() {
     return res.json({ message: 'Ação realizada com sucesso!', user: db.users[userIndex] });
   });
 
+  // Gerar Avatar Esportivo Inteligente usando Gemini API (General Image Editing model)
+  async function gerarAvatarEsportivo(player: Player, forceRegenerate = false): Promise<Player> {
+    const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
+    const timeDoCoracao = team ? team.name : (player.timeDoCoracao || 'São Paulo');
+    player.timeDoCoracao = timeDoCoracao;
+
+    if (!player.numeroFavorito) {
+      player.numeroFavorito = player.numeroFavorito || 10;
+    }
+    if (!player.peDominante) {
+      player.peDominante = player.peDominante || 'Direito';
+    }
+
+    // Set avatarOriginal separately to never lose it
+    if (player.photoOriginal && player.avatarOriginal !== player.photoOriginal) {
+      player.avatarOriginal = player.photoOriginal;
+    }
+
+    const hasAvatar = !!player.avatarEsportivo;
+    const isEditingButSame = !forceRegenerate && hasAvatar;
+
+    if (isEditingButSame) {
+      return player;
+    }
+
+    if (!player.photoOriginal) {
+      player.avatarEsportivo = '';
+      return player;
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (apiKey) {
+      try {
+        console.log(`[Avatar Inteligente] Iniciando geração com Gemini para o atleta: ${player.name} (${timeDoCoracao})`);
+        
+        const ai = new GoogleGenAI({
+          apiKey: apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            }
+          }
+        });
+
+        // Resolve base64 data
+        let base64Data = player.photoOriginal;
+        let mimeType = 'image/png';
+
+        const match = player.photoOriginal.match(/^data:([^;]+);base64,(.+)$/);
+        if (match) {
+          mimeType = match[1];
+          base64Data = match[2];
+        } else if (player.photoOriginal.startsWith('http')) {
+          try {
+            const fetchRes = await fetch(player.photoOriginal);
+            const arrayBuffer = await fetchRes.arrayBuffer();
+            base64Data = Buffer.from(arrayBuffer).toString('base64');
+            const contentType = fetchRes.headers.get('content-type');
+            if (contentType) mimeType = contentType;
+          } catch (fetchErr) {
+            console.error('[Avatar Inteligente] Erro ao buscar imagem externa:', fetchErr);
+          }
+        }
+
+        const prompt = `Transform this photo into a professional soccer player portrait. 
+Keep the original face, hair, mustache, beard, facial features, facial structure, skin tone, and expression exactly. 
+Change ONLY the body clothing/uniform to a high-quality athletic jersey of the soccer club '${timeDoCoracao}'. 
+The background should be a professional sports stadium with athletic field grass, floodlights, slightly out of focus, matching the color identity of the club ${timeDoCoracao}. 
+The framing should be chest-up, athletic soccer player pose, professional sports portrait lighting.`;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType: mimeType
+                }
+              },
+              {
+                text: prompt
+              }
+            ]
+          }
+        });
+
+        if (response.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+              player.avatarEsportivo = `data:image/png;base64,${part.inlineData.data}`;
+              player.avatarVersion = (player.avatarVersion || 0) + 1;
+              console.log(`[Avatar Inteligente] Sucesso na geração do avatar de ${player.name}`);
+              return player;
+            }
+          }
+        }
+        
+        throw new Error('Nenhuma imagem retornada no response do Gemini.');
+      } catch (err: any) {
+        const errorMsg = err?.message || String(err);
+        if (errorMsg.includes('quota') || errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
+          console.warn(`[Avatar Inteligente] Limite de cota do modelo excedido temporariamente (429/RESOURCE_EXHAUSTED). Ativando fallback instantâneo com a foto original, moldura do clube e escudo.`);
+        } else {
+          console.warn(`[Avatar Inteligente] Geração indisponível (${errorMsg}). Ativando fallback automático.`);
+        }
+      }
+    } else {
+      console.log(`[Avatar Inteligente] Sem GEMINI_API_KEY. Ativando fallback automático para ${player.name}.`);
+    }
+
+    // FALLBACK: usar automaticamente foto original como avatarEsportivo
+    player.avatarEsportivo = player.photoOriginal;
+    player.avatarVersion = (player.avatarVersion || 0) + 1;
+    return player;
+  }
+
   // Jogadores: Listar (Retorna ativos se sem parâmetro, ou todos se admin para gerenciamento)
   app.get('/api/players', (req, res) => {
     const db = readDb();
@@ -1023,7 +1153,7 @@ async function startServer() {
   });
 
   // Jogadores: Criar Jogador
-  app.post('/api/players', (req, res) => {
+  app.post('/api/players', async (req, res) => {
     const db = readDb();
     const requestingUser = getAuthenticatedUser(req, db);
 
@@ -1062,8 +1192,19 @@ async function startServer() {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       currentStreak: 0,
-      maxStreak: 0
+      maxStreak: 0,
+      
+      // Soccer Avatar fields
+      timeDoCoracao: playerData.timeDoCoracao || '',
+      numeroFavorito: Number(playerData.numeroFavorito) || 10,
+      peDominante: playerData.peDominante || 'Direito',
+      avatarOriginal: playerData.photoOriginal || '',
+      avatarEsportivo: '',
+      avatarVersion: 1
     };
+
+    // Execute intelligent sports avatar generation flow
+    await gerarAvatarEsportivo(newPlayer, true);
 
     db.players.push(newPlayer);
 
@@ -1267,7 +1408,7 @@ async function startServer() {
   });
 
   // Jogadores: Atualizar Jogador
-  app.put('/api/players/:id', (req, res) => {
+  app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
     const updateData = req.body as Partial<Player>;
     const { responsibleName } = req.body as any;
@@ -1393,6 +1534,15 @@ async function startServer() {
       updatedPlayer.statusEndDate = undefined;
     }
 
+    // Check if photo, team or dominant foot/number properties changed
+    const photoChanged = updateData.photoOriginal !== undefined && updateData.photoOriginal !== existingPlayer.photoOriginal;
+    const teamChanged = updateData.favoriteTeamId !== undefined && updateData.favoriteTeamId !== existingPlayer.favoriteTeamId;
+    const forceRegenerate = photoChanged || teamChanged || !existingPlayer.avatarEsportivo;
+
+    if (forceRegenerate) {
+      await gerarAvatarEsportivo(updatedPlayer, true);
+    }
+
     const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
     if (statusChanged) {
       const statusLabels: Record<string, string> = {
@@ -1441,6 +1591,21 @@ async function startServer() {
     writeDb(db);
 
     return res.json({ message: 'Jogador atualizado com sucesso!', player: updatedPlayer });
+  });
+
+  // Jogadores: Regenerar Avatar Inteligente avulso
+  app.post('/api/players/:id/generate-avatar', async (req, res) => {
+    const { id } = req.params;
+    const db = readDb();
+    const index = db.players.findIndex((p) => p.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: 'Jogador não encontrado.' });
+    }
+    const player = db.players[index];
+    await gerarAvatarEsportivo(player, true);
+    db.players[index] = player;
+    writeDb(db);
+    return res.json({ message: 'Avatar inteligente atualizado com sucesso!', player });
   });
 
   // Jogadores: Soft Delete (Inativar/Excluir Logicamente)
@@ -5343,10 +5508,34 @@ async function startServer() {
   // Add a new post
   app.post('/api/mural/posts', (req, res) => {
     try {
-      const { title, description, mediaUrl, mediaType, fileSize, category, matchId, eventId, authorId, authorName, authorRole, eventDate, thumbnailUrl, mediumUrl, showOnLanding, isHighlighted } = req.body;
+      const { 
+        title, 
+        description, 
+        mediaUrl, 
+        mediaType, 
+        fileSize, 
+        category, 
+        matchId, 
+        eventId, 
+        authorId, 
+        authorName, 
+        authorRole, 
+        eventDate, 
+        thumbnailUrl, 
+        mediumUrl, 
+        showOnLanding, 
+        isHighlighted,
+        order,
+        startDate,
+        expirationDate,
+        priority,
+        isArchived,
+        isDeleted
+      } = req.body;
 
-      if (!title || !mediaUrl || !category || !authorId) {
-        return res.status(400).json({ error: 'Título, arquivo, categoria e autor são obrigatórios.' });
+      const isComm = ['regra', 'aviso', 'comunicado'].includes(category);
+      if (!title || (!isComm && !mediaUrl) || !category || !authorId) {
+        return res.status(400).json({ error: 'Título, categoria e autor são obrigatórios.' });
       }
 
       const db = readDb();
@@ -5381,7 +5570,7 @@ async function startServer() {
         id: newPostId,
         title: title.trim(),
         description: (description || '').trim(),
-        mediaUrl,
+        mediaUrl: mediaUrl || '',
         mediaType: mediaType || 'image',
         fileSize: fileSize || 0,
         category,
@@ -5395,27 +5584,37 @@ async function startServer() {
         isHighlighted: isPostHighlighted,
         highlightedAt: isPostHighlighted ? nowIso : undefined,
         showOnLanding: showOnLanding === true,
-        thumbnailUrl: thumbnailUrl || mediaUrl,
-        mediumUrl: mediumUrl || mediaUrl,
+        thumbnailUrl: thumbnailUrl || mediaUrl || '',
+        mediumUrl: mediumUrl || mediaUrl || '',
         eventDate: defaultEventDate,
-        origin: 'manual' as const
+        origin: 'manual' as const,
+        
+        // Communication Center parameters
+        order: order !== undefined ? Number(order) : undefined,
+        startDate: startDate || undefined,
+        expirationDate: expirationDate || undefined,
+        priority: priority || undefined,
+        isArchived: isArchived === true,
+        isDeleted: isDeleted === true
       };
 
       if (!db.muralPosts) db.muralPosts = [];
       db.muralPosts.push(newPost);
 
-      // Save file metadata separately in muralFiles
-      if (!db.muralFiles) db.muralFiles = [];
-      db.muralFiles.push({
-        id: 'file-' + Date.now(),
-        postId: newPostId,
-        s3Url: mediaUrl,
-        mediaType: mediaType || 'image',
-        size: fileSize || 0,
-        originalName: mediaUrl.split('/').pop() || 'uploaded-file',
-        mimeType: mediaType === 'image' ? 'image/jpeg' : 'video/mp4',
-        uploadedAt: new Date().toISOString()
-      });
+      // Save file metadata separately in muralFiles if mediaUrl is provided
+      if (mediaUrl) {
+        if (!db.muralFiles) db.muralFiles = [];
+        db.muralFiles.push({
+          id: 'file-' + Date.now(),
+          postId: newPostId,
+          s3Url: mediaUrl,
+          mediaType: mediaType || 'image',
+          size: fileSize || 0,
+          originalName: mediaUrl.split('/').pop() || 'uploaded-file',
+          mimeType: mediaType === 'image' ? 'image/jpeg' : 'video/mp4',
+          uploadedAt: new Date().toISOString()
+        });
+      }
 
       writeDb(db);
       res.status(201).json(newPost);
@@ -5429,7 +5628,23 @@ async function startServer() {
   app.put('/api/mural/posts/:id', (req, res) => {
     try {
       const { id } = req.params;
-      const { title, description, reqUserId, reqUserRole, eventDate, showOnLanding, isHighlighted } = req.body;
+      const { 
+        title, 
+        description, 
+        reqUserId, 
+        reqUserRole, 
+        eventDate, 
+        showOnLanding, 
+        isHighlighted,
+        category,
+        order,
+        startDate,
+        expirationDate,
+        priority,
+        isArchived,
+        isDeleted,
+        matchId
+      } = req.body;
 
       if (!title) {
         return res.status(400).json({ error: 'O título é obrigatório.' });
@@ -5488,7 +5703,15 @@ async function startServer() {
         isHighlighted: isPostHighlighted,
         highlightedAt,
         updatedAt: new Date().toISOString(),
-        eventDate: eventDate || post.eventDate || post.createdAt.split('T')[0]
+        eventDate: eventDate || post.eventDate || post.createdAt.split('T')[0],
+        category: category || post.category,
+        matchId: matchId !== undefined ? matchId : post.matchId,
+        order: order !== undefined ? Number(order) : post.order,
+        startDate: startDate !== undefined ? startDate : post.startDate,
+        expirationDate: expirationDate !== undefined ? expirationDate : post.expirationDate,
+        priority: priority !== undefined ? priority : post.priority,
+        isArchived: isArchived !== undefined ? isArchived === true : post.isArchived,
+        isDeleted: isDeleted !== undefined ? isDeleted === true : post.isDeleted
       };
 
       writeDb(db);
@@ -5499,7 +5722,7 @@ async function startServer() {
     }
   });
 
-  // Delete publication (Admin only)
+  // Delete publication (Admin only) - Performs soft delete
   app.delete('/api/mural/posts/:id', (req, res) => {
     try {
       const { id } = req.params;
@@ -5521,17 +5744,12 @@ async function startServer() {
         return res.status(403).json({ error: 'Apenas Administradores podem excluir publicações do Mural.' });
       }
 
-      db.muralPosts = db.muralPosts.filter(p => p.id !== id);
-
-      if (db.muralHighlights) {
-        db.muralHighlights = db.muralHighlights.filter(h => h.postId !== id);
-      }
-      if (db.muralFiles) {
-        db.muralFiles = db.muralFiles.filter(f => f.postId !== id);
-      }
+      // Perform soft delete
+      post.isDeleted = true;
+      post.updatedAt = new Date().toISOString();
 
       writeDb(db);
-      res.json({ message: 'Publicação excluída com sucesso.' });
+      res.json({ message: 'Publicação excluída com sucesso (Soft Delete).' });
     } catch (err) {
       console.error('[API DELETE Mural Post]', err);
       res.status(500).json({ error: 'Erro ao excluir publicação.' });

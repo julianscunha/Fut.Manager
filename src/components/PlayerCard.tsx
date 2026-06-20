@@ -1,8 +1,201 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, Zap, RotateCcw, TrendingUp, ChevronDown, ChevronUp, Star, Award, History } from 'lucide-react';
-import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition } from '../types';
+import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap } from 'lucide-react';
+import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
-import { getAchievementsForPlayer, Achievement } from '../utils/achievements';
+import { getAchievementsForPlayer } from '../utils/achievements';
+
+// Standard high-quality vector Shields/Escudos for major soccer teams to guarantee accurate displays
+export function ClubShield({ clubId, className = "w-6 h-6" }: { clubId?: string, className?: string }) {
+  if (!clubId) return <Shield className={`${className} text-zinc-500`} />;
+
+  switch (clubId) {
+    case 'fla': // Flamengo
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="50" cy="50" rx="45" ry="45" fill="#18181b" stroke="#e11d48" strokeWidth="4"/>
+          <path d="M20 35H80" stroke="#e11d48" strokeWidth="6"/>
+          <path d="M15 50H85" stroke="#e11d48" strokeWidth="6"/>
+          <path d="M20 65H80" stroke="#e11d48" strokeWidth="6"/>
+          <rect x="35" y="30" width="30" height="40" rx="3" fill="#18181b" stroke="#ffffff" strokeWidth="2" />
+          <text x="50" y="55" fill="#ffffff" fontSize="16" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">CRF</text>
+        </svg>
+      );
+    case 'pal': // Palmeiras
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="45" fill="#15803d" stroke="#ffffff" strokeWidth="4" />
+          <circle cx="50" cy="50" r="35" fill="#16a34a" />
+          <text x="50" y="58" fill="#ffffff" fontSize="26" fontWeight="black" textAnchor="middle" fontFamily="sans-serif">P</text>
+          <polygon points="50,22 53,28 60,28 55,32 57,38 52,34 47,38 49,32 44,28 51,28" fill="#ffffff"/>
+        </svg>
+      );
+    case 'spa': // São Paulo
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 15 H85 V35 L50 85 L15 35 Z" fill="#ffffff" stroke="#18181b" strokeWidth="4"/>
+          <path d="M17 17 H83 V28 H17 Z" fill="#18181b" />
+          <text x="50" y="26" fill="#ffffff" fontSize="10" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">SPFC</text>
+          <path d="M25 32 H48 V45 L25 32 Z" fill="#dc2626" />
+          <path d="M52 32 H75 V45 L52 32 Z" fill="#18181b" />
+        </svg>
+      );
+    case 'cor': // Corinthians
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M30 70 L70 30 M30 30 L70 70" stroke="#dc2626" strokeWidth="6" strokeLinecap="round" />
+          <circle cx="50" cy="50" r="35" fill="#ffffff" stroke="#18181b" strokeWidth="4"/>
+          <circle cx="50" cy="50" r="27" fill="#18181b" stroke="#ffffff" strokeWidth="2" />
+          <text x="50" y="56" fill="#ffffff" fontSize="16" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">SCCP</text>
+        </svg>
+      );
+    case 'flu': // Fluminense
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 15 Q50 20 85 15 Q80 60 50 85 Q20 60 15 15 Z" fill="#86198f" stroke="#ffffff" strokeWidth="4" />
+          <path d="M19 19 Q50 24 81 19 Q76 56 50 79 Q24 56 19 19 Z" fill="#15803d" />
+          <text x="50" y="54" fill="#ffffff" fontSize="22" fontWeight="black" textAnchor="middle" fontFamily="serif">FFC</text>
+        </svg>
+      );
+    case 'vas': // Vasco
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 15 Q50 20 85 15 Q80 60 50 85 Q20 60 15 15 Z" fill="#18181b" stroke="#ffffff" strokeWidth="4" />
+          <path d="M28 25 L75 72" stroke="#ffffff" strokeWidth="12" strokeLinecap="square" />
+          <path d="M50 35 L53 45 L63 42 L55 50 L63 58 L53 55 L50 65 L47 55 L37 58 L45 50 L37 42 L47 45 Z" fill="#e11d48" />
+        </svg>
+      );
+    case 'gre': // Grêmio
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="45" fill="#0284c7" stroke="#ffffff" strokeWidth="4" />
+          <path d="M10 50 Q50 20 90 50 Q50 80 10 50" fill="#18181b" stroke="#ffffff" strokeWidth="2" />
+          <text x="50" y="55" fill="#ffffff" fontSize="14" fontWeight="bold" textAnchor="middle" fontFamily="sans-serif">GRÊMIO</text>
+        </svg>
+      );
+    case 'int': // Internacional
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="45" fill="#dc2626" stroke="#ffffff" strokeWidth="4" />
+          <circle cx="50" cy="50" r="35" fill="#dc2626" stroke="#ffffff" strokeWidth="2" strokeDasharray="4,2" />
+          <text x="50" y="58" fill="#ffffff" fontSize="20" fontWeight="black" textAnchor="middle" fontFamily="sans-serif">SCI</text>
+        </svg>
+      );
+    case 'san': // Santos
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 15 Q50 20 85 15 Q80 60 50 85 Q20 60 15 15 Z" fill="#ffffff" stroke="#18181b" strokeWidth="4" />
+          <path d="M15 40 L85 40" stroke="#18181b" strokeWidth="4" />
+          <text x="50" y="32" fill="#18181b" fontSize="14" fontWeight="black" textAnchor="middle" fontFamily="sans-serif">SFC</text>
+          <circle cx="50" cy="62" r="14" fill="#18181b" />
+          <circle cx="50" cy="62" r="10" fill="#ffffff" />
+        </svg>
+      );
+    case 'cru': // Cruzeiro
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="45" fill="#2563eb" stroke="#ffffff" strokeWidth="4"/>
+          <circle cx="50" cy="22" r="3.5" fill="#ffffff" />
+          <circle cx="50" cy="72" r="3.5" fill="#ffffff" />
+          <circle cx="28" cy="45" r="3.5" fill="#ffffff" />
+          <circle cx="72" cy="45" r="3.5" fill="#ffffff" />
+          <circle cx="62" cy="56" r="2" fill="#ffffff" />
+        </svg>
+      );
+    case 'bot': // Botafogo
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 15 Q50 18 85 15 Q80 62 50 85 Q20 62 15 15 Z" fill="#18181b" stroke="#ffffff" strokeWidth="6" />
+          <polygon points="50,25 55,38 68,38 58,46 62,59 50,51 38,59 42,46 32,38 45,38" fill="#ffffff"/>
+        </svg>
+      );
+    default: // Generic template
+      return (
+        <svg className={className} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M15 15 Q50 20 85 15 Q80 60 50 85 Q20 60 15 15 Z" fill="#b45309" stroke="#facc15" strokeWidth="4" />
+          <circle cx="50" cy="48" r="18" fill="#facc15" />
+          <path d="M38 38 L62 58 M62 38 L38 58" stroke="#b45309" strokeWidth="2" />
+        </svg>
+      );
+  }
+}
+
+// Gorgeous club profile frame style generator
+export const getClubMolduraStyle = (clubId: string) => {
+  switch (clubId) {
+    case 'fla':
+      return {
+        borderColor: '#e11d48',
+        boxShadow: '0 0 14px rgba(225, 29, 72, 0.55)',
+        background: 'linear-gradient(135deg, #e11d48, #181c1a)'
+      };
+    case 'pal':
+      return {
+        borderColor: '#16a34a',
+        boxShadow: '0 0 14px rgba(22, 163, 74, 0.55)',
+        background: 'linear-gradient(135deg, #15803d, #ffffff)'
+      };
+    case 'spa':
+      return {
+        borderColor: '#dc2626',
+        boxShadow: '0 0 14px rgba(220, 38, 38, 0.55)',
+        background: 'linear-gradient(135deg, #dc2626, #ffffff, #181c1a)'
+      };
+    case 'cor':
+      return {
+        borderColor: '#3f3f46',
+        boxShadow: '0 0 14px rgba(63, 63, 70, 0.6)',
+        background: 'linear-gradient(135deg, #18141b, #ffffff)'
+      };
+    case 'flu':
+      return {
+        borderColor: '#86198f',
+        boxShadow: '0 0 14px rgba(134, 25, 143, 0.55)',
+        background: 'linear-gradient(135deg, #86198f, #15803d)'
+      };
+    case 'vas':
+      return {
+        borderColor: '#52525b',
+        boxShadow: '0 0 14px rgba(82, 82, 91, 0.55)',
+        background: 'linear-gradient(135deg, #1d1d20, #ffffff)'
+      };
+    case 'gre':
+      return {
+        borderColor: '#0284c7',
+        boxShadow: '0 0 14px rgba(2, 132, 199, 0.55)',
+        background: 'linear-gradient(135deg, #0284c7, #ffffff, #181c1a)'
+      };
+    case 'int':
+      return {
+        borderColor: '#dc2626',
+        boxShadow: '0 0 14px rgba(220, 38, 38, 0.55)',
+        background: 'linear-gradient(135deg, #dc2626, #ffffff)'
+      };
+    case 'san':
+      return {
+        borderColor: '#71717a',
+        boxShadow: '0 0 14px rgba(113, 113, 122, 0.5)',
+        background: 'linear-gradient(135deg, #ffffff, #18181b)'
+      };
+    case 'cru':
+      return {
+        borderColor: '#2563eb',
+        boxShadow: '0 0 14px rgba(37, 99, 235, 0.55)',
+        background: 'linear-gradient(135deg, #2563eb, #1e3a8a)'
+      };
+    case 'bot':
+      return {
+        borderColor: '#18181b',
+        boxShadow: '0 0 14px rgba(24, 24, 27, 0.75)',
+        background: 'linear-gradient(135deg, #09090b, #ffffff)'
+      };
+    default:
+      return {
+        borderColor: '#22c55e',
+        boxShadow: '0 0 10px rgba(34, 197, 94, 0.4)',
+        background: 'linear-gradient(135deg, #1f2937, #111827)'
+      };
+  }
+};
 
 interface PlayerCardProps {
   key?: any;
@@ -16,13 +209,9 @@ interface PlayerCardProps {
 }
 
 export default function PlayerCard({ player, currentUser, onEdit, onInactivate, onRestore, canEdit, onEvaluationSavedGlobal }: PlayerCardProps) {
-  const [showFUTCard, setShowFUTCard] = useState(false);
-  const [showAttributes, setShowAttributes] = useState(false);
-  const [selectedImageView, setSelectedImageView] = useState<'original' | 'card'>(player.playerCardUrl ? 'card' : 'original');
-
-  useEffect(() => {
-    setSelectedImageView(player.playerCardUrl ? 'card' : 'original');
-  }, [player.playerCardUrl]);
+  // eSports Horizontal Flip state
+  const [isFlipped, setIsFlipped] = useState(false);
+  const [activeTab, setActiveTab] = useState<'geral' | 'atributos' | 'historico' | 'conquistas'>('geral');
   
   // Real-time metrics
   const [metrics, setMetrics] = useState<any>(null);
@@ -32,6 +221,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   const [evalModalOpen, setEvalModalOpen] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [categoryHistory, setCategoryHistory] = useState<CategoryTransition[]>([]);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const team = FAVORITE_TEAMS.find((t) => t.id === player.favoriteTeamId);
 
@@ -73,11 +263,31 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     fetchMetrics();
   }, [player.id, currentUser.id]);
 
-  const toggleAttributes = () => {
-    const nextState = !showAttributes;
-    setShowAttributes(nextState);
-    if (nextState) {
-      fetchMetrics();
+  const handleRegenerateAvatar = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRegenerating) return;
+    setIsRegenerating(true);
+    setSaveSuccessMsg('⌛ Processando Avatar Inteligente...');
+    try {
+      const res = await fetch(`/api/players/${player.id}/generate-avatar`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        setSaveSuccessMsg('✨ Avatar Esportivo recriado com sucesso!');
+        setTimeout(() => {
+          setSaveSuccessMsg('');
+          window.location.reload(); // Hard update to refresh avatar cache in browser
+        }, 1500);
+      } else {
+        const err = await res.json();
+        setSaveSuccessMsg(`❌ Erro no processamento: ${err.error || 'Falha'}`);
+        setTimeout(() => setSaveSuccessMsg(''), 4000);
+      }
+    } catch {
+      setSaveSuccessMsg('❌ Erro de conexão com o servidor.');
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -106,49 +316,99 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     }
   };
 
-  // Convert scale overall (0.0 - 5.0) to FIFA Overall (0 to 99)
-  const calculateFifaOverall = () => {
-    const overall = metrics ? metrics.overall : 3.5;
-    // 3.5 overall => approx 70 rating. 5.0 overall => 99 rating.
-    const score = Math.round(overall * 20);
-    return Math.min(Math.max(score, 40), 99);
-  };
+  const isSoftDeleted = !!player.deletedAt;
+  const avatarToDisplay = player.avatarEsportivo || player.photoOriginal || (player as any).photoUrl || '';
 
-  // Dynamically assign athletic statistics based on position
-  const getStatsForPosition = (pos: PlayerPosition) => {
-    const ratingValue = calculateFifaOverall();
-    switch (pos) {
-      case 'goleiro':
-        return { rating: ratingValue, pac: 58, sho: 32, pas: 65, dri: 48, def: 90, phy: 84, fields: [{n: 'DIV', v: Math.round(ratingValue * 0.98)}, {n: 'HAN', v: Math.round(ratingValue * 0.94)}, {n: 'KIC', v: Math.round(ratingValue * 0.88)}, {n: 'REF', v: Math.round(ratingValue * 1.01)}, {n: 'SPD', v: 55}, {n: 'POS', v: Math.round(ratingValue * 0.96)}] };
-      case 'zagueiro':
-        return { rating: ratingValue, pac: 72, sho: 45, pas: 66, dri: 65, def: 88, phy: 86, fields: [{n: 'PAC', v: 72}, {n: 'SHO', v: 45}, {n: 'PAS', v: 66}, {n: 'DRI', v: 65}, {n: 'DEF', v: Math.round(ratingValue * 1.01)}, {n: 'PHY', v: Math.round(ratingValue * 0.98)}] };
-      case 'lateral':
-        return { rating: ratingValue, pac: 86, sho: 58, pas: 78, dri: 76, def: 78, phy: 74, fields: [{n: 'PAC', v: 86}, {n: 'SHO', v: 58}, {n: 'PAS', v: 78}, {n: 'DRI', v: 76}, {n: 'DEF', v: Math.round(ratingValue * 0.89)}, {n: 'PHY', v: 74}] };
-      case 'volante':
-        return { rating: ratingValue, pac: 75, sho: 64, pas: 80, dri: 74, def: 84, phy: 82, fields: [{n: 'PAC', v: 75}, {n: 'SHO', v: 64}, {n: 'PAS', v: 80}, {n: 'DRI', v: 74}, {n: 'DEF', v: Math.round(ratingValue * 0.96)}, {n: 'PHY', v: Math.round(ratingValue * 0.94)}] };
-      case 'meio_campo':
-        return { rating: ratingValue, pac: 79, sho: 78, pas: 90, dri: 85, def: 62, phy: 72, fields: [{n: 'PAC', v: 79}, {n: 'SHO', v: 78}, {n: 'PAS', v: Math.round(ratingValue * 1.01)}, {n: 'DRI', v: Math.round(ratingValue * 0.96)}, {n: 'DEF', v: 62}, {n: 'PHY', v: 72}] };
-      case 'atacante':
-        return { rating: ratingValue, pac: 92, sho: 89, pas: 74, dri: 87, def: 34, phy: 78, fields: [{n: 'PAC', v: 92}, {n: 'SHO', v: Math.round(ratingValue * 0.98)}, {n: 'PAS', v: 74}, {n: 'DRI', v: Math.round(ratingValue * 0.96)}, {n: 'DEF', v: 34}, {n: 'PHY', v: 78}] };
+  // Determine card rarity based on matches under demand
+  const matchesCount = rachaStats?.presences || 0;
+  const winsCount = rachaStats?.vitorias || 0;
+  const achievements = getAchievementsForPlayer(player, rachaStats, allStats);
+  const earnedCount = achievements.filter((a) => a.earned).length;
+
+  let rarity: 'bronze' | 'prata' | 'ouro' | 'lendaria' = 'bronze';
+  if (matchesCount >= 20 && winsCount >= 10 && earnedCount >= 4) {
+    rarity = 'lendaria';
+  } else if (matchesCount >= 10 && winsCount >= 5) {
+    rarity = 'ouro';
+  } else if (matchesCount >= 4) {
+    rarity = 'prata';
+  }
+
+  const getRarityTheme = (r: 'bronze' | 'prata' | 'ouro' | 'lendaria') => {
+    switch (r) {
+      case 'lendaria':
+        return {
+          bgGradient: 'from-zinc-950 via-purple-950/40 to-black',
+          borderColor: 'border-purple-500/60',
+          textAccent: 'text-purple-400 font-black',
+          badgeText: 'Lendário ⭐',
+          cardGlow: 'shadow-[0_0_25px_rgba(168,85,247,0.35)] border-purple-500/50',
+          textTitle: 'text-purple-300 font-extrabold',
+          badgeBg: 'bg-purple-900/40 text-purple-200 border border-purple-500/30',
+          ovrColor: 'text-purple-400',
+          labelColor: 'text-purple-300/80',
+          statBg: 'bg-purple-950/30 border-purple-900/30 text-purple-250',
+          badgeRarity: 'bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-mono',
+          shieldColor: '#c084fc'
+        };
+      case 'ouro':
+        return {
+          bgGradient: 'from-amber-950/20 via-yellow-950/40 to-black',
+          borderColor: 'border-yellow-500/70',
+          textAccent: 'text-yellow-405 font-black',
+          badgeText: 'Ouro 🏅',
+          cardGlow: 'shadow-[0_0_22px_rgba(234,179,8,0.25)] border-yellow-400/50',
+          textTitle: 'text-yellow-200 font-extrabold',
+          badgeBg: 'bg-yellow-950/40 text-yellow-105 border border-yellow-500/30',
+          ovrColor: 'text-yellow-450',
+          labelColor: 'text-yellow-300/80',
+          statBg: 'bg-yellow-950/30 border-yellow-900/30 text-yellow-105',
+          badgeRarity: 'bg-gradient-to-r from-yellow-400 to-amber-600 text-black font-semibold',
+          shieldColor: '#facc15'
+        };
+      case 'prata':
+        return {
+          bgGradient: 'from-slate-900 via-zinc-900/40 to-zinc-950',
+          borderColor: 'border-zinc-500/50',
+          textAccent: 'text-zinc-350 font-black',
+          badgeText: 'Prata 🥈',
+          cardGlow: 'shadow-[0_0_15px_rgba(113,113,122,0.18)] border-zinc-650',
+          textTitle: 'text-zinc-200 font-extrabold',
+          badgeBg: 'bg-zinc-800 text-zinc-350 border border-zinc-750',
+          ovrColor: 'text-zinc-300',
+          labelColor: 'text-zinc-400/80',
+          statBg: 'bg-zinc-900/45 border-zinc-850 text-zinc-300',
+          badgeRarity: 'bg-zinc-650 text-white',
+          shieldColor: '#cbd5e1'
+        };
+      case 'bronze':
       default:
-        return { rating: ratingValue, pac: 75, sho: 65, pas: 70, dri: 72, def: 60, phy: 70, fields: [{n: 'PAC', v: 75}, {n: 'SHO', v: 65}, {n: 'PAS', v: 70}, {n: 'DRI', v: 72}, {n: 'DEF', v: 60}, {n: 'PHY', v: 70}] };
+        return {
+          bgGradient: 'from-amber-955/10 via-zinc-900/30 to-zinc-950',
+          borderColor: 'border-amber-800/30',
+          textAccent: 'text-amber-605 font-black',
+          badgeText: 'Bronze 🥉',
+          cardGlow: 'shadow-md border-amber-850/20',
+          textTitle: 'text-amber-205 font-extrabold',
+          badgeBg: 'bg-amber-950/30 text-amber-500 border border-amber-900/30',
+          ovrColor: 'text-amber-600',
+          labelColor: 'text-zinc-500',
+          statBg: 'bg-zinc-900/40 border-zinc-850 text-zinc-400',
+          badgeRarity: 'bg-amber-800/40 text-amber-200',
+          shieldColor: '#b45309'
+        };
     }
   };
 
-  const sportsStats = getStatsForPosition(player.primaryPosition);
+  const rarityTheme = getRarityTheme(rarity);
 
-  // Generation feature will be implemented natively backend-side in the next version
-
-  const isSoftDeleted = !!player.deletedAt;
-  const originalPhoto = player.photoOriginal || (player as any).photoUrl || '';
-
-  // Calculate SVG Graph Coordinates based on history points
+  // Sparkline coordinates calculator
   const renderSparkline = (historyPoints: any[]) => {
     if (!historyPoints || historyPoints.length < 2) return null;
     
     const width = 280;
-    const height = 45;
-    const padding = 5;
+    const height = 40;
+    const padding = 4;
 
     const xCoords = historyPoints.map((_, i) => padding + (i * (width - 2 * padding) / (historyPoints.length - 1)));
     const yCoords = historyPoints.map(p => height - padding - ((p.overall - 0.0) * (height - 2 * padding) / 5.0));
@@ -163,636 +423,678 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
             <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
           </linearGradient>
         </defs>
-        {/* Area fill */}
         <polygon
           points={`${padding},${height} ${points} ${width - padding},${height}`}
           fill={`url(#grad-${player.id})`}
         />
-        {/* Line */}
         <polyline
           fill="none"
           stroke="#10b981"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
           points={points}
         />
-        {/* Dots */}
         {xCoords.map((x, i) => (
-          <g key={i}>
-            <circle
-              cx={x}
-              cy={yCoords[i]}
-              r="2.5"
-              fill="#10b981"
-              stroke="#0b110e"
-              strokeWidth="0.8"
-            />
-            <title>{`Data: ${historyPoints[i].date} • Overall: ${historyPoints[i].overall}`}</title>
-          </g>
+          <circle
+            key={i}
+            cx={x}
+            cy={yCoords[i]}
+            r="2"
+            fill="#10b981"
+            stroke="#090d0b"
+            strokeWidth="0.5"
+          />
         ))}
       </svg>
     );
   };
 
+  // Helper to get attribute average from metrics
+  const getAttributeAverage = (attrId: string) => {
+    if (metrics && metrics.computedAttributes && metrics.computedAttributes[attrId]) {
+      return metrics.computedAttributes[attrId].average || 0;
+    }
+    return 0;
+  };
+
+  // eSports Dynamic FUT metrics converter (0-5 stars mapped to classic 50-99 system)
+  const getFifaStat = (attrId: string, defaultValue = 72) => {
+    const average = getAttributeAverage(attrId);
+    if (average === 0) return defaultValue;
+    return Math.min(99, Math.max(50, Math.round(average * 10 + 50)));
+  };
+
+  // Render Gold/Amber Stars based on rating (0.0 to 5.0)
+  const renderAttrStars = (ratingValue: number) => {
+    return (
+      <div className="flex gap-0.5 items-center">
+        {Array.from({ length: 5 }).map((_, index) => {
+          const starValue = index + 1;
+          const isFilled = ratingValue >= starValue;
+          const isHalf = !isFilled && ratingValue >= (starValue - 0.5);
+          return (
+            <Star
+              key={index}
+              className={`w-3 h-3 ${
+                isFilled
+                  ? 'fill-amber-450 text-amber-455'
+                  : isHalf
+                    ? 'text-amber-455 fill-amber-455/40'
+                    : 'text-zinc-805'
+              }`}
+            />
+          );
+        })}
+        {ratingValue > 0 && (
+          <span className="text-[10px] font-mono text-zinc-400 ml-1 font-bold">
+            {ratingValue.toFixed(1)}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  // OVR Calculation (50-99 scale derived from overall 0-5 average)
+  const displayOvr = metrics?.overall 
+    ? Math.min(99, Math.max(50, Math.round(metrics.overall * 10 + 50))) 
+    : 72;
+
+  // Render 6 FUT main attributes on card face
+  const isGoalkeeper = player.primaryPosition === 'goleiro';
+
+  // Stats calculation
+  const pac = getFifaStat('velocidade', 75);
+  const sho = getFifaStat('finalizacao', 72);
+  const pas = getFifaStat('passe', 74);
+  const dri = getFifaStat('drible', 73);
+  const defVal = Math.round(((getAttributeAverage('defesa') + getAttributeAverage('marcacao')) / 2) * 10 + 50) || 70;
+  const phy = getFifaStat('fisico', 74);
+
+  const div = getFifaStat('reflexo', 76);
+  const han = getFifaStat('saida_gol', 72);
+  const kic = getFifaStat('reposicao', 70);
+  const ref = Math.round(((getAttributeAverage('reflexo') + getAttributeAverage('posicionamento')) / 2) * 10 + 50) || 75;
+  const spd = Math.round(getAttributeAverage('reflexo') * 9 + 50) || 68;
+  const posGK = getFifaStat('posicionamento', 74);
+
   return (
     <div
       id={`player-card-${player.id}`}
-      className={`relative rounded-xl border p-4 sports-card transition-all duration-300 md:p-5 flex flex-col justify-between overflow-hidden ${
-        isSoftDeleted ? 'opacity-50 grayscale border-zinc-800' : 'border-zinc-800/80 hover:scale-[1.01]'
+      className={`relative w-full h-[460px] select-none transition-all duration-300 ${
+        isSoftDeleted ? 'opacity-65 grayscale' : ''
       }`}
+      style={{ perspective: '1000px' }}
     >
-      {/* Favorite Team color accent top bar */}
+      {/* 3D Rotating card element */}
       <div
-        className="absolute top-0 left-0 right-0 h-1.5"
-        style={{ backgroundColor: team?.colorHex || '#22c55e' }}
-      />
+        className="relative w-full h-full cursor-pointer transition-transform duration-500 ease-out"
+        style={{
+          transformStyle: 'preserve-3d',
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+        }}
+        onClick={() => setIsFlipped(!isFlipped)}
+      >
+        
+        {/* ========================================== */}
+        {/* FRONT SIDE (FRENTE - FIFA FUT STYLE CARD)  */}
+        {/* ========================================== */}
+        <div
+          className={`absolute inset-0 w-full h-full rounded-2xl border bg-gradient-to-b ${rarityTheme.bgGradient} ${rarityTheme.borderColor} ${rarityTheme.cardGlow} p-4 flex flex-col justify-between overflow-hidden`}
+          style={{
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+          }}
+        >
+          {/* Favorite Team color accent top bar */}
+          <div
+            className="absolute top-0 left-0 right-0 h-1.5"
+            style={{ backgroundColor: team?.colorHex || '#22c55e' }}
+          />
 
-      {/* Header Info */}
-      <div className="flex justify-between items-start gap-2 mb-3">
-        <div>
-          <span className="text-[10px] font-mono tracking-wider uppercase font-bold text-zinc-400 bg-zinc-800/60 px-2 py-0.5 rounded border border-zinc-700/30">
-            {CATEGORY_LABELS[player.category]}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {metrics && metrics.evalCount > 0 ? (
-            <div className="flex items-center gap-0.5 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/15 text-emerald-400 text-[10px] font-mono font-bold">
-              <Star className="w-3" />
-              <span>{metrics.overall.toFixed(1)}</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1 bg-zinc-800/20 px-2 py-0.5 rounded border border-zinc-700/30 text-zinc-400 text-[10px] font-mono font-bold">
-              <span>⚪ Não avaliado</span>
+          {/* Toast Notification inside card */}
+          {saveSuccessMsg && (
+            <div className="absolute top-3 left-3 right-3 z-50 bg-zinc-950/95 border border-amber-500/50 rounded-lg p-2 text-amber-200 text-center font-bold text-xs shadow-2xl animate-pulse">
+              {saveSuccessMsg}
             </div>
           )}
-          <span className={`text-xs px-2.5 py-0.5 rounded-full border flex items-center gap-1 font-medium ${STATUS_COLORS[player.status]}`}>
-            {getStatusIcon(player.status)}
-            <span>{STATUS_LABELS[player.status]}</span>
-          </span>
-        </div>
-      </div>
 
-      {showFUTCard ? (
-        /* Visualização de Imagens: Foto Original ou Card Gerado */
-        <div id={`image-viewer-${player.id}`} className="py-3 flex flex-col items-center">
-          {/* Tabs for choosing between Original and Generated */}
-          <div className="flex gap-1.5 p-1 bg-zinc-950 border border-zinc-900 rounded-lg mb-4 w-full">
-            <button
-              id={`tab-view-original-${player.id}`}
-              type="button"
-              onClick={() => setSelectedImageView('original')}
-              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-mono font-medium transition cursor-pointer text-center ${
-                selectedImageView === 'original'
-                  ? 'bg-emerald-600 text-white font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-              }`}
-            >
-              Foto Original
-            </button>
-            <button
-              id={`tab-view-card-${player.id}`}
-              type="button"
-              onClick={() => setSelectedImageView('card')}
-              className={`flex-1 py-1.5 px-3 rounded-md text-xs font-mono font-medium transition cursor-pointer text-center ${
-                selectedImageView === 'card'
-                  ? 'bg-emerald-600 text-white font-bold'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-900'
-              }`}
-            >
-              Card Gerado
-            </button>
+          {/* FUT Shield layout top section */}
+          <div className="flex justify-between items-start mt-2">
+            
+            {/* OVR & Badge panel (Left) */}
+            <div className="flex flex-col items-center">
+              <span className={`text-3xl font-display font-black leading-none ${rarityTheme.ovrColor} tracking-tighter`}>
+                {displayOvr}
+              </span>
+              <span className="text-[10px] font-mono font-black text-white/90 uppercase tracking-widest mt-0.5 leading-none">
+                {getPositionAbbreviation(player.primaryPosition)}
+              </span>
+              <div className="w-4 h-px bg-white/20 my-1" />
+              <span className="text-[10px]" title="Nacionalidade">🇧🇷</span>
+              
+              {/* Club name tag */}
+              <div 
+                className="text-[8px] font-mono font-extrabold px-1 py-0.5 rounded border border-white/10 text-white mt-1.5 leading-none uppercase"
+                style={{ backgroundColor: team?.colorHex || '#52525b' }}
+              >
+                {team ? team.name.substring(0, 3) : 'FOF'}
+              </div>
+
+              {/* Dominant feet indicator */}
+              <span className="text-[7px] font-mono text-zinc-400 mt-1 uppercase tracking-tight">
+                {player.peDominante === 'Esquerdo' ? 'LEF' : player.peDominante === 'Ambidestro' ? 'AMB' : 'RGT'}
+              </span>
+              
+              {/* Card Rarity label */}
+              <span className={`text-[7px] px-1 py-0.5 rounded uppercase font-bold tracking-tighter mt-1.5 ${rarityTheme.badgeRarity}`}>
+                {rarity === 'lendaria' ? 'LND' : rarity === 'ouro' ? 'GOL' : rarity === 'prata' ? 'SLV' : 'BRZ'}
+              </span>
+            </div>
+
+            {/* Giant Jersey Number or Favorite Number with subtle styling (Right top) */}
+            <div className="flex flex-col items-end">
+              <div className="text-3xl font-display font-black text-white/5 font-mono select-none -mr-1">
+                #{player.numeroFavorito || 10}
+              </div>
+              <span className={`text-[9px] px-2 py-0.5 rounded border ${STATUS_COLORS[player.status]} font-bold font-mono tracking-tight`}>
+                {STATUS_LABELS[player.status]}
+              </span>
+            </div>
+
           </div>
 
-          {/* Label indicating which image is currently shown */}
-          <div className="w-full text-center mb-3">
-            <span className="text-[10px] font-mono font-bold tracking-wider uppercase px-2.5 py-1 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
-              EXIBINDO: {selectedImageView === 'original' ? 'Foto Original' : 'Card Gerado'}
-            </span>
-          </div>
-
-          {/* Render image view state */}
-          <div className="w-full flex items-center justify-center min-h-[220px]">
-            {selectedImageView === 'original' ? (
-              originalPhoto ? (
-                <div className="relative w-[180px] h-[180px] rounded-full overflow-hidden border-2 border-emerald-500 bg-black/40 flex items-center justify-center shadow-2xl">
-                  <img
-                    src={originalPhoto}
-                    alt={`${player.name} - Foto Original`}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+          {/* Centered Profile Avatar/Athlete section with premium club framing and crest */}
+          <div className="flex flex-col items-center justify-center -mt-6 mb-1 relative">
+            <div 
+              style={getClubMolduraStyle(player.favoriteTeamId || '')}
+              className="relative w-28 h-28 rounded-xl overflow-hidden border-2 flex items-center justify-center shadow-2xl group transition-all duration-300"
+            >
+              {avatarToDisplay ? (
+                <img
+                  src={avatarToDisplay}
+                  alt={player.name}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover select-none transition duration-300 group-hover:scale-105"
+                />
               ) : (
-                <div className="w-[180px] h-[180px] rounded-full border border-dashed border-zinc-850 bg-black/45 flex flex-col items-center justify-center text-center p-3 text-zinc-550">
-                  <User className="w-10 h-10 mb-2 opacity-50" />
-                  <p className="text-[11px] font-mono">Sem foto original cadastrada</p>
+                <User className="w-14 h-14 text-zinc-700" />
+              )}
+              
+              {/* Escudo do Clube (Floating Badge) */}
+              <div 
+                className="absolute top-1 right-1 bg-black/90 p-0.5 rounded-full border border-white/20 shadow-md transform group-hover:scale-110 transition duration-150"
+                title={`${team ? team.name : 'Clube'}`}
+              >
+                <ClubShield clubId={player.favoriteTeamId} className="w-4.5 h-4.5" />
+              </div>
+
+              {/* Rarity Shield corner logo overlay (Bottom-Right) */}
+              <div 
+                className="absolute bottom-1 right-1 w-4 h-4 rounded-full flex items-center justify-center border border-white/20 select-none shadow"
+                style={{ backgroundColor: rarityTheme.shieldColor }}
+                title={rarityTheme.badgeText}
+              >
+                <Zap className="w-2.5 h-2.5 text-black fill-black" />
+              </div>
+            </div>
+          </div>
+
+          {/* Player Identity Block */}
+          <div className="text-center">
+            <h3 className="font-sans font-black text-base text-white tracking-tight uppercase leading-tight px-1 truncate">
+              {player.name}
+            </h3>
+            <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-zinc-400 to-transparent mx-auto mt-1" />
+          </div>
+
+          {/* FUT 6 Attributes Dashboard (Classic Grid) */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-black/60 border border-zinc-900 p-2 rounded-lg font-mono text-[10px] leading-snug mx-1.5 shadow-inner">
+            {isGoalkeeper ? (
+              <>
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">DIV (Sal)</span>
+                  <span className="font-extrabold text-amber-400">{div}</span>
                 </div>
-              )
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">REF (Ref)</span>
+                  <span className="font-extrabold text-amber-400">{ref}</span>
+                </div>
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">HAN (Man)</span>
+                  <span className="font-extrabold text-[#38bdf8]">{han}</span>
+                </div>
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">SPD (Vel)</span>
+                  <span className="font-extrabold text-[#38bdf8]">{spd}</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">KIC (Rep)</span>
+                  <span className="font-extrabold text-emerald-400">{kic}</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">POS (Pos)</span>
+                  <span className="font-extrabold text-emerald-400">{posGK}</span>
+                </div>
+              </>
             ) : (
-              /* Card Gerado ImageView */
-              player.playerCardUrl ? (
-                <div className="relative w-[190px] h-[270px] rounded-2xl overflow-hidden border border-emerald-500 bg-black/40 shadow-2xl flex items-center justify-center group">
-                  <img
-                    src={player.playerCardUrl}
-                    alt={`${player.name} - Card Gerado`}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                  />
-                  <div className="absolute top-2 right-2 bg-emerald-600 border border-emerald-400 px-1.5 py-0.5 rounded text-[8px] font-mono text-white font-black uppercase shadow">
-                    Temporada 2026
-                  </div>
+              <>
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">PAC (Rit)</span>
+                  <span className="font-extrabold text-purple-400">{pac}</span>
                 </div>
-              ) : (
-                /* Card Gerado: Not generated yet. Requirement 5, 6, 8 details. */
-                <div className="w-full max-w-sm p-4 rounded-xl border border-zinc-900 bg-zinc-950/80 flex flex-col items-center justify-center text-center space-y-3">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-amber-500" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-amber-400 font-mono uppercase tracking-wider">Card do Atleta de IA</h4>
-                    <span className="inline-block mt-1.5 text-[10px] font-bold bg-amber-550/15 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded font-mono">
-                      Funcionalidade planejada para próxima versão.
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-normal font-sans">
-                    Não simulamos a criação nem guardamos efeitos temporários de frontend.
-                  </p>
-                  <p className="text-[10px] text-zinc-500 leading-normal text-center bg-zinc-900/30 p-2 border border-zinc-900 rounded font-sans">
-                    O objetivo futuro é transformar a foto do atleta em um card de figurinha, isolando o rosto original e desenhando um uniforme estilizado inspirado nas cores do clube escolhido: <strong className="text-zinc-300">{team?.name || 'Outro'}</strong>.
-                  </p>
-                  <div className="w-full bg-zinc-900/50 border border-[#22c55e]/5 p-2.5 rounded-lg text-left text-[10px] font-mono text-zinc-500 space-y-1">
-                    <p className="font-bold text-[#4ade80] text-[10px] mb-1.5 uppercase">Fluxo Futuro Planejado (Back-end):</p>
-                    <p>1. Foto Original do Atleta no S3</p>
-                    <p>2. Processamento via API de Inteligência Artificial</p>
-                    <p>3. Geração do Card (Rosto original + uniforme customizado)</p>
-                    <p>4. Upload do Card finalizado para S3</p>
-                    <p>5. Salvamento definitivo do link no banco de dados</p>
-                  </div>
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">DRI (Dri)</span>
+                  <span className="font-extrabold text-purple-400">{dri}</span>
                 </div>
-              )
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">SHO (Fin)</span>
+                  <span className="font-extrabold text-amber-500">{sho}</span>
+                </div>
+                <div className="flex justify-between border-b border-zinc-850 py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">DEF (Mar)</span>
+                  <span className="font-extrabold text-amber-500">{defVal}</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">PAS (Pas)</span>
+                  <span className="font-extrabold text-[#4ade80]">{pas}</span>
+                </div>
+                <div className="flex justify-between py-0.5">
+                  <span className="text-zinc-500 uppercase tracking-tight">PHY (Fis)</span>
+                  <span className="font-extrabold text-[#4ade80]">{phy}</span>
+                </div>
+              </>
             )}
           </div>
 
-          <button
-            id={`btn-close-fut-${player.id}`}
-            type="button"
-            onClick={() => setShowFUTCard(false)}
-            className="mt-4 px-3 py-1 bg-zinc-900 border border-zinc-800 text-[10px] text-zinc-400 rounded-lg font-mono hover:text-white transition cursor-pointer"
-          >
-            ← Voltar para Ficha Básica
-          </button>
-        </div>
-      ) : (
-        /* Standard card layout view */
-        <>
-          {/* Main Card Body */}
-          <div className="flex items-center gap-4 py-2">
-            {/* Avatar/Photo Jersey View */}
-            <div className="relative flex-shrink-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-zinc-800 bg-[#121c17] flex items-center justify-center shadow-inner">
-                {originalPhoto ? (
-                  <img
-                    src={originalPhoto}
-                    alt={player.name}
-                    referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                      (e.target as HTMLElement).nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                ) : null}
-                <div className={`flex flex-col items-center justify-center text-center ${originalPhoto ? 'hidden' : ''}`}>
-                  <User className="w-6 h-6 text-zinc-500" />
-                </div>
-              </div>
-
-              {/* Player Badge Overlay */}
-              <div
-                className="absolute -bottom-1 -right-1 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded border text-white shadow-md flex items-center justify-center"
-                style={{ backgroundColor: team?.colorHex || '#10b981', borderColor: 'rgba(255,255,255,0.15)' }}
-                title={`Torcedor do ${team?.name}`}
-              >
-                {team ? team.name.substring(0, 3).toUpperCase() : 'FTB'}
-              </div>
-            </div>
-
-            {/* Player Names & Main Positions */}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5">
-                <h3 className="font-display font-bold text-lg text-white leading-tight truncate">
-                  {player.name}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => setShowFUTCard(true)}
-                  className="p-1 rounded bg-[#22c55e]/10 tracking-widest border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-white transition cursor-pointer flex-shrink-0"
-                  title="Exibir Card Esportivo de IA (FUT)"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              <p className="text-xs text-zinc-400 truncate mb-1">
-                {player.email}
-              </p>
-
-              {/* Position Badger */}
-              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                <span className="text-[10px] font-mono font-bold bg-[#22c55e]/20 text-[#4ade80] border border-[#22c55e]/30 px-1.5 py-0.5 rounded">
-                  {getPositionAbbreviation(player.primaryPosition)} - {POSITION_LABELS[player.primaryPosition]}
-                </span>
-
-                {/* Secondary Positions */}
-                {player.secondaryPositions && player.secondaryPositions.length > 0 && (
-                  <span className="text-[9px] font-mono text-zinc-500 flex items-center gap-1">
-                    <span>+</span>
-                    {player.secondaryPositions.map((sp) => getPositionAbbreviation(sp)).join(', ')}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {saveSuccessMsg && (
-            <p className="p-2 my-2 bg-emerald-500/10 border border-emerald-500/20 rounded text-[11px] font-mono text-emerald-400 animate-fadeIn">
-              {saveSuccessMsg}
-            </p>
-          )}
-
-          {/* Date-ranges display if unavailable/injured */}
-          {(player.status === 'lesionado' || player.status === 'indisponivel') && player.statusStartDate && player.statusEndDate && (
-            <div className="mt-2.5 px-3 py-1.5 rounded bg-zinc-900/60 border border-zinc-800/40 text-[11px] text-zinc-400 flex items-center gap-2">
-              <Calendar className="w-3.5 h-3.5 text-zinc-500" />
-              <span>
-                Ausente: {player.statusStartDate.split('-').reverse().join('/')} até {player.statusEndDate.split('-').reverse().join('/')}
+          {/* Action Footer persistent controls */}
+          <div className="mt-1">
+            <div className="text-center mb-1.5">
+              <span className="inline-flex items-center gap-1 text-[8.5px] font-bold font-mono text-zinc-500 hover:text-zinc-400 select-none bg-zinc-900/60 px-2.5 py-0.5 rounded border border-zinc-850">
+                <RotateCcw className="w-2.5 h-2.5 text-zinc-500 animate-pulse" /> 3D Flip • Estatísticas Completas
               </span>
             </div>
-          )}
 
-          {/* EXPANDING DETAILS / ATTRIBUTES SECTION */}
-          {showAttributes && (
-            <div className="mt-4 pt-4 border-t border-zinc-900 space-y-4 animate-slideDown">
-              {loadingMetrics ? (
-                <div className="flex items-center justify-center py-6 gap-2">
-                  <RotateCcw className="w-4 h-4 text-emerald-500 animate-spin" />
-                  <span className="text-[11px] text-zinc-500 font-mono">Processando avaliações...</span>
-                </div>
-              ) : metrics ? (
-                <div className="space-y-4">
+            {/* Admin control panel footer inside the card container */}
+            <div className="pt-2 border-t border-zinc-900 flex items-center justify-between gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEvalModalOpen(true);
+                }}
+                className="px-2 py-1 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded-lg text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1 cursor-pointer"
+              >
+                <Award className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Avaliar</span>
+              </button>
+
+              {/* On-demand generator trigger & Edit buttons */}
+              {canEdit && (
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                   
-                  {/* Overview statistics info card */}
-                  <div className="grid grid-cols-4 gap-1 bg-zinc-950 p-2.5 rounded-lg border border-zinc-900 text-center font-mono">
-                    <div className="border-r border-zinc-900">
-                      <span className="block text-[8px] text-zinc-500 uppercase leading-snug">Nota</span>
-                      <span className="text-sm font-black text-emerald-400">{metrics.overall.toFixed(1)}</span>
-                    </div>
-                    <div className="border-r border-zinc-900">
-                      <span className="block text-[8px] text-zinc-500 uppercase leading-snug">Votos</span>
-                      <span className="text-sm font-black text-white">{metrics.evalCount}</span>
-                    </div>
-                    <div className="border-r border-zinc-900">
-                      <span className="block text-[8px] text-zinc-500 uppercase leading-snug">Rachas</span>
-                      <span className="text-sm font-black text-emerald-400">{metrics.presencesCount || 0}</span>
-                    </div>
-                    <div>
-                      <span className="block text-[8px] text-zinc-500 uppercase leading-snug">Faltas</span>
-                      <span className="text-sm font-black text-rose-500">{metrics.absencesCount || 0}</span>
-                    </div>
-                  </div>
-
-                  {/* Racha Tournament Stats Grid */}
-                  <div className="space-y-2">
-                    <span className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Estatísticas Gerais do Racha</span>
-                    <div className="grid grid-cols-3 gap-2 bg-zinc-950 p-3 rounded-lg border border-zinc-900 font-mono text-center">
-                      <div className="border-r border-zinc-900">
-                        <span className="block text-[8px] text-zinc-500 uppercase">Ranking</span>
-                        <span className="text-xs font-black text-amber-400">{rachaStats ? `#${rachaStats.rank}` : '--'}</span>
-                      </div>
-                      <div className="border-r border-zinc-900">
-                        <span className="block text-[8px] text-zinc-500 uppercase">Vitórias</span>
-                        <span className="text-xs font-black text-emerald-400">{rachaStats ? `${rachaStats.vitorias}V` : '0V'}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[8px] text-zinc-500 uppercase">Aproveit.</span>
-                        <span className="text-xs font-black text-sky-400">{rachaStats ? `${rachaStats.aproveitamento}%` : '0%'}</span>
-                      </div>
-                      <div className="col-span-3 border-t border-zinc-900/60 pt-2 mt-1.5 grid grid-cols-3 gap-2 text-[9px] text-zinc-400">
-                        <div>
-                          <span>Partidas:</span> <span className="font-bold text-white">{rachaStats ? rachaStats.presences : 0}</span>
-                        </div>
-                        <div>
-                          <span>🔥 Seq. Atual:</span> <span className="font-bold text-amber-500">{rachaStats ? rachaStats.currentStreak : 0}V</span>
-                        </div>
-                        <div>
-                          <span>👑 Melhor Seq.:</span> <span className="font-bold text-rose-400">{rachaStats ? rachaStats.maxStreak : 0}V</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Últimas Participações History Section */}
-                  {metrics.lastParticipations && metrics.lastParticipations.length > 0 && (
-                    <div className="bg-zinc-950/40 p-2.5 rounded-lg border border-zinc-900/40 space-y-1.5 font-mono text-[10px]">
-                      <span className="block font-bold text-zinc-400 uppercase tracking-wider">Últimas Participações</span>
-                      <div className="space-y-1 divide-y divide-zinc-900/30">
-                        {metrics.lastParticipations.map((part: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center pt-1 text-zinc-300">
-                            <span className="flex items-center gap-1">
-                              <span>⚽</span>
-                              <span>{part.date.split('-').reverse().slice(0, 2).join('/')}</span>
-                            </span>
-                            <span className={`text-[9px] px-1 py-0.25 rounded ${
-                              part.status === 'confirmado' 
-                                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10' 
-                                : 'bg-rose-500/10 text-rose-400 border border-rose-500/10'
-                            }`}>
-                              {part.status === 'confirmado' ? 'PRESENÇA' : 'CANCELADO'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                  {/* Manual AI sports avatar reconstruction button */}
+                  {!isSoftDeleted && (
+                    <button
+                      onClick={handleRegenerateAvatar}
+                      disabled={isRegenerating}
+                      className="p-1 px-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-emerald-400 rounded-lg border border-zinc-800 transition-all text-[10px] flex items-center gap-1 cursor-pointer"
+                      title="Gerar / Recriar Avatar Inteligente"
+                    >
+                      <Sparkles className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
+                    </button>
                   )}
 
-                  {/* Attributes breakdown progressive bar list */}
-                  <div className="space-y-2.5">
-                    <span className="block text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider">Atributos Individuais</span>
-                    
-                    <div className="grid grid-cols-1 gap-2">
-                      {Object.keys(metrics.computedAttributes).map(attrName => {
-                        const attributeInfo = metrics.computedAttributes[attrName];
-                        const percentage = (attributeInfo.average / 5.0) * 100;
-                        return (
-                          <div key={attrName} className="space-y-1">
-                            <div className="flex justify-between items-center text-[11px]">
-                              <span className="font-sans text-zinc-300 capitalize">{attrName.replace('_', ' ')}</span>
-                              <div className="flex items-center gap-1.5 font-mono text-zinc-400">
-                                <span className="font-black text-emerald-400">{attributeInfo.average.toFixed(1)}</span>
-                                <span className="text-[9px] text-zinc-600">({attributeInfo.rawCount}v)</span>
-                              </div>
-                            </div>
-                            
-                            {/* Skill ProgressBar indicator */}
-                            <div className="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden border border-zinc-850/35">
-                              <div 
-                                className="h-full bg-emerald-500 rounded-full transition-all duration-500" 
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Historical Evolution Chart (ONLY rendered if history points available) */}
-                  {metrics.history && metrics.history.length >= 2 && (
-                    <div className="space-y-2 bg-zinc-950/40 p-2.5 rounded-lg border border-zinc-900">
-                      <div className="flex items-center gap-1 text-[10px] text-zinc-400 font-mono font-bold uppercase">
-                        <History className="w-3.5 h-3.5 text-zinc-500" />
-                        <span>Evolução do Overall</span>
-                      </div>
-                      
-                      {/* Interactive Sparkline graph rendering */}
-                      <div className="pt-2">
-                        {renderSparkline(metrics.history)}
-                      </div>
-
-                      <div className="flex justify-between text-[8px] font-mono text-zinc-650 px-1 pt-1">
-                        <span>{metrics.history[0].date.split('-').reverse().slice(0, 2).join('/')}</span>
-                        <span>{metrics.history[metrics.history.length - 1].date.split('-').reverse().slice(0, 2).join('/')}</span>
-                      </div>
-                    </div>
+                  {isSoftDeleted ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRestore && onRestore(player.id);
+                      }}
+                      className="px-2 py-1 bg-emerald-600/10 hover:bg-emerald-600/20 text-[#4ade80] border border-emerald-500/20 rounded-lg transition-all text-[10px] font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Reativar</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(player);
+                        }}
+                        className="p-1 px-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 rounded-lg border border-zinc-800 transition-all text-[10px] flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onInactivate(player.id);
+                        }}
+                        className="p-1 px-1.5 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/15 hover:border-rose-500/35 text-rose-400 rounded-lg transition-all text-[10px] flex items-center justify-center cursor-pointer"
+                        title="Inativar Jogador"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </>
                   )}
-
-                  {/* Category transitions history log */}
-                  <div className="space-y-2 bg-[#09100d] p-3 rounded-lg border border-zinc-900 font-mono text-[11px]">
-                    <span className="block font-bold text-zinc-400 uppercase tracking-wider text-[9px] mb-1">
-                      Histórico do Atleta no Grupo
-                    </span>
-                    <div className="flex justify-between items-center text-zinc-400 pb-1.5 border-b border-zinc-900/60">
-                      <span>Categoria Atual:</span>
-                      <span className="text-emerald-400 font-bold uppercase">
-                        {CATEGORY_LABELS[player.category]}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center text-zinc-400 pb-1.5 border-b border-zinc-900/60 mt-1">
-                      <span>Última alteração:</span>
-                      <span className="text-zinc-200 font-medium">
-                        {categoryHistory && categoryHistory.length > 0 
-                          ? new Date(categoryHistory[0].date).toLocaleDateString('pt-BR') 
-                          : 'Original de Registro'}
-                      </span>
-                    </div>
-
-                    {categoryHistory && categoryHistory.length > 0 ? (
-                      <div className="space-y-2 pt-2 max-h-32 overflow-y-auto divide-y divide-zinc-900/50">
-                        {categoryHistory.map((tr) => (
-                          <div key={tr.id} className="pt-1.5 text-[10px] text-zinc-400 space-y-0.5">
-                            <div className="flex justify-between font-bold text-zinc-300">
-                              <span>
-                                {CATEGORY_LABELS[tr.previousCategory] || tr.previousCategory} → {CATEGORY_LABELS[tr.newCategory] || tr.newCategory}
-                              </span>
-                              <span className="text-zinc-500 font-normal">
-                                {new Date(tr.date).toLocaleDateString('pt-BR')}
-                              </span>
-                            </div>
-                            <div className="text-[10px] text-zinc-650 flex justify-between">
-                              <span>Por: {tr.responsibleName || 'Administrador'}</span>
-                              <span>{new Date(tr.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-[10px] text-zinc-500 italic pt-1 text-center">
-                        Sem trocas de categorias registradas para este atleta.
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Categorized and Styled Player Achievements component */}
-                  <div className="space-y-3 bg-[#0a0f0d] p-3.5 rounded-xl border border-zinc-900 shadow-inner font-sans">
-                    <div className="flex justify-between items-center pb-2 border-b border-zinc-900/60">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">🏅</span>
-                        <h4 className="font-display font-black text-xs text-white uppercase tracking-wider">Conquistas do Jogador</h4>
-                      </div>
-                      <span className="text-[10px] font-mono text-emerald-400 font-extrabold bg-[#22c55e]/10 px-2 py-0.5 rounded border border-[#22c55e]/20">
-                        {getAchievementsForPlayer(player, rachaStats, allStats).filter(a => a.earned).length} / {getAchievementsForPlayer(player, rachaStats, allStats).length} Concluídas
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                      {getAchievementsForPlayer(player, rachaStats, allStats).map((ach) => {
-                        // Determine border color and style based on category
-                        let categoryClasses = "";
-                        let textBadgeColor = "";
-                        switch (ach.category) {
-                          case 'bronze':
-                            categoryClasses = "border-amber-955/10 bg-amber-955/[0.02] text-amber-500 hover:bg-amber-950/[0.04]";
-                            textBadgeColor = "text-amber-500";
-                            break;
-                          case 'prata':
-                            categoryClasses = "border-zinc-800 bg-zinc-900/10 text-zinc-350 hover:bg-zinc-900/20";
-                            textBadgeColor = "text-zinc-500";
-                            break;
-                          case 'ouro':
-                            categoryClasses = "border-yellow-600/20 bg-yellow-950/[0.02] text-yellow-500 hover:bg-yellow-950/[0.04] ring-1 ring-yellow-550/5";
-                            textBadgeColor = "text-yellow-400";
-                            break;
-                          case 'lendaria':
-                            categoryClasses = "border-purple-500/10 bg-purple-950/[0.04] text-purple-400 hover:bg-purple-950/[0.08] ring-1 ring-purple-550/10 shadow-[0_0_10px_rgba(168,85,247,0.01)]";
-                            textBadgeColor = "text-purple-400";
-                            break;
-                        }
-
-                        return (
-                          <div
-                            key={ach.id}
-                            className={`flex gap-3 p-2.5 rounded-lg border transition ${categoryClasses} ${
-                              ach.earned ? 'opacity-100' : 'opacity-40'
-                            }`}
-                          >
-                            {/* Left Badge with styling */}
-                            <div className={`w-11 h-11 flex-shrink-0 rounded-lg flex items-center justify-center text-xl select-none transition ${
-                              ach.earned 
-                                ? 'bg-zinc-950 border border-white/5 shadow-md scale-105' 
-                                : 'bg-zinc-900/40 border border-zinc-950 grayscale'
-                            }`}>
-                              {ach.icon}
-                            </div>
-
-                            {/* Middle & Right Content */}
-                            <div className="flex-1 min-w-0 flex flex-col justify-between">
-                              <div className="flex items-center justify-between gap-2">
-                                <span className="block text-[11px] font-bold text-white leading-tight truncate">{ach.title}</span>
-                                <span className={`text-[8px] font-mono font-bold uppercase tracking-wider ${textBadgeColor}`}>
-                                  {ach.category === 'lendaria' ? 'Lendária' : ach.category}
-                                </span>
-                              </div>
-                              <p className="text-[10.5px] text-zinc-400 leading-snug mt-0.5 line-clamp-2">{ach.description}</p>
-                              
-                              {/* Progress bar info for unlocked/locked achievements */}
-                              <div className="mt-1.5 flex items-center gap-2">
-                                <div className="flex-1 h-1 bg-zinc-950/80 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full transition-all duration-300 ${
-                                      ach.earned 
-                                        ? 'bg-[#22c55e]' 
-                                        : ach.category === 'lendaria' 
-                                          ? 'bg-purple-650' 
-                                          : ach.category === 'ouro' 
-                                            ? 'bg-yellow-550' 
-                                            : 'bg-zinc-600'
-                                    }`}
-                                    style={{ width: `${ach.progressPercent}%` }}
-                                  />
-                                </div>
-                                <span className="text-[8px] font-mono text-zinc-500 font-bold whitespace-nowrap leading-none">
-                                  {ach.progress} / {ach.target}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Click to trigger evaluator modal from sheet directly */}
-                  <button
-                    type="button"
-                    onClick={() => setEvalModalOpen(true)}
-                    className="w-full bg-[#1b2b23] hover:bg-[#223d30] border border-emerald-500/25 hover:border-emerald-500/40 py-2.5 rounded-xl text-xs font-bold font-mono text-emerald-400 hover:text-emerald-300 transition cursor-pointer text-center flex items-center justify-center gap-1.5"
-                  >
-                    <Award className="w-4 h-4 text-emerald-400" />
-                    <span>Avaliar este Atleta</span>
-                  </button>
-
                 </div>
-              ) : (
-                <p className="text-[11px] font-mono text-zinc-500 text-center italic py-4">Nenhuma métrica computada ainda.</p>
               )}
             </div>
-          )}
-
-          {/* Quick Info Drawer Button */}
-          <div className="mt-2.5 flex gap-2">
-            <button
-              type="button"
-              onClick={toggleAttributes}
-              className="flex-1 bg-zinc-950/60 hover:bg-zinc-900 border border-zinc-900 rounded-lg p-2 flex items-center justify-between text-[11px] font-mono text-zinc-400 hover:text-white cursor-pointer transition select-none"
-            >
-              <span className="flex items-center gap-1.5">
-                <Star className="w-3.5 h-3.5 text-emerald-500" />
-                <span>{showAttributes ? 'Ocultar Ficha Técnica' : 'Ver Ficha Técnica / Notas'}</span>
-              </span>
-              {showAttributes ? <ChevronUp className="w-3.5 h-3.5 text-zinc-550" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-550" />}
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => setShowFUTCard(true)}
-              className="bg-zinc-950/60 hover:bg-[#131d17] border border-zinc-900 hover:border-emerald-500/20 rounded-lg px-3 py-2 flex items-center justify-center text-[11px] text-zinc-400 hover:text-emerald-400 cursor-pointer transition"
-              title="Card IA de FUT"
-            >
-              <Sparkles className="w-4 h-4" />
-            </button>
           </div>
-        </>
-      )}
-
-      {/* Action Buttons footer */}
-      {canEdit && (
-        <div className="mt-4 pt-3 border-t border-zinc-900 flex justify-end gap-2 text-xs">
-          {isSoftDeleted ? (
-            <button
-              id={`btn-restore-${player.id}`}
-              onClick={() => onRestore && onRestore(player.id)}
-              className="px-3 py-1.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-[#4ade80] border border-emerald-500/20 hover:border-emerald-500/30 rounded-lg transition-all font-medium flex items-center gap-1.5 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Reativar</span>
-            </button>
-          ) : (
-            <>
-              <button
-                id={`btn-edit-${player.id}`}
-                onClick={() => onEdit(player)}
-                className="px-3 py-1.5 bg-zinc-800/50 hover:bg-zinc-800 hover:text-white text-zinc-300 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-              >
-                <Edit2 className="w-3.5 h-3.5" />
-                <span>Editar</span>
-              </button>
-              <button
-                id={`btn-inactivate-${player.id}`}
-                onClick={() => onInactivate(player.id)}
-                className="px-3 py-1.5 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/10 hover:border-rose-500/30 text-rose-400 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                title="Inativar Jogador (Não exclui fisicamente)"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>Inativar</span>
-              </button>
-            </>
-          )}
         </div>
-      )}
 
-      {/* Render evaluation modal if explicitly opened from the toggle action */}
-      {evalModalOpen && (
-        <PlayerEvaluationModal
-          player={player}
-          currentUser={currentUser}
-          onClose={() => setEvalModalOpen(false)}
-          onEvaluationSaved={(msg) => {
-            setSaveSuccessMsg(msg);
-            fetchMetrics();
-            if (onEvaluationSavedGlobal) {
-              onEvaluationSavedGlobal();
-            }
-            setTimeout(() => setSaveSuccessMsg(''), 4000);
+        {/* ========================================== */}
+        {/* BACK SIDE (VERSO - COMPREHENSIVE RECORDS)  */}
+        {/* ========================================== */}
+        <div
+          className={`absolute inset-0 w-full h-full rounded-2xl border bg-zinc-950 ${rarityTheme.borderColor} p-4 flex flex-col justify-between overflow-hidden`}
+          style={{
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
           }}
-        />
+        >
+          {/* Favorite Team color accent top bar */}
+          <div
+            className="absolute top-0 left-0 right-0 h-1.5"
+            style={{ backgroundColor: team?.colorHex || '#22c55e' }}
+          />
+
+          {/* Tab Selection Header */}
+          <div className="flex bg-zinc-900/50 p-0.5 rounded-lg border border-zinc-850 text-[9.5px] items-center text-center">
+            {(['geral', 'atributos', 'historico', 'conquistas'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab(tab);
+                }}
+                className={`flex-1 py-1 rounded capitalize font-mono font-extrabold transition-all duration-150 cursor-pointer ${
+                  activeTab === tab
+                    ? 'bg-zinc-800 text-emerald-400 border border-zinc-700/50 shadow'
+                    : 'text-zinc-500 hover:text-zinc-300'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* TAB CONTENTS (Fixed Height, scrollable inside when necessary to prevent card size shifts) */}
+          <div className="flex-1 my-3 overflow-y-auto pr-1 select-text scrollbar-thin scrollbar-thumb-zinc-800">
+            
+            {/* 1. TAB GERAL */}
+            {activeTab === 'geral' && (
+              <div className="space-y-1.5 font-mono text-[10px] animate-fadeIn">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
+                    <span className="text-zinc-500">Ranking:</span>
+                    <span className="text-amber-400 font-extrabold">{rachaStats ? `#${rachaStats.rank}` : '--'}</span>
+                  </div>
+                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
+                    <span className="text-zinc-500">Vitórias:</span>
+                    <span className="text-emerald-400 font-bold">{rachaStats?.vitorias || 0}</span>
+                  </div>
+                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
+                    <span className="text-zinc-500">Derrotas:</span>
+                    <span className="text-rose-400 font-bold">
+                      {rachaStats ? (rachaStats.presences - rachaStats.vitorias) : 0}
+                    </span>
+                  </div>
+                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
+                    <span className="text-zinc-500">Presenças:</span>
+                    <span className="text-zinc-200 font-bold">{rachaStats?.presences || 0}</span>
+                  </div>
+                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
+                    <span className="text-zinc-500">Faltas:</span>
+                    <span className="text-amber-500 font-bold">{metrics?.absencesCount || 0}</span>
+                  </div>
+                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
+                    <span className="text-zinc-500">Aproveitam.:</span>
+                    <span className="text-sky-400 font-bold">{rachaStats ? `${rachaStats.aproveitamento}%` : '0%'}</span>
+                  </div>
+                </div>
+
+                <div className="bg-zinc-900/20 p-2 rounded-lg border border-zinc-905 space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-400 font-bold">🔥 Seq. Atual:</span>
+                    <span className="text-amber-500 font-bold">{rachaStats ? `${rachaStats.currentStreak}V` : '0V'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-zinc-400 font-bold">👑 Melhor Seq.:</span>
+                    <span className="text-rose-400 font-bold">{rachaStats ? `${rachaStats.maxStreak}V` : '0V'}</span>
+                  </div>
+                </div>
+
+                {player.email && (
+                  <div className="bg-zinc-900/25 p-2 rounded-lg border border-zinc-905 text-zinc-400 flex flex-col pt-1.5">
+                    <span className="text-[8px] uppercase text-zinc-500 leading-none mb-1">Contato/E-mail</span>
+                    <span className="truncate text-zinc-350">{player.email}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. TAB ATRIBUTOS */}
+            {activeTab === 'atributos' && (
+              <div className="space-y-1 font-mono text-[11px] animate-fadeIn">
+                {(player.primaryPosition === 'goleiro' ? GOALKEEPER_ATTRIBUTES : LINE_ATTRIBUTES).map((attr) => {
+                  const rating = getAttributeAverage(attr.id);
+                  return (
+                    <div key={attr.id} className="flex justify-between items-center py-1 border-b border-zinc-900/60">
+                      <span className="text-zinc-350 font-sans">{attr.label}</span>
+                      {renderAttrStars(rating)}
+                    </div>
+                  );
+                })}
+                <div className="mt-2.5 p-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded text-center">
+                  <span className="text-[9px] text-zinc-505 block font-sans">Nota Geral de Avaliações</span>
+                  <span className="text-sm font-mono font-black text-emerald-400">
+                    {metrics?.overall ? metrics.overall.toFixed(2) : '3.5'}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* 3. TAB HISTÓRICO */}
+            {activeTab === 'historico' && (
+              <div className="space-y-3 font-mono text-[10px] animate-fadeIn">
+                
+                {/* Last matches visual representation ✅ ✅ ❌ ✅ */}
+                <div>
+                  <span className="block text-[8px] font-mono font-bold text-zinc-550 uppercase tracking-wider mb-1.5">Últimos Rachas</span>
+                  {metrics?.lastParticipations && metrics.lastParticipations.length > 0 ? (
+                    <div className="flex items-center justify-around bg-zinc-900/20 border border-zinc-900 p-2 rounded-lg">
+                      {metrics.lastParticipations.slice(0, 5).map((part: any, idx: number) => {
+                        const isConfirmed = part.status === 'confirmado';
+                        const isFirstAndstreakWon = idx === 0 && rachaStats?.currentStreak > 0;
+                        return (
+                          <div key={idx} className="flex flex-col items-center">
+                            <span 
+                              className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] select-none ${
+                                isConfirmed 
+                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
+                                  : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
+                              }`}
+                              title={`Partida em ${part.date.split('-').reverse().join('/')}`}
+                            >
+                              {isConfirmed ? (isFirstAndstreakWon ? '🏆' : '✅') : '❌'}
+                            </span>
+                            <span className="text-[7.5px] font-mono text-zinc-650 mt-1">
+                              {part.date ? part.date.split('-').reverse().slice(0, 2).join('/') : ''}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[9px] text-zinc-605 font-mono italic text-center py-1">Sem histórico de rachas disponível.</p>
+                  )}
+                </div>
+
+                {/* Sparkling chart for overalls */}
+                {metrics?.history && metrics.history.length >= 2 && (
+                  <div className="bg-zinc-900/20 p-2 rounded-lg border border-zinc-900 space-y-1">
+                    <span className="block text-[8px] font-mono font-bold text-zinc-550 uppercase tracking-wider">Evolução do Over</span>
+                    <div className="pt-1 select-none">
+                      {renderSparkline(metrics.history)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Transitions timeline log summary */}
+                <div className="bg-zinc-900/10 p-2 rounded border border-zinc-900 text-zinc-500 text-[8.5px] leading-tight space-y-0.5">
+                  <span className="block font-bold text-zinc-440 text-[8px] uppercase tracking-wider mb-1">Status de Categoria</span>
+                  <div className="flex justify-between">
+                    <span>Categoria:</span>
+                    <span className="text-zinc-350 font-bold uppercase">{CATEGORY_LABELS[player.category]}</span>
+                  </div>
+                  {categoryHistory && categoryHistory.length > 0 && (
+                    <div className="flex justify-between pt-1 border-t border-zinc-900 mt-1">
+                      <span>Último ajuste:</span>
+                      <span>{new Date(categoryHistory[0].date).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                  )}
+                </div>
+
+              </div>
+            )}
+
+            {/* 4. TAB CONQUISTAS */}
+            {activeTab === 'conquistas' && (
+              <div className="space-y-3 animate-fadeIn">
+                {/* Trophy collection grids */}
+                <div className="grid grid-cols-5 gap-1.5 justify-items-center">
+                  {getAchievementsForPlayer(player, rachaStats, allStats).map((ach) => {
+                    let tierColor = 'border-zinc-800 text-zinc-655 bg-zinc-900/30';
+                    if (ach.earned) {
+                      if (ach.category === 'bronze') tierColor = 'border-amber-700/60 bg-amber-900/15 text-amber-500 shadow-[0_0_8px_rgba(217,119,6,0.1)]';
+                      else if (ach.category === 'prata') tierColor = 'border-zinc-500/50 bg-zinc-700/15 text-zinc-250 shadow-[0_0_8px_rgba(113,113,122,0.1)]';
+                      else if (ach.category === 'ouro') tierColor = 'border-yellow-500/50 bg-yellow-950/20 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.15)]';
+                      else if (ach.category === 'lendaria') tierColor = 'border-purple-500/50 bg-purple-950/25 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)]';
+                    }
+
+                    return (
+                      <div
+                        key={ach.id}
+                        className={`w-10 h-10 rounded-lg border flex items-center justify-center text-lg relative group transition-all duration-300 ${tierColor} ${
+                          ach.earned ? 'opacity-100 scale-102' : 'opacity-25 grayscale hover:opacity-80'
+                        }`}
+                      >
+                        <span>{ach.icon}</span>
+                        {/* Hover Popup */}
+                        <div className="absolute bottom-full mb-1.5 hidden group-hover:flex flex-col items-center z-50 pointer-events-none">
+                          <div className="bg-zinc-950 text-white border border-zinc-805 p-2 rounded-lg shadow-2xl w-36 text-[9px] leading-relaxed relative text-center">
+                            <p className="font-bold text-white text-[9.5px] leading-none mb-1">{ach.title}</p>
+                            <p className="text-zinc-400 mb-1 leading-snug">{ach.description}</p>
+                            <span className="text-[7.5px] font-mono uppercase font-bold text-amber-500 block">
+                              {ach.category} • {ach.progress}/{ach.target}
+                            </span>
+                            {/* Down pointing small arrow */}
+                            <div className="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-zinc-950 animate-bounce"></div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-2 bg-zinc-900/35 rounded-lg border border-zinc-900 flex justify-between items-center text-[9px] font-mono">
+                  <span className="text-zinc-550">Concluídas:</span>
+                  <span className="text-emerald-400 font-extrabold">
+                    {getAchievementsForPlayer(player, rachaStats, allStats).filter(a => a.earned).length} / {getAchievementsForPlayer(player, rachaStats, allStats).length}
+                  </span>
+                </div>
+
+              </div>
+            )}
+          </div>
+
+          {/* Verso Card flip control & admin action persistent footer */}
+          <div className="mt-1">
+            <div className="text-center mb-1.5">
+              <span className="inline-flex items-center gap-1 text-[8.5px] font-bold font-mono text-zinc-500 hover:text-zinc-400 select-none bg-zinc-900/60 px-2.5 py-0.5 rounded border border-zinc-850">
+                <RotateCcw className="w-2.5 h-2.5 text-zinc-500 animate-pulse" /> Voltar para Frente
+              </span>
+            </div>
+
+            {/* Actions footer (mirrored so administrators have identical fast access on back of card too!) */}
+            <div className="pt-2 border-t border-zinc-900 flex items-center justify-between gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEvalModalOpen(true);
+                }}
+                className="px-2 py-1 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded-lg text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1 cursor-pointer"
+              >
+                <Award className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Avaliar</span>
+              </button>
+
+              {canEdit && (
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  {isSoftDeleted ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onRestore && onRestore(player.id);
+                      }}
+                      className="px-2 py-1 bg-emerald-600/10 hover:bg-emerald-600/20 text-[#4ade80] border border-emerald-500/20 rounded-lg transition-all text-[10px] font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Reativar</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit(player);
+                        }}
+                        className="p-1 px-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 rounded-lg border border-zinc-800 transition-all text-[10px] flex items-center gap-0.5 cursor-pointer"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        <span>Editar</span>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onInactivate(player.id);
+                        }}
+                        className="p-1 px-1.5 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/15 hover:border-rose-500/35 text-rose-400 rounded-lg transition-all text-[10px] flex items-center justify-center cursor-pointer"
+                        title="Inativar Jogador"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* Render evaluation modal when open */}
+      {evalModalOpen && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <PlayerEvaluationModal
+            player={player}
+            currentUser={currentUser}
+            onClose={() => setEvalModalOpen(false)}
+            onEvaluationSaved={(msg) => {
+              setSaveSuccessMsg(msg);
+              fetchMetrics();
+              if (onEvaluationSavedGlobal) {
+                onEvaluationSavedGlobal();
+              }
+              setTimeout(() => setSaveSuccessMsg(''), 4000);
+            }}
+          />
+        </div>
       )}
 
     </div>

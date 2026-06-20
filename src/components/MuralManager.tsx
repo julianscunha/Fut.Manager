@@ -28,9 +28,14 @@ import {
   BarChart2,
   AlertCircle,
   Clock,
-  Play
+  Play,
+  Megaphone,
+  ChevronDown,
+  BookOpen,
+  History
 } from 'lucide-react';
 import { User, MuralPost } from '../types';
+import CommunicationCenter from './CommunicationCenter';
 
 interface MuralManagerProps {
   currentUser: User | null;
@@ -196,6 +201,27 @@ const createResizedDataUrl = (file: File, maxDim: number, quality: number = 0.8)
 export default function MuralManager({ currentUser, isPublicMode = false }: MuralManagerProps) {
   // Check if we are in public view mode from the URL or passed prop
   const isPublic = isPublicMode || window.location.search.includes('public=true') || window.location.pathname === '/public-mural';
+
+  const [muralSubTab, setMuralSubTab] = useState<'comunicacao' | 'memorias'>('comunicacao');
+
+  // Mobile accordion state and compact publish state
+  const [expandedSection, setExpandedSection] = useState<'regra' | 'aviso' | 'comunicado' | 'memoria' | 'history' | null>('regra');
+  const [isPublishDropdownOpen, setIsPublishDropdownOpen] = useState(false);
+
+  const handleDropdownOptionClick = (type: 'regra' | 'aviso' | 'comunicado' | 'memoria') => {
+    setIsPublishDropdownOpen(false);
+    if (type === 'memoria') {
+      setMuralSubTab('memorias');
+      setExpandedSection('memoria');
+      setIsUploadOpen(true);
+    } else {
+      setMuralSubTab('comunicacao');
+      setExpandedSection(type);
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('trigger-add-communication', { detail: { category: type } }));
+      }, 120);
+    }
+  };
 
   // Component States
   const [posts, setPosts] = useState<MuralPost[]>([]);
@@ -881,34 +907,22 @@ ${shareUrl}`;
     });
   };
 
-  return (
-    <div className="space-y-6 animate-fadeIn" id="mural-viewport">
-      
-      {/* Title Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-zinc-900 pb-5">
-        <div>
-          <span className="text-[10px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/20 px-2.5 py-0.5 rounded-full uppercase font-mono font-bold tracking-widest">
-            {isPublic ? 'Destaques & Memórias' : 'Destaques & Memórias'}
-          </span>
-          <h2 className="font-display font-extrabold text-2xl text-white mt-2">Mural do Racha</h2>
-          <p className="text-zinc-500 text-xs mt-0.5">
-            {isPublic 
-              ? 'Área contendo os destaques e as mídias selecionadas do racha.'
-              : 'O espaço oficial para compartilhar e eternizar momentos, resenhas e grandes lances.'}
-          </p>
-        </div>
+  // Count helpers
+  const rulesCount = posts.filter(p => p.category === 'regra' && !p.isDeleted && !p.isArchived).length;
+  const warningsCount = posts.filter(p => p.category === 'aviso' && !p.isDeleted && !p.isArchived).length;
+  const announcementsCount = posts.filter(p => p.category === 'comunicado' && !p.isDeleted && !p.isArchived).length;
+  const memoriesCount = posts.filter(p => !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length;
+  const historyCount = posts.filter(p => {
+    const isComm = ['regra', 'aviso', 'comunicado'].includes(p.category);
+    if (!isComm) return false;
+    return currentUser?.role === 'admin' 
+      ? (p.isArchived === true || p.isDeleted === true)
+      : (p.isArchived === true && p.isDeleted !== true);
+  }).length;
 
-        {!isPublic && currentUser && (
-          <button
-            id="btn-upload-mural"
-            onClick={() => setIsUploadOpen(true)}
-            className="w-full md:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 transition cursor-pointer"
-          >
-            <Camera className="w-4 h-4" />
-            <span>Publicar Foto / Vídeo</span>
-          </button>
-        )}
-      </div>
+  const renderMemoriesContent = () => {
+    return (
+      <>
 
       {/* Notifications */}
       {errorMsg && (
@@ -956,7 +970,7 @@ ${shareUrl}`;
                  onClick={() => setSelectedPost(activeHighlight)}>
               {activeHighlight.mediaType === 'image' ? (
                 <img 
-                  src={activeHighlight.mediaUrl} 
+                  src={activeHighlight.mediaUrl || undefined} 
                   alt={activeHighlight.title} 
                   className="w-full h-full object-cover group-hover:scale-105 transition"
                   referrerPolicy="no-referrer"
@@ -964,7 +978,7 @@ ${shareUrl}`;
               ) : (
                 <div className="w-full h-full relative">
                   <video 
-                    src={activeHighlight.mediaUrl}
+                    src={activeHighlight.mediaUrl || undefined}
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
@@ -1240,7 +1254,7 @@ ${shareUrl}`;
                 >
                   {post.mediaType === 'image' ? (
                     <img
-                      src={post.mediaUrl}
+                      src={post.mediaUrl || undefined}
                       alt={post.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       referrerPolicy="no-referrer"
@@ -1248,7 +1262,7 @@ ${shareUrl}`;
                   ) : (
                     <div className="w-full h-full relative flex items-center justify-center">
                       <video
-                        src={post.mediaUrl}
+                        src={post.mediaUrl || undefined}
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -1424,14 +1438,14 @@ ${shareUrl}`;
                   <div className="h-[180px] bg-zinc-950 overflow-hidden relative rounded-lg border border-zinc-900/50">
                     {postsForDate[0].mediaType === 'image' ? (
                       <img
-                        src={postsForDate[0].mediaUrl}
+                        src={postsForDate[0].mediaUrl || undefined}
                         alt="Album Cover"
                         className="w-full h-full object-cover group-hover:scale-[1.03] transition duration-500"
                         referrerPolicy="no-referrer"
                       />
                     ) : (
                       <div className="w-full h-full relative flex items-center justify-center">
-                        <video src={postsForDate[0].mediaUrl} className="w-full h-full object-cover" />
+                        <video src={postsForDate[0].mediaUrl || undefined} className="w-full h-full object-cover" />
                         <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
                           <Play className="w-6 h-6 text-emerald-400 fill-current ml-0.5" />
                         </div>
@@ -1487,7 +1501,7 @@ ${shareUrl}`;
                 >
                   {post.mediaType === 'image' ? (
                     <img
-                      src={post.mediaUrl}
+                      src={post.mediaUrl || undefined}
                       alt={post.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                       referrerPolicy="no-referrer"
@@ -1495,7 +1509,7 @@ ${shareUrl}`;
                   ) : (
                     <div className="w-full h-full relative flex items-center justify-center">
                       <video
-                        src={post.mediaUrl}
+                        src={post.mediaUrl || undefined}
                         className="w-full h-full object-cover"
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -1708,14 +1722,14 @@ ${shareUrl}`;
 
                   {selectedPost.mediaType === 'image' ? (
                     <img 
-                      src={selectedPost.mediaUrl} 
+                      src={selectedPost.mediaUrl || undefined} 
                       alt={selectedPost.title} 
                       className="w-full h-full object-contain pointer-events-none select-none"
                       referrerPolicy="no-referrer"
                     />
                   ) : (
                     <video 
-                      src={selectedPost.mediaUrl}
+                      src={selectedPost.mediaUrl || undefined}
                       controls
                       autoPlay
                       className="w-full h-full object-contain"
@@ -1939,7 +1953,7 @@ ${shareUrl}`;
                         >
                           <div className="w-8 h-8 bg-zinc-900 rounded overflow-hidden flex-shrink-0 flex items-center justify-center relative border border-zinc-800">
                             {item.file.type.startsWith('image/') ? (
-                              <img src={item.preview} alt="Mini preview" className="w-full h-full object-cover" />
+                              <img src={item.preview || undefined} alt="Mini preview" className="w-full h-full object-cover" />
                             ) : (
                               <Film className="w-3.5 h-3.5 text-[#22c55e]" />
                             )}
@@ -2304,6 +2318,250 @@ ${shareUrl}`;
           </div>
         )}
       </AnimatePresence>
+    </>
+  );
+};
+
+  return (
+    <div className="space-y-6 animate-fadeIn font-sans" id="mural-viewport">
+      
+      {/* Compact Title Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-900 pb-4">
+        <div>
+          <h2 className="font-display font-extrabold text-xl text-white tracking-tight">Mural e Comunicação</h2>
+          <p className="text-zinc-500 text-xs mt-0.5">
+            Regras, avisos e comunicados do grupo.
+          </p>
+        </div>
+
+        {/* Compact publish dropdown picker */}
+        {!isPublic && currentUser && (
+          <div className="relative w-full sm:w-auto">
+            {currentUser.role === 'admin' ? (
+              <>
+                <button
+                  type="button"
+                  id="btn-publish-dropdown-toggle"
+                  onClick={() => setIsPublishDropdownOpen(!isPublishDropdownOpen)}
+                  className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer font-sans"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Publicar</span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
+
+                {isPublishDropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsPublishDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1.5 animate-fadeIn font-sans">
+                      <button
+                        type="button"
+                        onClick={() => handleDropdownOptionClick('regra')}
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                      >
+                        <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>📌 Nova Regra</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDropdownOptionClick('aviso')}
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                      >
+                        <Megaphone className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>📢 Novo Aviso</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDropdownOptionClick('comunicado')}
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                      >
+                        <Calendar className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>📅 Novo Comunicado</span>
+                      </button>
+                      <div className="border-t border-zinc-800/80 my-1"></div>
+                      <button
+                        type="button"
+                        onClick={() => handleDropdownOptionClick('memoria')}
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-emerald-500" />
+                        <span>📷 Nova Foto / Vídeo</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsUploadOpen(true)}
+                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer font-sans"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Enviar Foto / Vídeo</span>
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop View (hidden on mobile) */}
+      <div className="hidden md:block space-y-6">
+        {/* Subtab selection */}
+        <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-850/80 max-w-sm">
+          <button
+            type="button"
+            onClick={() => setMuralSubTab('comunicacao')}
+            className={`flex-1 py-1.5 text-center rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              muralSubTab === 'comunicacao'
+                ? 'bg-zinc-850 text-white shadow'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <Megaphone className="w-3.5 h-3.5" />
+            <span>Comunicação</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setMuralSubTab('memorias')}
+            className={`flex-1 py-1.5 text-center rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+              muralSubTab === 'memorias'
+                ? 'bg-zinc-850 text-white shadow'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5" />
+            <span>Galeria de Memórias</span>
+          </button>
+        </div>
+
+        {muralSubTab === 'comunicacao' ? (
+          <CommunicationCenter currentUser={currentUser} />
+        ) : (
+          renderMemoriesContent()
+        )}
+      </div>
+
+      {/* Mobile View (hidden on desktop >= md) */}
+      <div className="block md:hidden space-y-3">
+        {/* Regras do Racha */}
+        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => setExpandedSection(expandedSection === 'regra' ? null : 'regra')}
+            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <BookOpen className="w-4 h-4 text-emerald-450" />
+              <span className="font-sans font-bold text-xs text-zinc-100">Regras do Racha</span>
+              <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-400 font-extrabold shadow-sm">
+                {rulesCount}
+              </span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'regra' ? 'rotate-180 text-emerald-400' : ''}`} />
+          </button>
+          {expandedSection === 'regra' && (
+            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
+              <CommunicationCenter currentUser={currentUser} forceTab="regra" hideTabs={true} />
+            </div>
+          )}
+        </div>
+
+        {/* Avisos Temporários */}
+        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => setExpandedSection(expandedSection === 'aviso' ? null : 'aviso')}
+            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Megaphone className="w-4 h-4 text-[#4ade80]" />
+              <span className="font-sans font-bold text-xs text-zinc-100">Avisos Temporários</span>
+              <span className="bg-emerald-500/30 border border-emerald-900/50 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-[#4ade80] font-extrabold shadow-sm">
+                {warningsCount}
+              </span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'aviso' ? 'rotate-180 text-emerald-400' : ''}`} />
+          </button>
+          {expandedSection === 'aviso' && (
+            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
+              <CommunicationCenter currentUser={currentUser} forceTab="aviso" hideTabs={true} />
+            </div>
+          )}
+        </div>
+
+        {/* Comunicados da Rodada */}
+        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => setExpandedSection(expandedSection === 'comunicado' ? null : 'comunicado')}
+            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-emerald-450" />
+               <span className="font-sans font-bold text-xs text-zinc-100">Comunicados da Rodada</span>
+              <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-400 font-extrabold shadow-sm">
+                {announcementsCount}
+              </span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'comunicado' ? 'rotate-180 text-emerald-400' : ''}`} />
+          </button>
+          {expandedSection === 'comunicado' && (
+            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
+              <CommunicationCenter currentUser={currentUser} forceTab="comunicado" hideTabs={true} />
+            </div>
+          )}
+        </div>
+
+        {/* Galeria de Memórias */}
+        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
+          <button
+            type="button"
+            onClick={() => setExpandedSection(expandedSection === 'memoria' ? null : 'memoria')}
+            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+          >
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-emerald-400" />
+              <span className="font-sans font-bold text-xs text-zinc-100">Galeria de Memórias</span>
+              <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-400 font-extrabold shadow-sm">
+                {memoriesCount}
+              </span>
+            </div>
+            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'memoria' ? 'rotate-180 text-emerald-400' : ''}`} />
+          </button>
+          {expandedSection === 'memoria' && (
+            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
+              {renderMemoriesContent()}
+            </div>
+          )}
+        </div>
+
+        {/* Histórico / Arquivo */}
+        {!isPublic && currentUser && (currentUser.role === 'admin' || historyCount > 0) && (
+          <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
+            <button
+              type="button"
+              onClick={() => setExpandedSection(expandedSection === 'history' ? null : 'history')}
+              className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <History className="w-4 h-4 text-zinc-400" />
+                <span className="font-sans font-bold text-xs text-zinc-300">Histórico / Arquivo</span>
+                <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-500 font-extrabold shadow-sm">
+                  {historyCount}
+                </span>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'history' ? 'rotate-180 text-emerald-400' : ''}`} />
+            </button>
+            {expandedSection === 'history' && (
+              <div className="border-t border-zinc-900/60 p-3 bg-black/15">
+                <CommunicationCenter currentUser={currentUser} forceTab="history" hideTabs={true} />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

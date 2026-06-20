@@ -564,11 +564,70 @@ export function readDb(): DatabaseSchema {
     console.error('Error syncing match statuses on read:', err);
   }
 
+  // Auto-archive mural communication posts on read
+  try {
+    const muralUpdated = autoArchiveMuralPosts(db);
+    if (muralUpdated) {
+      updated = true;
+    }
+  } catch (err) {
+    console.error('Error in auto-archiving mural posts on read:', err);
+  }
+
   if (updated) {
     fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf-8');
   }
 
   return db;
+}
+
+export function autoArchiveMuralPosts(db: any): boolean {
+  if (!db.muralPosts) return false;
+  let updated = false;
+
+  let todayStr = '';
+  try {
+    todayStr = new Date().toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+      .split('/')
+      .map(x => x.padStart(2, '0'))
+      .reverse()
+      .join('-');
+  } catch (e) {
+    const d = new Date();
+    todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  const finalizedMatchIds = new Set<string>();
+  if (db.matches) {
+    db.matches.forEach((m: any) => {
+      if (m.status === 'encerrada') {
+        finalizedMatchIds.add(m.id);
+      }
+    });
+  }
+  if (db.results) {
+    db.results.forEach((r: any) => {
+      finalizedMatchIds.add(r.matchId);
+    });
+  }
+
+  db.muralPosts.forEach((p: any) => {
+    // 1. Expired Avisos
+    if (p.category === 'aviso' && p.expirationDate && todayStr > p.expirationDate && !p.isArchived) {
+      p.isArchived = true;
+      p.updatedAt = new Date().toISOString();
+      updated = true;
+    }
+
+    // 2. Finalized Comunicados da Rodada
+    if (p.category === 'comunicado' && p.matchId && finalizedMatchIds.has(p.matchId) && !p.isArchived) {
+      p.isArchived = true;
+      p.updatedAt = new Date().toISOString();
+      updated = true;
+    }
+  });
+
+  return updated;
 }
 
 export function getMonthlyFeeForDate(db: DatabaseSchema, dateStr: string): number {

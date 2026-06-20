@@ -586,7 +586,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             {highlightPost.mediaType === 'video' ? (
               <div className="w-full h-full relative">
                 <video 
-                  src={highlightPost.mediaUrl} 
+                  src={highlightPost.mediaUrl || undefined} 
                   muted 
                   playsInline 
                   loop
@@ -603,7 +603,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             ) : (
               <div className="w-full h-full relative">
                 <img 
-                  src={highlightPost.mediumUrl || highlightPost.mediaUrl} 
+                  src={highlightPost.mediumUrl || highlightPost.mediaUrl || undefined} 
                   alt={highlightPost.title} 
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
@@ -658,7 +658,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                 }`}
               >
                 <img 
-                  src={post.thumbnailUrl || post.mediaUrl} 
+                  src={post.thumbnailUrl || post.mediaUrl || undefined} 
                   alt={post.title} 
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover group-hover:scale-105 transition duration-200"
@@ -712,7 +712,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             <div className="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-xl border border-zinc-900 shadow-2xl bg-zinc-950">
               {selectedLightboxPost.mediaType === 'video' ? (
                 <video 
-                  src={selectedLightboxPost.mediaUrl}
+                  src={selectedLightboxPost.mediaUrl || undefined}
                   controls
                   autoPlay
                   playsInline
@@ -720,7 +720,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                 />
               ) : (
                 <img 
-                  src={selectedLightboxPost.mediumUrl || selectedLightboxPost.mediaUrl}
+                  src={selectedLightboxPost.mediumUrl || selectedLightboxPost.mediaUrl || undefined}
                   alt={selectedLightboxPost.title}
                   referrerPolicy="no-referrer"
                   className="max-w-full max-h-[70vh] object-contain rounded-lg"

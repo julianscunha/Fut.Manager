@@ -28,6 +28,10 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
   const [primaryPosition, setPrimaryPosition] = useState<PlayerPosition>('atacante');
   const [secondaryPositions, setSecondaryPositions] = useState<PlayerPosition[]>([]);
 
+  // Soccer Avatar Custom States
+  const [numeroFavorito, setNumeroFavorito] = useState<number>(10);
+  const [peDominante, setPeDominante] = useState<string>('Direito');
+
   // AWS S3 upload simulation states
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -51,6 +55,8 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       setPrimaryPosition(player.primaryPosition);
       setSecondaryPositions(player.secondaryPositions || []);
       setS3Path(player.photoOriginal && player.photoOriginal.startsWith('http') && player.photoOriginal.includes('amazonaws.com') ? player.photoOriginal : '');
+      setNumeroFavorito(player.numeroFavorito || 10);
+      setPeDominante(player.peDominante || 'Direito');
     } else {
       // Clear
       setName('');
@@ -67,6 +73,8 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       setPrimaryPosition('atacante');
       setSecondaryPositions([]);
       setS3Path('');
+      setNumeroFavorito(10);
+      setPeDominante('Direito');
     }
   }, [player]);
 
@@ -177,6 +185,12 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       photoOriginal,
       playerCardUrl,
       favoriteTeamId,
+      timeDoCoracao: selectedTeamDetails?.name || 'São Paulo',
+      numeroFavorito,
+      peDominante,
+      avatarOriginal: photoOriginal,
+      avatarEsportivo: player?.avatarEsportivo || '',
+      avatarVersion: player?.avatarVersion || 1,
       category,
       status,
       statusStartDate: (status === 'lesionado' || status === 'indisponivel') ? statusStartDate : undefined,
@@ -276,6 +290,38 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
               style={{ backgroundColor: selectedTeamDetails?.colorHex || '#ccc' }}
             />
           </div>
+        </div>
+
+        {/* Número Favorito */}
+        <div className="flex flex-col gap-1.5 col-span-1">
+          <label className="text-zinc-300 font-medium flex items-center gap-1.5">
+            <span className="text-emerald-400 font-mono">#</span>
+            <span>Número Favorito</span>
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={99}
+            required
+            value={numeroFavorito}
+            onChange={(e) => setNumeroFavorito(Math.max(1, Math.min(99, Number(e.target.value) || 10)))}
+            placeholder="Ex: 10"
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-[#22c55e] transition font-mono"
+          />
+        </div>
+
+        {/* Pé Dominante */}
+        <div className="flex flex-col gap-1.5 col-span-1">
+          <label className="text-zinc-300 font-medium">Pé Dominante</label>
+          <select
+            value={peDominante}
+            onChange={(e) => setPeDominante(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2.5 text-white focus:outline-none focus:border-[#22c55e] transition cursor-pointer"
+          >
+            <option value="Direito">Direito 🦶👉</option>
+            <option value="Esquerdo">Esquerdo 🦶👈</option>
+            <option value="Ambidestro">Ambidestro ⚡🦶</option>
+          </select>
         </div>
 
         {/* Category Selector with live visual aid guides box */}

@@ -44,6 +44,14 @@ export interface Player {
   currentStreak?: number;
   maxStreak?: number;
   adminNotes?: string;
+  
+  // Custom Avatar and FUT card properties
+  timeDoCoracao?: string;
+  numeroFavorito?: number;
+  peDominante?: string;
+  avatarOriginal?: string;
+  avatarEsportivo?: string;
+  avatarVersion?: number;
 }
 
 export interface PlayerEvaluation {
@@ -351,13 +359,13 @@ export interface MuralPost {
   mediaUrl: string; // AWS S3 URL or Base64 / Local preview
   mediaType: 'image' | 'video';
   fileSize: number; // in bytes
-  category: 'partida' | 'evento' | 'resenha' | 'livre';
+  category: 'partida' | 'evento' | 'resenha' | 'livre' | 'regra' | 'aviso' | 'comunicado';
   authorId: string;
   authorName: string;
   authorRole: string;
   createdAt: string;
   updatedAt: string;
-  matchId?: string; // Optional match association
+  matchId?: string; // Optional match association (also used as 'Rodada' for comunicados)
   eventId?: string; // Optional event association
   isHighlighted?: boolean; // Highlight of the week
   highlightedAt?: string;
@@ -367,10 +375,18 @@ export interface MuralPost {
   mediumUrl?: string; // Versão média otimizada
   eventDate?: string; // Date of the event/photo (YYYY-MM-DD)
   origin?: 'manual' | 'automatic'; // Origem da Publicação
+  
+  // Custom communication center fields
+  order?: number; // Manual ordering for rules
+  startDate?: string; // YYYY-MM-DD (Avisos)
+  expirationDate?: string; // YYYY-MM-DD (Avisos)
+  priority?: 'alta' | 'media' | 'baixa'; // Avisos priority
+  isArchived?: boolean; // Archived flag (manually or automatically)
+  isDeleted?: boolean; // Soft delete flag
 }
 
 export interface MuralCategory {
-  id: 'partida' | 'evento' | 'resenha' | 'livre';
+  id: 'partida' | 'evento' | 'resenha' | 'livre' | 'regra' | 'aviso' | 'comunicado';
   name: string;
 }
 

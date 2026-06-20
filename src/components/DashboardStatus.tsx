@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS, Player } from '../types';
 import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
+import { getRoundStatus } from '../utils/roundStatus';
 import { 
   Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check, 
   Users, Users2, Shield, Sparkles, X, ChevronDown, ChevronUp, BellRing,
@@ -1296,7 +1297,10 @@ export default function DashboardStatus({
     return name1.localeCompare(name2, 'pt-BR');
   };
 
-  const confirmedPlayers = [...presences.filter(p => p.presenceStatus === 'confirmado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
+  // Call the central helper function for the round status source of truth
+  const roundStatus = getRoundStatus(nextMatch, presences, reserveQueue, players);
+
+  const confirmedPlayers = [...presences.filter(p => p.presenceStatus === 'confirmado')].sort(sortPlayersByPositionAndName);
   const cancelPlayers = [...presences.filter(p => p.presenceStatus === 'cancelado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
   const unconfirmedPlayers = [...presences.filter(p => p.presenceStatus === 'nao_confirmado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
 
@@ -1306,9 +1310,9 @@ export default function DashboardStatus({
     ...cancelPlayers
   ];
 
-  const confirmedCount = confirmedPlayers.length;
-  const maxPlayersLimit = nextMatch && nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
-  const missingCount = nextMatch ? Math.max(0, maxPlayersLimit - confirmedCount) : 0;
+  const confirmedCount = roundStatus.confirmed;
+  const maxPlayersLimit = roundStatus.totalSlots;
+  const missingCount = roundStatus.vacancies;
   const isDeadlineExpired = nextMatch ? nextMatch.isDeadlineExpired : false;
   const areReservesReleased = nextMatch ? (nextMatch.reservesReleased === true) : false;
 
@@ -1357,26 +1361,23 @@ export default function DashboardStatus({
     if (nextMatch.status === 'agendada') {
       return 'agendada';
     }
-    if (nextMatch.status === 'fechada') {
-      return 'racha_fechado';
-    }
-    if (nextMatch.status === 'aguardando_reservas') {
-      return 'necessidade_reservas';
-    }
-    if (nextMatch.status === 'sorteada') {
-      return 'sorteada';
-    }
-    if (nextMatch.status === 'encerrada') {
-      return 'encerrada';
-    }
     if (nextMatch.status === 'cancelada') {
       return 'cancelada';
     }
-    if (nextMatch.status === 'confirmando') {
-      if (confirmedCount >= maxPlayersLimit) {
+    
+    switch (roundStatus.phase) {
+      case 'FINISHED':
+        return 'encerrada';
+      case 'DRAWN':
+        return 'sorteada';
+      case 'CLOSED':
         return 'racha_fechado';
-      }
-      return 'confirmacoes_abertas';
+      case 'CONFIRMING':
+      default:
+        if (nextMatch.status === 'aguardando_reservas') {
+          return 'necessidade_reservas';
+        }
+        return 'confirmacoes_abertas';
     }
     return null;
   };
@@ -1523,22 +1524,16 @@ export default function DashboardStatus({
 
   const getMatchState = (): 'AGENDADO' | 'CONFIRMACOES_ABERTAS' | 'RACHA_FECHADO' | 'SORTEIO_REALIZADO' | 'PARTIDA_ENCERRADA' | null => {
     if (!nextMatch) return null;
-    if (nextMatch.status === 'encerrada') {
-      return 'PARTIDA_ENCERRADA';
+    if (nextMatch.status === 'agendada') return 'AGENDADO';
+    
+    switch (roundStatus.phase) {
+      case 'FINISHED': return 'PARTIDA_ENCERRADA';
+      case 'DRAWN': return 'SORTEIO_REALIZADO';
+      case 'CLOSED': return 'RACHA_FECHADO';
+      case 'CONFIRMING':
+      default:
+        return 'CONFIRMACOES_ABERTAS';
     }
-    if (matchDraw && matchDraw.teams && matchDraw.teams.length > 0) {
-      return 'SORTEIO_REALIZADO';
-    }
-    if (confirmedCount >= maxPlayersLimit || nextMatch.status === 'fechada') {
-      return 'RACHA_FECHADO';
-    }
-    if (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') {
-      return 'CONFIRMACOES_ABERTAS';
-    }
-    if (nextMatch.status === 'agendada') {
-      return 'AGENDADO';
-    }
-    return null;
   };
 
   const matchState = getMatchState();
@@ -1583,15 +1578,13 @@ export default function DashboardStatus({
           <div className="flex items-center gap-2 pb-2.5 border-b border-[#22c55e]/10">
             <Shield className="w-5 h-5 text-emerald-400" />
             <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">🛡 Área do Administrador</span>
-            <span className="ml-auto text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/30 uppercase tracking-widest leading-none">
-              Controle Operacional
-            </span>
           </div>
 
           {matchState === 'AGENDADO' && (
             <div className="space-y-2.5">
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Próxima ação necessária:</span>
               <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
-                A rodada está criada. O próximo passo é abrir as confirmações para os mensalistas.
+                Abrir as confirmações para os atletas.
               </p>
               <button
                 disabled={actionLoading}
@@ -1605,14 +1598,10 @@ export default function DashboardStatus({
 
           {matchState === 'CONFIRMACOES_ABERTAS' && (
             <div className="space-y-2.5">
-              <div className="text-zinc-400 text-[11px] leading-relaxed">
-                <strong>Aguardando confirmações</strong> ({confirmedCount} de {maxPlayersLimit} confirmados).
-                {confirmedCount >= maxPlayersLimit ? (
-                  <span className="text-emerald-400 font-bold block mt-1">✔ Quórum mínimo atingido! O sorteio de times já está liberado.</span>
-                ) : (
-                  <span className="text-zinc-550 font-medium block mt-1">Compartilhe e divulgue o link para incentivar as presenças de hoje.</span>
-                )}
-              </div>
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Próxima ação necessária:</span>
+              <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
+                Aguardar confirmações dos atletas.
+              </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   type="button"
@@ -1622,7 +1611,7 @@ export default function DashboardStatus({
                   <Share2 className="w-3.5 h-3.5" />
                   <span>Divulgar Racha</span>
                 </button>
-                {confirmedCount >= maxPlayersLimit && (
+                {roundStatus.canDraw && (
                   <button
                     type="button"
                     onClick={() => {
@@ -1639,8 +1628,9 @@ export default function DashboardStatus({
 
           {matchState === 'RACHA_FECHADO' && (
             <div className="space-y-2.5">
-              <p className="text-amber-400 font-bold text-[11px] leading-relaxed">
-                ⚠ Próxima ação necessária: Realizar sorteio
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Próxima ação necessária:</span>
+              <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
+                Realizar sorteio.
               </p>
               <button
                 type="button"
@@ -1656,8 +1646,9 @@ export default function DashboardStatus({
 
           {matchState === 'SORTEIO_REALIZADO' && (
             <div className="space-y-2.5">
-              <p className="text-emerald-400 font-bold text-[11px] leading-relaxed">
-                ✔ Times definidos
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Próxima ação necessária:</span>
+              <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
+                Gerenciar equipes ou registrar placar.
               </p>
               <div className="flex gap-2">
                 <button
@@ -1688,11 +1679,9 @@ export default function DashboardStatus({
 
           {matchState === 'PARTIDA_ENCERRADA' && (
             <div className="space-y-1">
-              <p className="text-zinc-400 font-semibold text-[11px]">
-                Partida concluída
-              </p>
-              <p className="text-zinc-650 text-[10px] font-mono leading-relaxed">
-                Todas as operações para esta rodada foram encerradas e os placares foram salvos de forma definitiva.
+              <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-mono font-black block">Próxima ação necessária:</span>
+              <p className="text-[#a1a1aa] text-[11px] leading-relaxed">
+                Aguardar próximo agendamento.
               </p>
             </div>
           )}
@@ -2021,14 +2010,14 @@ export default function DashboardStatus({
             <div className="w-full sm:w-[150px] h-[95px] bg-zinc-900 rounded-xl overflow-hidden relative border border-zinc-850 shadow-md flex-shrink-0">
               {highlightPost.mediaType === 'image' ? (
                 <img 
-                  src={highlightPost.mediaUrl} 
+                  src={highlightPost.mediaUrl || undefined} 
                   alt={highlightPost.title} 
                   className="w-full h-full object-cover" 
                   referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="w-full h-full relative flex items-center justify-center bg-zinc-950">
-                  <video src={highlightPost.mediaUrl} className="w-full h-full object-cover opacity-60" />
+                  <video src={highlightPost.mediaUrl || undefined} className="w-full h-full object-cover opacity-60" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <span className="text-[10px] bg-emerald-600 font-mono font-bold px-2 py-0.5 rounded text-white tracking-widest uppercase">PLAY</span>
                   </div>
@@ -2182,7 +2171,7 @@ export default function DashboardStatus({
                 </div>
               </div>
             </div>
-          ) : matchDraw && matchDraw.teams ? (
+          ) : matchState === 'SORTEIO_REALIZADO' ? (
             /* Simplified Próxima Rodada Card (Sorteio realizado) */
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-4 space-y-3 flex flex-col justify-between shadow-lg">
               <div className="space-y-3">
@@ -2377,29 +2366,23 @@ export default function DashboardStatus({
                     </h3>
                   </div>
                   <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${
-                    nextMatch.status === 'agendada'
+                    matchState === 'AGENDADO'
                       ? 'bg-zinc-800 border-zinc-750 text-zinc-300'
-                      : nextMatch.status === 'confirmando'
+                      : matchState === 'CONFIRMACOES_ABERTAS'
                         ? 'bg-[#eab308]/15 border-[#eab308]/30 text-[#eab308] animate-pulse font-extrabold'
-                        : nextMatch.status === 'aguardando_reservas'
-                          ? 'bg-zinc-800 border-zinc-750 text-zinc-300 animate-pulse'
-                          : nextMatch.status === 'fechada'
-                            ? 'bg-purple-500/15 border-purple-500/30 text-purple-400 font-extrabold'
-                            : nextMatch.status === 'sorteada'
-                              ? 'bg-sky-500/15 border-sky-500/30 text-sky-400 font-extrabold'
-                              : nextMatch.status === 'encerrada'
-                                ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                                : nextMatch.status === 'cancelada'
-                                  ? 'bg-rose-500/15 border border-rose-500/35 text-rose-400'
-                                  : 'bg-zinc-800 text-zinc-400'
+                        : matchState === 'RACHA_FECHADO'
+                          ? 'bg-purple-500/15 border-purple-500/30 text-purple-400 font-extrabold'
+                          : matchState === 'SORTEIO_REALIZADO'
+                            ? 'bg-sky-500/15 border-sky-500/30 text-sky-400 font-extrabold'
+                            : matchState === 'PARTIDA_ENCERRADA'
+                              ? 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400'
+                              : 'bg-zinc-805 border-zinc-750 text-zinc-350'
                   }`}>
-                    {nextMatch.status === 'agendada' ? 'AGENDADA' :
-                     nextMatch.status === 'confirmando' ? 'CONFIRMAÇÕES ABERTAS' :
-                     nextMatch.status === 'aguardando_reservas' ? 'AGUARDANDO RESERVAS' :
-                     nextMatch.status === 'fechada' ? 'FECHADA' :
-                     nextMatch.status === 'sorteada' ? 'SORTEIO REALIZADO' :
-                     nextMatch.status === 'encerrada' ? 'FINALIZADA' :
-                     nextMatch.status === 'cancelada' ? 'CANCELADA' : nextMatch.status}
+                    {matchState === 'AGENDADO' ? 'AGENDADA' :
+                     matchState === 'CONFIRMACOES_ABERTAS' ? 'CONFIRMAÇÕES ABERTAS' :
+                     matchState === 'RACHA_FECHADO' ? 'FECHADA' :
+                     matchState === 'SORTEIO_REALIZADO' ? 'SORTEIO REALIZADO' :
+                     matchState === 'PARTIDA_ENCERRADA' ? 'ENCERRADA' : 'AGENDADA'}
                   </span>
                 </div>
                 
@@ -2430,8 +2413,9 @@ export default function DashboardStatus({
                     </span>
                   </div>
                 </div>
+              </div>
 
-                {nextMatch.status === 'agendada' ? (
+              {nextMatch.status === 'agendada' ? (
                   <div className="p-3 bg-zinc-900/40 border border-dashed border-zinc-850 rounded-lg font-mono text-[11px] text-zinc-400 text-center leading-relaxed">
                     {isAdmin ? (
                       <span>A rodada está criada. O próximo passo é abrir as confirmações para permitir que os mensalistas registrem presença.</span>
@@ -2515,7 +2499,7 @@ export default function DashboardStatus({
                   </>
                 )}
 
-                {matchState === 'CONFIRMACOES_ABERTAS' && nextMatch.status !== 'agendada' && (
+                {!isAdmin && (matchState === 'CONFIRMACOES_ABERTAS' || matchState === 'RACHA_FECHADO') && nextMatch.status !== 'agendada' && (
                   currentUserCategory === 'reserva' && !areReservesReleased ? (
                     <div className="flex flex-col gap-1 p-3 rounded-lg border border-dashed border-zinc-850 bg-zinc-950/40 text-center font-mono text-[11px]">
                       <span className="text-zinc-400 font-bold">Sua Confirmação:</span>
@@ -2545,11 +2529,11 @@ export default function DashboardStatus({
                 )}
 
                 {/* RSVP BUTTON ACTIONS */}
-                <div className="space-y-4 mt-4 pt-4 border-t border-zinc-900/40">
-                  {matchState === 'CONFIRMACOES_ABERTAS' && (
+                {!isAdmin && (matchState === 'CONFIRMACOES_ABERTAS' || matchState === 'RACHA_FECHADO') && (
+                  <div className="space-y-4 mt-4 pt-4 border-t border-zinc-900/40">
                     <div className="grid grid-cols-2 gap-2">
-                      <button
-                        disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || actionLoading}
+                       <button
+                        disabled={!nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased) || (confirmedCount >= maxPlayersLimit && myPresence !== 'confirmado') || actionLoading}
                         onClick={() => handleRsvpHolder('confirmado')}
                         className={`py-2.5 rounded-lg text-xs font-bold font-mono tracking-wider transition uppercase flex items-center justify-center gap-1.5 ${
                           !nextMatch || !['confirmando', 'aguardando_reservas'].includes(nextMatch.status) || (currentUserCategory === 'reserva' && !areReservesReleased)
@@ -2575,177 +2559,179 @@ export default function DashboardStatus({
                               ? 'bg-zinc-900 border border-zinc-800 text-zinc-500 cursor-wait'
                               : myPresence === 'cancelado'
                                 ? 'bg-rose-600 border border-rose-500 text-white shadow shadow-rose-500/15 cursor-pointer hover:bg-rose-500 active:scale-95'
-                                : 'bg-zinc-900 hover:bg-rose-500/10 border border-zinc-800 text-zinc-400 hover:text-rose-400 cursor-pointer active:scale-95'
+                                : 'bg-zinc-900 hover:bg-rose-500/10 border border-zinc-805 text-zinc-400 hover:text-rose-450 cursor-pointer active:scale-95'
                         }`}
                       >
                         <X className="w-4 h-4" />
                         <span>Não Vou</span>
                       </button>
                     </div>
-                  )}
+                  </div>
+                )}
 
                   {/* LIST OF CONFIRMED / CANCELLED IN THE MATCH */}
-                  <div className="border-t border-zinc-900/40 pt-3">
-                    {nextMatch.status === 'agendada' ? (
-                      <div className="bg-zinc-950/20 border border-dashed border-zinc-900 p-4 rounded-xl text-center text-zinc-500 font-mono text-[11px] leading-relaxed">
-                        {nextMatch && (nextMatch.status !== 'agendada' && nextMatch.status !== 'confirmando') ? 'Lista de chamada' : 'Lista de confirmações'} será disponibilizada após a abertura das confirmações.
-                      </div>
-                    ) : (
-                      <div className="space-y-3" id="nested-presence-block">
-                        <button
-                          type="button"
-                          onClick={() => setShowPresenceListDetail(!showPresenceListDetail)}
-                          className="w-full bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-900 p-3 text-xs text-zinc-400 hover:text-white rounded-xl flex flex-col sm:flex-row sm:items-center justify-between font-mono cursor-pointer transition gap-1.5"
-                        >
-                          <div className="flex flex-col items-start gap-1">
-                            <span className="flex items-center gap-1.5 text-white font-bold font-sans">
-                              <Users2 className="w-4 h-4 text-emerald-400" />
-                              <span>{nextMatch && (nextMatch.status !== 'agendada' && nextMatch.status !== 'confirmando') ? 'Lista de Chamada' : 'Lista de Confirmações'}</span>
-                            </span>
-                            <span className="text-[10px] text-zinc-500 pl-5">
-                              ({confirmedCount} confirmados)
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider self-end sm:self-auto text-emerald-400">
-                            <span>{showPresenceListDetail ? 'Esconder' : 'Expandir'}</span>
-                            {showPresenceListDetail ? (
-                              <ChevronUp className="w-4 h-4" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4" />
-                            )}
-                          </div>
-                        </button>
+                  {(matchState === 'CONFIRMACOES_ABERTAS' || matchState === 'RACHA_FECHADO') && (
+                    <div className="border-t border-zinc-900/40 pt-3">
+                      {nextMatch.status === 'agendada' ? (
+                        <div className="bg-zinc-950/20 border border-dashed border-zinc-900 p-4 rounded-xl text-center text-zinc-500 font-mono text-[11px] leading-relaxed">
+                          {nextMatch && (nextMatch.status !== 'agendada' && nextMatch.status !== 'confirmando') ? 'Lista de chamada' : 'Lista de confirmações'} será disponibilizada após a abertura das confirmações.
+                        </div>
+                      ) : (
+                        <div className="space-y-3" id="nested-presence-block">
+                          <button
+                            type="button"
+                            onClick={() => setShowPresenceListDetail(!showPresenceListDetail)}
+                            className="w-full bg-zinc-900/50 hover:bg-zinc-900 border border-zinc-900 p-3 text-xs text-zinc-400 hover:text-white rounded-xl flex flex-col sm:flex-row sm:items-center justify-between font-mono cursor-pointer transition gap-1.5"
+                          >
+                            <div className="flex flex-col items-start gap-1">
+                              <span className="flex items-center gap-1.5 text-white font-bold font-sans">
+                                <Users2 className="w-4 h-4 text-emerald-400" />
+                                <span>{nextMatch && (nextMatch.status !== 'agendada' && nextMatch.status !== 'confirmando') ? 'Lista de Chamada' : 'Lista de Confirmações'}</span>
+                              </span>
+                              <span className="text-[10px] text-zinc-500 pl-5">
+                                ({confirmedCount} confirmados)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider self-end sm:self-auto text-emerald-400">
+                              <span>{showPresenceListDetail ? 'Esconder' : 'Expandir'}</span>
+                              {showPresenceListDetail ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </div>
+                          </button>
 
-                        {showPresenceListDetail && (
-                          <div className="mt-2 bg-zinc-950 border border-zinc-900 p-2.5 rounded-xl space-y-2 font-mono text-[11px] animate-fadeIn">
-                            {presences.length === 0 ? (
-                              <div className="text-center italic text-zinc-600 py-3">Nenhuma presença declarada ainda.</div>
-                            ) : (
-                              <div className="space-y-2.5">
-                                {/* Bulk action selection bar for admins */}
-                                {isAdmin && presences.length > 0 && nextMatch && (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') && (
-                                  <div className="bg-[#0b120f] border border-emerald-500/15 rounded-xl p-3 flex flex-col gap-2 mb-2 font-mono">
-                                    <div className="text-[10px] uppercase font-bold tracking-wider text-[#94a3b8]">
-                                      Ações de Confirmação em Lote
-                                    </div>
-                                    <div className="text-[9px] text-[#64748b] leading-tight flex justify-between">
-                                      <span>Vagas Disponíveis: <strong>{missingCount} de {maxPlayersLimit}</strong></span>
-                                      <span>Status da Rodada: <strong className="text-emerald-450 capitalize">{nextMatch.status.replace('_', ' ')}</strong></span>
-                                    </div>
-
-                                    {nextMatch.status === 'confirmando' && (
-                                      <div className="mt-1">
-                                        <button
-                                          type="button"
-                                          disabled={actionLoading || missingCount <= 0}
-                                          onClick={handleConfirmMensalistasInBulk}
-                                          className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-sans font-bold py-2 px-3 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 border border-emerald-500/10 cursor-pointer"
-                                        >
-                                          <Users className="w-3.5 h-3.5" />
-                                          <span>Confirmar Mensalistas Pendentes</span>
-                                        </button>
-                                        <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
-                                          * Confirma apenas mensalistas que estão pendentes, respeitando o limite do racha ({maxPlayersLimit} no total).
-                                        </p>
+                          {showPresenceListDetail && (
+                            <div className="mt-2 bg-zinc-950 border border-zinc-900 p-2.5 rounded-xl space-y-2 font-mono text-[11px] animate-fadeIn">
+                              {presences.length === 0 ? (
+                                <div className="text-center italic text-zinc-600 py-3">Nenhuma presença declarada ainda.</div>
+                              ) : (
+                                <div className="space-y-2.5">
+                                  {/* Bulk action selection bar for admins */}
+                                  {isAdmin && presences.length > 0 && nextMatch && (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') && (
+                                    <div className="bg-[#0b120f] border border-emerald-500/15 rounded-xl p-3 flex flex-col gap-2 mb-2 font-mono">
+                                      <div className="text-[10px] uppercase font-bold tracking-wider text-[#94a3b8]">
+                                        Ações de Confirmação em Lote
                                       </div>
-                                    )}
-
-                                    {nextMatch.status === 'aguardando_reservas' && (
-                                      <div className="mt-1">
-                                        <button
-                                          type="button"
-                                          disabled={actionLoading || missingCount <= 0}
-                                          onClick={handleConfirmReservesInBulk}
-                                          className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 font-sans font-black py-2 px-3 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
-                                        >
-                                          <Users2 className="w-3.5 h-3.5" />
-                                          <span>Confirmar Reservas Convocados</span>
-                                        </button>
-                                        <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
-                                          * Confirma apenas reservas da fila que já se disponibilizaram para o racha, seguindo a ordem da fila de prioridade.
-                                        </p>
+                                      <div className="text-[9px] text-[#64748b] leading-tight flex justify-between">
+                                        <span>Vagas Disponíveis: <strong>{missingCount} de {maxPlayersLimit}</strong></span>
+                                        <span>Status da Rodada: <strong className="text-emerald-450 capitalize">{nextMatch.status.replace('_', ' ')}</strong></span>
                                       </div>
-                                    )}
-                                  </div>
-                                )}
 
-                                {sortedPresencesForList.map((p: any) => {
-                                  // Look up the matching registered athlete to fetch real-time category and primary position
-                                  const matchingPlayer = players.find((pl: any) => pl.id === p.playerId);
-                                  
-                                  const playerCat = matchingPlayer ? matchingPlayer.category : (p.category || 'reserva');
-                                  const catLabel = CATEGORY_LABELS[playerCat] || 'Reserva';
-                                  
-                                  const playerPos = matchingPlayer ? matchingPlayer.primaryPosition : (p.isGoleiro ? 'goleiro' : '');
-                                  const posLabel = playerPos && POSITION_LABELS[playerPos] ? POSITION_LABELS[playerPos] : '';
-                                  
-                                  const displayLegend = posLabel ? `${catLabel} • ${posLabel}` : catLabel;
-
-                                  return (
-                                    <div 
-                                      key={p.playerId} 
-                                      className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-zinc-900 last:border-b-0 gap-3 sm:gap-2"
-                                    >
-                                      <div className="flex items-center gap-2.5 min-w-0">
-                                        <div className="flex flex-col gap-0.5 min-w-0">
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            <span className="font-extrabold text-[#e2e8f0] truncate text-xs sm:text-[11px] font-sans">
-                                              {p.name}
-                                            </span>
-                                            {p.isGoleiro && (
-                                              <span className="text-[8.5px] px-1 py-0 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 rounded-md font-sans font-bold shrink-0 uppercase tracking-widest leading-none">
-                                                GK
-                                              </span>
-                                            )}
-                                          </div>
-                                          <span className="text-[9px] text-zinc-500 font-sans uppercase font-bold tracking-widest">
-                                            {displayLegend}
-                                          </span>
+                                      {nextMatch.status === 'confirmando' && (
+                                        <div className="mt-1">
+                                          <button
+                                            type="button"
+                                            disabled={actionLoading || missingCount <= 0}
+                                            onClick={handleConfirmMensalistasInBulk}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-sans font-bold py-2 px-3 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 border border-emerald-500/10 cursor-pointer"
+                                          >
+                                            <Users className="w-3.5 h-3.5" />
+                                            <span>Confirmar Mensalistas Pendentes</span>
+                                          </button>
+                                          <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
+                                            * Confirma apenas mensalistas que estão pendentes, respeitando o limite do racha ({maxPlayersLimit} no total).
+                                          </p>
                                         </div>
-                                      </div>
-                                    <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-                                      <div className="flex items-center gap-1 font-mono text-[10px]">
-                                        <span className="text-zinc-500 sm:hidden">Status: </span>
-                                        <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-900/40 border ${
-                                          p.presenceStatus === 'confirmado' 
-                                            ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' 
-                                            : p.presenceStatus === 'cancelado' 
-                                              ? 'text-rose-500 border-rose-500/20 bg-rose-500/5' 
-                                              : 'text-[#94a3b8] border-zinc-805'
-                                        }`}>
-                                          {p.presenceStatus === 'confirmado' ? 'Confirmado' : p.presenceStatus === 'cancelado' ? 'Não Vai' : 'Pendente'}
-                                        </span>
-                                      </div>
-                                      {isAdmin && (
-                                        <div className="flex gap-2.5 items-center">
-                                          {p.presenceStatus !== 'confirmado' && (
-                                            <button
-                                              type="button"
-                                              disabled={actionLoading}
-                                              onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                              className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
-                                              title="Aprovar participação"
-                                            >
-                                              <Check className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
-                                            </button>
-                                          )}
-                                          {p.presenceStatus !== 'cancelado' && (
-                                            <button
-                                              type="button"
-                                              disabled={actionLoading}
-                                              onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                              className="bg-rose-500/10 hover:bg-rose-500 text-rose-400 hover:text-black border border-rose-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
-                                              title="Remover / Cancelar"
-                                            >
-                                              <X className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
-                                            </button>
-                                          )}
+                                      )}
+
+                                      {nextMatch.status === 'aguardando_reservas' && (
+                                        <div className="mt-1">
+                                          <button
+                                            type="button"
+                                            disabled={actionLoading || missingCount <= 0}
+                                            onClick={handleConfirmReservesInBulk}
+                                            className="w-full bg-amber-500 hover:bg-amber-400 disabled:bg-zinc-800 disabled:text-zinc-500 text-zinc-950 font-sans font-black py-2 px-3 rounded-lg text-[10px] uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
+                                          >
+                                            <Users2 className="w-3.5 h-3.5" />
+                                            <span>Confirmar Reservas Convocados</span>
+                                          </button>
+                                          <p className="text-[9px] text-zinc-500 mt-1.5 font-sans leading-normal">
+                                            * Confirma apenas reservas da fila que já se disponibilizaram para o racha, seguindo a ordem da fila de prioridade.
+                                          </p>
                                         </div>
                                       )}
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  )}
+
+                                  {sortedPresencesForList.map((p: any) => {
+                                    // Look up the matching registered athlete to fetch real-time category and primary position
+                                    const matchingPlayer = players.find((pl: any) => pl.id === p.playerId);
+                                    
+                                    const playerCat = matchingPlayer ? matchingPlayer.category : (p.category || 'reserva');
+                                    const catLabel = CATEGORY_LABELS[playerCat] || 'Reserva';
+                                    
+                                    const playerPos = matchingPlayer ? matchingPlayer.primaryPosition : (p.isGoleiro ? 'goleiro' : '');
+                                    const posLabel = playerPos && POSITION_LABELS[playerPos] ? POSITION_LABELS[playerPos] : '';
+                                    
+                                    const displayLegend = posLabel ? `${catLabel} • ${posLabel}` : catLabel;
+
+                                    return (
+                                      <div 
+                                        key={p.playerId} 
+                                        className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-zinc-900 last:border-b-0 gap-3 sm:gap-2"
+                                      >
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                          <div className="flex flex-col gap-0.5 min-w-0">
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                              <span className="font-extrabold text-[#e2e8f0] truncate text-xs sm:text-[11px] font-sans">
+                                                {p.name}
+                                              </span>
+                                              {p.isGoleiro && (
+                                                <span className="text-[8.5px] px-1 py-0 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 rounded-md font-sans font-bold shrink-0 uppercase tracking-widest leading-none">
+                                                  GK
+                                                </span>
+                                              )}
+                                            </div>
+                                            <span className="text-[9px] text-zinc-500 font-sans uppercase font-bold tracking-widest">
+                                              {displayLegend}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
+                                        <div className="flex items-center gap-1 font-mono text-[10px]">
+                                          <span className="text-zinc-500 sm:hidden">Status: </span>
+                                          <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-900/40 border ${
+                                            p.presenceStatus === 'confirmado' 
+                                              ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' 
+                                              : p.presenceStatus === 'cancelado' 
+                                                ? 'text-rose-500 border-rose-500/20 bg-rose-500/5' 
+                                                : 'text-[#94a3b8] border-zinc-805'
+                                          }`}>
+                                            {p.presenceStatus === 'confirmado' ? 'Confirmado' : p.presenceStatus === 'cancelado' ? 'Não Vai' : 'Pendente'}
+                                          </span>
+                                        </div>
+                                        {isAdmin && (
+                                          <div className="flex gap-2.5 items-center">
+                                            {p.presenceStatus !== 'confirmado' && (
+                                              <button
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
+                                                className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
+                                                title="Aprovar participação"
+                                              >
+                                                <Check className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
+                                              </button>
+                                            )}
+                                            {p.presenceStatus !== 'cancelado' && (
+                                              <button
+                                                type="button"
+                                                disabled={actionLoading}
+                                                onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
+                                                className="bg-rose-500/10 hover:bg-rose-500 text-rose-450 hover:text-black border border-rose-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
+                                                title="Remover / Cancelar"
+                                              >
+                                                <X className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
+                                              </button>
+                                            )}
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
@@ -2753,9 +2739,10 @@ export default function DashboardStatus({
                       </div>
                     )}
                   </div>
+                )}
 
                   {/* RESERVES SECTION */}
-                  {matchState === 'CONFIRMACOES_ABERTAS' && confirmedCount < maxPlayersLimit && nextMatch.status !== 'agendada' && (() => {
+                  {roundStatus.needsReserve && nextMatch.status !== 'agendada' && nextMatch.status !== 'sorteada' && nextMatch.status !== 'encerrada' && (() => {
                     const activeConvocationPlayerId = reserveQueue?.activeConvocation?.playerId;
                     const suggestedPlayer = activeConvocationPlayerId
                       ? players.find(p => p.id === activeConvocationPlayerId)
@@ -2881,11 +2868,8 @@ export default function DashboardStatus({
                   })()}
                 </div>
               </div>
-
-            </div>
+            )}
           </div>
-          )}
-        </div>
       ) : (
         <div className="bg-zinc-950/20 border border-zinc-900 rounded-xl p-8 text-center space-y-4 shadow-xl order-3">
           <Calendar className="w-10 h-10 text-zinc-600 mx-auto" />
@@ -3060,11 +3044,17 @@ export default function DashboardStatus({
                 <div className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-3 flex flex-col justify-between min-h-[110px] h-full">
                   <div>
                     <span className="text-[11px] text-purple-400 uppercase tracking-wider font-extrabold block">🚀 Trio</span>
-                    <h4 className="text-white text-[11px] font-bold mt-0.5 truncate leading-tight">
-                      {stats && stats.trios && stats.trios.length > 0 
-                        ? `${stats.trios[0].playerAName.split(' ')[0]} + ...` 
-                        : 'Sem dados'}
-                    </h4>
+                    <div className="text-white text-[10px] font-bold mt-1 leading-tight flex flex-col gap-0.5">
+                      {stats && stats.trios && stats.trios.length > 0 ? (
+                        <>
+                          <span className="truncate block">{stats.trios[0].playerAName.split(' ')[0]}</span>
+                          <span className="truncate block">{stats.trios[0].playerBName.split(' ')[0]}</span>
+                          <span className="truncate block">{stats.trios[0].playerCName.split(' ')[0]}</span>
+                        </>
+                      ) : (
+                        <span>Sem dados</span>
+                      )}
+                    </div>
                   </div>
                   {stats && stats.trios && stats.trios.length > 0 ? (
                     <div className="text-[10px] text-zinc-400 mt-1 leading-tight font-sans">
