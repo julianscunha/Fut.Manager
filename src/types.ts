@@ -51,6 +51,8 @@ export interface Player {
   peDominante?: string;
   avatarOriginal?: string;
   avatarEsportivo?: string;
+  avatarCard?: string;
+  avatarStatus?: 'PENDENTE' | 'PROCESSANDO' | 'CONCLUÍDO' | 'ERRO';
   avatarVersion?: number;
 }
 

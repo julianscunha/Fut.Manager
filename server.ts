@@ -7,6 +7,7 @@ import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
 import { GoogleGenAI } from '@google/genai';
+import { AvatarProviderFactory } from './server/avatarProvider';
 
 async function startServer() {
   const app = express();
@@ -1022,7 +1023,7 @@ async function startServer() {
     return res.json({ message: 'Ação realizada com sucesso!', user: db.users[userIndex] });
   });
 
-  // Gerar Avatar Esportivo Inteligente usando Gemini API (General Image Editing model)
+  // Gerar Avatar Esportivo Inteligente usando o AvatarProviderFactory desacoplado
   async function gerarAvatarEsportivo(player: Player, forceRegenerate = false): Promise<Player> {
     const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
     const timeDoCoracao = team ? team.name : (player.timeDoCoracao || 'São Paulo');
@@ -1036,7 +1037,7 @@ async function startServer() {
     }
 
     // Set avatarOriginal separately to never lose it
-    if (player.photoOriginal && player.avatarOriginal !== player.photoOriginal) {
+    if (player.photoOriginal && !player.avatarOriginal) {
       player.avatarOriginal = player.photoOriginal;
     }
 
@@ -1048,95 +1049,100 @@ async function startServer() {
     }
 
     if (!player.photoOriginal) {
-      player.avatarEsportivo = '';
+      player.avatarEsportivo = undefined;
       return player;
     }
 
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (apiKey) {
-      try {
-        console.log(`[Avatar Inteligente] Iniciando geração com Gemini para o atleta: ${player.name} (${timeDoCoracao})`);
-        
-        const ai = new GoogleGenAI({
-          apiKey: apiKey,
-          httpOptions: {
-            headers: {
-              'User-Agent': 'aistudio-build',
-            }
-          }
-        });
-
-        // Resolve base64 data
-        let base64Data = player.photoOriginal;
-        let mimeType = 'image/png';
-
-        const match = player.photoOriginal.match(/^data:([^;]+);base64,(.+)$/);
-        if (match) {
-          mimeType = match[1];
-          base64Data = match[2];
-        } else if (player.photoOriginal.startsWith('http')) {
-          try {
-            const fetchRes = await fetch(player.photoOriginal);
-            const arrayBuffer = await fetchRes.arrayBuffer();
-            base64Data = Buffer.from(arrayBuffer).toString('base64');
-            const contentType = fetchRes.headers.get('content-type');
-            if (contentType) mimeType = contentType;
-          } catch (fetchErr) {
-            console.error('[Avatar Inteligente] Erro ao buscar imagem externa:', fetchErr);
-          }
-        }
-
-        const prompt = `Transform this photo into a professional soccer player portrait. 
-Keep the original face, hair, mustache, beard, facial features, facial structure, skin tone, and expression exactly. 
-Change ONLY the body clothing/uniform to a high-quality athletic jersey of the soccer club '${timeDoCoracao}'. 
-The background should be a professional sports stadium with athletic field grass, floodlights, slightly out of focus, matching the color identity of the club ${timeDoCoracao}. 
-The framing should be chest-up, athletic soccer player pose, professional sports portrait lighting.`;
-
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
-          contents: {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: mimeType
-                }
-              },
-              {
-                text: prompt
-              }
-            ]
-          }
-        });
-
-        if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-              player.avatarEsportivo = `data:image/png;base64,${part.inlineData.data}`;
-              player.avatarVersion = (player.avatarVersion || 0) + 1;
-              console.log(`[Avatar Inteligente] Sucesso na geração do avatar de ${player.name}`);
-              return player;
-            }
-          }
-        }
-        
-        throw new Error('Nenhuma imagem retornada no response do Gemini.');
-      } catch (err: any) {
-        const errorMsg = err?.message || String(err);
-        if (errorMsg.includes('quota') || errorMsg.includes('429') || errorMsg.includes('RESOURCE_EXHAUSTED')) {
-          console.warn(`[Avatar Inteligente] Limite de cota do modelo excedido temporariamente (429/RESOURCE_EXHAUSTED). Ativando fallback instantâneo com a foto original, moldura do clube e escudo.`);
-        } else {
-          console.warn(`[Avatar Inteligente] Geração indisponível (${errorMsg}). Ativando fallback automático.`);
-        }
-      }
-    } else {
-      console.log(`[Avatar Inteligente] Sem GEMINI_API_KEY. Ativando fallback automático para ${player.name}.`);
+    if (process.env.ENABLE_AVATAR_AI !== 'true') {
+      throw new Error('Geração de avatar desativada temporariamente via feature flag.');
     }
 
-    // FALLBACK: usar automaticamente foto original como avatarEsportivo
-    player.avatarEsportivo = player.photoOriginal;
-    player.avatarVersion = (player.avatarVersion || 0) + 1;
-    return player;
+    try {
+      console.log(`[Avatar Inteligente] Iniciando geração com AvatarProviderFactory para o atleta: ${player.name} (${timeDoCoracao})`);
+      const provider = AvatarProviderFactory.getProvider();
+      const generatedUrl = await provider.generateAvatar({
+        photoOriginal: player.photoOriginal,
+        club: timeDoCoracao,
+        playerName: player.name,
+      });
+
+      player.avatarEsportivo = generatedUrl;
+      player.avatarVersion = (player.avatarVersion || 0) + 1;
+      console.log(`[Avatar Inteligente] Sucesso na geração do avatar de ${player.name}`);
+      return player;
+    } catch (err: any) {
+      console.warn(`[Avatar Inteligente] Erro durante a geração: ${err.message || err}`);
+      throw err;
+    }
+  }
+
+  // Processamento síncrono ou assíncrono em segundo plano para avatares gamer do atleta
+  async function processarAvatarGamerBackground(playerId: string) {
+    console.log(`[Avatar Inteligente] Fluxo de background iniciado para o jogador ID: ${playerId}`);
+    
+    let db = readDb();
+    let playerIndex = db.players.findIndex(p => p.id === playerId);
+    if (playerIndex === -1) {
+      console.error(`[Avatar Inteligente] Atleta não encontrado para processamento.`);
+      return;
+    }
+
+    let player = db.players[playerIndex];
+    if (!player.photoOriginal) {
+      console.log(`[Avatar Inteligente] Sem foto original válida. Encerrando.`);
+      player.avatarStatus = 'ERRO';
+      player.avatarCard = null;
+      player.avatarEsportivo = null;
+      writeDb(db);
+      return;
+    }
+
+    if (process.env.ENABLE_AVATAR_AI !== 'true') {
+      console.log(`[Avatar Inteligente] Geração suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
+      player.avatarStatus = 'ERRO';
+      player.avatarCard = null;
+      player.avatarEsportivo = null;
+      writeDb(db);
+      return;
+    }
+
+    player.avatarStatus = 'PROCESSANDO';
+    writeDb(db);
+
+    try {
+      const generatedPlayer = await gerarAvatarEsportivo(player, true);
+
+      // Relê banco para evitar conflito de gravação concorrente
+      db = readDb();
+      playerIndex = db.players.findIndex(p => p.id === playerId);
+      if (playerIndex !== -1) {
+        player = db.players[playerIndex];
+        player.avatarCard = generatedPlayer.avatarEsportivo;
+        player.avatarEsportivo = generatedPlayer.avatarEsportivo;
+        player.avatarOriginal = generatedPlayer.avatarOriginal;
+        
+        const isFallback = !generatedPlayer.avatarEsportivo || generatedPlayer.avatarEsportivo === generatedPlayer.photoOriginal;
+        player.avatarStatus = isFallback ? 'ERRO' : 'CONCLUÍDO';
+        if (isFallback) {
+          player.avatarCard = null;
+          player.avatarEsportivo = null;
+        }
+        
+        writeDb(db);
+        console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
+      }
+    } catch (err) {
+      console.error(`[Avatar Inteligente] Falha no background:`, err);
+      db = readDb();
+      playerIndex = db.players.findIndex(p => p.id === playerId);
+      if (playerIndex !== -1) {
+        player = db.players[playerIndex];
+        player.avatarStatus = 'ERRO';
+        player.avatarCard = null;
+        player.avatarEsportivo = null;
+        writeDb(db);
+      }
+    }
   }
 
   // Jogadores: Listar (Retorna ativos se sem parâmetro, ou todos se admin para gerenciamento)
@@ -1200,13 +1206,21 @@ The framing should be chest-up, athletic soccer player pose, professional sports
       peDominante: playerData.peDominante || 'Direito',
       avatarOriginal: playerData.photoOriginal || '',
       avatarEsportivo: '',
+      avatarCard: '',
+      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO',
       avatarVersion: 1
     };
 
-    // Execute intelligent sports avatar generation flow
-    await gerarAvatarEsportivo(newPlayer, true);
-
     db.players.push(newPlayer);
+
+    // Trigger background generation asynchronously
+    if (newPlayer.photoOriginal) {
+      setImmediate(() => {
+        processarAvatarGamerBackground(newPlayer.id).catch(err => {
+          console.error('[Avatar Background Post] Fail:', err);
+        });
+      });
+    }
 
     // Auditoria: Criação de atleta
     if (!db.userAudits) db.userAudits = [];
@@ -1537,10 +1551,12 @@ The framing should be chest-up, athletic soccer player pose, professional sports
     // Check if photo, team or dominant foot/number properties changed
     const photoChanged = updateData.photoOriginal !== undefined && updateData.photoOriginal !== existingPlayer.photoOriginal;
     const teamChanged = updateData.favoriteTeamId !== undefined && updateData.favoriteTeamId !== existingPlayer.favoriteTeamId;
-    const forceRegenerate = photoChanged || teamChanged || !existingPlayer.avatarEsportivo;
+    const numChanged = updateData.numeroFavorito !== undefined && updateData.numeroFavorito !== existingPlayer.numeroFavorito;
+    const footChanged = updateData.peDominante !== undefined && updateData.peDominante !== existingPlayer.peDominante;
+    const forceRegenerate = photoChanged || teamChanged || numChanged || footChanged || !existingPlayer.avatarCard;
 
     if (forceRegenerate) {
-      await gerarAvatarEsportivo(updatedPlayer, true);
+      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO';
     }
 
     const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
@@ -1590,6 +1606,15 @@ The framing should be chest-up, athletic soccer player pose, professional sports
     db.players[index] = updatedPlayer;
     writeDb(db);
 
+    // Trigger background generation asynchronously if forced
+    if (forceRegenerate && updatedPlayer.photoOriginal) {
+      setImmediate(() => {
+        processarAvatarGamerBackground(updatedPlayer.id).catch(err => {
+          console.error('[Avatar Background PUT] Fail:', err);
+        });
+      });
+    }
+
     return res.json({ message: 'Jogador atualizado com sucesso!', player: updatedPlayer });
   });
 
@@ -1602,10 +1627,20 @@ The framing should be chest-up, athletic soccer player pose, professional sports
       return res.status(404).json({ error: 'Jogador não encontrado.' });
     }
     const player = db.players[index];
-    await gerarAvatarEsportivo(player, true);
+    player.avatarStatus = 'PENDENTE';
     db.players[index] = player;
     writeDb(db);
-    return res.json({ message: 'Avatar inteligente atualizado com sucesso!', player });
+    
+    setImmediate(() => {
+      processarAvatarGamerBackground(player.id).catch(err => {
+        console.error('[Avatar Background Manual] Fail:', err);
+      });
+    });
+
+    return res.json({ 
+      message: 'Geração do Avatar Gamer iniciada em background!', 
+      player
+    });
   });
 
   // Jogadores: Soft Delete (Inativar/Excluir Logicamente)

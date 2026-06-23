@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Player, User, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
-import { X, Award, Shield, Check, Info, AlertTriangle } from 'lucide-react';
+import { X, Award, Shield, Check, Info, AlertTriangle, ArrowLeft, Star } from 'lucide-react';
 
 interface PlayerEvaluationModalProps {
   player: Player;
@@ -15,12 +15,14 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
   const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
 
   const [ratings, setRatings] = useState<Record<string, number>>({});
+  const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [errorLocal, setErrorLocal] = useState('');
   const [validationMsg, setValidationMsg] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
-  // Scale of values from 0.0 to 5.0 inclusive with 0.5 steps
-  const scale = [0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
+  // Scale of values from 1 to 5 inclusive (integers)
+  const scale = [1, 2, 3, 4, 5];
 
   // Load existing evaluation if present
   useEffect(() => {
@@ -31,10 +33,14 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const data = await res.json();
+            
+            if (data.metrics) {
+              setMetrics(data.metrics);
+            }
+            
             if (data.myEvaluation && data.myEvaluation.ratings) {
               setRatings(data.myEvaluation.ratings);
               
-              // Correct period checking (Year-Month)
               const currentPeriod = new Date().toISOString().substring(0, 7); // "YYYY-MM"
               if (data.myEvaluation.date && data.myEvaluation.date.startsWith(currentPeriod)) {
                 setValidationMsg('Você já avaliou este jogador neste período. Sua avaliação anterior será atualizada.');
@@ -42,10 +48,10 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
                 setValidationMsg('Você possui uma avaliação feita em outro período. Ela será atualizada e substituída pela nova.');
               }
             } else {
-              // Pre-populate with solid baseline 3.5 for quick entry
+              // Pre-populate with solid baseline 3 for quick entry
               const initial: Record<string, number> = {};
               attributes.forEach(attr => {
-                initial[attr.id] = 3.5;
+                initial[attr.id] = 3;
               });
               setRatings(initial);
             }
@@ -68,7 +74,7 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
   const calculateTempOverall = () => {
     let sum = 0;
     attributes.forEach(attr => {
-      const val = ratings[attr.id] || 3.5;
+      const val = ratings[attr.id] || 3;
       sum += val * attr.weight;
     });
     return Math.round(sum * 10) / 10;
@@ -93,7 +99,7 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
       if (contentType && contentType.includes('application/json')) {
         data = await res.json();
       } else {
-        await res.text(); // Consume text safely without throwing syntax errors
+        await res.text();
         throw new Error('Não foi possível salvar a avaliação.');
       }
 
@@ -110,55 +116,131 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
     }
   };
 
+  const renderStars = (rating: number) => {
+    const rounded = Math.round(rating * 2) / 2; // round to nearest 0.5
+    return (
+      <div className="flex items-center gap-0.5 mt-0.5">
+        {Array.from({ length: 5 }).map((_, index) => {
+          const starValue = index + 1;
+          const isFilled = rounded >= starValue;
+          const isHalf = !isFilled && rounded >= (starValue - 0.5);
+          return (
+            <Star
+              key={index}
+              className={`w-3.5 h-3.5 ${
+                isFilled
+                  ? 'fill-amber-400 text-amber-400'
+                  : isHalf
+                    ? 'text-amber-400 fill-amber-400/40'
+                    : 'text-zinc-800'
+              }`}
+            />
+          );
+        })}
+        <span className="text-[11px] font-mono text-zinc-500 ml-1.5 font-bold">
+          {rating.toFixed(1)} / 5
+        </span>
+      </div>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/80 backdrop-blur-sm overflow-y-auto" id="eval-modal-container">
-      <div className="relative w-full max-w-lg bg-[#0e1613] border border-emerald-500/10 rounded-2xl shadow-2xl flex flex-col my-8 animate-fadeIn max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/95 md:bg-zinc-950/80 md:backdrop-blur-sm p-0 md:p-4 overflow-hidden" id="eval-modal-container">
+      {/* Container - Full screen on Mobile, Centralized Card on Desktop */}
+      <div className="relative w-full h-full md:h-initial md:max-h-[90vh] md:max-w-3xl bg-[#0a110e] rounded-none md:rounded-2xl border-0 md:border md:border-emerald-500/10 shadow-2xl flex flex-col overflow-hidden animate-fadeIn">
         
-        {/* Modal Header */}
-        <div className="p-4 border-b border-zinc-900 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Award className="w-5 h-5 text-emerald-400" />
-            <h3 className="font-display font-bold text-white text-base">Avaliar Atleta</h3>
-          </div>
+        {/* Header Block with Back Button (Mobile) or Close Button (Desktop) */}
+        <div className="p-4 border-b border-zinc-900 bg-zinc-950/40 flex items-center justify-between flex-shrink-0">
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg border border-zinc-850 hover:bg-zinc-900 text-zinc-400 hover:text-white transition cursor-pointer"
+            className="flex md:hidden items-center gap-1 text-zinc-400 hover:text-white transition text-xs font-bold font-mono cursor-pointer bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800"
+          >
+            <ArrowLeft className="w-4 h-4 text-emerald-400" />
+            <span>← Voltar</span>
+          </button>
+
+          <div className="flex items-center gap-2">
+            <Award className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-display font-black text-white text-xs md:text-sm uppercase tracking-wider">Avaliação de Atleta</h3>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="hidden md:flex p-1.5 rounded-lg border border-zinc-850 hover:bg-zinc-900 text-zinc-400 hover:text-white transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
+
+          {/* mobile symmetry spacer */}
+          <div className="w-16 md:hidden" />
         </div>
 
-        {/* Modal Scrollable Body */}
-        <div className="p-5 overflow-y-auto space-y-5">
-          {/* Athlete banner card summary */}
-          <div className="flex items-center gap-4 bg-zinc-950/50 p-4 rounded-xl border border-zinc-900">
-            <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-zinc-800 bg-zinc-900 flex-shrink-0">
+        {/* Scrollable Content Body */}
+        <div className="flex-1 p-5 overflow-y-auto space-y-6 scrollbar-thin scrollbar-thumb-zinc-800 pb-10">
+          
+          {/* Top Banner: Athlete Identity + Overall displays (Simplified Centered Layout) */}
+          <div className="flex flex-col items-center justify-center text-center bg-gradient-to-br from-[#070d0b] to-zinc-950 p-6 rounded-2xl border border-emerald-500/10 w-full relative">
+            
+            {/* Embedded Help toggle button */}
+            <button
+              onClick={() => setShowHelp(!showHelp)}
+              className="absolute top-3.5 right-3.5 text-zinc-500 hover:text-emerald-400 cursor-pointer p-1.5 rounded-lg hover:bg-zinc-900/60 transition"
+              title="Informações de Avaliação"
+              type="button"
+            >
+              <Info className="w-4 h-4" />
+            </button>
+
+            {/* Photo */}
+            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-500/30 bg-zinc-950 flex-shrink-0 flex items-center justify-center mb-3">
               {player.photoOriginal ? (
                 <img src={player.photoOriginal} alt={player.name} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full h-full flex items-center justify-center text-zinc-500 bg-zinc-950">Atleta</div>
+                <div className="w-full h-full flex items-center justify-center text-zinc-650 bg-zinc-950 text-[10px] font-mono font-black">ATLETA</div>
               )}
             </div>
-            <div className="min-w-0 flex-1">
-              <h4 className="font-display font-bold text-white text-sm truncate">{player.name}</h4>
-              <p className="text-xs text-zinc-500 font-mono mt-0.5 truncate flex items-center gap-2">
-                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: team?.colorHex || '#22c55e' }} />
-                <span>Torcedor do {team?.name || 'Vários'} • {POSITION_LABELS[player.primaryPosition]}</span>
-              </p>
+
+            {/* Athlete Name */}
+            <h4 className="font-sans font-black text-white text-lg tracking-tight uppercase leading-tight mb-2 max-w-[280px] break-words">
+              {player.name}
+            </h4>
+
+            {/* Overall & Vote status badges */}
+            <div className="flex flex-col sm:flex-row items-center gap-2.5 mt-1">
+              <div className="flex items-center gap-1.5 bg-zinc-950/80 border border-zinc-850 px-3 py-1 rounded-full text-xs font-mono">
+                <span className="text-amber-400">⭐</span>
+                <span className="text-zinc-400 uppercase tracking-wider text-[10px] font-bold">OVR</span>
+                <span className="text-white font-extrabold">{metrics?.overall ? metrics.overall.toFixed(1) : '3.5'}</span>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-emerald-500/5 border border-emerald-500/10 px-3 py-1 rounded-full text-xs font-mono text-emerald-400">
+                <span className="text-[10px] font-bold uppercase tracking-wider">Seu voto médio:</span>
+                <span className="text-white font-extrabold">{calculateTempOverall().toFixed(1)}</span>
+              </div>
             </div>
-            
-            {/* Real-time precalculated Overall Badge based on current slider configurations */}
-            <div className="text-center bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl flex-shrink-0 font-mono">
-              <span className="block text-[8px] font-bold text-emerald-500 uppercase">Seu Voto</span>
-              <span className="text-xl font-black text-white">{calculateTempOverall().toFixed(1)}</span>
-            </div>
+
+            {/* Micro tooltip explanation */}
+            {showHelp && (
+              <div className="absolute inset-x-4 top-10 sm:top-12 bg-zinc-950 border border-emerald-500/20 p-4 rounded-xl text-left text-xs text-zinc-300 shadow-2xl z-20 space-y-2 animate-fadeIn">
+                <div className="flex justify-between items-center border-b border-zinc-900 pb-1.5">
+                  <span className="font-bold text-emerald-400 uppercase tracking-widest text-[9px] font-mono">ⓘ Informação</span>
+                  <button onClick={() => setShowHelp(false)} className="text-zinc-500 hover:text-white p-0.5 rounded">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <p className="font-sans text-zinc-400 leading-relaxed text-[11px]">
+                  As avaliações são anônimas e utilizadas para o balanceamento dos sorteios. O racha calibra as médias ponderadas para balancear as partidas automaticamente.
+                </p>
+              </div>
+            )}
+
           </div>
 
           {validationMsg && (
-            <p className="text-[11px] font-mono text-emerald-400 px-3 py-1 bg-emerald-550/5 border border-emerald-500/10 rounded-lg flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 text-emerald-400" />
+            <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg text-xs font-mono text-emerald-400 flex items-center gap-2">
+              <Check className="w-4 h-4 text-emerald-400" />
               <span>{validationMsg}</span>
-            </p>
+            </div>
           )}
 
           {errorLocal && (
@@ -168,31 +250,33 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
             </div>
           )}
 
-          {/* Guide description */}
-          <div className="space-y-1.5">
-            <h5 className="text-xs font-bold text-zinc-300 uppercase tracking-wide font-mono">Métricas de Desempenho</h5>
-            <p className="text-[11px] text-zinc-500 leading-relaxed font-sans">
-              Toque nos botões para atribuir notas. Os coeficientes são balanceados conforme a posição do Atleta para calibrar o Overall final do grupo.
-            </p>
-          </div>
-
-          {/* Ratings list item selectors */}
-          <div className="space-y-4 pt-1">
+          {/* Rating Attributes list */}
+          <div className="space-y-6 pt-1">
             {attributes.map(attr => {
-              const currentVal = ratings[attr.id] ?? 3.5;
+              const currentVal = ratings[attr.id] ?? 3;
               return (
-                <div key={attr.id} className="space-y-1.5 border-b border-zinc-900 pb-3 last:border-0 last:pb-0">
+                <div key={attr.id} className="space-y-2 border-b border-zinc-900/60 pb-5 last:border-0 last:pb-0">
+                  
+                  {/* Label + Stars row */}
                   <div className="flex justify-between items-center">
-                    <span className="text-xs font-bold text-zinc-200">
-                      {attr.label}
-                    </span>
-                    <span className="text-xs font-extrabold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md font-mono">
-                      {currentVal.toFixed(1)}
-                    </span>
+                    <div className="space-y-0.5">
+                      <h5 className="text-xs font-bold text-zinc-200 uppercase tracking-widest font-mono flex items-center gap-1.5">
+                        <span className="w-1 h-3 bg-emerald-500 rounded-full" />
+                        {attr.label}
+                      </h5>
+                      <div>
+                        {renderStars(currentVal)}
+                      </div>
+                    </div>
+                    
+                    {/* Visual highlighted rating block [3] */}
+                    <div className="text-xs font-mono font-black text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-500/20 shadow-md">
+                      [{currentVal.toFixed(1)}]
+                    </div>
                   </div>
 
-                  {/* Fully mobile touch-friendly selector pill row */}
-                  <div className="grid grid-cols-11 gap-1 overflow-x-auto py-1 scrollbar-hide">
+                  {/* Single Clean Visual Row selector bar */}
+                  <div className="flex items-center justify-between bg-zinc-950 p-2 rounded-xl border border-zinc-900 overflow-x-auto scrollbar-hide gap-1 select-none w-full">
                     {scale.map(step => {
                       const isSelected = currentVal === step;
                       return (
@@ -200,48 +284,44 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
                           key={step}
                           type="button"
                           onClick={() => handleRatingChange(attr.id, step)}
-                          className={`py-1.5 rounded text-[10px] font-mono text-center transition cursor-pointer ${
+                          className={`flex-grow min-w-[32px] h-9 rounded-lg text-xs font-mono transition-all flex items-center justify-center cursor-pointer ${
                             isSelected
-                              ? 'bg-emerald-600 text-white font-extrabold shadow shadow-emerald-500/20'
-                              : 'bg-zinc-900 border border-zinc-850 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                              ? 'bg-emerald-500 text-zinc-950 font-black shadow-md border border-emerald-400 scale-105'
+                              : 'text-zinc-650 hover:text-zinc-250 hover:bg-zinc-900/50'
                           }`}
+                          title={`Nota ${step}`}
                         >
-                          {step === 0 ? '0' : step === 5 ? '5' : step.toFixed(1)}
+                          {step}
                         </button>
                       );
                     })}
                   </div>
+
                 </div>
               );
             })}
           </div>
 
-          {/* Sorteio Algorithm Integration Note */}
-          <div className="p-3 bg-zinc-950 rounded-xl border border-zinc-900 text-[10px] text-zinc-500 space-y-1 font-mono">
-            <span className="font-extrabold text-emerald-500/80 uppercase block">🛡️ Proteção Contra Manipulação</span>
-            <p className="leading-snug">
-              Avaliações são anônimas para manter o fair play. O algoritmo do racha amortece votos extremos usando média ponderada cumulativa. Note que as alterações expiram após um intervalo seguro de 30 dias.
-            </p>
-          </div>
         </div>
 
-        {/* Modal Footer Controls */}
-        <div className="p-4 border-t border-zinc-900 flex justify-end gap-3 bg-zinc-950/40 rounded-b-2xl">
+        {/* Fixed Footer Controls - Always Visible at bottom (flex-shrink-0 instead of absolute) */}
+        <div className="p-4 border-t border-zinc-900 flex justify-end gap-3 bg-zinc-950 flex-shrink-0 z-10 shadow-[0_-8px_24px_rgba(0,0,0,0.6)]">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-zinc-900 border border-zinc-850 text-zinc-400 hover:text-white rounded-xl text-xs font-bold font-mono transition cursor-pointer"
+            className="flex-1 sm:flex-initial px-5 py-3 sm:py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white rounded-xl text-xs font-bold font-mono transition cursor-pointer min-h-[44px]"
           >
             Cancelar
           </button>
+          
           <button
             type="button"
             disabled={loading}
             onClick={handleSubmit}
-            className="px-5 py-2 bg-emerald-600 hover:bg-emerald-555 text-white font-bold rounded-xl text-xs font-mono transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/10"
+            className="flex-1 sm:flex-initial px-6 py-3 sm:py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs font-mono transition flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-500/10 min-h-[44px]"
           >
             {loading ? (
-              <div className="animate-spin rounded-full h-3.5 w-3.5 border-t-2 border-white border-r-2 border-r-transparent mr-1" />
+              <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
             ) : (
               <Check className="w-4 h-4" />
             )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap } from 'lucide-react';
+import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 import { getAchievementsForPlayer } from '../utils/achievements';
@@ -209,9 +209,9 @@ interface PlayerCardProps {
 }
 
 export default function PlayerCard({ player, currentUser, onEdit, onInactivate, onRestore, canEdit, onEvaluationSavedGlobal }: PlayerCardProps) {
-  // eSports Horizontal Flip state
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [activeTab, setActiveTab] = useState<'geral' | 'atributos' | 'historico' | 'conquistas'>('geral');
+  const [faceIndex, setFaceIndex] = useState(0); // 5 distinct pages (0 to 4)
+  const [badgeFilter, setBadgeFilter] = useState<'all' | 'vitoria' | 'presenca' | 'ranking' | 'resenha'>('all');
+  const [selectedBadgeId, setSelectedBadgeId] = useState<string>('primeira_vitoria');
   
   // Real-time metrics
   const [metrics, setMetrics] = useState<any>(null);
@@ -221,6 +221,19 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   const [evalModalOpen, setEvalModalOpen] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [categoryHistory, setCategoryHistory] = useState<CategoryTransition[]>([]);
+  const [personalHistory, setPersonalHistory] = useState<{
+    vitorias: number;
+    derrotas: number;
+    empates: number;
+    presences: number;
+    recentResults: ('V' | 'D' | 'E' | 'NP')[];
+  }>({
+    vitorias: 0,
+    derrotas: 0,
+    empates: 0,
+    presences: 0,
+    recentResults: [],
+  });
   const [isRegenerating, setIsRegenerating] = useState(false);
 
   const team = FAVORITE_TEAMS.find((t) => t.id === player.favoriteTeamId);
@@ -247,6 +260,88 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         }
       }
 
+      const resultsRes = await fetch('/api/results');
+      if (resultsRes.ok) {
+        const resultsData = await resultsRes.json();
+        const sortedResults = [...resultsData];
+        let pWins = 0;
+        let pLosses = 0;
+        let pDraws = 0;
+        let pPresences = 0;
+
+        const last5Results = sortedResults.slice(-5);
+        const recentOutcomes = last5Results.map(resObj => {
+          const isGoalkeeper = player.primaryPosition === 'goleiro';
+          const blueTeam = resObj.teams?.find((t: any) => t.name === 'Azul')?.playerIds || [];
+          const redTeam = resObj.teams?.find((t: any) => t.name === 'Vermelho')?.playerIds || [];
+          const greenTeam = resObj.teams?.find((t: any) => t.name === 'Verde')?.playerIds || [];
+
+          const isBlue = blueTeam.includes(player.id);
+          const isRed = redTeam.includes(player.id);
+          const isGreen = greenTeam.includes(player.id);
+
+          const hasPlayed = isBlue || isRed || isGreen;
+          if (!hasPlayed) return 'NP';
+
+          const champTeams = resObj.champions || [];
+          if (resObj.isSharedGoalkeepers && isGoalkeeper) {
+            return champTeams.length > 0 ? 'V' : 'E';
+          }
+
+          const playerTeam = isBlue ? 'Azul' : isRed ? 'Vermelho' : isGreen ? 'Verde' : null;
+          if (!playerTeam) return 'NP';
+
+          if (champTeams.length === 0 || champTeams.length > 1) {
+            return 'E';
+          }
+          if (champTeams.includes(playerTeam)) {
+            return 'V';
+          }
+          return 'D';
+        });
+
+        sortedResults.forEach(resObj => {
+          const isGoalkeeper = player.primaryPosition === 'goleiro';
+          const blueTeam = resObj.teams?.find((t: any) => t.name === 'Azul')?.playerIds || [];
+          const redTeam = resObj.teams?.find((t: any) => t.name === 'Vermelho')?.playerIds || [];
+          const greenTeam = resObj.teams?.find((t: any) => t.name === 'Verde')?.playerIds || [];
+
+          const isBlue = blueTeam.includes(player.id);
+          const isRed = redTeam.includes(player.id);
+          const isGreen = greenTeam.includes(player.id);
+
+          const hasPlayed = isBlue || isRed || isGreen;
+          if (!hasPlayed) return;
+
+          pPresences++;
+          const champTeams = resObj.champions || [];
+          if (resObj.isSharedGoalkeepers && isGoalkeeper) {
+            if (champTeams.length > 0) pWins++;
+            else pDraws++;
+            return;
+          }
+
+          const playerTeam = isBlue ? 'Azul' : isRed ? 'Vermelho' : isGreen ? 'Verde' : null;
+          if (!playerTeam) return;
+
+          if (champTeams.length === 0 || champTeams.length > 1) {
+            pDraws++;
+          } else if (champTeams.includes(playerTeam)) {
+            pWins++;
+          } else {
+            pLosses++;
+          }
+        });
+
+        setPersonalHistory({
+          vitorias: pWins,
+          derrotas: pLosses,
+          empates: pDraws,
+          presences: pPresences,
+          recentResults: recentOutcomes
+        });
+      }
+
       const transRes = await fetch(`/api/players/${player.id}/transitions`);
       if (transRes.ok) {
         const transData = await transRes.json();
@@ -270,14 +365,23 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     setSaveSuccessMsg('⌛ Processando Avatar Inteligente...');
     try {
       const res = await fetch(`/api/players/${player.id}/generate-avatar`, {
-        method: 'POST'
+         method: 'POST'
       });
       if (res.ok) {
-        setSaveSuccessMsg('✨ Avatar Esportivo recriado com sucesso!');
+        const data = await res.json();
+        setSaveSuccessMsg(data.message || '✨ Avatar Esportivo recriado com sucesso!');
+        
+        // Refresh local card metrics and stats
+        await fetchMetrics();
+        
+        // Trigger parent state update so all components reflect the updated avatar
+        if (onEvaluationSavedGlobal) {
+          onEvaluationSavedGlobal();
+        }
+        
         setTimeout(() => {
           setSaveSuccessMsg('');
-          window.location.reload(); // Hard update to refresh avatar cache in browser
-        }, 1500);
+        }, 4000);
       } else {
         const err = await res.json();
         setSaveSuccessMsg(`❌ Erro no processamento: ${err.error || 'Falha'}`);
@@ -312,12 +416,12 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       case 'indisponivel':
         return <Calendar className="w-3.5 h-3.5 text-amber-400" />;
       default:
-        return <Shield className="w-3.5 h-3.5 text-zinc-400" />;
+        return <Shield className="w-3.5 h-3.5 text-zinc-405" />;
     }
   };
 
   const isSoftDeleted = !!player.deletedAt;
-  const avatarToDisplay = player.avatarEsportivo || player.photoOriginal || (player as any).photoUrl || '';
+  const avatarToDisplay = player.avatarCard || player.avatarEsportivo || player.avatarOriginal || player.photoOriginal || '';
 
   // Determine card rarity based on matches under demand
   const matchesCount = rachaStats?.presences || 0;
@@ -357,13 +461,13 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
           borderColor: 'border-yellow-500/70',
           textAccent: 'text-yellow-405 font-black',
           badgeText: 'Ouro 🏅',
-          cardGlow: 'shadow-[0_0_22px_rgba(234,179,8,0.25)] border-yellow-400/50',
+          cardGlow: 'shadow-[0_0_22px_rgba(234,179,8,0.25)] border-yellow-404/50',
           textTitle: 'text-yellow-200 font-extrabold',
           badgeBg: 'bg-yellow-950/40 text-yellow-105 border border-yellow-500/30',
           ovrColor: 'text-yellow-450',
           labelColor: 'text-yellow-300/80',
-          statBg: 'bg-yellow-950/30 border-yellow-900/30 text-yellow-105',
-          badgeRarity: 'bg-gradient-to-r from-yellow-400 to-amber-600 text-black font-semibold',
+          statBg: 'bg-yellow-950/30 border-yellow-905/30 text-yellow-105',
+          badgeRarity: 'bg-gradient-to-r from-yellow-404 to-amber-600 text-black font-semibold',
           shieldColor: '#facc15'
         };
       case 'prata':
@@ -374,7 +478,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
           badgeText: 'Prata 🥈',
           cardGlow: 'shadow-[0_0_15px_rgba(113,113,122,0.18)] border-zinc-650',
           textTitle: 'text-zinc-200 font-extrabold',
-          badgeBg: 'bg-zinc-800 text-zinc-350 border border-zinc-750',
+          badgeBg: 'bg-zinc-800 text-zinc-350 border border-zinc-752',
           ovrColor: 'text-zinc-300',
           labelColor: 'text-zinc-400/80',
           statBg: 'bg-zinc-900/45 border-zinc-850 text-zinc-300',
@@ -384,16 +488,16 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       case 'bronze':
       default:
         return {
-          bgGradient: 'from-amber-955/10 via-zinc-900/30 to-zinc-950',
+          bgGradient: 'from-amber-955/10 via-zinc-900/30 to-zinc-955',
           borderColor: 'border-amber-800/30',
           textAccent: 'text-amber-605 font-black',
           badgeText: 'Bronze 🥉',
           cardGlow: 'shadow-md border-amber-850/20',
           textTitle: 'text-amber-205 font-extrabold',
-          badgeBg: 'bg-amber-950/30 text-amber-500 border border-amber-900/30',
+          badgeBg: 'bg-amber-955/30 text-amber-500 border border-amber-900/30',
           ovrColor: 'text-amber-600',
           labelColor: 'text-zinc-500',
-          statBg: 'bg-zinc-900/40 border-zinc-850 text-zinc-400',
+          statBg: 'bg-zinc-900/40 border-zinc-855 text-zinc-404',
           badgeRarity: 'bg-amber-800/40 text-amber-200',
           shieldColor: '#b45309'
         };
@@ -456,624 +560,997 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     return 0;
   };
 
-  // eSports Dynamic FUT metrics converter (0-5 stars mapped to classic 50-99 system)
-  const getFifaStat = (attrId: string, defaultValue = 72) => {
-    const average = getAttributeAverage(attrId);
-    if (average === 0) return defaultValue;
-    return Math.min(99, Math.max(50, Math.round(average * 10 + 50)));
-  };
-
-  // Render Gold/Amber Stars based on rating (0.0 to 5.0)
-  const renderAttrStars = (ratingValue: number) => {
+  // Render Gold/Amber Stars based on rating (0.0 to 5.0) for the back of the card
+  const renderBackAttrStars = (ratingValue: number) => {
+    const rating = ratingValue || 3.5;
     return (
       <div className="flex gap-0.5 items-center">
         {Array.from({ length: 5 }).map((_, index) => {
           const starValue = index + 1;
-          const isFilled = ratingValue >= starValue;
-          const isHalf = !isFilled && ratingValue >= (starValue - 0.5);
+          const isFilled = rating >= starValue;
+          const isHalf = !isFilled && rating >= (starValue - 0.5);
           return (
             <Star
               key={index}
               className={`w-3 h-3 ${
                 isFilled
-                  ? 'fill-amber-450 text-amber-455'
+                  ? 'fill-amber-400 text-amber-500'
                   : isHalf
-                    ? 'text-amber-455 fill-amber-455/40'
-                    : 'text-zinc-805'
+                    ? 'text-amber-505 fill-amber-500/30'
+                    : 'text-zinc-700'
               }`}
             />
           );
         })}
-        {ratingValue > 0 && (
-          <span className="text-[10px] font-mono text-zinc-400 ml-1 font-bold">
-            {ratingValue.toFixed(1)}
-          </span>
-        )}
+        <span className="text-[11px] font-mono text-zinc-300 font-bold min-w-[36px] text-right ml-1.5 font-mono">
+          {rating.toFixed(1)}/5
+        </span>
       </div>
     );
   };
 
-  // OVR Calculation (50-99 scale derived from overall 0-5 average)
-  const displayOvr = metrics?.overall 
-    ? Math.min(99, Math.max(50, Math.round(metrics.overall * 10 + 50))) 
-    : 72;
+  // OVR Calculation (Real scale 0.0 to 5.0)
+  const displayOvr = (metrics?.overall ?? 3.5).toFixed(1);
 
-  // Render 6 FUT main attributes on card face
   const isGoalkeeper = player.primaryPosition === 'goleiro';
 
-  // Stats calculation
-  const pac = getFifaStat('velocidade', 75);
-  const sho = getFifaStat('finalizacao', 72);
-  const pas = getFifaStat('passe', 74);
-  const dri = getFifaStat('drible', 73);
-  const defVal = Math.round(((getAttributeAverage('defesa') + getAttributeAverage('marcacao')) / 2) * 10 + 50) || 70;
-  const phy = getFifaStat('fisico', 74);
+  // Social Share event implementation
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const text = `Atleta: ${player.name}\nOVR: ${displayOvr}\nPosição: ${POSITION_LABELS[player.primaryPosition]}\nVitórias: ${rachaStats?.vitorias || 0}\nPartidas: ${rachaStats?.presences || 0}\nAproveitamento: ${rachaStats ? rachaStats.aproveitamento : 0}%\nConfira no Racha do Fofim!`;
+    if (navigator.share) {
+      navigator.share({
+        title: `${player.name} - Card de Atleta`,
+        text: text,
+        url: window.location.href,
+      }).catch(err => console.log(err));
+    } else {
+      navigator.clipboard.writeText(text);
+      setSaveSuccessMsg('📋 Copiado para a área de transferência!');
+      setTimeout(() => setSaveSuccessMsg(''), 3050);
+    }
+  };
 
-  const div = getFifaStat('reflexo', 76);
-  const han = getFifaStat('saida_gol', 72);
-  const kic = getFifaStat('reposicao', 70);
-  const ref = Math.round(((getAttributeAverage('reflexo') + getAttributeAverage('posicionamento')) / 2) * 10 + 50) || 75;
-  const spd = Math.round(getAttributeAverage('reflexo') * 9 + 50) || 68;
-  const posGK = getFifaStat('posicionamento', 74);
+  // Find Ranking inside the Specific Position dynamically
+  const getPositionRank = () => {
+    if (!allStats?.individual || !player) return null;
+    const samePositionPlayers = (allStats.individual as any[])
+      .filter((p: any) => p.primaryPosition === player.primaryPosition);
+    const sortedSamePosition = [...samePositionPlayers].sort((a,b) => {
+      if (b.vitorias !== a.vitorias) return b.vitorias - a.vitorias;
+      return b.aproveitamento - a.aproveitamento;
+    });
+    const playerIndex = sortedSamePosition.findIndex((p: any) => p.playerId === player.id);
+    return playerIndex !== -1 ? playerIndex + 1 : null;
+  };
+
+  // Find if player is in the seasonal All-Star Team dynamically
+  const getIsAllStar = () => {
+    if (!allStats?.individual || allStats.individual.length === 0) return false;
+    const statsList = allStats.individual;
+    const selected: string[] = [];
+    const usedIds = new Set<string>();
+    
+    const findBestFor = (posGroup: string[]) => {
+      const found = statsList.find((p: any) => 
+        !usedIds.has(p.playerId) && 
+        posGroup.includes(p.primaryPosition || '') &&
+        p.presences > 0
+      );
+      if (found) {
+        usedIds.add(found.playerId);
+        selected.push(found.playerId);
+      }
+    };
+    
+    findBestFor(['goleiro']);
+    findBestFor(['zagueiro', 'lateral']);
+    findBestFor(['volante']);
+    findBestFor(['meio_campo']);
+    findBestFor(['atacante']);
+    
+    return selected.includes(player.id);
+  };
+
+  // Computes the customized achievements list
+  const getBadges = () => {
+    const isGk = player.primaryPosition === 'goleiro';
+    const rank = rachaStats?.rank || 0;
+    const vitorias = personalHistory.vitorias;
+    const presences = personalHistory.presences;
+    const presencesCount = metrics?.presencesCount || 0;
+    const absencesCount = metrics?.absencesCount || 0;
+    const maxStreak = rachaStats?.maxStreak || player.maxStreak || 0;
+    const ovr = metrics?.overall || 3.5;
+    
+    const dateStr = player.createdAt ? new Date(player.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '20/06/2026';
+    
+    const list: {
+      id: string;
+      category: 'vitoria' | 'presenca' | 'ranking' | 'resenha';
+      icon: string;
+      name: string;
+      desc: string;
+      status: 'Conquistado' | 'Em progresso' | 'Bloqueado';
+      date: string | null;
+      progress: number;
+      target: number;
+      customProg?: string;
+      secret?: boolean;
+    }[] = [
+      // Vitórias e Participação (category: 'vitoria')
+      {
+        id: 'primeira_vitoria',
+        category: 'vitoria' as const,
+        icon: '🏆',
+        name: 'Primeira Vitória',
+        desc: 'Venceu pelo menos uma rodada.',
+        status: vitorias >= 1 ? ('Conquistado' as const) : ('Bloqueado' as const),
+        date: vitorias >= 1 ? dateStr : null,
+        progress: vitorias,
+        target: 1,
+      },
+      {
+        id: 'em_chamas',
+        category: 'vitoria' as const,
+        icon: '🔥',
+        name: 'Em Chamas',
+        desc: '5 vitórias consecutivas no racha.',
+        status: maxStreak >= 5 ? ('Conquistado' as const) : (maxStreak > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: maxStreak >= 5 ? dateStr : null,
+        progress: maxStreak,
+        target: 5,
+      },
+      {
+        id: 'frequentador',
+        category: 'vitoria' as const,
+        icon: '📅',
+        name: 'Frequentador',
+        desc: 'Completou 10 partidas no racha.',
+        status: presences >= 10 ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: presences >= 10 ? dateStr : null,
+        progress: presences,
+        target: 10,
+      },
+      {
+        id: 'patrimonio',
+        category: 'vitoria' as const,
+        icon: '🗿',
+        name: 'Patrimônio',
+        desc: 'Atingiu 50 presenças ao todo.',
+        status: presences >= 50 ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: presences >= 50 ? dateStr : null,
+        progress: presences,
+        target: 50,
+      },
+
+      // Presença e Pontualidade (category: 'presenca')
+      {
+        id: 'pontual',
+        category: 'presenca' as const,
+        icon: '⏰',
+        name: 'Pontual',
+        desc: '10 presenças confirmadas no grupo.',
+        status: presencesCount >= 10 ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: presencesCount >= 10 ? dateStr : null,
+        progress: presencesCount,
+        target: 10,
+      },
+      {
+        id: 'comprometido',
+        category: 'presenca' as const,
+        icon: '📲',
+        name: 'Comprometido',
+        desc: '25 presenças confirmadas no grupo.',
+        status: presencesCount >= 25 ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: presencesCount >= 25 ? dateStr : null,
+        progress: presencesCount,
+        target: 25,
+      },
+      {
+        id: 'fechamento',
+        category: 'presenca' as const,
+        icon: '🤝',
+        name: 'Fechamento',
+        desc: '15 rodadas sem cancelamento ou falta.',
+        status: (presencesCount >= 15 && absencesCount === 0) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: (presencesCount >= 15 && absencesCount === 0) ? dateStr : null,
+        progress: presencesCount,
+        target: 15,
+      },
+      {
+        id: 'inabalavel',
+        category: 'presenca' as const,
+        icon: '🌿',
+        name: 'Inabalável',
+        desc: 'Racha sem faltas ou atraso (mínimo 5 participações).',
+        status: (absencesCount === 0 && presencesCount >= 5) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: (absencesCount === 0 && presencesCount >= 5) ? dateStr : null,
+        progress: presencesCount,
+        target: 5,
+      },
+
+      // Ranking e Seleções (category: 'ranking')
+      {
+        id: 'top10_geral',
+        category: 'ranking' as const,
+        icon: '🥉',
+        name: 'Top 10 Geral',
+        desc: 'Está no Top 10 geral do racha.',
+        status: (rank > 0 && rank <= 10) ? ('Conquistado' as const) : ('Bloqueado' as const),
+        date: (rank > 0 && rank <= 10) ? dateStr : null,
+        progress: (rank > 0 && rank <= 10) ? 1 : 0,
+        target: 1,
+        customProg: rank > 0 ? `Rank #${rank}` : 'Sem Rank',
+      },
+      {
+        id: 'elite_fofim',
+        category: 'ranking' as const,
+        icon: '🥇',
+        name: 'Elite do Fofim',
+        desc: 'Está no Top 3 geral do racha.',
+        status: (rank > 0 && rank <= 3) ? ('Conquistado' as const) : ('Bloqueado' as const),
+        date: (rank > 0 && rank <= 3) ? dateStr : null,
+        progress: (rank > 0 && rank <= 3) ? 1 : 0,
+        target: 1,
+        customProg: rank > 0 ? `Rank #${rank}` : 'Sem Rank',
+      },
+      {
+        id: 'selecionavel',
+        category: 'ranking' as const,
+        icon: '⭐',
+        name: 'Selecionável',
+        desc: 'Média Técnica >= 3.8 com 5+ presenças.',
+        status: (ovr >= 3.8 && presences >= 5) ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: (ovr >= 3.8 && presences >= 5) ? dateStr : null,
+        progress: presences,
+        target: 5,
+      },
+      {
+        id: 'rei_do_racha',
+        category: 'ranking' as const,
+        icon: '👑',
+        name: 'Rei do Racha',
+        desc: 'Líder do ranking da temporada (Rank #1).',
+        status: rank === 1 ? ('Conquistado' as const) : ('Bloqueado' as const),
+        date: rank === 1 ? dateStr : null,
+        progress: rank === 1 ? 1 : 0,
+        target: 1,
+        secret: true,
+      }
+    ];
+
+    if (isGk) {
+      list.push(
+        {
+          id: 'primeira_defesa',
+          category: 'resenha' as const,
+          icon: '🧤',
+          name: 'Primeira Defesa',
+          desc: 'Estreou como goleiro oficial.',
+          status: presences >= 1 ? ('Conquistado' as const) : ('Bloqueado' as const),
+          date: presences >= 1 ? dateStr : null,
+          progress: presences,
+          target: 1,
+        },
+        {
+          id: 'muralha',
+          category: 'resenha' as const,
+          icon: '🧱',
+          name: 'Muralha',
+          desc: 'Completou 5 partidas no gol.',
+          status: presences >= 5 ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+          date: presences >= 5 ? dateStr : null,
+          progress: presences,
+          target: 5,
+        },
+        {
+          id: 'fortaleza',
+          category: 'resenha' as const,
+          icon: '🏰',
+          name: 'Fortaleza',
+          desc: 'Completou 15 partidas no gol.',
+          status: presences >= 15 ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+          date: presences >= 15 ? dateStr : null,
+          progress: presences,
+          target: 15,
+        },
+        {
+          id: 'insuperavel',
+          category: 'resenha' as const,
+          icon: '👽',
+          name: 'Insuperável',
+          desc: 'Completou 30 partidas no gol.',
+          status: presences >= 30 ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+          date: presences >= 30 ? dateStr : null,
+          progress: presences,
+          target: 30,
+        }
+      );
+    } else {
+      list.push(
+        {
+          id: 'pelo_churrasco',
+          category: 'resenha' as const,
+          icon: '🍺',
+          name: 'Só Pelo Churrasco',
+          desc: 'Categoria Reserva, ou Média Técnica < 3.2.',
+          status: (player.category === 'reserva' || (ovr < 3.2 && presences >= 1)) ? ('Conquistado' as const) : ('Bloqueado' as const),
+          date: (player.category === 'reserva' || (ovr < 3.2 && presences >= 1)) ? dateStr : null,
+          progress: (player.category === 'reserva' || (ovr < 3.2 && presences >= 1)) ? 1 : 0,
+          target: 1,
+        },
+        {
+          id: 'figura_carimbada',
+          category: 'resenha' as const,
+          icon: '😂',
+          name: 'Figura Carimbada',
+          desc: 'Completou 15 partidas no racha.',
+          status: presences >= 15 ? ('Conquistado' as const) : (presences > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+          date: presences >= 15 ? dateStr : null,
+          progress: presences,
+          target: 15,
+        },
+        {
+          id: 'turista',
+          category: 'resenha' as const,
+          icon: '🚌',
+          name: 'Turista',
+          desc: 'Esteve em menos de 5 jogos com a galera.',
+          status: (presences > 0 && presences < 5) ? ('Conquistado' as const) : ('Bloqueado' as const),
+          date: (presences > 0 && presences < 5) ? dateStr : null,
+          progress: presences,
+          target: 5,
+        },
+        {
+          id: 'pipoqueiro',
+          category: 'resenha' as const,
+          icon: '🐸',
+          name: 'Pipoqueiro',
+          desc: 'Guerreiro fujão: possui 3 ou mais faltas anotadas.',
+          status: absencesCount >= 3 ? ('Conquistado' as const) : (absencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+          date: absencesCount >= 3 ? dateStr : null,
+          progress: absencesCount,
+          target: 3,
+          secret: true,
+        }
+      );
+    }
+
+    return list;
+  };
 
   return (
     <div
       id={`player-card-${player.id}`}
-      className={`relative w-full h-[460px] select-none transition-all duration-300 ${
+      className={`relative w-full h-[495px] select-none transition-all duration-300 ${
         isSoftDeleted ? 'opacity-65 grayscale' : ''
       }`}
-      style={{ perspective: '1000px' }}
     >
-      {/* 3D Rotating card element */}
       <div
-        className="relative w-full h-full cursor-pointer transition-transform duration-500 ease-out"
-        style={{
-          transformStyle: 'preserve-3d',
-          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
-        }}
-        onClick={() => setIsFlipped(!isFlipped)}
+        className={`w-full h-full rounded-2xl border bg-gradient-to-b ${rarityTheme.bgGradient} ${rarityTheme.borderColor} ${rarityTheme.cardGlow} p-4 flex flex-col justify-between overflow-hidden relative shadow-2xl`}
       >
-        
-        {/* ========================================== */}
-        {/* FRONT SIDE (FRENTE - FIFA FUT STYLE CARD)  */}
-        {/* ========================================== */}
+        {/* Favorite Team color accent top bar */}
         <div
-          className={`absolute inset-0 w-full h-full rounded-2xl border bg-gradient-to-b ${rarityTheme.bgGradient} ${rarityTheme.borderColor} ${rarityTheme.cardGlow} p-4 flex flex-col justify-between overflow-hidden`}
-          style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-          }}
-        >
-          {/* Favorite Team color accent top bar */}
-          <div
-            className="absolute top-0 left-0 right-0 h-1.5"
-            style={{ backgroundColor: team?.colorHex || '#22c55e' }}
-          />
+          className="absolute top-0 left-0 right-0 h-1.5 z-20"
+          style={{ backgroundColor: team?.colorHex || '#22c55e' }}
+        />
 
-          {/* Toast Notification inside card */}
-          {saveSuccessMsg && (
-            <div className="absolute top-3 left-3 right-3 z-50 bg-zinc-950/95 border border-amber-500/50 rounded-lg p-2 text-amber-200 text-center font-bold text-xs shadow-2xl animate-pulse">
-              {saveSuccessMsg}
+        {/* Toast Notification inside card */}
+        {saveSuccessMsg && (
+          <div className="absolute top-3 left-3 right-3 z-50 bg-zinc-950/95 border border-amber-500/50 rounded-lg p-2 text-amber-200 text-center font-bold text-xs shadow-2xl animate-pulse font-mono">
+            {saveSuccessMsg}
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* FACE CARD CONTENT CONTAINER               */}
+        {/* ========================================== */}
+        <div className="flex-1 flex flex-col overflow-hidden justify-start pt-1.5 w-full">
+          
+          {/* FACE 1: CARD PRINCIPAL */}
+          {faceIndex === 0 && (
+            <div className="flex-1 flex flex-col justify-between animate-fade-in">
+              {/* Header Panel */}
+              <div className="flex justify-between items-start mt-1 px-0.5">
+                <div className="flex flex-col items-start leading-none">
+                  <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase select-none mb-0.5">OVR</span>
+                  <span className={`text-3xl font-display font-black leading-none ${rarityTheme.ovrColor} tracking-tighter`}>
+                    {displayOvr}
+                  </span>
+                  <span className="text-[11px] font-mono font-black text-white/95 uppercase tracking-wide mt-1.5 leading-none">
+                    {POSITION_LABELS[player.primaryPosition].toUpperCase()}
+                  </span>
+                  <span className="text-[9px] font-mono font-bold text-zinc-400 uppercase mt-1 leading-none tracking-tight">
+                    {CATEGORY_LABELS[player.category].toUpperCase()}
+                  </span>
+                </div>
+
+                <div className="flex flex-col items-end">
+                  {rachaStats?.rank ? (
+                    <div className="text-xl font-display font-black text-amber-400 font-mono tracking-tighter bg-amber-950/45 px-2.5 py-1 rounded-xl border border-yellow-500/15 animate-bounce">
+                      #{rachaStats.rank}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Centered Profile Avatar */}
+              <div className="flex flex-col items-center justify-center -mt-1 mb-1 relative">
+                <div 
+                  style={getClubMolduraStyle(player.favoriteTeamId || '')}
+                  className="relative w-36 h-36 rounded-2xl overflow-hidden border-2 flex items-center justify-center shadow-2xl group transition-all duration-300"
+                >
+                  {avatarToDisplay ? (
+                    <img
+                      src={avatarToDisplay}
+                      alt={player.name}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover select-none transition duration-300 group-hover:scale-105"
+                    />
+                  ) : (
+                    <User className="w-16 h-16 text-zinc-700" />
+                  )}
+                  
+                  {/* Status processing overlays */}
+                  {player.avatarStatus === 'PROCESSANDO' && (
+                    <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center gap-1.5 z-10">
+                      <div className="w-5 h-5 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[8px] font-sans font-extrabold text-emerald-400 tracking-wider">⏳ Gerando Avatar Gamer...</span>
+                    </div>
+                  )}
+
+                  {player.avatarStatus === 'PENDENTE' && (
+                    <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center gap-1.5 z-10">
+                      <div className="w-4 h-4 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-[8px] font-sans font-extrabold text-amber-400 tracking-wider">⏳ Aguardando processamento</span>
+                    </div>
+                  )}
+
+                  {player.avatarStatus === 'ERRO' && (
+                    <div className="absolute bottom-1 left-1.5 bg-zinc-900 border border-zinc-800 text-[8px] font-medium text-zinc-450 px-1.5 py-0.5 rounded-full shadow z-10">
+                      ⚠ Utilizando foto original
+                    </div>
+                  )}
+
+                  {/* Gamer badge indicator */}
+                  {(player.avatarStatus === 'CONCLUÍDO' &&
+                   player.avatarCard &&
+                   player.avatarCard !== (player.avatarOriginal || player.photoOriginal)) && (
+                    <div className="absolute bottom-1 left-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-[8px] font-sans font-extrabold text-black px-1.5 py-0.5 rounded-full shadow border border-white/20 z-10">
+                      ⚡ CARD IA
+                    </div>
+                  )}
+
+                  {/* Admin quick regenerator */}
+                  {canEdit && (player.avatarOriginal || player.photoOriginal) && 
+                   (!player.avatarStatus || player.avatarStatus === 'ERRO' || player.avatarStatus === 'CONCLUÍDO') && (
+                    <button
+                      type="button"
+                      onClick={handleRegenerateAvatar}
+                      disabled={isRegenerating}
+                      className="absolute top-1 left-1 bg-black/90 hover:bg-emerald-950 p-1.5 rounded-full border border-zinc-800 hover:border-emerald-500/50 text-zinc-450 hover:text-emerald-400 transition shadow-lg z-20 cursor-pointer flex items-center justify-center"
+                      title="Regenerar Avatar Gamer"
+                    >
+                      <RotateCcw className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin text-emerald-400' : ''}`} />
+                    </button>
+                  )}
+                  
+                  {/* Escudo do Clube */}
+                  <div 
+                    className="absolute top-1.5 right-1.5 bg-black/95 p-0.5 rounded-full border border-white/20 shadow-md transform group-hover:scale-110 transition duration-150"
+                    title={`${team ? team.name : 'Clube'}`}
+                  >
+                    <ClubShield clubId={player.favoriteTeamId} className="w-5 h-5" />
+                  </div>
+
+                  {/* Rarity Shield corner logo overlay */}
+                  <div 
+                    className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center border border-white/20 select-none shadow animate-pulse"
+                    style={{ backgroundColor: rarityTheme.shieldColor }}
+                    title={rarityTheme.badgeText}
+                  >
+                    <Zap className="w-3 h-3 text-black fill-black" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Player Identity */}
+              <div className="text-center mt-1">
+                <h3 className="font-sans font-black text-lg text-white tracking-tight uppercase leading-tight px-1 truncate drop-shadow-md">
+                  {player.name}
+                </h3>
+                <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-zinc-400 to-transparent mx-auto mt-0.5" />
+              </div>
+
+              {/* Availability tag */}
+              <div className="flex justify-center mt-1">
+                <span className={`text-[9px] font-mono font-extrabold px-3 py-0.5 rounded border shadow-sm ${
+                  isSoftDeleted 
+                    ? 'bg-zinc-950/80 border-zinc-850 text-zinc-500' 
+                    : STATUS_COLORS[player.status]
+                }`}>
+                  [ {isSoftDeleted ? 'INATIVO' : STATUS_LABELS[player.status].toUpperCase()} ]
+                </span>
+              </div>
+
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-3 gap-1 bg-black/75 border border-zinc-900 p-2.5 rounded-xl font-mono text-[10px] text-center mx-1 shadow-inner mt-2">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-zinc-500 font-bold text-[8.5px] uppercase mb-0.5">🏆 Vitórias</span>
+                  <span className="font-extrabold text-emerald-400 text-sm leading-none">{rachaStats?.vitorias || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center border-x border-zinc-900">
+                  <span className="text-zinc-505 font-bold text-[8.5px] uppercase mb-0.5">⚽ Partidas</span>
+                  <span className="font-extrabold text-white text-sm leading-none">{rachaStats?.presences || 0}</span>
+                </div>
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-zinc-505 font-bold text-[8.5px] uppercase mb-0.5 font-mono">📈 Aproveit.</span>
+                  <span className="font-extrabold text-sky-400 text-sm leading-none">{rachaStats ? `${rachaStats.aproveitamento}%` : '0%'}</span>
+                </div>
+              </div>
             </div>
           )}
 
-          {/* FUT Shield layout top section */}
-          <div className="flex justify-between items-start mt-2">
-            
-            {/* OVR & Badge panel (Left) */}
-            <div className="flex flex-col items-center">
-              <span className={`text-3xl font-display font-black leading-none ${rarityTheme.ovrColor} tracking-tighter`}>
-                {displayOvr}
-              </span>
-              <span className="text-[10px] font-mono font-black text-white/90 uppercase tracking-widest mt-0.5 leading-none">
-                {getPositionAbbreviation(player.primaryPosition)}
-              </span>
-              <div className="w-4 h-px bg-white/20 my-1" />
-              <span className="text-[10px]" title="Nacionalidade">🇧🇷</span>
-              
-              {/* Club name tag */}
-              <div 
-                className="text-[8px] font-mono font-extrabold px-1 py-0.5 rounded border border-white/10 text-white mt-1.5 leading-none uppercase"
-                style={{ backgroundColor: team?.colorHex || '#52525b' }}
-              >
-                {team ? team.name.substring(0, 3) : 'FOF'}
+          {/* FACE 2: ATRIBUTOS */}
+          {faceIndex === 1 && (
+            <div className="flex-1 flex flex-col justify-between animate-fade-in">
+              <div className="text-center mt-1 pb-1 border-b border-zinc-900/40">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase block">Atributos de Desempenho</span>
+                <span className={`text-xs font-sans font-black uppercase tracking-tight text-white mt-0.5 block truncate`}>
+                  {player.name}
+                </span>
               </div>
 
-              {/* Dominant feet indicator */}
-              <span className="text-[7px] font-mono text-zinc-400 mt-1 uppercase tracking-tight">
-                {player.peDominante === 'Esquerdo' ? 'LEF' : player.peDominante === 'Ambidestro' ? 'AMB' : 'RGT'}
-              </span>
-              
-              {/* Card Rarity label */}
-              <span className={`text-[7px] px-1 py-0.5 rounded uppercase font-bold tracking-tighter mt-1.5 ${rarityTheme.badgeRarity}`}>
-                {rarity === 'lendaria' ? 'LND' : rarity === 'ouro' ? 'GOL' : rarity === 'prata' ? 'SLV' : 'BRZ'}
-              </span>
-            </div>
-
-            {/* Giant Jersey Number or Favorite Number with subtle styling (Right top) */}
-            <div className="flex flex-col items-end">
-              <div className="text-3xl font-display font-black text-white/5 font-mono select-none -mr-1">
-                #{player.numeroFavorito || 10}
-              </div>
-              <span className={`text-[9px] px-2 py-0.5 rounded border ${STATUS_COLORS[player.status]} font-bold font-mono tracking-tight`}>
-                {STATUS_LABELS[player.status]}
-              </span>
-            </div>
-
-          </div>
-
-          {/* Centered Profile Avatar/Athlete section with premium club framing and crest */}
-          <div className="flex flex-col items-center justify-center -mt-6 mb-1 relative">
-            <div 
-              style={getClubMolduraStyle(player.favoriteTeamId || '')}
-              className="relative w-28 h-28 rounded-xl overflow-hidden border-2 flex items-center justify-center shadow-2xl group transition-all duration-300"
-            >
-              {avatarToDisplay ? (
-                <img
-                  src={avatarToDisplay}
-                  alt={player.name}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover select-none transition duration-300 group-hover:scale-105"
-                />
-              ) : (
-                <User className="w-14 h-14 text-zinc-700" />
-              )}
-              
-              {/* Escudo do Clube (Floating Badge) */}
-              <div 
-                className="absolute top-1 right-1 bg-black/90 p-0.5 rounded-full border border-white/20 shadow-md transform group-hover:scale-110 transition duration-150"
-                title={`${team ? team.name : 'Clube'}`}
-              >
-                <ClubShield clubId={player.favoriteTeamId} className="w-4.5 h-4.5" />
-              </div>
-
-              {/* Rarity Shield corner logo overlay (Bottom-Right) */}
-              <div 
-                className="absolute bottom-1 right-1 w-4 h-4 rounded-full flex items-center justify-center border border-white/20 select-none shadow"
-                style={{ backgroundColor: rarityTheme.shieldColor }}
-                title={rarityTheme.badgeText}
-              >
-                <Zap className="w-2.5 h-2.5 text-black fill-black" />
-              </div>
-            </div>
-          </div>
-
-          {/* Player Identity Block */}
-          <div className="text-center">
-            <h3 className="font-sans font-black text-base text-white tracking-tight uppercase leading-tight px-1 truncate">
-              {player.name}
-            </h3>
-            <div className="w-12 h-0.5 bg-gradient-to-r from-transparent via-zinc-400 to-transparent mx-auto mt-1" />
-          </div>
-
-          {/* FUT 6 Attributes Dashboard (Classic Grid) */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-black/60 border border-zinc-900 p-2 rounded-lg font-mono text-[10px] leading-snug mx-1.5 shadow-inner">
-            {isGoalkeeper ? (
-              <>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">DIV (Sal)</span>
-                  <span className="font-extrabold text-amber-400">{div}</span>
-                </div>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">REF (Ref)</span>
-                  <span className="font-extrabold text-amber-400">{ref}</span>
-                </div>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">HAN (Man)</span>
-                  <span className="font-extrabold text-[#38bdf8]">{han}</span>
-                </div>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">SPD (Vel)</span>
-                  <span className="font-extrabold text-[#38bdf8]">{spd}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">KIC (Rep)</span>
-                  <span className="font-extrabold text-emerald-400">{kic}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">POS (Pos)</span>
-                  <span className="font-extrabold text-emerald-400">{posGK}</span>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">PAC (Rit)</span>
-                  <span className="font-extrabold text-purple-400">{pac}</span>
-                </div>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">DRI (Dri)</span>
-                  <span className="font-extrabold text-purple-400">{dri}</span>
-                </div>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">SHO (Fin)</span>
-                  <span className="font-extrabold text-amber-500">{sho}</span>
-                </div>
-                <div className="flex justify-between border-b border-zinc-850 py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">DEF (Mar)</span>
-                  <span className="font-extrabold text-amber-500">{defVal}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">PAS (Pas)</span>
-                  <span className="font-extrabold text-[#4ade80]">{pas}</span>
-                </div>
-                <div className="flex justify-between py-0.5">
-                  <span className="text-zinc-500 uppercase tracking-tight">PHY (Fis)</span>
-                  <span className="font-extrabold text-[#4ade80]">{phy}</span>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Action Footer persistent controls */}
-          <div className="mt-1">
-            <div className="text-center mb-1.5">
-              <span className="inline-flex items-center gap-1 text-[8.5px] font-bold font-mono text-zinc-500 hover:text-zinc-400 select-none bg-zinc-900/60 px-2.5 py-0.5 rounded border border-zinc-850">
-                <RotateCcw className="w-2.5 h-2.5 text-zinc-500 animate-pulse" /> 3D Flip • Estatísticas Completas
-              </span>
-            </div>
-
-            {/* Admin control panel footer inside the card container */}
-            <div className="pt-2 border-t border-zinc-900 flex items-center justify-between gap-1">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEvalModalOpen(true);
-                }}
-                className="px-2 py-1 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded-lg text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1 cursor-pointer"
-              >
-                <Award className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Avaliar</span>
-              </button>
-
-              {/* On-demand generator trigger & Edit buttons */}
-              {canEdit && (
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  
-                  {/* Manual AI sports avatar reconstruction button */}
-                  {!isSoftDeleted && (
-                    <button
-                      onClick={handleRegenerateAvatar}
-                      disabled={isRegenerating}
-                      className="p-1 px-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-emerald-400 rounded-lg border border-zinc-800 transition-all text-[10px] flex items-center gap-1 cursor-pointer"
-                      title="Gerar / Recriar Avatar Inteligente"
-                    >
-                      <Sparkles className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin' : ''}`} />
-                    </button>
-                  )}
-
-                  {isSoftDeleted ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRestore && onRestore(player.id);
-                      }}
-                      className="px-2 py-1 bg-emerald-600/10 hover:bg-emerald-600/20 text-[#4ade80] border border-emerald-500/20 rounded-lg transition-all text-[10px] font-medium flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Reativar</span>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(player);
-                        }}
-                        className="p-1 px-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 rounded-lg border border-zinc-800 transition-all text-[10px] flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                        <span>Editar</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onInactivate(player.id);
-                        }}
-                        className="p-1 px-1.5 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/15 hover:border-rose-500/35 text-rose-400 rounded-lg transition-all text-[10px] flex items-center justify-center cursor-pointer"
-                        title="Inativar Jogador"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* ========================================== */}
-        {/* BACK SIDE (VERSO - COMPREHENSIVE RECORDS)  */}
-        {/* ========================================== */}
-        <div
-          className={`absolute inset-0 w-full h-full rounded-2xl border bg-zinc-950 ${rarityTheme.borderColor} p-4 flex flex-col justify-between overflow-hidden`}
-          style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)',
-          }}
-        >
-          {/* Favorite Team color accent top bar */}
-          <div
-            className="absolute top-0 left-0 right-0 h-1.5"
-            style={{ backgroundColor: team?.colorHex || '#22c55e' }}
-          />
-
-          {/* Tab Selection Header */}
-          <div className="flex bg-zinc-900/50 p-0.5 rounded-lg border border-zinc-850 text-[9.5px] items-center text-center">
-            {(['geral', 'atributos', 'historico', 'conquistas'] as const).map((tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveTab(tab);
-                }}
-                className={`flex-1 py-1 rounded capitalize font-mono font-extrabold transition-all duration-150 cursor-pointer ${
-                  activeTab === tab
-                    ? 'bg-zinc-800 text-emerald-400 border border-zinc-700/50 shadow'
-                    : 'text-zinc-500 hover:text-zinc-300'
-                }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* TAB CONTENTS (Fixed Height, scrollable inside when necessary to prevent card size shifts) */}
-          <div className="flex-1 my-3 overflow-y-auto pr-1 select-text scrollbar-thin scrollbar-thumb-zinc-800">
-            
-            {/* 1. TAB GERAL */}
-            {activeTab === 'geral' && (
-              <div className="space-y-1.5 font-mono text-[10px] animate-fadeIn">
-                <div className="grid grid-cols-2 gap-1.5">
-                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
-                    <span className="text-zinc-500">Ranking:</span>
-                    <span className="text-amber-400 font-extrabold">{rachaStats ? `#${rachaStats.rank}` : '--'}</span>
-                  </div>
-                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
-                    <span className="text-zinc-500">Vitórias:</span>
-                    <span className="text-emerald-400 font-bold">{rachaStats?.vitorias || 0}</span>
-                  </div>
-                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
-                    <span className="text-zinc-500">Derrotas:</span>
-                    <span className="text-rose-400 font-bold">
-                      {rachaStats ? (rachaStats.presences - rachaStats.vitorias) : 0}
-                    </span>
-                  </div>
-                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
-                    <span className="text-zinc-500">Presenças:</span>
-                    <span className="text-zinc-200 font-bold">{rachaStats?.presences || 0}</span>
-                  </div>
-                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
-                    <span className="text-zinc-500">Faltas:</span>
-                    <span className="text-amber-500 font-bold">{metrics?.absencesCount || 0}</span>
-                  </div>
-                  <div className="bg-zinc-900/40 p-1.5 rounded border border-zinc-900/60 flex justify-between items-center">
-                    <span className="text-zinc-500">Aproveitam.:</span>
-                    <span className="text-sky-400 font-bold">{rachaStats ? `${rachaStats.aproveitamento}%` : '0%'}</span>
-                  </div>
-                </div>
-
-                <div className="bg-zinc-900/20 p-2 rounded-lg border border-zinc-905 space-y-1">
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-400 font-bold">🔥 Seq. Atual:</span>
-                    <span className="text-amber-500 font-bold">{rachaStats ? `${rachaStats.currentStreak}V` : '0V'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-400 font-bold">👑 Melhor Seq.:</span>
-                    <span className="text-rose-400 font-bold">{rachaStats ? `${rachaStats.maxStreak}V` : '0V'}</span>
-                  </div>
-                </div>
-
-                {player.email && (
-                  <div className="bg-zinc-900/25 p-2 rounded-lg border border-zinc-905 text-zinc-400 flex flex-col pt-1.5">
-                    <span className="text-[8px] uppercase text-zinc-500 leading-none mb-1">Contato/E-mail</span>
-                    <span className="truncate text-zinc-350">{player.email}</span>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* 2. TAB ATRIBUTOS */}
-            {activeTab === 'atributos' && (
-              <div className="space-y-1 font-mono text-[11px] animate-fadeIn">
+              <div className="grid grid-cols-2 gap-x-2.5 gap-y-2 bg-black/50 border border-zinc-900/60 rounded-xl p-2.5 my-auto shadow-inner">
                 {(player.primaryPosition === 'goleiro' ? GOALKEEPER_ATTRIBUTES : LINE_ATTRIBUTES).map((attr) => {
-                  const rating = getAttributeAverage(attr.id);
+                  const rating = getAttributeAverage(attr.id) || 3.5;
                   return (
-                    <div key={attr.id} className="flex justify-between items-center py-1 border-b border-zinc-900/60">
-                      <span className="text-zinc-350 font-sans">{attr.label}</span>
-                      {renderAttrStars(rating)}
+                    <div key={attr.id} className="flex flex-col justify-between p-1.5 rounded bg-zinc-950/45 border border-zinc-900/40">
+                      <span className="text-zinc-405 font-sans font-semibold text-[9.5px] mb-1 leading-tight tracking-tight uppercase truncate">{attr.label}</span>
+                      {renderBackAttrStars(rating)}
                     </div>
                   );
                 })}
-                <div className="mt-2.5 p-1.5 bg-emerald-500/5 border border-emerald-500/10 rounded text-center">
-                  <span className="text-[9px] text-zinc-505 block font-sans">Nota Geral de Avaliações</span>
-                  <span className="text-sm font-mono font-black text-emerald-400">
-                    {metrics?.overall ? metrics.overall.toFixed(2) : '3.5'}
+              </div>
+
+              {/* Small info footer of face 2 */}
+              <div className="text-center text-[8px] font-mono text-zinc-505 mt-1 uppercase">
+                Baseado em {metrics?.evalCount || 0} avaliações do grupo
+              </div>
+            </div>
+          )}
+
+          {/* FACE 3: ESTATÍSTICAS PESSOAIS */}
+          {faceIndex === 2 && (
+            <div className="flex-1 flex flex-col justify-between animate-fade-in">
+              <div className="text-center mt-1 pb-1 border-b border-zinc-900/40">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-400 uppercase block">Histórico Individual</span>
+                <span className={`text-xs font-sans font-black uppercase tracking-tight text-white mt-0.5 block truncate`}>
+                  {player.name}
+                </span>
+              </div>
+
+              {/* Personal stats grid list */}
+              <div className="grid grid-cols-3 gap-1.5 bg-black/45 border border-zinc-900/50 rounded-xl p-2 my-auto shadow-inner">
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center">
+                  <span className="text-[7.5px] font-mono text-zinc-505 font-bold uppercase mb-1">Vitórias</span>
+                  <span className="text-xs font-mono font-black text-emerald-400 leading-none">{personalHistory.vitorias}</span>
+                </div>
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center">
+                  <span className="text-[7.5px] font-mono text-zinc-550 font-bold uppercase mb-1">Empates</span>
+                  <span className="text-xs font-mono font-black text-amber-500 leading-none">{personalHistory.empates}</span>
+                </div>
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center">
+                  <span className="text-[7.5px] font-mono text-zinc-550 font-bold uppercase mb-1">Derrotas</span>
+                  <span className="text-xs font-mono font-black text-rose-500 leading-none">{personalHistory.derrotas}</span>
+                </div>
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center">
+                  <span className="text-[7.5px] font-mono text-zinc-550 font-bold uppercase mb-1">Partidas</span>
+                  <span className="text-xs font-mono font-black text-zinc-350 leading-none">{personalHistory.presences}</span>
+                </div>
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center col-span-2">
+                  <span className="text-[7.5px] font-mono text-zinc-550 font-bold uppercase mb-1">Aproveitamento Real</span>
+                  <span className="text-xs font-mono font-black text-sky-400 leading-none animate-pulse">
+                    {personalHistory.presences > 0 ? Math.round((personalHistory.vitorias / personalHistory.presences) * 100) : 0}%
+                  </span>
+                </div>
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center col-span-1.5">
+                  <span className="text-[7.5px] font-mono text-zinc-550 font-bold uppercase mb-1">Racha Atual</span>
+                  <span className="text-xs font-mono font-black text-amber-400 leading-none">
+                    {rachaStats?.currentStreak || 0} 🔥
+                  </span>
+                </div>
+                <div className="bg-zinc-950/50 border border-zinc-900/40 p-1.5 rounded flex flex-col items-center col-span-1.5">
+                  <span className="text-[7.5px] font-mono text-zinc-500 font-bold uppercase mb-1">Melhor Racha</span>
+                  <span className="text-xs font-mono font-black text-yellow-500 leading-none">
+                    {rachaStats?.maxStreak || player.maxStreak || 0} 👑
                   </span>
                 </div>
               </div>
-            )}
 
-            {/* 3. TAB HISTÓRICO */}
-            {activeTab === 'historico' && (
-              <div className="space-y-3 font-mono text-[10px] animate-fadeIn">
-                
-                {/* Last matches visual representation ✅ ✅ ❌ ✅ */}
-                <div>
-                  <span className="block text-[8px] font-mono font-bold text-zinc-550 uppercase tracking-wider mb-1.5">Últimos Rachas</span>
-                  {metrics?.lastParticipations && metrics.lastParticipations.length > 0 ? (
-                    <div className="flex items-center justify-around bg-zinc-900/20 border border-zinc-900 p-2 rounded-lg">
-                      {metrics.lastParticipations.slice(0, 5).map((part: any, idx: number) => {
-                        const isConfirmed = part.status === 'confirmado';
-                        const isFirstAndstreakWon = idx === 0 && rachaStats?.currentStreak > 0;
-                        return (
-                          <div key={idx} className="flex flex-col items-center">
-                            <span 
-                              className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] select-none ${
-                                isConfirmed 
-                                  ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' 
-                                  : 'bg-rose-500/10 border border-rose-500/20 text-rose-400'
-                              }`}
-                              title={`Partida em ${part.date.split('-').reverse().join('/')}`}
-                            >
-                              {isConfirmed ? (isFirstAndstreakWon ? '🏆' : '✅') : '❌'}
-                            </span>
-                            <span className="text-[7.5px] font-mono text-zinc-650 mt-1">
-                              {part.date ? part.date.split('-').reverse().slice(0, 2).join('/') : ''}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <p className="text-[9px] text-zinc-605 font-mono italic text-center py-1">Sem histórico de rachas disponível.</p>
-                  )}
-                </div>
-
-                {/* Sparkling chart for overalls */}
-                {metrics?.history && metrics.history.length >= 2 && (
-                  <div className="bg-zinc-900/20 p-2 rounded-lg border border-zinc-900 space-y-1">
-                    <span className="block text-[8px] font-mono font-bold text-zinc-550 uppercase tracking-wider">Evolução do Over</span>
-                    <div className="pt-1 select-none">
-                      {renderSparkline(metrics.history)}
-                    </div>
-                  </div>
-                )}
-
-                {/* Transitions timeline log summary */}
-                <div className="bg-zinc-900/10 p-2 rounded border border-zinc-900 text-zinc-500 text-[8.5px] leading-tight space-y-0.5">
-                  <span className="block font-bold text-zinc-440 text-[8px] uppercase tracking-wider mb-1">Status de Categoria</span>
-                  <div className="flex justify-between">
-                    <span>Categoria:</span>
-                    <span className="text-zinc-350 font-bold uppercase">{CATEGORY_LABELS[player.category]}</span>
-                  </div>
-                  {categoryHistory && categoryHistory.length > 0 && (
-                    <div className="flex justify-between pt-1 border-t border-zinc-900 mt-1">
-                      <span>Último ajuste:</span>
-                      <span>{new Date(categoryHistory[0].date).toLocaleDateString('pt-BR')}</span>
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            )}
-
-            {/* 4. TAB CONQUISTAS */}
-            {activeTab === 'conquistas' && (
-              <div className="space-y-3 animate-fadeIn">
-                {/* Trophy collection grids */}
-                <div className="grid grid-cols-5 gap-1.5 justify-items-center">
-                  {getAchievementsForPlayer(player, rachaStats, allStats).map((ach) => {
-                    let tierColor = 'border-zinc-800 text-zinc-655 bg-zinc-900/30';
-                    if (ach.earned) {
-                      if (ach.category === 'bronze') tierColor = 'border-amber-700/60 bg-amber-900/15 text-amber-500 shadow-[0_0_8px_rgba(217,119,6,0.1)]';
-                      else if (ach.category === 'prata') tierColor = 'border-zinc-500/50 bg-zinc-700/15 text-zinc-250 shadow-[0_0_8px_rgba(113,113,122,0.1)]';
-                      else if (ach.category === 'ouro') tierColor = 'border-yellow-500/50 bg-yellow-950/20 text-yellow-400 shadow-[0_0_8px_rgba(234,179,8,0.15)]';
-                      else if (ach.category === 'lendaria') tierColor = 'border-purple-500/50 bg-purple-950/25 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.25)]';
+              {/* Latest 5 Racha trends */}
+              <div className="bg-zinc-955/60 border border-zinc-900 rounded-xl p-2.5">
+                <span className="text-[9px] font-mono font-extrabold text-zinc-405 tracking-wider text-center block mb-2 uppercase">
+                  ÚLTIMOS 5 RACHAS
+                </span>
+                <div className="flex justify-center gap-3">
+                  {personalHistory.recentResults.slice(-5).map((outcome, idx) => {
+                    let color = 'bg-zinc-900 border-zinc-800 text-zinc-500';
+                    let emoji = '⚪';
+                    let label = 'N/P';
+                    let textColor = 'text-zinc-550';
+                    if (outcome === 'V') {
+                      color = 'bg-emerald-955/45 border-emerald-500/25 text-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.15)]';
+                      emoji = '🟢';
+                      label = 'VIT';
+                      textColor = 'text-emerald-405';
+                    } else if (outcome === 'D') {
+                      color = 'bg-rose-955/20 border-rose-500/15 text-rose-455';
+                      emoji = '🔴';
+                      label = 'DER';
+                      textColor = 'text-rose-455';
+                    } else if (outcome === 'E') {
+                      color = 'bg-amber-955/40 border-amber-500/15 text-amber-500';
+                      emoji = '🟡';
+                      label = 'EMP';
+                      textColor = 'text-amber-550';
                     }
-
                     return (
-                      <div
-                        key={ach.id}
-                        className={`w-10 h-10 rounded-lg border flex items-center justify-center text-lg relative group transition-all duration-300 ${tierColor} ${
-                          ach.earned ? 'opacity-100 scale-102' : 'opacity-25 grayscale hover:opacity-80'
-                        }`}
-                      >
-                        <span>{ach.icon}</span>
-                        {/* Hover Popup */}
-                        <div className="absolute bottom-full mb-1.5 hidden group-hover:flex flex-col items-center z-50 pointer-events-none">
-                          <div className="bg-zinc-950 text-white border border-zinc-805 p-2 rounded-lg shadow-2xl w-36 text-[9px] leading-relaxed relative text-center">
-                            <p className="font-bold text-white text-[9.5px] leading-none mb-1">{ach.title}</p>
-                            <p className="text-zinc-400 mb-1 leading-snug">{ach.description}</p>
-                            <span className="text-[7.5px] font-mono uppercase font-bold text-amber-500 block">
-                              {ach.category} • {ach.progress}/{ach.target}
-                            </span>
-                            {/* Down pointing small arrow */}
-                            <div className="absolute top-full left-1/2 -ml-1 border-4 border-transparent border-t-zinc-950 animate-bounce"></div>
-                          </div>
+                      <div key={idx} className="flex flex-col items-center gap-0.5">
+                        <div className={`w-7 h-7 rounded-full border flex items-center justify-center font-display font-semibold text-xs ${color}`}>
+                          {emoji}
                         </div>
+                        <span className={`text-[7.5px] font-mono font-bold ${textColor}`}>
+                          {label}
+                        </span>
                       </div>
                     );
                   })}
                 </div>
+              </div>
+            </div>
+          )}
 
-                <div className="p-2 bg-zinc-900/35 rounded-lg border border-zinc-900 flex justify-between items-center text-[9px] font-mono">
-                  <span className="text-zinc-550">Concluídas:</span>
-                  <span className="text-emerald-400 font-extrabold">
-                    {getAchievementsForPlayer(player, rachaStats, allStats).filter(a => a.earned).length} / {getAchievementsForPlayer(player, rachaStats, allStats).length}
+          {/* FACE 4: ESTATÍSTICAS NO GRUPO */}
+          {faceIndex === 3 && (
+            <div className="flex-1 flex flex-col justify-between animate-fade-in">
+              <div className="text-center mt-1 pb-1 border-b border-zinc-900/40">
+                <span className="text-[10px] font-mono font-bold tracking-widest text-zinc-405 uppercase block">Posicionamento Coletivo</span>
+                <span className={`text-xs font-sans font-black uppercase tracking-tight text-white mt-0.5 block truncate`}>
+                  {player.name}
+                </span>
+              </div>
+
+              {/* Group stats list rows */}
+              <div className="flex-1 my-auto flex flex-col justify-center space-y-1.5 bg-black/55 border border-zinc-900/60 rounded-xl p-3 shadow-inner">
+                <div className="flex justify-between items-center py-1 border-b border-zinc-900/25">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">🏅 Ranking Geral</span>
+                  <span className="font-mono text-amber-400 font-black text-xs">
+                    {rachaStats?.rank ? `#${rachaStats.rank}` : '--'}
                   </span>
                 </div>
+                <div className="flex justify-between items-center py-1 border-b border-zinc-900/25">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">🥇 Ranking da Posição</span>
+                  <span className="font-mono text-zinc-300 font-black text-xs">
+                    {getPositionRank() ? `#${getPositionRank()}` : '--'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-zinc-900/25">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">⭐ Média Técnica (OVR)</span>
+                  <span className="font-mono text-teal-400 font-black text-xs">
+                    {displayOvr} / 5.0
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-zinc-900/25">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">🗳️ Votos Computados</span>
+                  <span className="font-mono text-zinc-450 text-xs">
+                    {metrics?.evalCount || 0} avaliações
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-zinc-900/25">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">👥 Participações Ativas</span>
+                  <span className="font-mono text-zinc-300 text-xs">
+                    {rachaStats?.presences || 0} jogos
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 border-b border-zinc-900/25">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">🌟 All-Star Team</span>
+                  <span className={`font-mono font-black text-xs ${getIsAllStar() ? 'text-amber-400 animate-pulse' : 'text-zinc-650'}`}>
+                    {getIsAllStar() ? 'SELECIONADO 👑' : 'NÃO CONVOQ.'}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center py-1 last:border-0">
+                  <span className="text-zinc-405 font-sans text-[11px] font-medium">📅 Presenças Confirmadas</span>
+                  <span className="font-mono text-emerald-400 text-xs font-bold">
+                    {metrics?.presencesCount || 0} rodadas
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* FACE 5: CONQUISTAS E BADGES */}
+          {faceIndex === 4 && (() => {
+            const isGkLocal = player.primaryPosition === 'goleiro';
+            const allBadges = getBadges();
+            const totalBadges = allBadges.length;
+            const unlockedBadgesCount = allBadges.filter(b => b.status === 'Conquistado').length;
+            const overallProgressPercentage = totalBadges > 0 ? Math.round((unlockedBadgesCount / totalBadges) * 100) : 0;
+
+            const categoriesList = [
+              { id: 'all' as const, label: 'Todas' },
+              { id: 'vitoria' as const, label: 'Vitória' },
+              { id: 'presenca' as const, label: 'Presença' },
+              { id: 'ranking' as const, label: 'Ranking' },
+              { id: 'resenha' as const, label: isGkLocal ? 'Goleiro' : 'Resenha' }
+            ];
+
+            const filteredBadges = allBadges.filter(b => badgeFilter === 'all' || b.category === badgeFilter);
+            const selectedBadge = allBadges.find(b => b.id === selectedBadgeId) || filteredBadges[0] || allBadges[0];
+
+            return (
+              <div className="flex-1 flex flex-col justify-between animate-fade-in overflow-hidden h-full">
+                
+                {/* TOPO: PROGRESS BAR AND STATS */}
+                <div className="px-2 py-1.5 bg-black/40 border border-zinc-900/60 rounded-xl mb-1.5 flex-shrink-0">
+                  <div className="flex justify-between items-center text-[9px] font-mono font-black text-zinc-400 mb-1">
+                    <span className="tracking-wider">🏆 CONQUISTAS</span>
+                    <span className="text-amber-400">{unlockedBadgesCount} / {totalBadges} LIBERADAS ({overallProgressPercentage}%)</span>
+                  </div>
+                  <div className="w-full bg-zinc-950 h-2 rounded border border-zinc-900 overflow-hidden relative">
+                    <div 
+                      className="bg-gradient-to-r from-amber-500 via-yellow-400 to-emerald-500 h-full rounded transition-all duration-500 shadow-[0_0_8px_rgba(245,158,11,0.35)]"
+                      style={{ width: `${overallProgressPercentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* FILTROS DE CATEGORIAS */}
+                <div className="flex gap-1 overflow-x-auto pb-1.5 select-none no-scrollbar flex-shrink-0">
+                  {categoriesList.map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        setBadgeFilter(cat.id);
+                        const filtered = allBadges.filter(b => cat.id === 'all' || b.category === cat.id);
+                        if (filtered.length > 0) {
+                          setSelectedBadgeId(filtered[0].id);
+                        }
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[8px] font-extrabold font-mono transition duration-150 uppercase border flex-shrink-0 cursor-pointer ${
+                        badgeFilter === cat.id
+                          ? 'bg-amber-500/25 text-amber-300 border-amber-500/40 shadow-[0_0_6px_rgba(245,158,11,0.25)]'
+                          : 'bg-zinc-955/85 text-zinc-450 border-zinc-900/60 hover:text-zinc-300'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* MEDAL GALLERY COMPONENT */}
+                <div className="flex overflow-x-auto gap-2 py-1 select-none no-scrollbar w-full flex-nowrap md:grid md:grid-cols-4 md:gap-2 md:overflow-visible flex-shrink-0 min-h-[50px]">
+                  {filteredBadges.map((badge) => {
+                    const isSel = selectedBadge?.id === badge.id;
+                    const isUnlocked = badge.status === 'Conquistado';
+                    const isPrg = badge.status === 'Em progresso';
+                    const labelIcon = badge.secret && !isUnlocked ? '❓' : badge.icon;
+                    
+                    return (
+                      <button
+                        key={badge.id}
+                        type="button"
+                        onClick={() => setSelectedBadgeId(badge.id)}
+                        className={`relative w-10 h-10 rounded-full flex items-center justify-center border transition-all duration-200 transform flex-shrink-0 cursor-pointer ${
+                          isSel
+                            ? 'scale-105 z-10 border-amber-400 bg-amber-950/30 shadow-[0_0_8px_rgba(250,204,21,0.4)]'
+                            : isUnlocked
+                              ? 'border-zinc-805 bg-zinc-900/40 shadow-[0_0_4px_rgba(16,185,129,0.15)]'
+                              : isPrg
+                                ? 'border-zinc-850 bg-zinc-955/75 saturate-[0.6]'
+                                : 'border-zinc-905 bg-zinc-955/95 saturate-0 opacity-45'
+                        }`}
+                        title={badge.name}
+                      >
+                        {isUnlocked && (
+                          <div className="absolute -top-0.5 -right-0.5 bg-emerald-500 text-[6px] text-zinc-950 font-sans font-black w-3.5 h-3.5 rounded-full flex items-center justify-center border border-zinc-950 select-none shadow">
+                            ✔
+                          </div>
+                        )}
+                        {isPrg && (
+                          <div className="absolute -bottom-0.5 -right-0.5 bg-amber-500 text-[6px] text-zinc-950 font-sans font-black w-3.5 h-3.5 rounded-full flex items-center justify-center border border-zinc-950 select-none shadow animate-pulse">
+                            ★
+                          </div>
+                        )}
+                        <span className="text-base select-none filter drop-shadow">
+                          {labelIcon}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* DETALHES DA BADGE SELECIONADA */}
+                {selectedBadge && (() => {
+                  const isSecreta = selectedBadge.secret && selectedBadge.status !== 'Conquistado';
+                  return (
+                    <div className="mt-1.5 p-2 bg-black/65 border border-zinc-900/60 rounded-xl flex flex-col justify-between flex-1 min-h-[140px] overflow-hidden">
+                      <div className="flex gap-2.5 items-start">
+                        <div className={`w-11 h-11 rounded-full border flex items-center justify-center text-2xl flex-shrink-0 ${
+                          selectedBadge.status === 'Conquistado'
+                            ? 'bg-amber-955/40 border-amber-450/70 text-amber-205 shadow-[0_0_10px_rgba(245,158,11,0.2)] animate-pulse'
+                            : selectedBadge.status === 'Em progresso'
+                              ? 'bg-zinc-950/80 border-zinc-800 text-zinc-350'
+                              : 'bg-zinc-955/95 border-zinc-900 text-zinc-600 filter grayscale opacity-55'
+                        }`}>
+                          {isSecreta ? '❓' : selectedBadge.icon}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="font-sans font-black text-[10px] uppercase tracking-wider text-white truncate leading-none">
+                              {isSecreta ? 'CONQUISTA OCULTA' : selectedBadge.name}
+                            </h4>
+                            <span className={`text-[6.5px] font-mono font-black uppercase px-1.5 py-0.5 rounded border leading-none ${
+                              selectedBadge.status === 'Conquistado'
+                                ? 'bg-emerald-950/40 border-emerald-500/25 text-emerald-400'
+                                : selectedBadge.status === 'Em progresso'
+                                  ? 'bg-amber-950/40 border-amber-500/25 text-amber-400'
+                                  : 'bg-zinc-900 border-zinc-850 text-zinc-500'
+                            }`}>
+                              {selectedBadge.status}
+                            </span>
+                          </div>
+
+                          <p className="text-[9px] font-sans text-zinc-400 leading-snug mt-1 font-medium">
+                            {isSecreta 
+                              ? 'Esta conquista é um segredo! Continue jogando e participando para revelar as condições de desbloqueio.' 
+                              : selectedBadge.desc}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* AREA PROGRESSO/CONQUISTA */}
+                      <div className="pt-2 border-t border-zinc-900/40 flex-shrink-0">
+                        {selectedBadge.status === 'Conquistado' ? (
+                          <div className="flex justify-between items-center text-[8.5px] font-mono leading-none">
+                            <span className="text-emerald-400 font-bold">🎉 DESBLOQUEADA!</span>
+                            {selectedBadge.date && (
+                              <span className="text-zinc-550">CONQUISTADA EM: <span className="text-zinc-350 font-bold">{selectedBadge.date}</span></span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex justify-between items-center text-[8.5px] font-mono leading-none">
+                              <span className="text-zinc-500">Progresso do Desafio</span>
+                              <span className="text-amber-450 font-black">
+                                {selectedBadge.customProg || `${Math.min(selectedBadge.progress, selectedBadge.target)} / ${selectedBadge.target}`}
+                              </span>
+                            </div>
+                            
+                            <div className="w-full bg-zinc-950 h-1.5 rounded overflow-hidden border border-zinc-900">
+                              <div 
+                                className={`h-full rounded transition-all duration-300 ${
+                                  selectedBadge.status === 'Em progresso' ? 'bg-amber-500/80 shadow-[0_0_4px_rgba(245,158,11,0.5)]' : 'bg-zinc-800'
+                                }`}
+                                style={{ width: `${Math.min(100, (selectedBadge.progress / selectedBadge.target) * 100)}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
               </div>
-            )}
+            );
+          })()}
+
+        </div>
+
+        {/* ========================================== */}
+        {/* SEQUENTIAL NAVIGATION CONTROLS              */}
+        {/* ========================================== */}
+        <div className="flex items-center justify-between py-1 px-1 mt-1 z-20" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            disabled={faceIndex === 0}
+            onClick={() => setFaceIndex(prev => Math.max(0, prev - 1))}
+            className={`p-1.5 rounded-lg border transition ${
+              faceIndex === 0
+                ? 'bg-zinc-955/20 border-zinc-950/10 text-zinc-650 cursor-not-allowed'
+                : 'bg-zinc-950/60 border-zinc-850 text-zinc-350 hover:text-white cursor-pointer hover:bg-zinc-900'
+            }`}
+          >
+            <ChevronLeft className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Dots Indicator */}
+          <div className="flex gap-1.5 items-center justify-center">
+            {Array.from({ length: 5 }).map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setFaceIndex(idx)}
+                className={`w-2 h-2 rounded-full transition-all duration-200 cursor-pointer ${
+                  faceIndex === idx
+                    ? 'bg-amber-500 scale-125 shadow-[0_0_8px_rgba(245,158,11,0.5)]'
+                    : 'bg-zinc-700 hover:bg-zinc-600'
+                }`}
+                title={`Face ${idx + 1}`}
+              />
+            ))}
           </div>
 
-          {/* Verso Card flip control & admin action persistent footer */}
-          <div className="mt-1">
-            <div className="text-center mb-1.5">
-              <span className="inline-flex items-center gap-1 text-[8.5px] font-bold font-mono text-zinc-500 hover:text-zinc-400 select-none bg-zinc-900/60 px-2.5 py-0.5 rounded border border-zinc-850">
-                <RotateCcw className="w-2.5 h-2.5 text-zinc-500 animate-pulse" /> Voltar para Frente
-              </span>
-            </div>
+          <button
+            type="button"
+            disabled={faceIndex === 4}
+            onClick={() => setFaceIndex(prev => Math.min(4, prev + 1))}
+            className={`p-1.5 rounded-lg border transition ${
+              faceIndex === 4
+                ? 'bg-zinc-955/20 border-zinc-950/10 text-zinc-650 cursor-not-allowed'
+                : 'bg-zinc-950/60 border-zinc-850 text-zinc-350 hover:text-white cursor-pointer hover:bg-zinc-900'
+            }`}
+          >
+            <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
 
-            {/* Actions footer (mirrored so administrators have identical fast access on back of card too!) */}
-            <div className="pt-2 border-t border-zinc-900 flex items-center justify-between gap-1">
+        {/* ========================================== */}
+        {/* PERSISTENT ACTIONS FOOTER AREA             */}
+        {/* ========================================== */}
+        <div className="pt-2 border-t border-zinc-900/40 flex items-center justify-between gap-1.5 z-20 mt-1" onClick={(e) => e.stopPropagation()}>
+          {/* Action 1: Avaliar */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setEvalModalOpen(true);
+            }}
+            className="flex-1 py-2 bg-emerald-950/35 hover:bg-emerald-950/65 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+          >
+            <Award className="w-3.5 h-3.5" />
+            <span>Avaliar</span>
+          </button>
+
+          {/* Action 2: Share / Edit Admin */}
+          {canEdit ? (
+            <div className="flex-1 flex gap-1 h-9">
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setEvalModalOpen(true);
+                  onEdit(player);
                 }}
-                className="px-2 py-1 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-500/20 hover:border-emerald-500/40 rounded-lg text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center gap-1 cursor-pointer"
+                className="flex-1 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
               >
-                <Award className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Avaliar</span>
+                <Edit2 className="w-2.5 h-2.5 text-zinc-450" />
+                <span>Editar</span>
               </button>
-
-              {canEdit && (
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  {isSoftDeleted ? (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRestore && onRestore(player.id);
-                      }}
-                      className="px-2 py-1 bg-emerald-600/10 hover:bg-emerald-600/20 text-[#4ade80] border border-emerald-500/20 rounded-lg transition-all text-[10px] font-medium flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Reativar</span>
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEdit(player);
-                        }}
-                        className="p-1 px-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-350 rounded-lg border border-zinc-800 transition-all text-[10px] flex items-center gap-0.5 cursor-pointer"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                        <span>Editar</span>
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onInactivate(player.id);
-                        }}
-                        className="p-1 px-1.5 bg-rose-950/20 hover:bg-rose-950/40 border border-rose-500/15 hover:border-rose-500/35 text-rose-400 rounded-lg transition-all text-[10px] flex items-center justify-center cursor-pointer"
-                        title="Inativar Jogador"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onInactivate(player.id);
+                }}
+                className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-9 w-9"
+                title="Inativar Jogador"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </div>
-
+          ) : (
+            <button
+              type="button"
+              onClick={handleShare}
+              className="flex-1 py-2 bg-zinc-900 hover:bg-zinc-800 text-sky-400 hover:text-sky-305 rounded-xl border border-zinc-805 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+            >
+              <span>Compartilhar</span>
+            </button>
+          )}
         </div>
 
       </div>

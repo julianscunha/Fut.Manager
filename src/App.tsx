@@ -48,7 +48,14 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [activeTab, setActiveTab] = useState<NavTab>('dash');
+  const [activeTab, setActiveTab] = useState<NavTab>(() => {
+    const saved = localStorage.getItem('racha_active_tab');
+    return (saved as NavTab) || 'dash';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('racha_active_tab', activeTab);
+  }, [activeTab]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -202,6 +209,33 @@ export default function App() {
       window.removeEventListener('mensalistas-updated', handleMensalistasUpdated);
     };
   }, []);
+
+  // Poll players list if any avatar is pending or processing to get real-time status updates
+  useEffect(() => {
+    if (!currentUser || players.length === 0) return;
+    
+    const hasActiveGamerGeneration = players.some(
+      (p) => p.avatarStatus === 'PENDENTE' || p.avatarStatus === 'PROCESSANDO'
+    );
+    
+    if (!hasActiveGamerGeneration) return;
+    
+    const interval = setInterval(async () => {
+      try {
+        const isAdminOrAux = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
+        const url = `/api/players?includeDeleted=${isAdminOrAux ? 'true' : 'false'}`;
+        const res = await authFetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          setPlayers(data);
+        }
+      } catch (err) {
+        console.error('Error during real-time avatar sync:', err);
+      }
+    }, 4000);
+    
+    return () => clearInterval(interval);
+  }, [players, currentUser]);
 
   // Player CRUD actions
   const handleSavePlayer = async (formData: Omit<Player, 'id' | 'createdAt' | 'updatedAt'>) => {
