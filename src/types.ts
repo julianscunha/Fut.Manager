@@ -22,7 +22,7 @@ export type PlayerCategory = 'mensalista' | 'reserva';
 
 export type PlayerStatus = 'disponivel' | 'indisponivel' | 'lesionado' | 'afastado';
 
-export type PlayerPosition = 'goleiro' | 'zagueiro' | 'lateral' | 'volante' | 'meio_campo' | 'atacante';
+export type PlayerPosition = 'goleiro' | 'zagueiro' | 'volante' | 'meio_campo' | 'atacante';
 
 export interface Player {
   id: string;
@@ -121,7 +121,6 @@ export const FAVORITE_TEAMS: FavoriteTeam[] = [
 export const POSITION_LABELS: Record<PlayerPosition, string> = {
   goleiro: 'Goleiro',
   zagueiro: 'Zagueiro',
-  lateral: 'Lateral',
   volante: 'Volante',
   meio_campo: 'Meio Campo',
   atacante: 'Atacante'
@@ -312,9 +311,13 @@ export interface PlayerStats {
   playerId: string;
   presences: number;
   vitorias: number;
+  derrotas: number;
+  empates: number;
   aproveitamento: number; // percentage (vitorias / presences * 100)
   currentStreak: number;
   maxStreak: number;
+  ovr?: number;
+  createdAt?: string;
 }
 
 export type GrupalEventType = 'churrasco' | 'confraternizacao' | 'festa' | 'viagem' | 'personalizado';

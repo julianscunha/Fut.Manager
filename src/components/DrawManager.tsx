@@ -27,17 +27,15 @@ interface DrawManagerProps {
 const POS_SQUAD_ORDER: Record<string, number> = {
   goleiro: 1,
   zagueiro: 2,
-  lateral: 3,
-  meio_campo: 4,
-  volante: 5,
-  atacante: 6,
+  meio_campo: 3,
+  volante: 4,
+  atacante: 5,
 };
 
 const getAbbreviation = (pos: string) => {
   switch (pos) {
     case 'goleiro': return 'GK';
     case 'zagueiro': return 'ZAG';
-    case 'lateral': return 'LAT';
     case 'meio_campo': return 'MEI';
     case 'volante': return 'VOL';
     case 'atacante': return 'ATA';
@@ -46,7 +44,7 @@ const getAbbreviation = (pos: string) => {
 };
 
 export function computeTacticalAssignments(players: Player[]): Record<string, { position: string; isAdapted: boolean }> {
-  const positions = ['goleiro', 'zagueiro', 'lateral', 'meio_campo', 'volante', 'atacante'];
+  const positions = ['goleiro', 'zagueiro', 'meio_campo', 'volante', 'atacante'];
   const bestAssignment: Record<string, string> = {};
   let bestScore = -Infinity;
 
@@ -456,10 +454,9 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       const POS_ORDER: Record<string, number> = {
         goleiro: 1,
         zagueiro: 2,
-        lateral: 3,
-        volante: 4,
-        meio_campo: 5,
-        atacante: 6,
+        volante: 3,
+        meio_campo: 4,
+        atacante: 5,
       };
 
       const valA = POS_ORDER[posA] || 99;
@@ -538,7 +535,6 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     switch (pos) {
       case 'goleiro': return 'bg-amber-500/15 border-amber-500/30 text-amber-400';
       case 'zagueiro': return 'bg-indigo-500/15 border-indigo-500/30 text-indigo-400';
-      case 'lateral': return 'bg-teal-500/15 border-teal-500/30 text-teal-400';
       case 'volante': return 'bg-blue-500/15 border-blue-500/30 text-blue-400';
       case 'meio_campo': return 'bg-purple-500/15 border-purple-500/30 text-purple-400';
       case 'atacante': return 'bg-rose-500/15 border-rose-500/30 text-rose-400';
@@ -550,7 +546,6 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     switch (pos) {
       case 'goleiro': return 'Goleiro';
       case 'zagueiro': return 'Zagueiro';
-      case 'lateral': return 'Lateral';
       case 'volante': return 'Volante';
       case 'meio_campo': return 'Meio Campo';
       case 'atacante': return 'Atacante';
@@ -663,10 +658,9 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     const POSITION_ORDER: Record<string, number> = {
                       goleiro: 1,
                       zagueiro: 2,
-                      lateral: 3,
-                      meio_campo: 4,
-                      volante: 5,
-                      atacante: 6,
+                      meio_campo: 3,
+                      volante: 4,
+                      atacante: 5,
                     };
                     const orderA = POSITION_ORDER[a.primaryPosition] || 99;
                     const orderB = POSITION_ORDER[b.primaryPosition] || 99;

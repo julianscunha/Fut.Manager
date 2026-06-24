@@ -1335,14 +1335,14 @@ async function startServer() {
     const positions: PlayerPosition[] = [
       "goleiro",
       "zagueiro",
-      "lateral",
+      "volante",
       "volante",
       "meio_campo",
       "atacante",
       "meio_campo",
       "atacante",
       "zagueiro",
-      "lateral"
+      "meio_campo"
     ];
 
     const newlyCreated: Player[] = [];
@@ -1368,7 +1368,6 @@ async function startServer() {
 
       let secPos: PlayerPosition[] = [];
       if (pos === "zagueiro") secPos = ["volante"];
-      else if (pos === "lateral") secPos = ["meio_campo"];
       else if (pos === "volante") secPos = ["zagueiro", "meio_campo"];
       else if (pos === "meio_campo") secPos = ["atacante"];
       else if (pos === "atacante") secPos = ["meio_campo"];
@@ -1927,11 +1926,54 @@ async function startServer() {
       participationsList.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       const lastParticipations = participationsList.slice(0, 5);
 
+      // Sort matches of these presences by date ascending to compute consecutive presences
+      const confirmedMatches = playerPresences
+        .map(p => {
+          const matchObj = db.matches.find(m => m.id === p.matchId);
+          return { status: p.status, date: matchObj ? matchObj.date : '' };
+        })
+        .filter(x => x.date !== '')
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+      let currentConsecutive = 0;
+      let maxConsecutive = 0;
+      confirmedMatches.forEach(cm => {
+        if (cm.status === 'confirmado') {
+          currentConsecutive++;
+          if (currentConsecutive > maxConsecutive) {
+            maxConsecutive = currentConsecutive;
+          }
+        } else {
+          currentConsecutive = 0;
+        }
+      });
+      const consecutivePresencesCount = maxConsecutive;
+
+      const earlyConfirmationsCount = playerPresences.filter(p => {
+        if (p.status !== 'confirmado') return false;
+        if (!p.confirmedAt) return true; // default to true for legacy data
+        const matchObj = db.matches.find(m => m.id === p.matchId);
+        if (!matchObj) return true;
+        const matchTime = matchObj.time || '21:30';
+        const matchDateTimeStr = `${matchObj.date}T${matchTime}:00`;
+        const deadlineDays = matchObj.confirmationDeadlineDaysBefore ?? 2;
+        const deadlineTime = new Date(matchDateTimeStr).getTime() - (deadlineDays * 24 * 60 * 60 * 1000);
+        return new Date(p.confirmedAt).getTime() <= deadlineTime;
+      }).length;
+
+      const completedMinimumVacanciesCount = playerPresences.filter(p => {
+        if (p.status !== 'confirmado') return false;
+        return p.manuallyApproved || p.confirmedAt !== undefined;
+      }).length;
+
       const metricsEnriched = {
         ...metrics,
         presencesCount,
         absencesCount,
-        lastParticipations
+        lastParticipations,
+        earlyConfirmationsCount,
+        consecutivePresencesCount,
+        completedMinimumVacanciesCount
       };
 
       return res.json({
@@ -3936,7 +3978,9 @@ async function startServer() {
         matches: db.matches,
         presences: db.presences,
         results: db.results || [],
-        seasonId: seasonId as string || null
+        seasonId: seasonId as string || null,
+        evaluations: db.evaluations,
+        evaluationHistory: db.evaluationHistory
       });
 
       // Compute group events attendance (completed/encerrado events only)
@@ -4169,7 +4213,9 @@ async function startServer() {
           matches: db.matches,
           presences: db.presences,
           results: db.results || [],
-          seasonId: match.seasonId
+          seasonId: match.seasonId,
+          evaluations: db.evaluations,
+          evaluationHistory: db.evaluationHistory
         });
 
         // Format Best Duo
@@ -4392,7 +4438,9 @@ async function startServer() {
           matches: db.matches,
           presences: db.presences,
           results: db.results || [],
-          seasonId: match.seasonId
+          seasonId: match.seasonId,
+          evaluations: db.evaluations,
+          evaluationHistory: db.evaluationHistory
         });
 
         const snapshot = {

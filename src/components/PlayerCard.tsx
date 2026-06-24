@@ -250,6 +250,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         }
       }
 
+      let currentRachaStats: any = null;
       const statsRes = await fetch('/api/stats');
       if (statsRes.ok) {
         const statsData = await statsRes.json();
@@ -257,6 +258,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         const statsObj = (statsData.individual || []).find((s: any) => s.playerId === player.id);
         if (statsObj) {
           setRachaStats(statsObj);
+          currentRachaStats = statsObj;
         }
       }
 
@@ -334,10 +336,10 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         });
 
         setPersonalHistory({
-          vitorias: pWins,
-          derrotas: pLosses,
-          empates: pDraws,
-          presences: pPresences,
+          vitorias: currentRachaStats ? currentRachaStats.vitorias : pWins,
+          derrotas: currentRachaStats ? currentRachaStats.derrotas : pLosses,
+          empates: currentRachaStats ? currentRachaStats.empates : pDraws,
+          presences: currentRachaStats ? currentRachaStats.presences : pPresences,
           recentResults: recentOutcomes
         });
       }
@@ -399,7 +401,6 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     switch (pos) {
       case 'goleiro': return 'GOL';
       case 'zagueiro': return 'ZAG';
-      case 'lateral': return 'LAT';
       case 'volante': return 'VOL';
       case 'meio_campo': return 'MEI';
       case 'atacante': return 'ATA';
@@ -644,7 +645,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     };
     
     findBestFor(['goleiro']);
-    findBestFor(['zagueiro', 'lateral']);
+    findBestFor(['zagueiro']);
     findBestFor(['volante']);
     findBestFor(['meio_campo']);
     findBestFor(['atacante']);
@@ -730,40 +731,40 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         category: 'presenca' as const,
         icon: '⏰',
         name: 'Pontual',
-        desc: '10 presenças confirmadas no grupo.',
-        status: presencesCount >= 10 ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
-        date: presencesCount >= 10 ? dateStr : null,
-        progress: presencesCount,
-        target: 10,
+        desc: 'Confirmou presença antecipadamente antes do encerramento do prazo.',
+        status: (presencesCount >= 10 || (metrics?.earlyConfirmationsCount && metrics.earlyConfirmationsCount >= 1)) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: (presencesCount >= 10 || (metrics?.earlyConfirmationsCount && metrics.earlyConfirmationsCount >= 1)) ? dateStr : null,
+        progress: metrics?.earlyConfirmationsCount || presencesCount,
+        target: 1,
       },
       {
         id: 'comprometido',
         category: 'presenca' as const,
         icon: '📲',
         name: 'Comprometido',
-        desc: '25 presenças confirmadas no grupo.',
-        status: presencesCount >= 25 ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
-        date: presencesCount >= 25 ? dateStr : null,
-        progress: presencesCount,
-        target: 25,
+        desc: 'Confirmou presença em várias rodadas consecutivas (mínimo 5).',
+        status: (presencesCount >= 25 || (metrics?.consecutivePresencesCount && metrics.consecutivePresencesCount >= 5)) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: (presencesCount >= 25 || (metrics?.consecutivePresencesCount && metrics.consecutivePresencesCount >= 5)) ? dateStr : null,
+        progress: metrics?.consecutivePresencesCount || presencesCount,
+        target: 5,
       },
       {
         id: 'fechamento',
         category: 'presenca' as const,
         icon: '🤝',
         name: 'Fechamento',
-        desc: '15 rodadas sem cancelamento ou falta.',
-        status: (presencesCount >= 15 && absencesCount === 0) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
-        date: (presencesCount >= 15 && absencesCount === 0) ? dateStr : null,
-        progress: presencesCount,
-        target: 15,
+        desc: 'Completou a lista para atingir as vagas mínimas exigidas da rodada.',
+        status: (metrics?.completedMinimumVacanciesCount && metrics.completedMinimumVacanciesCount >= 1) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
+        date: (metrics?.completedMinimumVacanciesCount && metrics.completedMinimumVacanciesCount >= 1) ? dateStr : null,
+        progress: metrics?.completedMinimumVacanciesCount || 0,
+        target: 1,
       },
       {
         id: 'inabalavel',
         category: 'presenca' as const,
         icon: '🌿',
         name: 'Inabalável',
-        desc: 'Racha sem faltas ou atraso (mínimo 5 participações).',
+        desc: 'Mantém uma sequência sólida de participações sem nenhuma falta.',
         status: (absencesCount === 0 && presencesCount >= 5) ? ('Conquistado' as const) : (presencesCount > 0 ? ('Em progresso' as const) : ('Bloqueado' as const)),
         date: (absencesCount === 0 && presencesCount >= 5) ? dateStr : null,
         progress: presencesCount,

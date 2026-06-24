@@ -2,7 +2,7 @@ import { Player, TeamDraw, DrawTeam, DuoAffinity, TrioAffinity, PlayerPosition }
 
 // Helper to check if a position represents a defender
 function isDefender(pos: PlayerPosition): boolean {
-  return pos === 'zagueiro' || pos === 'lateral' || pos === 'volante';
+  return pos === 'zagueiro' || pos === 'volante';
 }
 
 // Helper to check if a position represents an attacker

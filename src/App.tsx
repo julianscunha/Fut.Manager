@@ -369,10 +369,9 @@ export default function App() {
   const positionOrder: Record<string, number> = {
     goleiro: 1,
     zagueiro: 2,
-    lateral: 3,
-    volante: 4,
-    meio_campo: 5,
-    atacante: 6,
+    volante: 3,
+    meio_campo: 4,
+    atacante: 5,
   };
 
   const sortedPlayers = [...filteredPlayers].sort((a, b) => {

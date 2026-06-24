@@ -295,22 +295,20 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
       const postsData = await postsRes.json();
       setPosts(postsData);
 
-      if (!isPublic) {
-        // Load configurations / metadata only for authenticated users
-        const [catRes, assocRes, statsRes, matchesRes, resultsRes] = await Promise.all([
-          fetch('/api/mural/categories'),
-          fetch('/api/mural/associations'),
-          fetch('/api/mural/stats'),
-          fetch('/api/matches'),
-          fetch('/api/results')
-        ]);
+      // Load configurations, metadata, matches, results, and stats for all users (both public and authenticated)
+      const [catRes, assocRes, statsRes, matchesRes, resultsRes] = await Promise.all([
+        fetch('/api/mural/categories'),
+        fetch('/api/mural/associations'),
+        fetch('/api/mural/stats'),
+        fetch('/api/matches'),
+        fetch('/api/results')
+      ]);
 
-        if (catRes.ok) setCategories(await catRes.json());
-        if (assocRes.ok) setAssociations(await assocRes.json());
-        if (statsRes.ok) setStats(await statsRes.json());
-        if (matchesRes && matchesRes.ok) setFullMatches(await matchesRes.json());
-        if (resultsRes && resultsRes.ok) setFullResults(await resultsRes.json());
-      }
+      if (catRes.ok) setCategories(await catRes.json());
+      if (assocRes.ok) setAssociations(await assocRes.json());
+      if (statsRes.ok) setStats(await statsRes.json());
+      if (matchesRes && matchesRes.ok) setFullMatches(await matchesRes.json());
+      if (resultsRes && resultsRes.ok) setFullResults(await resultsRes.json());
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao carregar os dados do Mural.');
     } finally {
@@ -349,9 +347,13 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   }, [pendingMatchIdToOpen, posts]);
 
   // Statistics Calculation (Client side fallback + server-synced)
-  const currentPhotosCount = posts.filter(p => p.mediaType === 'image').length;
-  const currentVideosCount = posts.filter(p => p.mediaType === 'video').length;
-  const currentPublicationsCount = posts.length;
+  const currentPhotosCount = posts.filter(p => p.mediaType === 'image' && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length;
+  const currentVideosCount = posts.filter(p => p.mediaType === 'video' && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length;
+  const currentPublicationsCount = posts.filter(p => !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length;
+
+  const highlightedPosts = posts.filter(p => !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
+  const latestHighlightedPost = highlightedPosts.find(p => p.isHighlighted === true && p.mediaUrl && p.mediaType === 'image') || highlightedPosts.find(p => p.mediaUrl && p.mediaType === 'image');
+  const capaImageUrl = latestHighlightedPost?.mediaUrl || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80';
 
   // Destaques do Mural (No máximo 3)
   const muralHighlights = useMemo(() => {
@@ -1107,37 +1109,45 @@ ${shareUrl}`;
 
       {/* STATS INFOGRAPH (Hidden in Public mode) */}
       {!isPublic && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" id="mural-stats-block">
-          <div className="bg-[#101714] p-4 rounded-xl border border-zinc-850 flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Publicações</span>
-              <span className="block text-2xl font-black text-white">{currentPublicationsCount}</span>
-            </div>
-            <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
-              <Camera className="w-5 h-5" />
-            </div>
+        currentPublicationsCount === 0 && currentPhotosCount === 0 && currentVideosCount === 0 ? (
+          <div className="bg-[#101714] p-6 rounded-xl border border-zinc-850 text-center space-y-1.5 shadow-md animate-fadeIn" id="mural-stats-block">
+            <div className="text-xl">🏛️</div>
+            <h4 className="text-sm font-bold text-emerald-400 uppercase tracking-wide">Museu em Construção</h4>
+            <p className="text-zinc-500 text-xs font-mono">Nenhuma memória registrada até o momento.</p>
           </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4" id="mural-stats-block">
+            <div className="bg-[#101714] p-4 rounded-xl border border-zinc-850 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Publicações</span>
+                <span className="block text-2xl font-black text-white">{currentPublicationsCount}</span>
+              </div>
+              <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-400">
+                <Camera className="w-5 h-5" />
+              </div>
+            </div>
 
-          <div className="bg-[#101714] p-4 rounded-xl border border-zinc-850 flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Fotos Compartilhadas</span>
-              <span className="block text-2xl font-black text-white">{currentPhotosCount}</span>
+            <div className="bg-[#101714] p-4 rounded-xl border border-zinc-850 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Fotos Compartilhadas</span>
+                <span className="block text-2xl font-black text-white">{currentPhotosCount}</span>
+              </div>
+              <div className="p-3 bg-[#0a5c36]/20 rounded-xl text-emerald-400">
+                <ImageIcon className="w-5 h-5" />
+              </div>
             </div>
-            <div className="p-3 bg-[#0a5c36]/20 rounded-xl text-emerald-400">
-              <ImageIcon className="w-5 h-5" />
-            </div>
-          </div>
 
-          <div className="bg-[#101714] p-4 rounded-xl border border-zinc-850 flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Vídeos Carregados</span>
-              <span className="block text-2xl font-black text-white">{currentVideosCount}</span>
-            </div>
-            <div className="p-3 bg-[#22c55e]/10 rounded-xl text-emerald-400">
-              <Film className="w-5 h-5" />
+            <div className="bg-[#101714] p-4 rounded-xl border border-zinc-850 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="block text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Vídeos Carregados</span>
+                <span className="block text-2xl font-black text-white">{currentVideosCount}</span>
+              </div>
+              <div className="p-3 bg-[#22c55e]/10 rounded-xl text-emerald-400">
+                <Film className="w-5 h-5" />
+              </div>
             </div>
           </div>
-        </div>
+        )
       )}
 
       {/* FILTER & SEARCH PANEL */}
@@ -1225,10 +1235,38 @@ ${shareUrl}`;
           <span className="text-xs text-zinc-500 font-mono">Lendo publicações do Mural...</span>
         </div>
       ) : filteredPosts.length === 0 ? (
-        <div className="text-center py-16 rounded-xl border border-dashed border-zinc-850 bg-[#111815]/10 p-6">
-          <ImageIcon className="w-10 h-10 text-zinc-600 mx-auto mb-2.5" />
-          <p className="text-zinc-400 font-semibold text-sm">Nenhum registro encontrado no Mural!</p>
-          <p className="text-xs text-zinc-600 mt-1">Seja o primeiro a publicar um momento do racha.</p>
+        <div className="text-center py-20 rounded-2xl border border-dashed border-zinc-800 bg-[#111815]/15 max-w-xl mx-auto p-8 space-y-4 shadow-xl animate-fadeIn">
+          <div className="w-16 h-16 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-400 mx-auto text-2xl">
+            🏛️
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-white font-display font-extrabold text-base md:text-lg tracking-tight uppercase">
+              🏛 O Museu ainda está sendo construído.
+            </h3>
+            <p className="text-zinc-400 text-xs md:text-sm font-medium">
+              Toda grande história começa com um primeiro capítulo.
+            </p>
+            <p className="text-zinc-500 text-[11px] md:text-xs">
+              Publique fotos, vídeos e momentos marcantes para eternizar a história do clube.
+            </p>
+          </div>
+          
+          <button
+            type="button"
+            onClick={() => {
+              if (!isPublic && currentUser) {
+                setMuseuTab('memorias');
+                setMuralSubTab('memorias');
+                setExpandedSection('memoria');
+                setIsUploadOpen(true);
+              } else {
+                alert('Faça login na plataforma para publicar memórias no Museu!');
+              }
+            }}
+            className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs inline-flex items-center gap-2 shadow-lg shadow-emerald-600/15 transition cursor-pointer"
+          >
+            <span>📸 Publicar Primeira Memória</span>
+          </button>
         </div>
       ) : activeAlbumDate ? (
         <div className="space-y-6">
@@ -2343,19 +2381,79 @@ ${shareUrl}`;
   return (
     <div className="space-y-6 animate-fadeIn font-sans" id="mural-viewport">
       
-      {/* Compact Title Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-900 pb-4">
-        <div>
-          <h2 className="font-display font-extrabold text-xl text-white tracking-tight flex items-center gap-2">
-            🏛️ Museu do Clube
-          </h2>
-          <p className="text-zinc-500 text-xs mt-0.5">
-            O acervo vivo das melhores memórias, histórias e comunicados do Racha do Fofim.
-          </p>
+      {/* Capa & Hero do Museu */}
+      <div className="relative w-full rounded-2xl overflow-hidden border border-zinc-850/60 shadow-2xl mb-6">
+        {/* Capa Image Background */}
+        <div className="absolute inset-0 z-0">
+          <img
+            src={capaImageUrl}
+            alt="Capa do Museu"
+            className="w-full h-full object-cover brightness-[0.25] contrast-[1.05]"
+            referrerPolicy="no-referrer"
+          />
+          {/* Gradient overlay to ensure superb text contrast */}
+          <div className="absolute inset-0 bg-gradient-to-t from-[#090e0c] via-black/35 to-black/75" />
         </div>
 
-        {/* Compact publish dropdown picker */}
-        {!isPublic && currentUser && (
+        {/* Hero Content */}
+        <div className="relative z-10 px-6 py-10 md:py-14 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="space-y-3 max-w-xl">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-sans font-extrabold uppercase tracking-widest select-none">
+              🏛️ Acervo Oficial do Clube
+            </div>
+            <h1 className="font-display font-black text-3xl md:text-4xl text-white tracking-tight leading-none uppercase">
+              🏛️ Museu do Clube
+            </h1>
+            <p className="text-zinc-300 text-xs md:text-sm leading-relaxed font-sans">
+              O acervo vivo das histórias, resenhas e momentos do Racha do Fofim.
+            </p>
+          </div>
+
+          {/* Quick Summary Statistics Grid */}
+          <div className="grid grid-cols-2 gap-3 min-w-[280px] sm:min-w-[340px] font-sans">
+            <div className="p-3 bg-zinc-950/75 border border-zinc-900/60 rounded-xl backdrop-blur-md flex items-center gap-2.5 shadow-lg">
+              <span className="text-lg">📸</span>
+              <div>
+                <span className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Memórias</span>
+                <span className="block text-sm font-black text-white">{currentPublicationsCount}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-zinc-950/75 border border-zinc-900/60 rounded-xl backdrop-blur-md flex items-center gap-2.5 shadow-lg">
+              <span className="text-lg">🎥</span>
+              <div>
+                <span className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Vídeos</span>
+                <span className="block text-sm font-black text-white">{currentVideosCount}</span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-zinc-950/75 border border-zinc-900/60 rounded-xl backdrop-blur-md flex items-center gap-2.5 shadow-lg">
+              <span className="text-lg">⚽</span>
+              <div>
+                <span className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Rodadas</span>
+                <span className="block text-sm font-black text-white">
+                  {fullMatches.length}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-3 bg-zinc-950/75 border border-zinc-900/60 rounded-xl backdrop-blur-md flex items-center gap-2.5 shadow-lg">
+              <span className="text-lg">🏆</span>
+              <div>
+                <span className="block text-[9px] font-bold text-zinc-500 uppercase tracking-wider">Épicos</span>
+                <span className="block text-sm font-black text-white">
+                  {posts.filter(p => (p.isHighlighted === true || p.showOnLanding === true) && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Compact publish and header row */}
+      {!isPublic && currentUser && (
+        <div className="flex justify-end items-center gap-4 pb-1">
+          {/* Compact publish dropdown picker */}
           <div className="relative w-full sm:w-auto font-sans">
             {currentUser.role === 'admin' ? (
               <>
@@ -2425,8 +2523,8 @@ ${shareUrl}`;
               </button>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Tabs Navigation Selector - Swipeable/Scrollable on mobile, Clean list on desktop */}
       <div className="sticky top-0 bg-[#090e0c]/95 backdrop-blur-md py-3 z-30 border-b border-zinc-900/60 -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -2540,18 +2638,32 @@ ${shareUrl}`;
 
         {museuTab === 'momentos' && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-amber-500/5 to-zinc-950/20 border border-amber-500/10 rounded-2xl p-4 md:p-6 shadow-sm animate-fadeIn">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
-                  <Star className="w-5 h-5 fill-amber-500" />
-                </div>
-                <div>
-                  <h3 className="font-display font-extrabold text-[#f59e0b] text-sm uppercase tracking-wider">
-                    🏆 Galeria de Honra — Momentos Épicos
-                  </h3>
-                  <p className="text-zinc-400 text-xs font-mono">
-                    Os acontecimentos históricos, resenhas inesquecíveis e lances imortalizados do Racha do Fofim.
+            {/* Header Area Premium style */}
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#1c1404] via-[#090e0c] to-[#0d1210] border border-amber-500/30 rounded-2xl p-6 md:p-8 shadow-xl">
+              {/* Decorative faint background glow */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 to-amber-600/10 border border-amber-500/30 text-amber-400 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">
+                    ⭐️ GALERIA DE HONRA DO CLUBE ⭐️
+                  </div>
+                  <h2 className="font-display font-black text-2xl md:text-3xl text-amber-100 tracking-tight leading-none uppercase flex items-center gap-2">
+                    🏆 HALL DA FAMA
+                  </h2>
+                  <p className="text-zinc-350 text-xs md:text-sm max-w-xl leading-relaxed">
+                    Os acontecimentos históricos, as resenhas lendárias e os lances imortalizados que construíram a lenda do <strong className="text-amber-400">Racha do Fofim</strong>.
                   </p>
+                </div>
+                <div className="flex items-center gap-3 bg-zinc-950/60 border border-zinc-850 p-4 rounded-xl self-start md:self-auto backdrop-blur">
+                  <Award className="w-10 h-10 text-amber-400 animate-pulse flex-shrink-0" />
+                  <div className="font-mono">
+                    <span className="block text-[10px] text-zinc-500 uppercase font-bold tracking-wider">Lendas Consagradas</span>
+                    <strong className="block text-xl text-amber-450 font-extrabold leading-none mt-1">
+                      {posts.filter(p => (p.isHighlighted === true || p.showOnLanding === true) && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length}
+                    </strong>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2559,7 +2671,7 @@ ${shareUrl}`;
             {/* Filter posts that are marked highlighted or showOnLanding */}
             {posts.filter(p => (p.isHighlighted === true || p.showOnLanding === true) && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length === 0 ? (
               <div className="text-center py-12 bg-[#090e0c]/40 border border-zinc-900 rounded-xl max-w-md mx-auto space-y-3">
-                <Star className="w-8 h-8 text-zinc-650 mx-auto opacity-40 animate-pulse" />
+                <Star className="w-8 h-8 text-zinc-600 mx-auto opacity-40 animate-pulse" />
                 <div className="space-y-0.5">
                   <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Nenhum Momento Marcado</p>
                   <p className="text-[10px] text-zinc-500 font-mono">Os lances e resenhas que receberem destaque dos administradores aparecerão consagrados aqui.</p>
@@ -2572,17 +2684,17 @@ ${shareUrl}`;
                   .map(post => {
                     // Dynamically map a visual title tag depending on its context
                     let badgeLabel = '🔥 Momento Épico';
-                    let badgeStyle = 'from-rose-500/20 to-orange-500/10 text-orange-450 border-orange-500/20';
+                    let badgeStyle = 'from-amber-600/30 to-amber-900/20 text-amber-400 border-amber-500/30';
                     
                     if (post.title.toLowerCase().includes('clássico') || post.description?.toLowerCase().includes('clássico')) {
-                      badgeLabel = '🏆 Clássico Memorável';
-                      badgeStyle = 'from-amber-500/25 to-yellow-600/15 text-amber-400 border-amber-500/30';
+                      badgeLabel = '👑 Clássico Memorável';
+                      badgeStyle = 'from-yellow-500/30 to-amber-600/20 text-amber-300 border-amber-500/40';
                     } else if (post.title.toLowerCase().includes('rodada') || post.category === 'partida') {
                       badgeLabel = '⚽ Grande Rodada';
-                      badgeStyle = 'from-emerald-500/25 to-teal-500/15 text-emerald-400 border-emerald-500/30';
+                      badgeStyle = 'from-emerald-600/30 to-teal-900/20 text-emerald-400 border-emerald-500/30';
                     } else if (post.mediaType === 'image') {
                       badgeLabel = '📸 Foto Histórica';
-                      badgeStyle = 'from-cyan-500/25 to-blue-500/15 text-cyan-400 border-cyan-500/30';
+                      badgeStyle = 'from-cyan-600/30 to-blue-900/20 text-cyan-300 border-cyan-500/30';
                     }
 
                     const formattedDateStr = post.eventDate 
@@ -2592,14 +2704,14 @@ ${shareUrl}`;
                     return (
                       <div
                         key={`highlight-${post.id}`}
-                        className="bg-zinc-950 border border-zinc-900 rounded-2xl overflow-hidden hover:border-amber-500/25 shadow-xl transition flex flex-col group relative"
+                        className="bg-[#0b100e] border-2 border-amber-500/25 rounded-2xl overflow-hidden hover:border-amber-400/60 shadow-xl hover:shadow-amber-500/5 transition duration-500 flex flex-col group relative"
                       >
                         {/* Shimmer overlay for extra premium styling */}
-                        <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
 
                         <div
                           onClick={() => setSelectedPost(post)}
-                          className="h-[200px] bg-zinc-900 overflow-hidden relative cursor-pointer"
+                          className="h-[210px] bg-zinc-950 overflow-hidden relative cursor-pointer"
                         >
                           {post.mediaType === 'image' ? (
                             <img
@@ -2622,21 +2734,25 @@ ${shareUrl}`;
                             </div>
                           )}
 
-                          <div className={`absolute top-3 left-3 bg-gradient-to-r ${badgeStyle} text-[10px] font-sans font-extrabold px-3 py-1 rounded-full border shadow-md uppercase tracking-wider`}>
+                          <div className={`absolute top-3 left-3 bg-gradient-to-r ${badgeStyle} text-[10px] font-sans font-black px-3 py-1 rounded-full border shadow-md uppercase tracking-wider`}>
                             {badgeLabel}
+                          </div>
+
+                          <div className="absolute top-3 right-3 bg-zinc-950/80 backdrop-blur border border-amber-500/30 p-1.5 rounded-full text-amber-400">
+                            <Star className="w-3.5 h-3.5 fill-amber-400" />
                           </div>
                         </div>
 
-                        <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div className="p-5 flex-1 flex flex-col justify-between bg-gradient-to-b from-zinc-950 to-[#0e1411]">
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
-                              <span className="font-bold text-[#f59e0b] uppercase">{post.authorName}</span>
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-550 font-mono">
+                              <span className="font-extrabold text-amber-400 uppercase">{post.authorName}</span>
                               <span>•</span>
                               <span>{formattedDateStr}</span>
                             </div>
                             <h4
                               onClick={() => setSelectedPost(post)}
-                              className="font-display font-extrabold text-sm text-white tracking-tight hover:text-amber-400 cursor-pointer transition line-clamp-1"
+                              className="font-display font-black text-base text-zinc-100 tracking-tight hover:text-amber-400 cursor-pointer transition line-clamp-1 uppercase"
                             >
                               {post.title}
                             </h4>
@@ -2648,7 +2764,7 @@ ${shareUrl}`;
                           <div className="mt-5 pt-3 border-t border-zinc-900/60 flex items-center justify-between text-[11px] font-mono">
                             <button
                               onClick={() => setSelectedPost(post)}
-                              className="text-zinc-400 hover:text-white hover:underline uppercase text-[9.5px]"
+                              className="text-amber-450 hover:text-amber-350 hover:underline uppercase text-[9.5px] font-bold tracking-wider"
                             >
                               Ver Detalhes &rarr;
                             </button>
@@ -2656,7 +2772,7 @@ ${shareUrl}`;
                             <div className="flex gap-1.5">
                               <button
                                 onClick={() => handleShareWhatsApp(post)}
-                                className="p-1.5 bg-zinc-900 hover:bg-emerald-950/20 text-zinc-400 hover:text-emerald-400 border border-zinc-850 rounded-lg transition"
+                                className="p-1.5 bg-zinc-950 hover:bg-emerald-950/20 text-zinc-400 hover:text-emerald-400 border border-zinc-850 rounded-lg transition"
                                 title="Compartilhar"
                               >
                                 <Share2 className="w-3.5 h-3.5" />
@@ -2666,10 +2782,10 @@ ${shareUrl}`;
                               {currentUser?.role === 'admin' && (
                                 <button
                                   onClick={() => handleToggleHighlight(post.id)}
-                                  className="p-1.5 bg-zinc-900 hover:bg-amber-950/20 text-yellow-500 hover:text-zinc-400 border border-zinc-850 rounded-lg transition"
+                                  className="p-1.5 bg-zinc-950 hover:bg-amber-950/20 text-yellow-550 hover:text-zinc-400 border border-zinc-850 rounded-lg transition"
                                   title="Remover Categoria de Destaque"
                                 >
-                                  <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
+                                  <Star className="w-3.5 h-3.5 fill-yellow-550 text-yellow-550" />
                                 </button>
                               )}
                             </div>
@@ -2685,142 +2801,199 @@ ${shareUrl}`;
 
         {museuTab === 'historia' && (
           <div className="space-y-6">
-            <div className="bg-[#101714] border border-[#22c55e]/15 rounded-2xl p-4 md:p-6 shadow-sm animate-fadeIn">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="p-2.5 bg-emerald-500/10 text-[#4ade80] rounded-xl">
-                  <Calendar className="w-5 h-5 text-emerald-400" />
+            <div className="relative overflow-hidden bg-gradient-to-r from-[#0d1612] to-[#090e0c] border border-emerald-500/25 rounded-2xl p-5 md:p-6 shadow-lg">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+              <div className="flex items-center gap-3 relative z-10">
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl">
+                  <Calendar className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-display font-extrabold text-white text-sm uppercase tracking-wider">
-                    📜 História do Clube — Linha do Tempo
+                  <h3 className="font-display font-black text-base text-white uppercase tracking-wider">
+                    📜 HISTÓRIA DO CLUBE
                   </h3>
-                  <p className="text-zinc-500 text-xs font-mono">
-                    Acompanhe a trajetória rodada a rodada do Racha do Fofim, seus placares históricos e mídias associadas.
+                  <p className="text-zinc-400 text-xs font-mono">
+                    A trajetória rodada a rodada do Racha do Fofim, seus placares lendários e mídias associadas.
                   </p>
                 </div>
               </div>
             </div>
 
             {fullMatches.length === 0 ? (
-              <div className="text-center py-12 bg-zinc-950 border border-zinc-900 rounded-xl max-w-sm mx-auto space-y-2">
-                <Calendar className="w-6 h-6 text-zinc-655 mx-auto opacity-35 animate-bounce" />
+              <div className="text-center py-12 bg-[#090e0c]/40 border border-zinc-900 rounded-xl max-w-sm mx-auto space-y-2">
+                <Calendar className="w-6 h-6 text-zinc-650 mx-auto opacity-35 animate-bounce" />
                 <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Sem Histórico de Rodadas</p>
                 <p className="text-[10px] text-zinc-500 font-mono">Nenhuma rodada foi sorteada ou encerrada nesta temporada.</p>
               </div>
             ) : (
-              <div className="relative pl-6 md:pl-8 border-l border-zinc-850 space-y-8 py-3 max-w-3xl mx-auto font-sans animate-fadeIn">
-                {fullMatches
-                  .slice()
-                  .sort((a,b) => b.date.localeCompare(a.date))
-                  .map((match, idx, arr) => {
-                    const result = fullResults.find(r => r.matchId === match.id);
-                    const matchMedias = posts.filter(p => p.matchId === match.id && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
-                    const photosCount = matchMedias.filter(m => m.mediaType === 'image').length;
-                    const videosCount = matchMedias.filter(m => m.mediaType === 'video').length;
-                    const hasMedias = matchMedias.length > 0;
+              <div className="space-y-10 max-w-3xl mx-auto">
+                {(() => {
+                  const sortedMatches = fullMatches.slice().sort((a,b) => b.date.localeCompare(a.date));
+                  const matchesByYear: { [year: string]: typeof fullMatches } = {};
+                  
+                  sortedMatches.forEach(match => {
+                    const year = match.date ? match.date.split('-')[0] : '2026';
+                    if (!matchesByYear[year]) {
+                      matchesByYear[year] = [];
+                    }
+                    matchesByYear[year].push(match);
+                  });
 
-                    const formattedDate = new Date(match.date + 'T12:00:00').toLocaleDateString('pt-BR');
+                  const sortedYears = Object.keys(matchesByYear).sort((a, b) => b.localeCompare(a));
 
-                    return (
-                      <div key={match.id} className="relative group select-none">
-                        {/* Timeline Circle Bullet Indicator */}
-                        <div className={`absolute -left-[31px] md:-left-[39px] top-1.5 w-4 h-4 rounded-full border-2 bg-zinc-950 transition-all duration-300 group-hover:scale-125 ${
-                          hasMedias
-                            ? 'border-emerald-500 bg-emerald-950 text-emerald-400'
-                            : 'border-zinc-800 bg-zinc-900 text-zinc-500'
-                        }`}>
-                          <div className={`w-1.5 h-1.5 rounded-full mx-auto my-0.5 ${hasMedias ? 'bg-emerald-400' : 'bg-zinc-700'}`} />
+                  return sortedYears.map((year) => (
+                    <div key={year} className="space-y-6 relative">
+                      {/* Year Header Indicator */}
+                      <div className="flex items-center gap-3 pt-4">
+                        <div className="px-4 py-1.5 bg-gradient-to-r from-zinc-950 via-[#0e1612] to-zinc-950 border border-emerald-500/30 text-emerald-300 font-display font-black text-sm tracking-widest uppercase rounded-xl shadow-md flex items-center gap-2.5">
+                          <span>📅 {year}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-[10px] font-mono text-zinc-500 lowercase bg-zinc-900/80 px-2 py-0.5 rounded border border-zinc-850">
+                            {matchesByYear[year].length} {matchesByYear[year].length === 1 ? 'rodada' : 'rodadas'}
+                          </span>
                         </div>
+                        <div className="h-[1px] flex-1 bg-gradient-to-r from-emerald-500/20 via-zinc-850 to-transparent" />
+                      </div>
 
-                        {/* Timeline Card */}
-                        <div className="bg-[#0f1512] border border-zinc-900 hover:border-emerald-950/60 rounded-xl p-5 shadow-md hover:shadow-xl transition duration-300 relative flex flex-col md:flex-row md:items-center justify-between gap-4">
-                          <div className="space-y-3 flex-1">
-                            {/* Date Badge */}
-                            <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
-                              <span className="bg-zinc-900 border border-zinc-850 px-2.5 py-0.5 rounded-full text-zinc-350 font-bold">
-                                📅 {formattedDate}
-                              </span>
-                              <span className="text-zinc-550 italic font-medium">
-                                ({match.location || 'Local Desconhecido'})
-                              </span>
-                            </div>
+                      {/* Timeline down connection line */}
+                      <div className="absolute top-[48px] left-[18px] md:left-[22px] bottom-0 w-[2px] bg-gradient-to-b from-emerald-500/20 via-zinc-800 to-zinc-950/20 pointer-events-none" />
 
-                            {/* Round Title */}
-                            <div>
-                              <h4 className="font-display font-black text-sm text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
-                                Rodada #{arr.length - idx}
-                              </h4>
-                              {result ? (
-                                <div className="mt-2 grid grid-cols-3 gap-2 max-w-sm text-[11px] font-mono bg-zinc-950/60 p-2.5 border border-zinc-900 rounded-lg">
-                                  <div className="text-center flex flex-col items-center">
-                                    <span className="text-zinc-500 text-[9px] uppercase font-semibold">🟢 Verde</span>
-                                    <strong className="text-emerald-450 text-xs mt-0.5">{result.winsGreen || 0} Vit</strong>
+                      {/* Year Round Cards List */}
+                      <div className="space-y-6 pl-7 md:pl-9">
+                        {matchesByYear[year].map((match, matchIdx, roundArr) => {
+                          const result = fullResults.find(r => r.matchId === match.id);
+                          const matchMedias = posts.filter(p => p.matchId === match.id && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
+                          const photosCount = matchMedias.filter(m => m.mediaType === 'image').length;
+                          const videosCount = matchMedias.filter(m => m.mediaType === 'video').length;
+                          const hasMedias = matchMedias.length > 0;
+
+                          const formattedDate = new Date(match.date + 'T12:00:00').toLocaleDateString('pt-BR');
+                          const isLastOfGroup = matchIdx === roundArr.length - 1;
+
+                          return (
+                            <div key={match.id} className="relative group">
+                              {/* Connector Arrow Icon indicator */}
+                              <div className={`absolute -left-[30px] md:-left-[36px] top-4.5 w-5 h-5 rounded-full border bg-zinc-950 flex items-center justify-center transition-all duration-300 group-hover:scale-115 ${
+                                hasMedias
+                                  ? 'border-emerald-500/50 bg-emerald-950/85 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                  : 'border-zinc-800 bg-zinc-900 text-zinc-500'
+                              }`}>
+                                <div className={`w-1.5 h-1.5 rounded-full ${hasMedias ? 'bg-emerald-400' : 'bg-zinc-650'}`} />
+                              </div>
+
+                              {/* Timeline card with sports flavor */}
+                              <div className="bg-gradient-to-b from-[#0b100e] to-[#080c0a] border border-zinc-900 hover:border-emerald-500/25 rounded-2xl p-5 shadow-lg hover:shadow-emerald-500/2 transition duration-300 flex flex-col md:flex-row md:items-center justify-between gap-5 relative">
+                                <div className="space-y-3.5 flex-1 min-w-0">
+                                  {/* Badges / Header details */}
+                                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
+                                    <span className="bg-[#111915] border border-emerald-500/15 px-3 py-1 rounded-full text-emerald-400 font-extrabold flex items-center gap-1 leading-none shadow-sm uppercase">
+                                      ⚽ Rodada #{sortedMatches.length - sortedMatches.findIndex(m => m.id === match.id)}
+                                    </span>
+                                    <span className="bg-zinc-900 border border-zinc-850 px-2.5 py-1 rounded-full text-zinc-400 font-semibold leading-none">
+                                      📅 {formattedDate}
+                                    </span>
+                                    <span className="text-zinc-500 font-medium truncate">
+                                      ({match.location || 'Arena Society'})
+                                    </span>
                                   </div>
-                                  <div className="text-center flex flex-col items-center border-x border-zinc-900">
-                                    <span className="text-zinc-500 text-[9px] uppercase font-semibold">🔴 Vermelho</span>
-                                    <strong className="text-red-400 text-xs mt-0.5">{result.winsRed || 0} Vit</strong>
+
+                                  {/* Scoreboard and Champions details */}
+                                  <div className="space-y-3">
+                                    {result ? (
+                                      <div className="space-y-3">
+                                        {/* Score table layout */}
+                                        <div className="flex flex-wrap gap-2.5 max-w-md">
+                                          {/* Verde */}
+                                          <div className="flex-1 min-w-[85px] bg-[#0c1410] border border-emerald-500/10 hover:border-emerald-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
+                                            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-450" /> Verde
+                                            </span>
+                                            <strong className="text-emerald-400 font-display font-black text-sm mt-0.5">{result.winsGreen || 0} vit</strong>
+                                          </div>
+
+                                          {/* Vermelho */}
+                                          <div className="flex-1 min-w-[85px] bg-[#140c0d] border border-rose-500/10 hover:border-rose-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
+                                            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Vermelho
+                                            </span>
+                                            <strong className="text-rose-400 font-display font-black text-sm mt-0.5">{result.winsRed || 0} vit</strong>
+                                          </div>
+
+                                          {/* Azul */}
+                                          <div className="flex-1 min-w-[85px] bg-[#0c1014] border border-blue-500/10 hover:border-blue-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
+                                            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Azul
+                                            </span>
+                                            <strong className="text-blue-400 font-display font-black text-sm mt-0.5">{result.winsBlue || 0} vit</strong>
+                                          </div>
+                                        </div>
+
+                                        {/* Golden Trophy Ribbon for Champions */}
+                                        {result.champions && result.champions.length > 0 && (
+                                          <div className="inline-flex items-center gap-2 bg-amber-500/5 border border-amber-500/20 text-amber-400 px-3 py-1.5 rounded-xl text-xs font-mono leading-none shadow-sm">
+                                            <div className="p-1 bg-amber-500/10 text-amber-400 rounded-md">
+                                              <Award className="w-3.5 h-3.5 fill-amber-500" />
+                                            </div>
+                                            <span>
+                                              Campeão da Rodada: <strong className="text-amber-300 font-bold uppercase">{result.champions.join(' & ')}</strong>
+                                            </span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="py-2.5 px-3 bg-zinc-950/60 border border-zinc-900 rounded-xl max-w-sm">
+                                        <p className="text-xs text-zinc-500 font-mono italic flex items-center gap-1.5">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-ping" />
+                                          {match.status === 'encerrada' ? 'Placar em processamento / auditoria' : 'Partida futura programada'}
+                                        </p>
+                                      </div>
+                                    )}
                                   </div>
-                                  <div className="text-center flex flex-col items-center">
-                                    <span className="text-zinc-550 text-[9px] uppercase font-semibold">🔵 Azul</span>
-                                    <strong className="text-blue-400 text-xs mt-0.5">{result.winsBlue || 0} Vit</strong>
+
+                                  {/* Media counter row */}
+                                  <div className="text-[10px] font-mono text-zinc-500 flex items-center gap-2 pt-0.5">
+                                    <span className="flex items-center gap-1">📸 <strong>{photosCount}</strong> fotos</span>
+                                    <span>•</span>
+                                    <span className="flex items-center gap-1">🎥 <strong>{videosCount}</strong> vídeos</span>
                                   </div>
                                 </div>
-                              ) : (
-                                <p className="text-xs text-zinc-500 mt-1 font-sans italic font-semibold">
-                                  {match.status === 'encerrada' ? 'Aguardando publicação do resultado' : 'Rodada futura / agendada'}
-                                </p>
-                              )}
-                            </div>
 
-                            {/* Champions text badge */}
-                            {result && result.champions && result.champions.length > 0 && (
-                              <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-md text-[10px] font-mono leading-none">
-                                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                                <span>Campeão: <strong>{result.champions.join(', ')}</strong></span>
+                                {/* Responsive CTA Buttons */}
+                                <div className="flex flex-row md:flex-col items-stretch gap-2 pt-2 md:pt-0 w-full md:w-auto">
+                                  {hasMedias ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedHistoryMatchId(match.id);
+                                        setMuseuTab('memorias');
+                                      }}
+                                      className="flex-1 md:flex-none px-4 py-2 bg-[#1b2f25] hover:bg-emerald-500 text-emerald-300 hover:text-zinc-950 rounded-xl text-[11px] font-black tracking-wider uppercase transition border border-emerald-500/10 hover:border-emerald-450 cursor-pointer text-center font-mono"
+                                    >
+                                      🏛️ Acervo da Rodada
+                                    </button>
+                                  ) : (
+                                    match.status === 'encerrada' && !isPublic && currentUser && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFormAssociation(`match-${match.id}`);
+                                          setFormCategory('partida');
+                                          setIsUploadOpen(true);
+                                        }}
+                                        className="flex-1 md:flex-none px-3.5 py-2 bg-zinc-900 hover:bg-zinc-805 text-zinc-400 hover:text-white rounded-xl text-[10.5px] font-mono font-bold transition border border-zinc-850 cursor-pointer text-center"
+                                      >
+                                        📷 Registrar Mídia
+                                      </button>
+                                    )
+                                  )}
+                                </div>
                               </div>
-                            )}
-
-                            {/* Media counter summary text */}
-                            <div className="text-[10px] font-mono text-zinc-500 flex items-center gap-2">
-                              <span>📸 {photosCount} fotos</span>
-                              <span>•</span>
-                              <span>🎥 {videosCount} vídeos</span>
                             </div>
-                          </div>
-
-                          {/* Action Button trigger filter */}
-                          <div className="flex items-center gap-2 pt-2 md:pt-0">
-                            {hasMedias ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedHistoryMatchId(match.id);
-                                  setMuseuTab('memorias');
-                                }}
-                                className="w-full md:w-auto px-4 py-2 bg-[#1b2f25] hover:bg-[#22c55e]/90 text-[#4ade80] hover:text-white rounded-lg text-xs font-bold transition border border-emerald-500/10 hover:border-emerald-400 cursor-pointer text-center whitespace-nowrap uppercase tracking-wider font-mono"
-                              >
-                                🏛️ Explorar Acervo
-                              </button>
-                            ) : (
-                              match.status === 'encerrada' && !isPublic && currentUser && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setFormAssociation(`match-${match.id}`);
-                                    setFormCategory('partida');
-                                    setIsUploadOpen(true);
-                                  }}
-                                  className="w-full md:w-auto px-3 py-2 bg-zinc-900 hover:bg-zinc-805 text-zinc-400 hover:text-white rounded-lg text-[10.5px] font-mono transition border border-zinc-850 cursor-pointer text-center"
-                                >
-                                  📷 Registrar Memória
-                                </button>
-                              )
-                            )}
-                          </div>
-                        </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ));
+                })()}
               </div>
             )}
           </div>

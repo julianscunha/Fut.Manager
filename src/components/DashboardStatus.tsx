@@ -13,7 +13,6 @@ const getAbbreviation = (pos: string) => {
   switch (pos) {
     case 'goleiro': return 'GK';
     case 'zagueiro': return 'ZAG';
-    case 'lateral': return 'LAT';
     case 'meio_campo': return 'MEI';
     case 'volante': return 'VOL';
     case 'atacante': return 'ATA';
@@ -22,7 +21,7 @@ const getAbbreviation = (pos: string) => {
 };
 
 function computeTacticalAssignments(playersList: Player[]): Record<string, { position: string; isAdapted: boolean }> {
-  const positions = ['goleiro', 'zagueiro', 'lateral', 'meio_campo', 'volante', 'atacante'];
+  const positions = ['goleiro', 'zagueiro', 'meio_campo', 'volante', 'atacante'];
   const bestAssignment: Record<string, string> = {};
   let bestScore = -Infinity;
 
@@ -1285,7 +1284,7 @@ export default function DashboardStatus({
   };
 
   // Aggregate stats from matching list
-  const POSITION_ORDER = ['goleiro', 'zagueiro', 'volante', 'meio_campo', 'lateral', 'atacante'];
+  const POSITION_ORDER = ['goleiro', 'zagueiro', 'volante', 'meio_campo', 'atacante'];
 
   const sortPlayersByPositionAndName = (p1: any, p2: any) => {
     const pl1 = players.find((pl: any) => pl.id === p1.playerId);
@@ -1476,7 +1475,7 @@ export default function DashboardStatus({
     // 1. GK
     findBestFor(['goleiro'], 'GK');
     // 2. ZAG
-    findBestFor(['zagueiro', 'lateral'], 'ZAG');
+    findBestFor(['zagueiro'], 'ZAG');
     // 3. VOL
     findBestFor(['volante'], 'VOL');
     // 4. MEI
@@ -1538,7 +1537,6 @@ export default function DashboardStatus({
     switch (pos) {
       case 'goleiro': return '🧤';
       case 'zagueiro': return '🛡️';
-      case 'lateral': return '🛡️';
       case 'volante': return '🧠';
       case 'meio_campo': return '🧠';
       case 'atacante': return '⚡';
@@ -2370,7 +2368,7 @@ export default function DashboardStatus({
 
                           // Group into the vertical tiers of the football field
                           const gks = teamPlayers.filter(p => assignments[p.id]?.position === 'goleiro');
-                          const defs = teamPlayers.filter(p => ['zagueiro', 'lateral'].includes(assignments[p.id]?.position));
+                          const defs = teamPlayers.filter(p => assignments[p.id]?.position === 'zagueiro');
                           const mids = teamPlayers.filter(p => ['volante', 'meio_campo'].includes(assignments[p.id]?.position));
                           const atts = teamPlayers.filter(p => assignments[p.id]?.position === 'atacante');
 

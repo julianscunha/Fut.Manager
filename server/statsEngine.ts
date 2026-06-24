@@ -1,15 +1,69 @@
 import { Player, Match, Presence, MatchResult, Season, PlayerStats, DuoAffinity, TrioAffinity } from '../src/types';
 
-// Helper to sort players as defined in the request (Priority: 1. Wins, 2. WinRate/Aproveitamento, 3. Presences)
+function computePlayerMetrics(playerId: string, playerPosition: string, evaluations: any[] = []) {
+  const playerEvals = evaluations.filter(e => e.targetPlayerId === playerId);
+  const isGk = playerPosition === 'goleiro';
+  const attribs = isGk 
+    ? ['reflexo', 'posicionamento', 'saida_gol', 'reposicao']
+    : ['defesa', 'passe', 'finalizacao', 'velocidade', 'posicionamento', 'drible', 'marcacao', 'fisico'];
+    
+  const weights: Record<string, number> = isGk
+    ? { reflexo: 0.35, posicionamento: 0.25, saida_gol: 0.20, reposicao: 0.20 }
+    : { defesa: 0.15, passe: 0.15, finalizacao: 0.15, velocidade: 0.15, posicionamento: 0.15, drible: 0.10, marcacao: 0.10, fisico: 0.05 };
+
+  const BASE_RATING = 3.5;
+  const BASE_WEIGHT = 4.0;
+
+  let weightedOverallSum = 0;
+
+  attribs.forEach(attr => {
+    const votes = playerEvals.map(e => e.ratings?.[attr]).filter(v => v !== undefined && v !== null);
+    const votesSum = votes.reduce((acc, v) => acc + (v as number), 0);
+    const votesCount = votes.length;
+    const weightedAvg = ((BASE_RATING * BASE_WEIGHT) + votesSum) / (BASE_WEIGHT + votesCount);
+    const roundedAvg = Math.round(weightedAvg * 10) / 10;
+    const weight = weights[attr] || 0;
+    weightedOverallSum += roundedAvg * weight;
+  });
+
+  return Math.round(weightedOverallSum * 10) / 10;
+}
+
+// Helper to sort players as defined in the request:
+// 1. Vitórias (desc)
+// 2. Aproveitamento (desc)
+// 3. Presenças (desc)
+// 4. OVR (desc)
+// 5. Melhor Sequência Histórica (desc)
+// 6. Ordem de Cadastro (last resort, ascending - oldest first)
 export function sortPlayersForRanking(statsList: Array<PlayerStats & { name: string; photoOriginal: string; primaryPosition: string }>) {
   return [...statsList].sort((a, b) => {
+    // 1. Vitórias
     if (b.vitorias !== a.vitorias) {
       return b.vitorias - a.vitorias;
     }
+    // 2. Aproveitamento
     if (b.aproveitamento !== a.aproveitamento) {
       return b.aproveitamento - a.aproveitamento;
     }
-    return b.presences - a.presences;
+    // 3. Presenças
+    if (b.presences !== a.presences) {
+      return b.presences - a.presences;
+    }
+    // 4. OVR (descending)
+    const ovrA = a.ovr ?? 3.5;
+    const ovrB = b.ovr ?? 3.5;
+    if (ovrB !== ovrA) {
+      return ovrB - ovrA;
+    }
+    // 5. Melhor Sequência Histórica (descending)
+    if (b.maxStreak !== a.maxStreak) {
+      return b.maxStreak - a.maxStreak;
+    }
+    // 6. Ordem de Cadastro (ascending - older first)
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateA - dateB;
   });
 }
 
@@ -47,13 +101,17 @@ export function computeStatsForSeason({
   matches,
   presences,
   results,
-  seasonId // string or undefined/null for whole history
+  seasonId, // string or undefined/null for whole history
+  evaluations = [],
+  evaluationHistory = []
 }: {
   players: Player[];
   matches: Match[];
   presences: Presence[];
   results: MatchResult[];
   seasonId?: string | null;
+  evaluations?: any[];
+  evaluationHistory?: any[];
 }): RenderedStats {
   // Filter matches of this season
   const activeMatches = seasonId 
@@ -82,12 +140,16 @@ export function computeStatsForSeason({
   const currentStreakMap: Record<string, number> = {};
   const maxStreakMap: Record<string, number> = {};
   const winCountMap: Record<string, number> = {};
+  const lossCountMap: Record<string, number> = {};
+  const drawCountMap: Record<string, number> = {};
   const presenceCountMap: Record<string, number> = {};
 
   activePlayers.forEach(p => {
     currentStreakMap[p.id] = 0;
     maxStreakMap[p.id] = 0;
     winCountMap[p.id] = 0;
+    lossCountMap[p.id] = 0;
+    drawCountMap[p.id] = 0;
     presenceCountMap[p.id] = 0;
   });
 
@@ -138,20 +200,30 @@ export function computeStatsForSeason({
 
       presenceCountMap[player.id]++;
 
-      // Did they won?
+      // Did they won, draw, or lose?
       let won = false;
+      let draw = false;
+      let lost = false;
       const isGoalkeeper = player.primaryPosition === 'goleiro';
 
       if (isSharedGk && isGoalkeeper) {
-        // Shared GKs win if any team wins (unless all got 0 wins)
-        won = champTeams.length > 0;
+        if (champTeams.length > 0) {
+          won = true;
+        } else {
+          draw = true;
+        }
       } else {
-        // They win if their team name is in the champions list
         const teamNameOfPlayer = blueTeamPlayerIds.has(player.id) ? 'Azul' : 
                                  redTeamPlayerIds.has(player.id) ? 'Vermelho' : 
                                  greenTeamPlayerIds.has(player.id) ? 'Verde' : null;
-        if (teamNameOfPlayer && champTeams.includes(teamNameOfPlayer)) {
-          won = true;
+        if (teamNameOfPlayer) {
+          if (champTeams.length === 0 || champTeams.length > 1) {
+            draw = true;
+          } else if (champTeams.includes(teamNameOfPlayer)) {
+            won = true;
+          } else {
+            lost = true;
+          }
         }
       }
 
@@ -162,6 +234,11 @@ export function computeStatsForSeason({
           maxStreakMap[player.id] = currentStreakMap[player.id];
         }
       } else {
+        if (draw) {
+          drawCountMap[player.id]++;
+        } else if (lost) {
+          lossCountMap[player.id]++;
+        }
         currentStreakMap[player.id] = 0; // streak is broken
       }
     });
@@ -206,7 +283,10 @@ export function computeStatsForSeason({
   const individualStatsList: Array<PlayerStats & { name: string; photoOriginal: string; primaryPosition: string }> = activePlayers.map(p => {
     const presences = presenceCountMap[p.id] || 0;
     const vitorias = winCountMap[p.id] || 0;
+    const derrotas = lossCountMap[p.id] || 0;
+    const empates = drawCountMap[p.id] || 0;
     const aproveitamento = presences > 0 ? Math.round((vitorias / presences) * 100) : 0;
+    const ovr = computePlayerMetrics(p.id, p.primaryPosition, evaluations);
 
     return {
       playerId: p.id,
@@ -215,9 +295,13 @@ export function computeStatsForSeason({
       primaryPosition: p.primaryPosition,
       presences,
       vitorias,
+      derrotas,
+      empates,
       aproveitamento,
       currentStreak: currentStreakMap[p.id] || 0,
-      maxStreak: maxStreakMap[p.id] || 0
+      maxStreak: maxStreakMap[p.id] || 0,
+      ovr,
+      createdAt: p.createdAt
     };
   });
 

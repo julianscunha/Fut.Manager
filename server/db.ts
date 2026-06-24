@@ -134,7 +134,7 @@ function ensureDbExists() {
           category: 'mensalista',
           status: 'disponivel',
           primaryPosition: 'meio_campo',
-          secondaryPositions: ['volante', 'lateral'],
+          secondaryPositions: ['volante'],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         },
