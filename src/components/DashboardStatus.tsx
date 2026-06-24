@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS, Player } from '../types';
+import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS, Player, FAVORITE_TEAMS } from '../types';
 import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
 import { getRoundStatus } from '../utils/roundStatus';
 import { 
@@ -159,6 +159,7 @@ export default function DashboardStatus({
 
   // Analytical Racha States
   const [stats, setStats] = useState<any>(null);
+  const [summaries, setSummaries] = useState<any[]>([]);
   const [latestResult, setLatestResult] = useState<any>(null);
   const [nextMatchResult, setNextMatchResult] = useState<any>(null);
 
@@ -414,6 +415,17 @@ export default function DashboardStatus({
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
+      }
+
+      // Fetch player summaries (OVR)
+      try {
+        const sumRes = await fetch('/api/evaluations/summary');
+        if (sumRes.ok) {
+          const sumData = await sumRes.json();
+          setSummaries(sumData || []);
+        }
+      } catch (sumErr) {
+        console.error('Falha ao ler resumos de avaliacoes:', sumErr);
       }
 
       // Fetch latest result
@@ -1522,6 +1534,18 @@ export default function DashboardStatus({
 
   const bestKeeper = getBestKeeper();
 
+  const getPositionEmoji = (pos: string) => {
+    switch (pos) {
+      case 'goleiro': return '🧤';
+      case 'zagueiro': return '🛡️';
+      case 'lateral': return '🛡️';
+      case 'volante': return '🧠';
+      case 'meio_campo': return '🧠';
+      case 'atacante': return '⚡';
+      default: return '🏃';
+    }
+  };
+
   const getMatchState = (): 'AGENDADO' | 'CONFIRMACOES_ABERTAS' | 'RACHA_FECHADO' | 'SORTEIO_REALIZADO' | 'PARTIDA_ENCERRADA' | null => {
     if (!nextMatch) return null;
     if (nextMatch.status === 'agendada') return 'AGENDADO';
@@ -1539,16 +1563,15 @@ export default function DashboardStatus({
   const matchState = getMatchState();
 
   return (
-    <div className="flex flex-col gap-6 animate-fadeIn" id="dashboard-status-wrapper">
-
-      {/* PAINEL OPERACIONAL: AÇÕES NECESSÁRIAS */}
+    <div className="space-y-6 flex flex-col pt-2" id="dashboard-status-main-container">
+       {/* PAINEL OPERACIONAL: AÇÕES NECESSÁRIAS */}
       {isAdmin && hasAdminPendencies && (
-        <div className="rounded-xl border border-dashed border-emerald-500/20 bg-zinc-950/20 p-4 md:p-5 space-y-4 shadow-lg order-1" id="admin-required-actions-panel">
+        <div className="rounded-xl border border-dashed border-emerald-500/20 bg-zinc-950/20 p-4 md:p-5 space-y-4 shadow-lg order-11" id="admin-required-actions-panel">
           <div className="flex items-center gap-2 pb-2.5 border-b border-[#22c55e]/10">
             <Shield className="w-5 h-5 text-emerald-400" />
-            <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">⚠ Pendências Administrativas</span>
+            <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">🛡️ Central de Pendências</span>
             <span className="ml-auto text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-              Painel do Administrador
+              Gestão
             </span>
           </div>
 
@@ -1571,13 +1594,12 @@ export default function DashboardStatus({
       )}
 
 
-
       {/* AREA DO ADMINISTRADOR: STANDALONE OPERATIONAL CONTROL CENTER */}
       {isAdmin && nextMatch && (
-        <div className="rounded-xl border border-dashed border-emerald-500/20 bg-zinc-950/25 p-5 space-y-4 shadow-lg order-2" id="admin-operational-center-panel">
+        <div className="rounded-xl border border-dashed border-emerald-500/20 bg-zinc-950/25 p-5 space-y-4 shadow-lg order-12" id="admin-operational-center-panel">
           <div className="flex items-center gap-2 pb-2.5 border-b border-[#22c55e]/10">
             <Shield className="w-5 h-5 text-emerald-400" />
-            <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">🛡 Área do Administrador</span>
+            <span className="font-display font-extrabold text-sm text-white uppercase tracking-wider">🎯 Gestão da Rodada</span>
           </div>
 
           {matchState === 'AGENDADO' && (
@@ -2061,8 +2083,93 @@ export default function DashboardStatus({
           <span>Lendo informações da próxima rodada...</span>
         </div>
       ) : nextMatch ? (
-        <div className="flex flex-col gap-6 order-3 w-full">
+        <div className="flex flex-col gap-6 order-2 w-full">
           
+          {matchState !== 'PARTIDA_ENCERRADA' && (() => {
+            // My status rendering block
+            const myAthleteProfile = players.find(p => p.id === resolvedPlayerId);
+            const myPrimaryPosition = myAthleteProfile?.primaryPosition;
+            const myPositionLabel = myPrimaryPosition && POSITION_LABELS[myPrimaryPosition] ? POSITION_LABELS[myPrimaryPosition] : 'Não especificado';
+            const myTeamDetails = myAthleteProfile ? FAVORITE_TEAMS.find(t => t.id === myAthleteProfile.favoriteTeamId) : null;
+            const myTeamName = myTeamDetails ? myTeamDetails.name : 'Vários';
+            
+            const isUserReserveInWait = currentUserCategory === 'reserva' && !areReservesReleased;
+            
+            return (
+              <div className="bg-gradient-to-br from-zinc-950 via-zinc-950 to-[#0c1f15]/15 border border-zinc-900 rounded-xl p-4 md:p-5 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg animate-fadeIn">
+                <div className="flex items-center gap-3.5 w-full md:w-auto">
+                  <div className="relative">
+                    {myAthleteProfile?.photoOriginal ? (
+                      <img 
+                        src={myAthleteProfile.photoOriginal} 
+                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-md"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-full bg-zinc-900 border-2 border-zinc-800 flex items-center justify-center text-zinc-400 font-sans text-sm font-bold">
+                        {currentUser.name?.slice(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="absolute -bottom-1 -right-1 bg-zinc-900 rounded-full border border-zinc-805 p-0.5">
+                      <Trophy className="w-3 h-3 text-emerald-450" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-0.5">
+                    <span className="text-[9px] text-zinc-500 font-mono uppercase font-black tracking-widest block">Meu Status no Racha</span>
+                    <h4 className="text-white text-sm font-display font-extrabold leading-tight">
+                      {currentUser.name}
+                    </h4>
+                    <div className="flex items-center gap-2 text-[10px] text-zinc-400 font-mono">
+                      <span>Cat: <strong className="text-emerald-450 uppercase">{currentUserCategory === 'mensalista' ? 'Mensalista' : 'Reserva'}</strong></span>
+                      <span>•</span>
+                      <span>Posição: <strong className="text-white uppercase">{myPositionLabel}</strong></span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3.5 w-full md:w-auto md:justify-end">
+                  <div className="flex items-center gap-2 bg-zinc-900/40 border border-zinc-900 w-full sm:w-auto px-3.5 py-1.5 rounded-lg text-[10px] font-mono justify-between sm:justify-start">
+                    <span className="text-zinc-500">Time do Coração:</span>
+                    <span className="text-white font-extrabold flex items-center gap-1">
+                      ❤️ {myTeamName}
+                    </span>
+                  </div>
+
+                  <div className={`text-center py-2 px-4 rounded-lg border font-bold text-xs font-mono uppercase flex items-center gap-1.5 w-full sm:w-auto justify-center ${
+                    myPresence === 'confirmado' 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25 shadow shadow-emerald-500/5' 
+                      : myPresence === 'cancelado' 
+                        ? 'bg-rose-500/10 text-rose-450 border-rose-500/20'
+                        : 'bg-zinc-900 text-amber-400 border-zinc-800'
+                  }`}>
+                    {myPresence === 'confirmado' ? (
+                      <>
+                        <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span>⚽ Escalação Confirmada</span>
+                      </>
+                    ) : myPresence === 'cancelado' ? (
+                      <>
+                        <span className="inline-block w-2 h-2 rounded-full bg-rose-500" />
+                        <span>❌ Fora da Rodada</span>
+                      </>
+                    ) : isUserReserveInWait ? (
+                      <>
+                        <span className="inline-block w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
+                        <span>🎟 Na Fila de Espera</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        <span>⏳ Escalação Pendente</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {matchState === 'PARTIDA_ENCERRADA' ? (
             /* 🏆 STATE 5: RESUMO DE PLACAR DA PARTIDA ENCERRADA */
             <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 space-y-4 flex flex-col justify-between shadow-lg" id="dashboard-resumo-da-partida">
@@ -2309,9 +2416,16 @@ export default function DashboardStatus({
                                   <span>Time {team.name}</span>
                                   <span className="text-[7.5px] font-mono font-medium text-zinc-400">({teamPlayers.length})</span>
                                 </div>
-                                {teamOverall && (
-                                  <span className="font-mono text-[9px]">★ {teamOverall.toFixed(1)}</span>
-                                )}
+                                {teamOverall && (() => {
+                                  const rounded = Math.round(teamOverall);
+                                  const stars = '★'.repeat(Math.min(5, Math.max(1, rounded))) + '☆'.repeat(Math.max(0, 5 - Math.min(5, Math.max(1, rounded))));
+                                  return (
+                                    <div className="flex items-center gap-1">
+                                      <span className="text-amber-400 tracking-tight text-[8px]">{stars}</span>
+                                      <span className="font-mono text-[9px] text-zinc-350">({teamOverall.toFixed(1)})</span>
+                                    </div>
+                                  );
+                                })()}
                               </div>
 
                               {/* Soccer Field Viewport - Fixed height of 170px to shrink vertical space by 45% */}
@@ -2665,73 +2779,111 @@ export default function DashboardStatus({
                                     const playerPos = matchingPlayer ? matchingPlayer.primaryPosition : (p.isGoleiro ? 'goleiro' : '');
                                     const posLabel = playerPos && POSITION_LABELS[playerPos] ? POSITION_LABELS[playerPos] : '';
                                     
-                                    const displayLegend = posLabel ? `${catLabel} • ${posLabel}` : catLabel;
+                                    const athletePhoto = matchingPlayer?.photoOriginal || p.photoOriginal;
+                                    
+                                    const matchingSummary = summaries.find(s => s.playerId === p.playerId);
+                                    const playerOvr = matchingSummary ? matchingSummary.overall : 3.5;
 
                                     return (
                                       <div 
                                         key={p.playerId} 
-                                        className="flex flex-col sm:flex-row sm:items-center justify-between py-3 border-b border-zinc-900 last:border-b-0 gap-3 sm:gap-2"
+                                        className="flex items-center justify-between py-2.5 px-3 border border-zinc-900 rounded-xl bg-zinc-950/20 hover:bg-zinc-950/50 gap-3 transition"
                                       >
-                                        <div className="flex items-center gap-2.5 min-w-0">
-                                          <div className="flex flex-col gap-0.5 min-w-0">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                          {/* Athlete Avatar */}
+                                          <div className="relative shrink-0">
+                                            {athletePhoto ? (
+                                              <img 
+                                                src={athletePhoto} 
+                                                alt="" 
+                                                className="w-9 h-9 rounded-full object-cover border border-zinc-850 shadow-md"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                            ) : (
+                                              <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 font-sans text-xs font-bold shadow-md">
+                                                {p.name?.slice(0, 2).toUpperCase()}
+                                              </div>
+                                            )}
+                                          </div>
+
+                                          {/* Profile Details */}
+                                          <div className="flex flex-col min-w-0">
                                             <div className="flex items-center gap-1.5 flex-wrap">
-                                              <span className="font-extrabold text-[#e2e8f0] truncate text-xs sm:text-[11px] font-sans">
+                                              <span className="font-extrabold text-[#e2e8f0] text-sm font-sans truncate">
                                                 {p.name}
                                               </span>
                                               {p.isGoleiro && (
-                                                <span className="text-[8.5px] px-1 py-0 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 rounded-md font-sans font-bold shrink-0 uppercase tracking-widest leading-none">
+                                                <span className="text-[8.5px] px-1 py-0.25 bg-[#34d399]/10 text-[#34d399] border border-[#34d399]/20 rounded font-sans font-black uppercase tracking-wider scale-90">
                                                   GK
                                                 </span>
                                               )}
                                             </div>
-                                            <span className="text-[9px] text-zinc-500 font-sans uppercase font-bold tracking-widest">
-                                              {displayLegend}
+                                            <div className="flex items-center gap-1.5 text-[10px] text-zinc-500 font-sans mt-0.5 uppercase tracking-wide">
+                                              <span className="text-zinc-400 font-bold">{catLabel}</span>
+                                              <span>•</span>
+                                              <span className="flex items-center gap-1 text-[#4ade80] font-semibold">
+                                                <span>{getPositionEmoji(playerPos)}</span>
+                                                <span>{posLabel || 'Atleta'}</span>
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 shrink-0">
+                                          {/* OVR info */}
+                                          <div className="text-right">
+                                            <span className="text-[9px] text-zinc-550 uppercase tracking-widest font-mono font-bold block leading-none">OVR</span>
+                                            <span className="text-xs font-mono font-extrabold text-zinc-400 leading-none mt-1 inline-block">
+                                              ⭐ {playerOvr?.toFixed(1) || '3.5'}
                                             </span>
                                           </div>
-                                        </div>
-                                      <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap sm:flex-nowrap w-full sm:w-auto">
-                                        <div className="flex items-center gap-1 font-mono text-[10px]">
-                                          <span className="text-zinc-500 sm:hidden">Status: </span>
-                                          <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-900/40 border ${
-                                            p.presenceStatus === 'confirmado' 
-                                              ? 'text-emerald-400 border-emerald-500/20 bg-emerald-500/5' 
-                                              : p.presenceStatus === 'cancelado' 
-                                                ? 'text-rose-500 border-rose-500/20 bg-rose-500/5' 
-                                                : 'text-[#94a3b8] border-zinc-805'
-                                          }`}>
-                                            {p.presenceStatus === 'confirmado' ? 'Confirmado' : p.presenceStatus === 'cancelado' ? 'Não Vai' : 'Pendente'}
-                                          </span>
-                                        </div>
-                                        {isAdmin && (
-                                          <div className="flex gap-2.5 items-center">
-                                            {p.presenceStatus !== 'confirmado' && (
-                                              <button
-                                                type="button"
-                                                disabled={actionLoading}
-                                                onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
-                                                className="bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
-                                                title="Aprovar participação"
-                                              >
-                                                <Check className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
-                                              </button>
-                                            )}
-                                            {p.presenceStatus !== 'cancelado' && (
-                                              <button
-                                                type="button"
-                                                disabled={actionLoading}
-                                                onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
-                                                className="bg-rose-500/10 hover:bg-rose-500 text-rose-450 hover:text-black border border-rose-500/25 rounded-xl w-11 h-11 sm:w-10 sm:h-10 transition cursor-pointer flex items-center justify-center active:scale-95 flex-shrink-0"
-                                                title="Remover / Cancelar"
-                                              >
-                                                <X className="w-5.5 h-5.5 sm:w-4.5 sm:h-4.5 stroke-[3]" />
-                                              </button>
+
+                                          <div className="flex items-center gap-2.5">
+                                            {/* Status Badge */}
+                                            <div className="hidden sm:block">
+                                              <span className={`text-[9px] px-2 py-1 rounded font-bold uppercase tracking-wider bg-zinc-950/40 border border-zinc-900/60 shadow ${
+                                                p.presenceStatus === 'confirmado' 
+                                                  ? 'text-emerald-400 border-emerald-500/10 bg-emerald-500/5' 
+                                                  : p.presenceStatus === 'cancelado' 
+                                                    ? 'text-rose-500 border-rose-500/10 bg-rose-500/5' 
+                                                    : 'text-[#94a3b8] border-zinc-805 bg-zinc-950'
+                                              }`}>
+                                                {p.presenceStatus === 'confirmado' ? 'Confirmado' : p.presenceStatus === 'cancelado' ? 'Não Vai' : 'Pendente'}
+                                              </span>
+                                            </div>
+
+                                            {/* Admin Actions */}
+                                            {isAdmin && (
+                                              <div className="flex gap-1.5 items-center">
+                                                {p.presenceStatus !== 'confirmado' && (
+                                                  <button
+                                                    type="button"
+                                                    disabled={actionLoading}
+                                                    onClick={() => handleAdminTogglePresence(p.playerId, 'confirmado')}
+                                                    className="bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-black border border-emerald-500/25 rounded-lg w-8 h-8 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                                    title="Aprovar Presença"
+                                                  >
+                                                    <Check className="w-4 h-4 stroke-[3]" />
+                                                  </button>
+                                                )}
+                                                {p.presenceStatus !== 'cancelado' && (
+                                                  <button
+                                                    type="button"
+                                                    disabled={actionLoading}
+                                                    onClick={() => handleAdminTogglePresence(p.playerId, 'cancelado')}
+                                                    className="bg-rose-500/15 hover:bg-rose-500 text-rose-450 hover:text-black border border-rose-500/25 rounded-lg w-8 h-8 transition cursor-pointer flex items-center justify-center active:scale-95"
+                                                    title="Negar Presença"
+                                                  >
+                                                    <X className="w-4 h-4 stroke-[3]" />
+                                                  </button>
+                                                )}
+                                              </div>
                                             )}
                                           </div>
-                                        )}
+                                        </div>
                                       </div>
-                                    </div>
-                                  );
-                                })}
+                                    );
+                                  })}
                               </div>
                             )}
                           </div>
@@ -2892,9 +3044,9 @@ export default function DashboardStatus({
           <div className="flex flex-col h-full justify-between space-y-4">
             <div>
               <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/40">
-                <span className="text-lg">💵</span>
+                <span className="text-lg">💰</span>
                 <h3 className="font-display font-extrabold text-white text-xs uppercase tracking-wide">
-                  Resumo Financeiro
+                  Caixa do Clube
                 </h3>
               </div>
               <p className="text-[11px] text-zinc-500 font-sans mt-1.5">
@@ -2953,14 +3105,14 @@ export default function DashboardStatus({
           </div>
         </div>
 
-        {/* Coluna Direita: Mural Destaque da Temporada */}
+        {/* Coluna Direita: Destaques do Racha */}
         <div className="rounded-xl border border-zinc-900 bg-zinc-950/20 p-5 flex flex-col justify-between space-y-4 shadow-lg">
           <div className="flex flex-col h-full justify-between space-y-4">
             <div>
               <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/40">
                 <Trophy className="w-5 h-5 text-amber-500 animate-pulse" />
                 <h3 className="font-display font-extrabold text-white text-sm uppercase tracking-wide">
-                  Mural Destaque da Temporada
+                  Destaques do Racha
                 </h3>
               </div>
               <p className="text-[12px] text-zinc-400 font-sans mt-1.5">
@@ -2969,11 +3121,11 @@ export default function DashboardStatus({
             </div>
 
             <div className="flex flex-col gap-4">
-              {/* 1. ALL-STAR TEAM DA TEMPORADA */}
+              {/* 1. SELEÇÃO DA TEMPORADA */}
               <div className="w-full bg-[#0e1411]/60 border border-emerald-900/30 rounded-xl p-3.5 space-y-2.5">
                 <div className="flex items-center justify-between border-b border-emerald-950/40 pb-1.5">
                   <span className="text-[11px] text-amber-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
-                    ⭐ ALL-STAR TEAM DA TEMPORADA
+                    ⭐ SELEÇÃO DA TEMPORADA
                   </span>
                   <span className="text-[9px] text-zinc-500 font-sans font-bold">TOP 5 PERFORMANCE</span>
                 </div>

@@ -405,6 +405,7 @@ async function startServer() {
     });
 
     db.notifications = db.notifications.filter((n: any) => {
+      if (!n) return false;
       // 1. Delete if match or event no longer exists
       if (n.matchId && !existingMatchIds.has(n.matchId)) {
         return false;
@@ -435,12 +436,13 @@ async function startServer() {
 
     // 1. Sync bills (created and overdue)
     (db.bills || []).forEach((bill: any) => {
-      const player = db.players.find((p: any) => p.id === bill.playerId);
+      if (!bill) return;
+      const player = (db.players || []).find((p: any) => p && p.id === bill.playerId);
       const pName = player ? player.name : 'Jogador';
 
       // Bill created
       const createdKey = `notif-bill-created-${bill.id}`;
-      if (!db.notifications.some((n: any) => n.id === createdKey)) {
+      if (!db.notifications.some((n: any) => n && n.id === createdKey)) {
         db.notifications.push({
           id: createdKey,
           category: 'financeiro',
@@ -455,8 +457,8 @@ async function startServer() {
 
       // Bill overdue
       const overdueKey = `notif-bill-overdue-${bill.id}`;
-      if (bill.status === 'pendente' && bill.dueDate < todayStr) {
-        if (!db.notifications.some((n: any) => n.id === overdueKey)) {
+      if (bill.status === 'pendente' && bill.dueDate && typeof bill.dueDate === 'string' && bill.dueDate < todayStr) {
+        if (!db.notifications.some((n: any) => n && n.id === overdueKey)) {
           db.notifications.push({
             id: overdueKey,
             category: 'financeiro',
@@ -492,7 +494,7 @@ async function startServer() {
           // 24 hours before alert (when hoursRemaining is between 0 and 24 hours)
           if (hoursRemaining > 0 && hoursRemaining <= 24) {
             const key24h = `notif-match-deadline-24h-${match.id}`;
-            if (!db.notifications.some((n: any) => n.id === key24h)) {
+            if (!db.notifications.some((n: any) => n && n.id === key24h)) {
               db.notifications.push({
                 id: key24h,
                 category: 'partida',
@@ -510,7 +512,7 @@ async function startServer() {
           // 2 hours before alert (when hoursRemaining is between 0 and 2 hours)
           if (hoursRemaining > 0 && hoursRemaining <= 2) {
             const key2h = `notif-match-deadline-2h-${match.id}`;
-            if (!db.notifications.some((n: any) => n.id === key2h)) {
+            if (!db.notifications.some((n: any) => n && n.id === key2h)) {
               db.notifications.push({
                 id: key2h,
                 category: 'partida',
@@ -529,12 +531,12 @@ async function startServer() {
           const legacyLimitHours = matchDeadlineDays * 24;
           if (hoursRemaining > 0 && hoursRemaining <= legacyLimitHours) {
             const keyGeneral = `notif-match-deadline-general-${match.id}`;
-            if (!db.notifications.some((n: any) => n.id === keyGeneral)) {
+            if (!db.notifications.some((n: any) => n && n.id === keyGeneral)) {
               db.notifications.push({
                 id: keyGeneral,
                 category: 'partida',
                 title: '⚠️ Prazo de Confirmação Próximo',
-                message: `O prazo para confirmar sua presença na rodada de ${match.date.split('-').reverse().join('/')} se encerra em breve.`,
+                message: `O prazo para confirmar sua presença na rodada de ${match.date && typeof match.date === 'string' ? match.date.split('-').reverse().join('/') : ''} se encerra em breve.`,
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
@@ -3527,8 +3529,11 @@ async function startServer() {
         return res.status(404).json({ error: 'Partida não encontrada.' });
       }
 
-      if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'O sorteio já foi realizado para esta partida e não é permitido gerar novo sorteio ou executar novo re-sorteio.' });
+      if (match.status === 'encerrada') {
+        return res.status(400).json({ error: 'A partida está encerrada e não é permitido gerar novo sorteio ou executar novo re-sorteio.' });
+      }
+      if (match.status === 'cancelada') {
+        return res.status(400).json({ error: 'A partida foi cancelada e não é permitido gerar novo sorteio ou executar novo re-sorteio.' });
       }
 
       // Check current redraw count limit
@@ -4999,7 +5004,7 @@ async function startServer() {
         });
       } else {
         // Non-admins (normal players) can only read their own bills and payments!
-        const player = db.players.find(p => p.email.toLowerCase().trim() === email);
+        const player = (db.players || []).find(p => p && p.email && typeof p.email === 'string' && p.email.toLowerCase().trim() === email);
         if (!player) {
           return res.json({
             bills: [],
@@ -5147,7 +5152,7 @@ async function startServer() {
 
       // If not admin, check if the bill belongs to this player (by email)
       const player = db.players.find(p => p.id === bill.playerId);
-      const isMyBill = player && player.email.toLowerCase().trim() === (email || '').toLowerCase().trim();
+      const isMyBill = player && player.email && typeof player.email === 'string' && player.email.toLowerCase().trim() === (email || '').toLowerCase().trim();
 
       if (role !== 'admin' && role !== 'auxiliar') {
         if (!isMyBill) {
@@ -5207,7 +5212,7 @@ async function startServer() {
 
       const bill = db.bills[billIndex];
       const player = db.players.find(p => p.id === bill.playerId);
-      const isMyBill = player && player.email.toLowerCase().trim() === (email || '').toLowerCase().trim();
+      const isMyBill = player && player.email && typeof player.email === 'string' && player.email.toLowerCase().trim() === (email || '').toLowerCase().trim();
       const isAdmin = role === 'admin' || role === 'auxiliar';
 
       if (!isAdmin && !isMyBill) {
@@ -5905,7 +5910,7 @@ async function startServer() {
       let targetUserId = userId;
       // If only email is provided, we can resolve the playerId
       if (!targetUserId && email) {
-        const resolvedPlayer = db.players.find(p => p.email.toLowerCase().trim() === email.toLowerCase().trim());
+        const resolvedPlayer = (db.players || []).find(p => p && p.email && typeof p.email === 'string' && p.email.toLowerCase().trim() === email.toLowerCase().trim());
         if (resolvedPlayer) {
           targetUserId = resolvedPlayer.id;
         }
@@ -6006,7 +6011,7 @@ async function startServer() {
 
       let targetUserId = userId;
       if (!targetUserId && email) {
-        const resolvedPlayer = db.players.find(p => p.email.toLowerCase().trim() === email.toLowerCase().trim());
+        const resolvedPlayer = (db.players || []).find(p => p && p.email && typeof p.email === 'string' && p.email.toLowerCase().trim() === email.toLowerCase().trim());
         if (resolvedPlayer) {
           targetUserId = resolvedPlayer.id;
         }

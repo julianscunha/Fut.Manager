@@ -863,15 +863,15 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
               )}
 
               {/* Action Button */}
-              {selectedMatch?.lifecycleState === 'DRAW_COMPLETED' || selectedMatch?.status === 'sorteada' ? (
+              {selectedMatch?.status === 'sorteada' && activeDraw && activeDraw.redrawCount !== undefined && activeDraw.redrawCount >= 2 ? (
                 <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 text-[10.5px] rounded-lg leading-relaxed text-center font-mono">
                   🔒 O sorteio oficial está ativo! Apenas trocas manuais de jogadores e alteração de capitães são permitidas. Re-sorteios estão desativados para preservar a governança.
                 </div>
-              ) : (selectedMatch?.lifecycleState === 'CHECKIN_CLOSED' || selectedMatch?.status === 'fechada') ? (
+              ) : (selectedMatch?.lifecycleState === 'CHECKIN_CLOSED' || selectedMatch?.status === 'fechada' || selectedMatch?.lifecycleState === 'DRAW_COMPLETED' || selectedMatch?.status === 'sorteada') ? (
                 <button
                   type="button"
                   onClick={handleGenerateDraw}
-                  disabled={loading || confirmedPlayers.length === 0 || selectedMatch?.status === 'cancelada' || (activeDraw && activeDraw.redrawCount && activeDraw.redrawCount >= 2 ? true : false)}
+                  disabled={loading || confirmedPlayers.length === 0 || selectedMatch?.status === 'cancelada' || (activeDraw && activeDraw.redrawCount !== undefined && activeDraw.redrawCount >= 2)}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-850 disabled:text-zinc-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-400" />

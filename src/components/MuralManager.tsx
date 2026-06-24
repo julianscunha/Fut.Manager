@@ -203,6 +203,12 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   const isPublic = isPublicMode || window.location.search.includes('public=true') || window.location.pathname === '/public-mural';
 
   const [muralSubTab, setMuralSubTab] = useState<'comunicacao' | 'memorias'>('comunicacao');
+  
+  // New States for Museu do Clube V2 (5 Tabs)
+  const [museuTab, setMuseuTab] = useState<'memorias' | 'momentos' | 'historia' | 'comunicacao' | 'arquivo'>('memorias');
+  const [fullMatches, setFullMatches] = useState<any[]>([]);
+  const [fullResults, setFullResults] = useState<any[]>([]);
+  const [selectedHistoryMatchId, setSelectedHistoryMatchId] = useState<string | null>(null);
 
   // Mobile accordion state and compact publish state
   const [expandedSection, setExpandedSection] = useState<'regra' | 'aviso' | 'comunicado' | 'memoria' | 'history' | null>('regra');
@@ -211,10 +217,12 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   const handleDropdownOptionClick = (type: 'regra' | 'aviso' | 'comunicado' | 'memoria') => {
     setIsPublishDropdownOpen(false);
     if (type === 'memoria') {
+      setMuseuTab('memorias');
       setMuralSubTab('memorias');
       setExpandedSection('memoria');
       setIsUploadOpen(true);
     } else {
+      setMuseuTab('comunicacao');
       setMuralSubTab('comunicacao');
       setExpandedSection(type);
       setTimeout(() => {
@@ -289,15 +297,19 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
 
       if (!isPublic) {
         // Load configurations / metadata only for authenticated users
-        const [catRes, assocRes, statsRes] = await Promise.all([
+        const [catRes, assocRes, statsRes, matchesRes, resultsRes] = await Promise.all([
           fetch('/api/mural/categories'),
           fetch('/api/mural/associations'),
-          fetch('/api/mural/stats')
+          fetch('/api/mural/stats'),
+          fetch('/api/matches'),
+          fetch('/api/results')
         ]);
 
         if (catRes.ok) setCategories(await catRes.json());
         if (assocRes.ok) setAssociations(await assocRes.json());
         if (statsRes.ok) setStats(await statsRes.json());
+        if (matchesRes && matchesRes.ok) setFullMatches(await matchesRes.json());
+        if (resultsRes && resultsRes.ok) setFullResults(await resultsRes.json());
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao carregar os dados do Mural.');
@@ -378,6 +390,12 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
 
   // Apply filters
   const filteredPosts = posts.filter((post) => {
+    // DO NOT show communication categories under Galeria de Memórias or Momentos Épicos
+    if (['regra', 'aviso', 'comunicado'].includes(post.category)) return false;
+
+    // Filter by selected history match
+    if (selectedHistoryMatchId && post.matchId !== selectedHistoryMatchId) return false;
+
     // Determine event date
     const rawDateStr = post.eventDate || post.createdAt.split('T')[0];
     const postDate = new Date(rawDateStr + 'T12:00:00'); 
@@ -2328,36 +2346,38 @@ ${shareUrl}`;
       {/* Compact Title Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-zinc-900 pb-4">
         <div>
-          <h2 className="font-display font-extrabold text-xl text-white tracking-tight">Mural e Comunicação</h2>
+          <h2 className="font-display font-extrabold text-xl text-white tracking-tight flex items-center gap-2">
+            🏛️ Museu do Clube
+          </h2>
           <p className="text-zinc-500 text-xs mt-0.5">
-            Regras, avisos e comunicados do grupo.
+            O acervo vivo das melhores memórias, histórias e comunicados do Racha do Fofim.
           </p>
         </div>
 
         {/* Compact publish dropdown picker */}
         {!isPublic && currentUser && (
-          <div className="relative w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto font-sans">
             {currentUser.role === 'admin' ? (
               <>
                 <button
                   type="button"
                   id="btn-publish-dropdown-toggle"
                   onClick={() => setIsPublishDropdownOpen(!isPublishDropdownOpen)}
-                  className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer font-sans"
+                  className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Publicar</span>
+                  <span>Publicar no Museu</span>
                   <ChevronDown className="w-3.5 h-3.5" />
                 </button>
 
                 {isPublishDropdownOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsPublishDropdownOpen(false)} />
-                    <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1.5 animate-fadeIn font-sans">
+                    <div className="absolute right-0 mt-2 w-56 bg-zinc-900 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1.5 animate-fadeIn">
                       <button
                         type="button"
                         onClick={() => handleDropdownOptionClick('regra')}
-                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <BookOpen className="w-3.5 h-3.5 text-emerald-500" />
                         <span>📌 Nova Regra</span>
@@ -2365,7 +2385,7 @@ ${shareUrl}`;
                       <button
                         type="button"
                         onClick={() => handleDropdownOptionClick('aviso')}
-                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <Megaphone className="w-3.5 h-3.5 text-emerald-500" />
                         <span>📢 Novo Aviso</span>
@@ -2373,7 +2393,7 @@ ${shareUrl}`;
                       <button
                         type="button"
                         onClick={() => handleDropdownOptionClick('comunicado')}
-                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <Calendar className="w-3.5 h-3.5 text-emerald-500" />
                         <span>📅 Novo Comunicado</span>
@@ -2382,7 +2402,7 @@ ${shareUrl}`;
                       <button
                         type="button"
                         onClick={() => handleDropdownOptionClick('memoria')}
-                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer font-sans"
+                        className="w-full text-left px-4 py-3 sm:py-2 hover:bg-zinc-800 text-zinc-200 text-xs font-medium flex items-center gap-2.5 transition cursor-pointer"
                       >
                         <Camera className="w-3.5 h-3.5 text-emerald-500" />
                         <span>📷 Nova Foto / Vídeo</span>
@@ -2394,8 +2414,11 @@ ${shareUrl}`;
             ) : (
               <button
                 type="button"
-                onClick={() => setIsUploadOpen(true)}
-                className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer font-sans"
+                onClick={() => {
+                  setMuseuTab('memorias');
+                  setIsUploadOpen(true);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-md hover:shadow-lg transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Enviar Foto / Vídeo</span>
@@ -2405,159 +2428,423 @@ ${shareUrl}`;
         )}
       </div>
 
-      {/* Desktop View (hidden on mobile) */}
-      <div className="hidden md:block space-y-6">
-        {/* Subtab selection */}
-        <div className="flex bg-zinc-950 p-1 rounded-xl border border-zinc-850/80 max-w-sm">
+      {/* Tabs Navigation Selector - Swipeable/Scrollable on mobile, Clean list on desktop */}
+      <div className="sticky top-0 bg-[#090e0c]/95 backdrop-blur-md py-3 z-30 border-b border-zinc-900/60 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex overflow-x-auto scrollbar-none gap-2 pb-1">
           <button
             type="button"
-            onClick={() => setMuralSubTab('comunicacao')}
-            className={`flex-1 py-1.5 text-center rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              muralSubTab === 'comunicacao'
-                ? 'bg-zinc-850 text-white shadow'
-                : 'text-zinc-500 hover:text-zinc-300'
+            onClick={() => {
+              setMuseuTab('memorias');
+              setMuralSubTab('memorias');
+            }}
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+              museuTab === 'memorias'
+                ? 'bg-emerald-600 text-white shadow-lg'
+                : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            <Megaphone className="w-3.5 h-3.5" />
-            <span>Comunicação</span>
+            <Camera className="w-4 h-4" />
+            <span>Memórias ({memoriesCount})</span>
           </button>
+
           <button
             type="button"
-            onClick={() => setMuralSubTab('memorias')}
-            className={`flex-1 py-1.5 text-center rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              muralSubTab === 'memorias'
-                ? 'bg-zinc-850 text-white shadow'
-                : 'text-zinc-500 hover:text-zinc-300'
+            onClick={() => {
+              setMuseuTab('momentos');
+            }}
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+              museuTab === 'momentos'
+                ? 'bg-amber-600 text-white shadow-lg'
+                : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            <ImageIcon className="w-3.5 h-3.5" />
-            <span>Galeria de Memórias</span>
+            <Star className="w-4 h-4" />
+            <span>Momentos Épicos</span>
           </button>
-        </div>
 
-        {muralSubTab === 'comunicacao' ? (
-          <CommunicationCenter currentUser={currentUser} />
-        ) : (
-          renderMemoriesContent()
-        )}
-      </div>
-
-      {/* Mobile View (hidden on desktop >= md) */}
-      <div className="block md:hidden space-y-3">
-        {/* Regras do Racha */}
-        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
           <button
             type="button"
-            onClick={() => setExpandedSection(expandedSection === 'regra' ? null : 'regra')}
-            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+            onClick={() => {
+              setMuseuTab('historia');
+            }}
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+              museuTab === 'historia'
+                ? 'bg-emerald-805/40 text-emerald-400 border border-emerald-500/20 shadow-lg'
+                : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
+            }`}
           >
-            <div className="flex items-center gap-2">
-              <BookOpen className="w-4 h-4 text-emerald-450" />
-              <span className="font-sans font-bold text-xs text-zinc-100">Regras do Racha</span>
-              <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-400 font-extrabold shadow-sm">
-                {rulesCount}
-              </span>
-            </div>
-            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'regra' ? 'rotate-180 text-emerald-400' : ''}`} />
+            <BookOpen className="w-4 h-4" />
+            <span>História do Clube</span>
           </button>
-          {expandedSection === 'regra' && (
-            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
-              <CommunicationCenter currentUser={currentUser} forceTab="regra" hideTabs={true} />
-            </div>
-          )}
-        </div>
 
-        {/* Avisos Temporários */}
-        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
           <button
             type="button"
-            onClick={() => setExpandedSection(expandedSection === 'aviso' ? null : 'aviso')}
-            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+            onClick={() => {
+              setMuseuTab('comunicacao');
+              setMuralSubTab('comunicacao');
+            }}
+            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+              museuTab === 'comunicacao'
+                ? 'bg-[#1e3a2f] text-[#4ade80] border border-emerald-500/40'
+                : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
+            }`}
           >
-            <div className="flex items-center gap-2">
-              <Megaphone className="w-4 h-4 text-[#4ade80]" />
-              <span className="font-sans font-bold text-xs text-zinc-100">Avisos Temporários</span>
-              <span className="bg-emerald-500/30 border border-emerald-900/50 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-[#4ade80] font-extrabold shadow-sm">
-                {warningsCount}
-              </span>
-            </div>
-            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'aviso' ? 'rotate-180 text-emerald-400' : ''}`} />
+            <Megaphone className="w-4 h-4" />
+            <span>Comunicação ({rulesCount + warningsCount + announcementsCount})</span>
           </button>
-          {expandedSection === 'aviso' && (
-            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
-              <CommunicationCenter currentUser={currentUser} forceTab="aviso" hideTabs={true} />
-            </div>
-          )}
-        </div>
 
-        {/* Comunicados da Rodada */}
-        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
-          <button
-            type="button"
-            onClick={() => setExpandedSection(expandedSection === 'comunicado' ? null : 'comunicado')}
-            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-emerald-450" />
-               <span className="font-sans font-bold text-xs text-zinc-100">Comunicados da Rodada</span>
-              <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-400 font-extrabold shadow-sm">
-                {announcementsCount}
-              </span>
-            </div>
-            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'comunicado' ? 'rotate-180 text-emerald-400' : ''}`} />
-          </button>
-          {expandedSection === 'comunicado' && (
-            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
-              <CommunicationCenter currentUser={currentUser} forceTab="comunicado" hideTabs={true} />
-            </div>
-          )}
-        </div>
-
-        {/* Galeria de Memórias */}
-        <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
-          <button
-            type="button"
-            onClick={() => setExpandedSection(expandedSection === 'memoria' ? null : 'memoria')}
-            className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
-          >
-            <div className="flex items-center gap-2">
-              <ImageIcon className="w-4 h-4 text-emerald-400" />
-              <span className="font-sans font-bold text-xs text-zinc-100">Galeria de Memórias</span>
-              <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-400 font-extrabold shadow-sm">
-                {memoriesCount}
-              </span>
-            </div>
-            <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'memoria' ? 'rotate-180 text-emerald-400' : ''}`} />
-          </button>
-          {expandedSection === 'memoria' && (
-            <div className="border-t border-zinc-900/60 p-3 bg-black/15">
-              {renderMemoriesContent()}
-            </div>
-          )}
-        </div>
-
-        {/* Histórico / Arquivo */}
-        {!isPublic && currentUser && (currentUser.role === 'admin' || historyCount > 0) && (
-          <div className="border border-zinc-900 bg-[#090e0c]/60 rounded-xl overflow-hidden shadow-sm">
+          {!isPublic && currentUser && (currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
             <button
               type="button"
-              onClick={() => setExpandedSection(expandedSection === 'history' ? null : 'history')}
-              className="w-full flex items-center justify-between p-3.5 bg-zinc-900/40 hover:bg-zinc-900/80 transition text-left cursor-pointer"
+              onClick={() => {
+                setMuseuTab('arquivo');
+              }}
+              className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+                museuTab === 'arquivo'
+                  ? 'bg-zinc-800 text-white shadow-lg'
+                  : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
+              }`}
             >
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4 text-zinc-400" />
-                <span className="font-sans font-bold text-xs text-zinc-300">Histórico / Arquivo</span>
-                <span className="bg-zinc-950 border border-zinc-850 px-2.5 py-0.5 rounded-full text-[9px] font-mono text-zinc-500 font-extrabold shadow-sm">
-                  {historyCount}
-                </span>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-zinc-500 transition-transform duration-250 ${expandedSection === 'history' ? 'rotate-180 text-emerald-400' : ''}`} />
+              <History className="w-4 h-4" />
+              <span>Arquivo ({historyCount})</span>
             </button>
-            {expandedSection === 'history' && (
-              <div className="border-t border-zinc-900/60 p-3 bg-black/15">
-                <CommunicationCenter currentUser={currentUser} forceTab="history" hideTabs={true} />
+          )}
+        </div>
+      </div>
+
+      {/* Render selected content tab view */}
+      <div className="space-y-6">
+        {museuTab === 'memorias' && (
+          <div className="space-y-4">
+            {selectedHistoryMatchId && (
+              <div className="p-3.5 bg-emerald-950/20 border border-emerald-500/20 rounded-xl text-xs flex items-center justify-between gap-3 text-emerald-400 animate-slideDown">
+                <span className="font-mono flex items-center gap-1.5">
+                  🔍 Filtrando fotos e vídeos de: <strong>Rodada de {
+                    fullMatches.find(m => m.id === selectedHistoryMatchId)
+                      ? new Date(fullMatches.find(m => m.id === selectedHistoryMatchId).date + 'T12:00:00').toLocaleDateString('pt-BR')
+                      : 'Selecionada'
+                  }</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedHistoryMatchId(null)}
+                  className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 hover:bg-emerald-500/20 px-2.5 py-1 rounded-md border border-emerald-500/20 transition text-emerald-300 cursor-pointer"
+                >
+                  Limpar Filtro
+                </button>
               </div>
             )}
+            {renderMemoriesContent()}
+          </div>
+        )}
+
+        {museuTab === 'momentos' && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-amber-500/5 to-zinc-950/20 border border-amber-500/10 rounded-2xl p-4 md:p-6 shadow-sm animate-fadeIn">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-xl">
+                  <Star className="w-5 h-5 fill-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-display font-extrabold text-[#f59e0b] text-sm uppercase tracking-wider">
+                    🏆 Galeria de Honra — Momentos Épicos
+                  </h3>
+                  <p className="text-zinc-400 text-xs font-mono">
+                    Os acontecimentos históricos, resenhas inesquecíveis e lances imortalizados do Racha do Fofim.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Filter posts that are marked highlighted or showOnLanding */}
+            {posts.filter(p => (p.isHighlighted === true || p.showOnLanding === true) && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted).length === 0 ? (
+              <div className="text-center py-12 bg-[#090e0c]/40 border border-zinc-900 rounded-xl max-w-md mx-auto space-y-3">
+                <Star className="w-8 h-8 text-zinc-650 mx-auto opacity-40 animate-pulse" />
+                <div className="space-y-0.5">
+                  <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Nenhum Momento Marcado</p>
+                  <p className="text-[10px] text-zinc-500 font-mono">Os lances e resenhas que receberem destaque dos administradores aparecerão consagrados aqui.</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {posts
+                  .filter(p => (p.isHighlighted === true || p.showOnLanding === true) && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted)
+                  .map(post => {
+                    // Dynamically map a visual title tag depending on its context
+                    let badgeLabel = '🔥 Momento Épico';
+                    let badgeStyle = 'from-rose-500/20 to-orange-500/10 text-orange-450 border-orange-500/20';
+                    
+                    if (post.title.toLowerCase().includes('clássico') || post.description?.toLowerCase().includes('clássico')) {
+                      badgeLabel = '🏆 Clássico Memorável';
+                      badgeStyle = 'from-amber-500/25 to-yellow-600/15 text-amber-400 border-amber-500/30';
+                    } else if (post.title.toLowerCase().includes('rodada') || post.category === 'partida') {
+                      badgeLabel = '⚽ Grande Rodada';
+                      badgeStyle = 'from-emerald-500/25 to-teal-500/15 text-emerald-400 border-emerald-500/30';
+                    } else if (post.mediaType === 'image') {
+                      badgeLabel = '📸 Foto Histórica';
+                      badgeStyle = 'from-cyan-500/25 to-blue-500/15 text-cyan-400 border-cyan-500/30';
+                    }
+
+                    const formattedDateStr = post.eventDate 
+                      ? post.eventDate.split('-').reverse().join('/') 
+                      : new Date(post.createdAt).toLocaleDateString('pt-BR');
+
+                    return (
+                      <div
+                        key={`highlight-${post.id}`}
+                        className="bg-zinc-950 border border-zinc-900 rounded-2xl overflow-hidden hover:border-amber-500/25 shadow-xl transition flex flex-col group relative"
+                      >
+                        {/* Shimmer overlay for extra premium styling */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition duration-500 pointer-events-none" />
+
+                        <div
+                          onClick={() => setSelectedPost(post)}
+                          className="h-[200px] bg-zinc-900 overflow-hidden relative cursor-pointer"
+                        >
+                          {post.mediaType === 'image' ? (
+                            <img
+                              src={post.mediaUrl || undefined}
+                              alt={post.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="w-full h-full relative flex items-center justify-center">
+                              <video
+                                src={post.mediaUrl || undefined}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <div className="bg-amber-500 p-2.5 rounded-full text-zinc-950 shadow-lg">
+                                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className={`absolute top-3 left-3 bg-gradient-to-r ${badgeStyle} text-[10px] font-sans font-extrabold px-3 py-1 rounded-full border shadow-md uppercase tracking-wider`}>
+                            {badgeLabel}
+                          </div>
+                        </div>
+
+                        <div className="p-5 flex-1 flex flex-col justify-between">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+                              <span className="font-bold text-[#f59e0b] uppercase">{post.authorName}</span>
+                              <span>•</span>
+                              <span>{formattedDateStr}</span>
+                            </div>
+                            <h4
+                              onClick={() => setSelectedPost(post)}
+                              className="font-display font-extrabold text-sm text-white tracking-tight hover:text-amber-400 cursor-pointer transition line-clamp-1"
+                            >
+                              {post.title}
+                            </h4>
+                            <p className="text-zinc-400 text-xs leading-relaxed line-clamp-3">
+                              {post.description || 'Nenhuma descrição detalhada informada.'}
+                            </p>
+                          </div>
+
+                          <div className="mt-5 pt-3 border-t border-zinc-900/60 flex items-center justify-between text-[11px] font-mono">
+                            <button
+                              onClick={() => setSelectedPost(post)}
+                              className="text-zinc-400 hover:text-white hover:underline uppercase text-[9.5px]"
+                            >
+                              Ver Detalhes &rarr;
+                            </button>
+
+                            <div className="flex gap-1.5">
+                              <button
+                                onClick={() => handleShareWhatsApp(post)}
+                                className="p-1.5 bg-zinc-900 hover:bg-emerald-950/20 text-zinc-400 hover:text-emerald-400 border border-zinc-850 rounded-lg transition"
+                                title="Compartilhar"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {/* Only Admin can edit/remove highlights */}
+                              {currentUser?.role === 'admin' && (
+                                <button
+                                  onClick={() => handleToggleHighlight(post.id)}
+                                  className="p-1.5 bg-zinc-900 hover:bg-amber-950/20 text-yellow-500 hover:text-zinc-400 border border-zinc-850 rounded-lg transition"
+                                  title="Remover Categoria de Destaque"
+                                >
+                                  <Star className="w-3.5 h-3.5 fill-yellow-500 text-yellow-500" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {museuTab === 'historia' && (
+          <div className="space-y-6">
+            <div className="bg-[#101714] border border-[#22c55e]/15 rounded-2xl p-4 md:p-6 shadow-sm animate-fadeIn">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="p-2.5 bg-emerald-500/10 text-[#4ade80] rounded-xl">
+                  <Calendar className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="font-display font-extrabold text-white text-sm uppercase tracking-wider">
+                    📜 História do Clube — Linha do Tempo
+                  </h3>
+                  <p className="text-zinc-500 text-xs font-mono">
+                    Acompanhe a trajetória rodada a rodada do Racha do Fofim, seus placares históricos e mídias associadas.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {fullMatches.length === 0 ? (
+              <div className="text-center py-12 bg-zinc-950 border border-zinc-900 rounded-xl max-w-sm mx-auto space-y-2">
+                <Calendar className="w-6 h-6 text-zinc-655 mx-auto opacity-35 animate-bounce" />
+                <p className="text-zinc-400 text-xs font-bold uppercase tracking-wider">Sem Histórico de Rodadas</p>
+                <p className="text-[10px] text-zinc-500 font-mono">Nenhuma rodada foi sorteada ou encerrada nesta temporada.</p>
+              </div>
+            ) : (
+              <div className="relative pl-6 md:pl-8 border-l border-zinc-850 space-y-8 py-3 max-w-3xl mx-auto font-sans animate-fadeIn">
+                {fullMatches
+                  .slice()
+                  .sort((a,b) => b.date.localeCompare(a.date))
+                  .map((match, idx, arr) => {
+                    const result = fullResults.find(r => r.matchId === match.id);
+                    const matchMedias = posts.filter(p => p.matchId === match.id && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
+                    const photosCount = matchMedias.filter(m => m.mediaType === 'image').length;
+                    const videosCount = matchMedias.filter(m => m.mediaType === 'video').length;
+                    const hasMedias = matchMedias.length > 0;
+
+                    const formattedDate = new Date(match.date + 'T12:00:00').toLocaleDateString('pt-BR');
+
+                    return (
+                      <div key={match.id} className="relative group select-none">
+                        {/* Timeline Circle Bullet Indicator */}
+                        <div className={`absolute -left-[31px] md:-left-[39px] top-1.5 w-4 h-4 rounded-full border-2 bg-zinc-950 transition-all duration-300 group-hover:scale-125 ${
+                          hasMedias
+                            ? 'border-emerald-500 bg-emerald-950 text-emerald-400'
+                            : 'border-zinc-800 bg-zinc-900 text-zinc-500'
+                        }`}>
+                          <div className={`w-1.5 h-1.5 rounded-full mx-auto my-0.5 ${hasMedias ? 'bg-emerald-400' : 'bg-zinc-700'}`} />
+                        </div>
+
+                        {/* Timeline Card */}
+                        <div className="bg-[#0f1512] border border-zinc-900 hover:border-emerald-950/60 rounded-xl p-5 shadow-md hover:shadow-xl transition duration-300 relative flex flex-col md:flex-row md:items-center justify-between gap-4">
+                          <div className="space-y-3 flex-1">
+                            {/* Date Badge */}
+                            <div className="flex items-center gap-2 flex-wrap text-[10px] font-mono">
+                              <span className="bg-zinc-900 border border-zinc-850 px-2.5 py-0.5 rounded-full text-zinc-350 font-bold">
+                                📅 {formattedDate}
+                              </span>
+                              <span className="text-zinc-550 italic font-medium">
+                                ({match.location || 'Local Desconhecido'})
+                              </span>
+                            </div>
+
+                            {/* Round Title */}
+                            <div>
+                              <h4 className="font-display font-black text-sm text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
+                                Rodada #{arr.length - idx}
+                              </h4>
+                              {result ? (
+                                <div className="mt-2 grid grid-cols-3 gap-2 max-w-sm text-[11px] font-mono bg-zinc-950/60 p-2.5 border border-zinc-900 rounded-lg">
+                                  <div className="text-center flex flex-col items-center">
+                                    <span className="text-zinc-500 text-[9px] uppercase font-semibold">🟢 Verde</span>
+                                    <strong className="text-emerald-450 text-xs mt-0.5">{result.winsGreen || 0} Vit</strong>
+                                  </div>
+                                  <div className="text-center flex flex-col items-center border-x border-zinc-900">
+                                    <span className="text-zinc-500 text-[9px] uppercase font-semibold">🔴 Vermelho</span>
+                                    <strong className="text-red-400 text-xs mt-0.5">{result.winsRed || 0} Vit</strong>
+                                  </div>
+                                  <div className="text-center flex flex-col items-center">
+                                    <span className="text-zinc-550 text-[9px] uppercase font-semibold">🔵 Azul</span>
+                                    <strong className="text-blue-400 text-xs mt-0.5">{result.winsBlue || 0} Vit</strong>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-zinc-500 mt-1 font-sans italic font-semibold">
+                                  {match.status === 'encerrada' ? 'Aguardando publicação do resultado' : 'Rodada futura / agendada'}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Champions text badge */}
+                            {result && result.champions && result.champions.length > 0 && (
+                              <div className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2.5 py-1 rounded-md text-[10px] font-mono leading-none">
+                                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                <span>Campeão: <strong>{result.champions.join(', ')}</strong></span>
+                              </div>
+                            )}
+
+                            {/* Media counter summary text */}
+                            <div className="text-[10px] font-mono text-zinc-500 flex items-center gap-2">
+                              <span>📸 {photosCount} fotos</span>
+                              <span>•</span>
+                              <span>🎥 {videosCount} vídeos</span>
+                            </div>
+                          </div>
+
+                          {/* Action Button trigger filter */}
+                          <div className="flex items-center gap-2 pt-2 md:pt-0">
+                            {hasMedias ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedHistoryMatchId(match.id);
+                                  setMuseuTab('memorias');
+                                }}
+                                className="w-full md:w-auto px-4 py-2 bg-[#1b2f25] hover:bg-[#22c55e]/90 text-[#4ade80] hover:text-white rounded-lg text-xs font-bold transition border border-emerald-500/10 hover:border-emerald-400 cursor-pointer text-center whitespace-nowrap uppercase tracking-wider font-mono"
+                              >
+                                🏛️ Explorar Acervo
+                              </button>
+                            ) : (
+                              match.status === 'encerrada' && !isPublic && currentUser && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setFormAssociation(`match-${match.id}`);
+                                    setFormCategory('partida');
+                                    setIsUploadOpen(true);
+                                  }}
+                                  className="w-full md:w-auto px-3 py-2 bg-zinc-900 hover:bg-zinc-805 text-zinc-400 hover:text-white rounded-lg text-[10.5px] font-mono transition border border-zinc-850 cursor-pointer text-center"
+                                >
+                                  📷 Registrar Memória
+                                </button>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {museuTab === 'comunicacao' && (
+          <div className="space-y-4 animate-fadeIn">
+            <CommunicationCenter currentUser={currentUser} />
+          </div>
+        )}
+
+        {museuTab === 'arquivo' && (
+          <div className="bg-[#090e0c]/60 p-5 border border-zinc-900 rounded-xl space-y-4 animate-fadeIn">
+            <div className="space-y-1 pb-3 border-b border-zinc-900/60">
+              <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+                <History className="w-4 h-4 text-zinc-450" />
+                <span>Arquivo Histórico e Auditoria</span>
+              </h3>
+              <p className="text-[11px] text-zinc-500 font-mono">
+                Central de governança para publicações arquivadas ou excluídas logicamente.
+              </p>
+            </div>
+            
+            <CommunicationCenter currentUser={currentUser} forceTab="history" hideTabs={true} />
           </div>
         )}
       </div>
