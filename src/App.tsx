@@ -421,22 +421,22 @@ export default function App() {
             <button
               id="tab-dash"
               onClick={() => { setActiveTab('dash'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'dash'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Ínicio</span>
+              <span className="hidden sm:inline">Início</span>
             </button>
 
             <button
               id="tab-players"
               onClick={() => { setActiveTab('players'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'players'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -447,9 +447,9 @@ export default function App() {
             <button
               id="tab-calendar"
               onClick={() => { setActiveTab('calendar'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'calendar'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -460,9 +460,9 @@ export default function App() {
             <button
               id="tab-draw"
               onClick={() => { setActiveTab('draw'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'draw'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -473,9 +473,9 @@ export default function App() {
             <button
               id="tab-ranking"
               onClick={() => { setActiveTab('ranking'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'ranking'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -486,9 +486,9 @@ export default function App() {
             <button
               id="tab-finances"
               onClick={() => { setActiveTab('finances'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'finances'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -499,9 +499,9 @@ export default function App() {
             <button
               id="tab-events"
               onClick={() => { setActiveTab('events'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'events'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -512,9 +512,9 @@ export default function App() {
             <button
               id="tab-mural"
               onClick={() => { setActiveTab('mural'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                 activeTab === 'mural'
-                  ? 'bg-emerald-600 text-white shadow'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
               }`}
             >
@@ -526,9 +526,9 @@ export default function App() {
               <button
                 id="tab-approvals"
                 onClick={() => { setActiveTab('approvals'); setIsFormOpen(false); }}
-                className={`relative px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                className={`relative px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
                   activeTab === 'approvals'
-                    ? 'bg-emerald-600 text-white shadow'
+                    ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
                 }`}
               >
@@ -587,7 +587,7 @@ export default function App() {
                     <span className="font-display font-black text-sm tracking-tight text-white uppercase block">
                       Racha do <span className="text-[#22c55e]">Fofim</span>
                     </span>
-                    <span className="text-[8px] font-mono text-zinc-505 uppercase tracking-wider block">
+                    <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider block">
                       Grupo Privado Society
                     </span>
                   </div>
@@ -638,10 +638,10 @@ export default function App() {
                         setIsFormOpen(false);
                         setIsMobileMenuOpen(false);
                       }}
-                      className={`w-full min-h-[44px] px-3.5 rounded-xl font-bold text-xs flex items-center justify-between transition cursor-pointer ${
+                      className={`w-full min-h-[44px] px-3.5 rounded-xl font-bold text-xs flex items-center justify-between transition-all duration-200 active:scale-[0.97] cursor-pointer ${
                         isCurActive
-                          ? 'bg-emerald-600 text-white shadow shadow-emerald-500/10'
-                          : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent hover:border-zinc-850'
+                          ? 'bg-emerald-600 text-white shadow shadow-emerald-500/15'
+                          : 'text-zinc-400 hover:text-white hover:bg-zinc-900/80 border border-transparent hover:border-zinc-800'
                       }`}
                     >
                       <div className="flex items-center gap-3">
