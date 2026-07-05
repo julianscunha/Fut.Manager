@@ -440,26 +440,8 @@ export default function App() {
     }
   };
 
-  const handleGenerateRandomPlayers = async () => {
-    setErrorMsg('');
-    setSuccessMsg('');
-    setLoading(true);
-    try {
-      const res = await authFetch('/api/players/generate-random-10', {
-        method: 'POST'
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao gerar atletas aleatórios.');
 
-      setSuccessMsg('10 atletas simulados foram cadastrados com sucesso!');
-      await fetchPlayers();
-      setTimeout(() => setSuccessMsg(''), 5005);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao interagir com o servidor.');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   const handleEditClick = (player: Player) => {
     setEditingPlayer(player);
@@ -968,15 +950,6 @@ export default function App() {
                   
                   {isEditor && (
                     <div className="flex gap-2 flex-wrap">
-                      <button
-                        id="btn-generate-10-players"
-                        onClick={handleGenerateRandomPlayers}
-                        disabled={loading}
-                        className="px-4 py-2.5 bg-zinc-900 border border-zinc-800 hover:bg-[#1a1c1a] text-zinc-300 hover:text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-lg transition cursor-pointer disabled:opacity-50"
-                      >
-                        <Sparkles className="w-4 h-4 text-amber-500" />
-                        <span>Gerar 10 Atletas</span>
-                      </button>
                       <button
                         id="btn-new-player"
                         onClick={() => { setEditingPlayer(null); setIsFormOpen(true); }}

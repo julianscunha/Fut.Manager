@@ -65,22 +65,9 @@ function ensureDbExists() {
       seasons: [
         { id: 'season-2026', name: 'Temporada 2026', year: 2026, startDate: '2026-01-01', endDate: '2026-12-31', active: true }
       ],
-      matches: [
-        {
-          id: 'match-1',
-          seasonId: 'season-2026',
-          date: '2026-06-06',
-          time: '21:30',
-          location: 'Arena Furacão',
-          durationMinutes: 60,
-          status: 'confirmando'
-        }
-      ],
-      presences: [
-        { id: 'pres-1', matchId: 'match-1', playerId: 'player-1', status: 'confirmado', confirmedAt: new Date().toISOString() },
-        { id: 'pres-2', matchId: 'match-1', playerId: 'player-2', status: 'nao_confirmado' }
-      ],
-      reservesOrder: ['player-4'],
+      matches: [],
+      presences: [],
+      reservesOrder: [],
       recurrentConfig: {
         dayOfWeek: 6, // Sábado
         time: '21:30',
@@ -107,111 +94,10 @@ function ensureDbExists() {
           secondaryPositions: [],
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
-        },
-        {
-          id: 'player-1',
-          name: 'Fofim Magalhães',
-          phone: '(85) 99111-1111',
-          email: 'fofim@racha.com',
-          photoOriginal: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=150',
-          playerCardUrl: '',
-          favoriteTeamId: 'fla',
-          category: 'mensalista',
-          status: 'disponivel',
-          primaryPosition: 'atacante',
-          secondaryPositions: ['meio_campo'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 'player-2',
-          name: 'João Silva',
-          phone: '(85) 99222-2222',
-          email: 'sistema@auditoria.local',
-          photoOriginal: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-          playerCardUrl: '',
-          favoriteTeamId: 'pal',
-          category: 'mensalista',
-          status: 'disponivel',
-          primaryPosition: 'meio_campo',
-          secondaryPositions: ['volante'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 'player-3',
-          name: 'Goleiro Paredão',
-          phone: '(85) 99333-3333',
-          email: 'parede@racha.com',
-          photoOriginal: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-          playerCardUrl: '',
-          favoriteTeamId: 'spa',
-          category: 'mensalista',
-          status: 'disponivel',
-          primaryPosition: 'goleiro',
-          secondaryPositions: [],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: 'player-4',
-          name: 'Zeco Canela',
-          phone: '(85) 99444-4444',
-          email: 'zeco@racha.com',
-          photoOriginal: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150',
-          playerCardUrl: '',
-          favoriteTeamId: 'cor',
-          category: 'reserva',
-          status: 'lesionado',
-          statusStartDate: '1970-01-01',
-          statusEndDate: '2026-05-01', // Expired lesionado date (for auto-resolution testing)
-          primaryPosition: 'zagueiro',
-          secondaryPositions: ['volante'],
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
         }
       ],
-      evaluations: [
-        {
-          id: 'eval-1',
-          evaluatorUserId: 'user-admin',
-          targetPlayerId: 'player-1',
-          date: '2026-05-10',
-          ratings: { defesa: 3.5, passe: 4.0, finalizacao: 4.5, velocidade: 4.5, posicionamento: 4.0, drible: 4.5, marcacao: 3.0, fisico: 4.0 }
-        },
-        {
-          id: 'eval-2',
-          evaluatorUserId: 'user-sim-1',
-          targetPlayerId: 'player-1',
-          date: '2026-05-15',
-          ratings: { defesa: 3.0, passe: 4.5, finalizacao: 5.0, velocidade: 4.5, posicionamento: 4.5, drible: 4.5, marcacao: 3.5, fisico: 4.5 }
-        },
-        {
-          id: 'eval-3',
-          evaluatorUserId: 'user-admin',
-          targetPlayerId: 'player-2',
-          date: '2026-05-02',
-          ratings: { defesa: 4.0, passe: 4.5, finalizacao: 4.0, velocidade: 3.5, posicionamento: 4.5, drible: 4.0, marcacao: 4.0, fisico: 3.5 }
-        },
-        {
-          id: 'eval-4',
-          evaluatorUserId: 'user-admin',
-          targetPlayerId: 'player-3',
-          date: '2026-05-12',
-          ratings: { reflexo: 4.5, posicionamento: 4.5, saida_gol: 4.0, reposicao: 4.0 }
-        }
-      ],
-      evaluationHistory: [
-        { playerId: 'player-1', date: '2026-03-01', overall: 3.8 },
-        { playerId: 'player-1', date: '2026-04-01', overall: 4.1 },
-        { playerId: 'player-1', date: '2026-05-01', overall: 4.2 },
-        { playerId: 'player-1', date: '2026-06-01', overall: 4.3 },
-        { playerId: 'player-2', date: '2026-04-01', overall: 3.9 },
-        { playerId: 'player-2', date: '2026-05-01', overall: 4.0 },
-        { playerId: 'player-2', date: '2026-06-01', overall: 4.1 },
-        { playerId: 'player-3', date: '2026-05-01', overall: 4.2 },
-        { playerId: 'player-3', date: '2026-06-01', overall: 4.3 }
-      ],
+      evaluations: [],
+      evaluationHistory: [],
       draws: [],
       duoAffinities: [],
       trioAffinities: [],
@@ -267,24 +153,11 @@ export function readDb(): DatabaseSchema {
     updated = true;
   }
   if (!db.matches) {
-    db.matches = [
-      {
-        id: 'match-1',
-        seasonId: 'season-2026',
-        date: '2026-06-06',
-        time: '21:30',
-        location: 'Arena Furacão',
-        durationMinutes: 60,
-        status: 'confirmando'
-      }
-    ];
+    db.matches = [];
     updated = true;
   }
   if (!db.presences) {
-    db.presences = [
-      { id: 'pres-1', matchId: 'match-1', playerId: 'player-1', status: 'confirmado', confirmedAt: new Date().toISOString() },
-      { id: 'pres-2', matchId: 'match-1', playerId: 'player-2', status: 'nao_confirmado' }
-    ];
+    db.presences = [];
     updated = true;
   }
   if (!db.financeConfig) {
