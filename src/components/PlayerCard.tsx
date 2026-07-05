@@ -206,9 +206,10 @@ interface PlayerCardProps {
   onRestore?: (id: string) => void | Promise<void>;
   canEdit: boolean;
   onEvaluationSavedGlobal?: () => void;
+  onSelect?: (player: Player) => void;
 }
 
-export default function PlayerCard({ player, currentUser, onEdit, onInactivate, onRestore, canEdit, onEvaluationSavedGlobal }: PlayerCardProps) {
+export default function PlayerCard({ player, currentUser, onEdit, onInactivate, onRestore, canEdit, onEvaluationSavedGlobal, onSelect }: PlayerCardProps) {
   const [faceIndex, setFaceIndex] = useState(0); // 5 distinct pages (0 to 4)
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'vitoria' | 'presenca' | 'ranking' | 'resenha'>('all');
   const [selectedBadgeId, setSelectedBadgeId] = useState<string>('primeira_vitoria');
@@ -924,7 +925,8 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   return (
     <div
       id={`player-card-${player.id}`}
-      className={`relative w-full h-[495px] select-none transition-all duration-300 ${
+      onClick={() => onSelect?.(player)}
+      className={`relative w-full h-[495px] select-none transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
         isSoftDeleted ? 'opacity-65 grayscale' : ''
       }`}
     >
@@ -1503,55 +1505,70 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         {/* ========================================== */}
         {/* PERSISTENT ACTIONS FOOTER AREA             */}
         {/* ========================================== */}
-        <div className="pt-2 border-t border-zinc-900/40 flex items-center justify-between gap-1.5 z-20 mt-1" onClick={(e) => e.stopPropagation()}>
-          {/* Action 1: Avaliar */}
+        <div className="pt-2 border-t border-zinc-900/40 flex flex-col gap-1.5 z-20 mt-1" onClick={(e) => e.stopPropagation()}>
+          {/* Main Action: Ver Perfil */}
           <button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              setEvalModalOpen(true);
+              if (onSelect) onSelect(player);
             }}
-            className="flex-1 py-2 bg-emerald-950/35 hover:bg-emerald-950/65 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+            className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-[10px] font-mono transition flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
           >
-            <Award className="w-3.5 h-3.5" />
-            <span>Avaliar</span>
+            <User className="w-3.5 h-3.5 text-emerald-100" />
+            <span>Ver Perfil</span>
           </button>
 
-          {/* Action 2: Share / Edit Admin */}
-          {canEdit ? (
-            <div className="flex-1 flex gap-1 h-9">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(player);
-                }}
-                className="flex-1 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
-              >
-                <Edit2 className="w-2.5 h-2.5 text-zinc-450" />
-                <span>Editar</span>
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onInactivate(player.id);
-                }}
-                className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-9 w-9"
-                title="Inativar Jogador"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
+          <div className="flex items-center justify-between gap-1.5 w-full">
+            {/* Action 1: Avaliar */}
             <button
               type="button"
-              onClick={handleShare}
-              className="flex-1 py-2 bg-zinc-900 hover:bg-zinc-800 text-sky-400 hover:text-sky-305 rounded-xl border border-zinc-805 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEvalModalOpen(true);
+              }}
+              className="flex-1 py-2 bg-emerald-950/35 hover:bg-emerald-950/65 border border-emerald-500/20 hover:border-emerald-500/40 rounded-xl text-[10px] font-bold font-mono text-emerald-400 hover:text-emerald-300 transition flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
             >
-              <span>Compartilhar</span>
+              <Award className="w-3.5 h-3.5" />
+              <span>Avaliar</span>
             </button>
-          )}
+
+            {/* Action 2: Share / Edit Admin */}
+            {canEdit ? (
+              <div className="flex-1 flex gap-1 h-9">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(player);
+                  }}
+                  className="flex-1 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+                >
+                  <Edit2 className="w-2.5 h-2.5 text-zinc-450" />
+                  <span>Editar</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onInactivate(player.id);
+                  }}
+                  className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-9 w-9"
+                  title="Inativar Jogador"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex-1 py-2 bg-zinc-900 hover:bg-zinc-800 text-sky-400 hover:text-sky-305 rounded-xl border border-zinc-805 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+              >
+                <span>Compartilhar</span>
+              </button>
+            )}
+          </div>
         </div>
 
       </div>

@@ -139,6 +139,31 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   // Moving state for manual swaps
   const [selectedPlayerToMove, setSelectedPlayerToMove] = useState<{ playerId: string; currentTeam: string } | null>(null);
 
+  // Helper to sort a list of players based on current sidebar ordering settings
+  const sortPlayersBySelectedOrdering = (list: Player[]) => {
+    return [...list].sort((a, b) => {
+      if (orderingMode === 'posicao') {
+        const POSITION_ORDER: Record<string, number> = {
+          goleiro: 1,
+          zagueiro: 2,
+          meio_campo: 3,
+          volante: 4,
+          atacante: 5,
+        };
+        const orderA = POSITION_ORDER[a.primaryPosition] || 99;
+        const orderB = POSITION_ORDER[b.primaryPosition] || 99;
+        if (orderA !== orderB) return orderA - orderB;
+        return a.name.localeCompare(b.name);
+      } else if (orderingMode === 'confirmacao') {
+        const idxA = confirmedPresenceOrder.indexOf(a.id);
+        const idxB = confirmedPresenceOrder.indexOf(b.id);
+        return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
+      } else {
+        return a.name.localeCompare(b.name);
+      }
+    });
+  };
+
   // Load matches on start
   useEffect(() => {
     fetchMatches();
@@ -486,7 +511,8 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       const teamOverall = t.name === 'Azul' ? activeDraw.overallBlue : t.name === 'Vermelho' ? activeDraw.overallRed : activeDraw.overallGreen;
       // Use color circle depending on team name
       const colorIcon = t.name === 'Azul' ? '🔵' : t.name === 'Vermelho' ? '🔴' : '🟢';
-      text += `${colorIcon} TIME ${t.name.toUpperCase()} (Média ${teamOverall.toFixed(1)})\n`;
+      const displayLabel = t.name === 'Azul' ? 'EQUIPE A' : t.name === 'Vermelho' ? 'EQUIPE B' : 'EQUIPE C';
+      text += `${colorIcon} ${displayLabel} (Média ${teamOverall.toFixed(1)})\n`;
       
       const sortedTeamPlayers = getSortedTeamPlayers(t.playerIds, t.name, t.captainPlayerId);
       const teamPlayers = t.playerIds.map(pid => getPlayerObj(pid)).filter((p): p is Player => !!p);
@@ -652,29 +678,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-1">
-              {[...confirmedPlayers]
-                .sort((a, b) => {
-                  if (orderingMode === 'posicao') {
-                    const POSITION_ORDER: Record<string, number> = {
-                      goleiro: 1,
-                      zagueiro: 2,
-                      meio_campo: 3,
-                      volante: 4,
-                      atacante: 5,
-                    };
-                    const orderA = POSITION_ORDER[a.primaryPosition] || 99;
-                    const orderB = POSITION_ORDER[b.primaryPosition] || 99;
-                    if (orderA !== orderB) return orderA - orderB;
-                    return a.name.localeCompare(b.name);
-                  } else if (orderingMode === 'confirmacao') {
-                    const idxA = confirmedPresenceOrder.indexOf(a.id);
-                    const idxB = confirmedPresenceOrder.indexOf(b.id);
-                    // fallback to 999 if not found, to keep them at the end
-                    return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
-                  } else {
-                    return a.name.localeCompare(b.name);
-                  }
-                })
+              {sortPlayersBySelectedOrdering(confirmedPlayers)
                 .map((p) => {
                   const overall = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
                   return (
@@ -710,7 +714,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 <input
                   type="checkbox"
                   checked={captainsConfigured}
-                  disabled={selectedMatch?.status === 'sorteada'}
+                  disabled={selectedMatch?.status === 'sorteada' && (!activeDraw || (activeDraw.redrawCount || 0) >= 2)}
                   onChange={(e) => setCaptainsConfigured(e.target.checked)}
                   className="accent-emerald-500 h-3.5 w-3.5"
                 />
@@ -724,7 +728,14 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                       value={captains.Azul || ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (activeDraw) {
+                        const hasFreeRedraws = selectedMatch?.status === 'sorteada' && activeDraw && (activeDraw.redrawCount || 0) < 2;
+                        if (hasFreeRedraws) {
+                          setCaptains(prev => ({ ...prev, Azul: val }));
+                          const teamPlayerIds = activeDraw.teams.find(t => t.name === 'Azul')?.playerIds || [];
+                          if (val === '' || teamPlayerIds.includes(val)) {
+                            handleToggleCaptain(val, 'Azul');
+                          }
+                        } else if (activeDraw) {
                           handleToggleCaptain(val, 'Azul');
                         } else {
                           setCaptains({ ...captains, Azul: val });
@@ -734,11 +745,13 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     >
                       <option value="">Selecione...</option>
                       {(() => {
-                        const teamPlayerIds = activeDraw?.teams.find(t => t.name === 'Azul')?.playerIds;
+                        const hasFreeRedraws = selectedMatch?.status === 'sorteada' && activeDraw && (activeDraw.redrawCount || 0) < 2;
+                        const teamPlayerIds = !hasFreeRedraws ? activeDraw?.teams.find(t => t.name === 'Azul')?.playerIds : null;
                         const playersList = teamPlayerIds
                           ? confirmedPlayers.filter(p => teamPlayerIds.includes(p.id))
                           : confirmedPlayers;
-                        return playersList.map(p => {
+                        const sortedList = sortPlayersBySelectedOrdering(playersList);
+                        return sortedList.map(p => {
                           const isSelectedOther = captains.Vermelho === p.id ? 'Vermelho' : captains.Verde === p.id ? 'Verde' : null;
                           if (isSelectedOther) {
                             return (
@@ -759,7 +772,14 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                       value={captains.Vermelho || ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (activeDraw) {
+                        const hasFreeRedraws = selectedMatch?.status === 'sorteada' && activeDraw && (activeDraw.redrawCount || 0) < 2;
+                        if (hasFreeRedraws) {
+                          setCaptains(prev => ({ ...prev, Vermelho: val }));
+                          const teamPlayerIds = activeDraw.teams.find(t => t.name === 'Vermelho')?.playerIds || [];
+                          if (val === '' || teamPlayerIds.includes(val)) {
+                            handleToggleCaptain(val, 'Vermelho');
+                          }
+                        } else if (activeDraw) {
                           handleToggleCaptain(val, 'Vermelho');
                         } else {
                           setCaptains({ ...captains, Vermelho: val });
@@ -769,11 +789,13 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     >
                       <option value="">Selecione...</option>
                       {(() => {
-                        const teamPlayerIds = activeDraw?.teams.find(t => t.name === 'Vermelho')?.playerIds;
+                        const hasFreeRedraws = selectedMatch?.status === 'sorteada' && activeDraw && (activeDraw.redrawCount || 0) < 2;
+                        const teamPlayerIds = !hasFreeRedraws ? activeDraw?.teams.find(t => t.name === 'Vermelho')?.playerIds : null;
                         const playersList = teamPlayerIds
                           ? confirmedPlayers.filter(p => teamPlayerIds.includes(p.id))
                           : confirmedPlayers;
-                        return playersList.map(p => {
+                        const sortedList = sortPlayersBySelectedOrdering(playersList);
+                        return sortedList.map(p => {
                           const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Verde === p.id ? 'Verde' : null;
                           if (isSelectedOther) {
                             return (
@@ -794,7 +816,14 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                       value={captains.Verde || ''}
                       onChange={(e) => {
                         const val = e.target.value;
-                        if (activeDraw) {
+                        const hasFreeRedraws = selectedMatch?.status === 'sorteada' && activeDraw && (activeDraw.redrawCount || 0) < 2;
+                        if (hasFreeRedraws) {
+                          setCaptains(prev => ({ ...prev, Verde: val }));
+                          const teamPlayerIds = activeDraw.teams.find(t => t.name === 'Verde')?.playerIds || [];
+                          if (val === '' || teamPlayerIds.includes(val)) {
+                            handleToggleCaptain(val, 'Verde');
+                          }
+                        } else if (activeDraw) {
                           handleToggleCaptain(val, 'Verde');
                         } else {
                           setCaptains({ ...captains, Verde: val });
@@ -804,11 +833,13 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     >
                       <option value="">Selecione...</option>
                       {(() => {
-                        const teamPlayerIds = activeDraw?.teams.find(t => t.name === 'Verde')?.playerIds;
+                        const hasFreeRedraws = selectedMatch?.status === 'sorteada' && activeDraw && (activeDraw.redrawCount || 0) < 2;
+                        const teamPlayerIds = !hasFreeRedraws ? activeDraw?.teams.find(t => t.name === 'Verde')?.playerIds : null;
                         const playersList = teamPlayerIds
                           ? confirmedPlayers.filter(p => teamPlayerIds.includes(p.id))
                           : confirmedPlayers;
-                        return playersList.map(p => {
+                        const sortedList = sortPlayersBySelectedOrdering(playersList);
+                        return sortedList.map(p => {
                           const isSelectedOther = captains.Azul === p.id ? 'Azul' : captains.Vermelho === p.id ? 'Vermelho' : null;
                           if (isSelectedOther) {
                             return (
@@ -834,7 +865,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 <input
                   type="checkbox"
                   checked={isSharedGoalkeepers}
-                  disabled={selectedMatch?.status === 'sorteada'}
+                  disabled={selectedMatch?.status === 'sorteada' && (!activeDraw || (activeDraw.redrawCount || 0) >= 2)}
                   onChange={(e) => setIsSharedGoalkeepers(e.target.checked)}
                   className="accent-emerald-500 h-3.5 w-3.5"
                 />
@@ -901,7 +932,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     <div key={teamName} className={`rounded-xl border border-zinc-850 p-3 bg-[#0c120f] flex flex-col justify-between shadow ${teamColor}`}>
                       <div>
                         <div className={`p-2 rounded-lg border flex items-center justify-between mb-3 text-xs font-black ${teamHeaderColor}`}>
-                          <span>TIME {teamName.toUpperCase()}</span>
+                          <span>{teamName === 'Azul' ? 'EQUIPE A' : teamName === 'Vermelho' ? 'EQUIPE B' : 'EQUIPE C'}</span>
                           <span className="font-mono text-[11px]">⭐ 0.0</span>
                         </div>
                         <div className="space-y-1.5 min-h-[140px] flex flex-col items-center justify-center text-zinc-650">
@@ -929,17 +960,17 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 </div>
 
                 <div className="p-3 bg-zinc-950/50 rounded-lg border border-zinc-90 w-full text-center">
-                  <span className="text-[10px] text-[#3b82f6] uppercase font-bold font-mono">Overall Azul</span>
+                  <span className="text-[10px] text-[#3b82f6] uppercase font-bold font-mono">Overall Equipe A</span>
                   <p className="text-lg font-black text-[#60a5fa] mt-1 font-mono">{activeDraw.overallBlue.toFixed(1)}</p>
                 </div>
 
                 <div className="p-3 bg-zinc-950/50 rounded-lg border border-zinc-90 w-full text-center">
-                  <span className="text-[10px] text-[#ef4444] uppercase font-bold font-mono">Overall Vermelho</span>
+                  <span className="text-[10px] text-[#ef4444] uppercase font-bold font-mono">Overall Equipe B</span>
                   <p className="text-lg font-black text-[#f87171] mt-1 font-mono">{activeDraw.overallRed.toFixed(1)}</p>
                 </div>
 
                 <div className="p-3 bg-zinc-950/50 rounded-lg border border-zinc-90 w-full text-center">
-                  <span className="text-[10px] text-[#22c55e] uppercase font-bold font-mono">Overall Verde</span>
+                  <span className="text-[10px] text-[#22c55e] uppercase font-bold font-mono">Overall Equipe C</span>
                   <p className="text-lg font-black text-[#4ade80] mt-1 font-mono">{activeDraw.overallGreen.toFixed(1)}</p>
                 </div>
               </div>
@@ -955,7 +986,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                       {/* Squad header banner */}
                       <div>
                         <div className={`p-2 rounded-lg border flex items-center justify-between mb-3 text-xs font-black ${teamHeaderColor}`}>
-                          <span>TIME {team.name.toUpperCase()}</span>
+                          <span>{team.name === 'Azul' ? 'EQUIPE A' : team.name === 'Vermelho' ? 'EQUIPE B' : 'EQUIPE C'}</span>
                           <span className="font-mono text-[11px]">
                             ⭐ {team.name === 'Azul' ? activeDraw.overallBlue.toFixed(1) : team.name === 'Vermelho' ? activeDraw.overallRed.toFixed(1) : activeDraw.overallGreen.toFixed(1)}
                           </span>

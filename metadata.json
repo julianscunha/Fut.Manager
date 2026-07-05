@@ -1,6 +1,6 @@
 {
   "name": "Racha do Fofim",
-  "description": "Fundação do sistema de gerenciamento de grupo privado de futebol society, com autenticação, perfis de usuários e controle de jogadores.",
+  "description": "Cockpit da Rodada para o grupo privado de futebol society Racha do Fofim, com gerenciamento unificado para atletas e professores.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

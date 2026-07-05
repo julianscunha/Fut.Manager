@@ -172,6 +172,7 @@ export interface Match {
   confirmationDeadlineDaysBefore?: number;
   reservesReleased?: boolean;
   reservesReleasedAt?: string;
+  evaluationsReleased?: boolean;
   maxPlayers?: number;
 }
 

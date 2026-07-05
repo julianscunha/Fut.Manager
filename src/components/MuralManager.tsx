@@ -282,6 +282,19 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [activeHighlightIdx, setActiveHighlightIdx] = useState(0);
 
+  const [memoriesPage, setMemoriesPage] = useState(1);
+  const [albumPage, setAlbumPage] = useState(1);
+
+  // Reset memories pagination when filters or search change
+  useEffect(() => {
+    setMemoriesPage(1);
+  }, [search, filterCategory, filterYear, filterMonth, selectedHistoryMatchId]);
+
+  // Reset album pagination when active album date changes
+  useEffect(() => {
+    setAlbumPage(1);
+  }, [activeAlbumDate]);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load Initial Data
@@ -444,6 +457,18 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     }
     return filteredPosts;
   }, [filteredPosts, activeAlbumDate]);
+
+  // Paginated list of date keys (main memories feed)
+  const paginatedDateKeys = useMemo(() => {
+    const startIndex = (memoriesPage - 1) * 10;
+    return sortedDateKeys.slice(startIndex, startIndex + 10);
+  }, [sortedDateKeys, memoriesPage]);
+
+  // Paginated active album items
+  const paginatedAlbumList = useMemo(() => {
+    const startIndex = (albumPage - 1) * 10;
+    return activeSlideshowList.slice(startIndex, startIndex + 10);
+  }, [activeSlideshowList, albumPage]);
 
   // Slideshow Navigation Methods
   const handlePrevPost = () => {
@@ -1297,7 +1322,7 @@ ${shareUrl}`;
 
           {/* Album items sub-grid content mapping */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {activeSlideshowList.map((post) => (
+            {paginatedAlbumList.map((post) => (
               <div
                 key={post.id}
                 className="bg-[#0f1512] border border-zinc-900 rounded-xl overflow-hidden hover:border-[#22c55e]/25 transition flex flex-col group relative"
@@ -1467,11 +1492,41 @@ ${shareUrl}`;
               </div>
             ))}
           </div>
+
+          {/* Pagination Controls for Album */}
+          {Math.ceil(activeSlideshowList.length / 10) > 1 && (
+            <div className="flex items-center justify-between border-t border-zinc-900 pt-6 mt-4">
+              <span className="text-xs text-zinc-500 font-mono">
+                Página <strong className="text-zinc-350">{albumPage}</strong> de <strong className="text-zinc-350">{Math.ceil(activeSlideshowList.length / 10)}</strong> ({activeSlideshowList.length} itens)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={albumPage === 1}
+                  onClick={() => setAlbumPage(prev => Math.max(1, prev - 1))}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 border border-zinc-850 disabled:hover:bg-zinc-900 text-zinc-350 hover:text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4 text-emerald-450" />
+                  <span>Anterior</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={albumPage === Math.ceil(activeSlideshowList.length / 10)}
+                  onClick={() => setAlbumPage(prev => Math.min(Math.ceil(activeSlideshowList.length / 10), prev + 1))}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 border border-zinc-850 disabled:hover:bg-zinc-900 text-zinc-350 hover:text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Próximo</span>
+                  <ChevronRight className="w-4 h-4 text-emerald-450" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        /* Display feed categorized with Grouped Albums if multiple uploads share date, or singular post cards */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sortedDateKeys.map((dateStr) => {
+        <div className="space-y-6">
+          {/* Display feed categorized with Grouped Albums if multiple uploads share date, or singular post cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedDateKeys.map((dateStr) => {
             const postsForDate = groupedByDateMap[dateStr];
             
             // IF MULTIPLE ASSETS EXIST FOR THE CURRENT DATE, COMPILE THEM INTO AN ALBUM CARD
@@ -1714,6 +1769,36 @@ ${shareUrl}`;
               </div>
             );
           })}
+          </div>
+
+          {/* Pagination Controls for Memories Main Feed */}
+          {Math.ceil(sortedDateKeys.length / 10) > 1 && (
+            <div className="flex items-center justify-between border-t border-zinc-900 pt-6 mt-4">
+              <span className="text-xs text-zinc-500 font-mono">
+                Página <strong className="text-zinc-350">{memoriesPage}</strong> de <strong className="text-zinc-350">{Math.ceil(sortedDateKeys.length / 10)}</strong> ({sortedDateKeys.length} álbuns/postagens)
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={memoriesPage === 1}
+                  onClick={() => setMemoriesPage(prev => Math.max(1, prev - 1))}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 border border-zinc-850 disabled:hover:bg-zinc-900 text-zinc-350 hover:text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4 text-emerald-450" />
+                  <span>Anterior</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={memoriesPage === Math.ceil(sortedDateKeys.length / 10)}
+                  onClick={() => setMemoriesPage(prev => Math.min(Math.ceil(sortedDateKeys.length / 10), prev + 1))}
+                  className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 border border-zinc-850 disabled:hover:bg-zinc-900 text-zinc-350 hover:text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Próximo</span>
+                  <ChevronRight className="w-4 h-4 text-emerald-450" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -2528,14 +2613,14 @@ ${shareUrl}`;
 
       {/* Tabs Navigation Selector - Swipeable/Scrollable on mobile, Clean list on desktop */}
       <div className="sticky top-0 bg-[#090e0c]/95 backdrop-blur-md py-3 z-30 border-b border-zinc-900/60 -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex overflow-x-auto scrollbar-none gap-2 pb-1">
+        <div className="flex flex-wrap md:flex-nowrap gap-2 pb-1">
           <button
             type="button"
             onClick={() => {
               setMuseuTab('memorias');
               setMuralSubTab('memorias');
             }}
-            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
               museuTab === 'memorias'
                 ? 'bg-emerald-600 text-white shadow-lg'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2550,7 +2635,7 @@ ${shareUrl}`;
             onClick={() => {
               setMuseuTab('momentos');
             }}
-            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
               museuTab === 'momentos'
                 ? 'bg-amber-600 text-white shadow-lg'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2565,7 +2650,7 @@ ${shareUrl}`;
             onClick={() => {
               setMuseuTab('historia');
             }}
-            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
               museuTab === 'historia'
                 ? 'bg-emerald-805/40 text-emerald-400 border border-emerald-500/20 shadow-lg'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2581,7 +2666,7 @@ ${shareUrl}`;
               setMuseuTab('comunicacao');
               setMuralSubTab('comunicacao');
             }}
-            className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
               museuTab === 'comunicacao'
                 ? 'bg-[#1e3a2f] text-[#4ade80] border border-emerald-500/40'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2597,7 +2682,7 @@ ${shareUrl}`;
               onClick={() => {
                 setMuseuTab('arquivo');
               }}
-              className={`flex-shrink-0 px-4 py-2 text-xs font-bold rounded-lg transition flex items-center gap-2 cursor-pointer ${
+              className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
                 museuTab === 'arquivo'
                   ? 'bg-zinc-800 text-white shadow-lg'
                   : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'

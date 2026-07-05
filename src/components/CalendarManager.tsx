@@ -1,17 +1,80 @@
 import React, { useState, useEffect } from 'react';
-import { User, Season, Match, MatchStatus } from '../types';
+import { motion } from 'motion/react';
+import { User, Season, Match, MatchStatus, Player } from '../types';
 import { 
   Calendar, Clock, MapPin, Plus, Trash2, Edit, Check, Play, RefreshCw,
   Sliders, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle2,
-  ListOrdered, HelpCircle, Activity, Hourglass, CalendarRange, X
+  ListOrdered, HelpCircle, Activity, Hourglass, CalendarRange, X,
+  Trophy, Users, Award, Star, Image, ChevronDown, ChevronUp, CheckSquare, Sparkles
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
+const STATUS_METADATA: Record<string, { icon: string; bg: string; text: string; border: string; label: string }> = {
+  agendada: {
+    icon: '📅',
+    bg: 'bg-zinc-850/40',
+    text: 'text-zinc-300',
+    border: 'border-zinc-800',
+    label: 'Agendada'
+  },
+  confirmando: {
+    icon: '🔔',
+    bg: 'bg-amber-500/10 animate-pulse',
+    text: 'text-amber-400',
+    border: 'border-amber-500/20',
+    label: 'Chamada Aberta'
+  },
+  fechada: {
+    icon: '🔒',
+    bg: 'bg-purple-500/10',
+    text: 'text-purple-400',
+    border: 'border-purple-500/20',
+    label: 'Lista Fechada'
+  },
+  sorteada: {
+    icon: '🎲',
+    bg: 'bg-sky-500/10',
+    text: 'text-sky-400',
+    border: 'border-sky-500/20',
+    label: 'Sorteio Realizado'
+  },
+  em_andamento: {
+    icon: '⚡',
+    bg: 'bg-red-500/10 animate-pulse',
+    text: 'text-red-400',
+    border: 'border-red-500/25',
+    label: 'Em Andamento'
+  },
+  avaliacoes: {
+    icon: '⭐',
+    bg: 'bg-yellow-500/10',
+    text: 'text-yellow-400',
+    border: 'border-yellow-500/20',
+    label: 'Avaliações Abertas'
+  },
+  encerrada: {
+    icon: '🏆',
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/20',
+    label: 'Finalizada'
+  },
+  cancelada: {
+    icon: '❌',
+    bg: 'bg-rose-500/10',
+    text: 'text-rose-400',
+    border: 'border-rose-500/20',
+    label: 'Cancelada'
+  }
+};
+
 interface CalendarManagerProps {
   currentUser: User;
+  simulatedState?: number | null;
+  setSimulatedState?: (state: number | null) => void;
 }
 
-export default function CalendarManager({ currentUser }: CalendarManagerProps) {
+export default function CalendarManager({ currentUser, simulatedState = null, setSimulatedState }: CalendarManagerProps) {
   const isAdmin = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
 
   const todayVal = new Date();
@@ -26,6 +89,11 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [recurrentConfig, setRecurrentConfig] = useState<any>(null);
   const [reserves, setReserves] = useState<any[]>([]);
   const [reservesOrder, setReservesOrder] = useState<string[]>([]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [expandedMatchId, setExpandedMatchId] = useState<string | null>(null);
+  const [activeDetailTab, setActiveDetailTab] = useState<'presences' | 'teams' | 'result' | 'ratings' | 'museum'>('presences');
+  const [muralPosts, setMuralPosts] = useState<any[]>([]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   
   // UI Loading/Status States
   const [loading, setLoading] = useState(true);
@@ -74,6 +142,48 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
   const [recurMaxPlayers, setRecurMaxPlayers] = useState('15');
   const [newMatchMaxPlayers, setNewMatchMaxPlayers] = useState('15');
   const [highlightedMatchId, setHighlightedMatchId] = useState<string | null>(null);
+
+  // Inline editing for scheduled matches
+  const [editingMatchId, setEditingMatchId] = useState<string | null>(null);
+  const [editMatchDate, setEditMatchDate] = useState('');
+  const [editMatchTime, setEditMatchTime] = useState('');
+  const [editMatchLocation, setEditMatchLocation] = useState('');
+  const [editMatchDeadline, setEditMatchDeadline] = useState('');
+
+  const handleSaveMatchEdit = async (matchId: string) => {
+    if (!editMatchDate || !editMatchTime) {
+      setErrorMsg('Data e horário são obrigatórios para editar a partida.');
+      return;
+    }
+
+    setActionLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await fetch(`/api/matches/${matchId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: editMatchDate,
+          time: editMatchTime,
+          location: editMatchLocation,
+          confirmationDeadlineDaysBefore: parseInt(editMatchDeadline || '2')
+        })
+      });
+
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.error || 'Não foi possível salvar as alterações.');
+      }
+
+      setEditingMatchId(null);
+      triggerFeedback('Rodada atualizada com sucesso!');
+      await fetchAllData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Falha ao atualizar partida.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   // Data Fetching
   const fetchAllData = async () => {
@@ -128,6 +238,20 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
         const resultsData = await resultsRes.json();
         setResults(resultsData || []);
       }
+
+      // 6. Players
+      const playersRes = await fetch('/api/players');
+      if (playersRes.ok) {
+        const playersData = await playersRes.json();
+        setPlayers(playersData || []);
+      }
+
+      // 7. Mural Posts
+      const muralRes = await fetch('/api/mural/posts');
+      if (muralRes.ok) {
+        const muralData = await muralRes.json();
+        setMuralPosts(muralData || []);
+      }
     } catch (err) {
       console.error(err);
       setErrorMsg('Não foi possível sincronizar as informações do calendário.');
@@ -146,6 +270,7 @@ export default function CalendarManager({ currentUser }: CalendarManagerProps) {
       const matchId = customEvent.detail;
       if (matchId) {
         setHighlightedMatchId(matchId);
+        setExpandedMatchId(matchId);
         setTimeout(() => {
           const el = document.getElementById(`match-card-${matchId}`);
           if (el) {
@@ -440,14 +565,13 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     setErrorMsg('');
     const match = matches.find((m) => m.id === matchId);
     if (match) {
-      const hasHistory = match.hasPresences || match.hasDraws || match.hasResults;
+      const hasHistory = match.hasDraws || match.hasResults;
       if (hasHistory) {
         const reasons = [];
-        if (match.hasPresences) reasons.push('respostas de presença (confirmados/recusados)');
         if (match.hasDraws) reasons.push('times sorteados/parciais');
         if (match.hasResults) reasons.push('placar/resultados finais gravados');
         
-        setErrorMsg(`Não é possível excluir esta partida permanentemente pois ela já possui histórico registrado (${reasons.join(', ')}). Utilize a opção "Cancelar" para cancelar a rodada e manter as informações históricas.`);
+        setErrorMsg(`Não é possível excluir esta partida permanentemente pois ela possui sorteio realizado ou resultados registrados (${reasons.join(', ')}).`);
         return;
       }
     }
@@ -510,7 +634,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
   const handleSelectAllEligible = () => {
     const eligibleIds = matches
-      .filter((m: any) => !(m.hasPresences || m.hasDraws || m.hasResults))
+      .filter((m: any) => !(m.hasDraws || m.hasResults))
       .map((m: any) => m.id);
     setSelectedMatchIds(eligibleIds);
   };
@@ -632,6 +756,152 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
   const activeSeason = seasons.find((s) => s.active);
 
+  const getHighlightsForLastMatch = () => {
+    const ended = matches.filter(m => m.status === 'encerrada');
+    const lastMatch = ended.length > 0
+      ? [...ended].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
+      : null;
+    
+    if (!lastMatch) return null;
+    const result = results.find(r => r.matchId === lastMatch.id);
+    
+    // Find champion
+    const championTeamNames = result?.champions || [];
+    const championText = championTeamNames.length > 0 
+      ? championTeamNames.map(c => c === 'Azul' ? 'Equipe A' : c === 'Vermelho' ? 'Equipe B' : 'Equipe C').join(' + ')
+      : 'Nenhum';
+
+    // Find players from champion team if available
+    const championPlayerIds = result?.teams
+      ? result.teams.filter((t: any) => championTeamNames.includes(t.name)).flatMap((t: any) => t.playerIds || [])
+      : [];
+
+    let mvpPlayer: Player | null = null;
+    const activePlayers = players.filter(p => !p.deletedAt);
+
+    if (championPlayerIds.length > 0) {
+      // Find player from champion team with highest streak or overall as MVP
+      const champs = activePlayers.filter(p => championPlayerIds.includes(p.id));
+      if (champs.length > 0) {
+        mvpPlayer = [...champs].sort((a, b) => (b.currentStreak || 0) - (a.currentStreak || 0))[0] || champs[0];
+      }
+    }
+    if (!mvpPlayer && activePlayers.length > 0) {
+      mvpPlayer = [...activePlayers].sort((a, b) => (b.currentStreak || 0) - (a.currentStreak || 0))[0];
+    }
+
+    // Find top striker / artilheiro
+    const strikers = activePlayers.filter(p => p.primaryPosition === 'atacante');
+    const artilheiroPlayer = strikers.length > 0
+      ? [...strikers].sort((a, b) => (b.currentStreak || 0) - (a.currentStreak || 0))[0]
+      : (activePlayers.length > 0 ? activePlayers[0] : null);
+
+    // Find goalkeeper / melhor defesa
+    const keepers = activePlayers.filter(p => p.primaryPosition === 'goleiro');
+    const melhorDefesaPlayer = keepers.length > 0
+      ? keepers[0]
+      : (activePlayers.length > 0 ? activePlayers[Math.min(activePlayers.length - 1, 1)] : null);
+
+    return {
+      lastMatch,
+      championText,
+      mvp: mvpPlayer,
+      artilheiro: artilheiroPlayer,
+      melhorDefesa: melhorDefesaPlayer
+    };
+  };
+
+  const currentSeasonName = activeSeason ? activeSeason.name : 'Nenhuma Temporada Ativa';
+  const totalRounds = matches.length;
+
+  const scheduledMatches = matches.filter(m => m.status !== 'cancelada' && m.status !== 'encerrada');
+  const nextMatch = scheduledMatches.length > 0
+    ? [...scheduledMatches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
+    : null;
+
+  const getAutoState = (): number => {
+    if (!nextMatch) return 1;
+    
+    const today = new Date();
+    const offset = today.getTimezoneOffset();
+    const localToday = new Date(today.getTime() - (offset * 60 * 1000)).toISOString().split('T')[0];
+    const isMatchDay = nextMatch.date === localToday;
+
+    if (isMatchDay && nextMatch.status !== 'encerrada') {
+      return 6; // Dia do Jogo
+    }
+
+    if (nextMatch.status === 'agendada') return 1;
+
+    if (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') {
+      const vacancies = Math.max(0, (nextMatch.maxPlayers || 15) - (nextMatch.confirmedCount || 0));
+      if (vacancies > 0 && vacancies <= 3) {
+        return 3; // Lista Quase Completa
+      }
+      return 2; // Confirmações Abertas
+    }
+
+    if (nextMatch.status === 'fechada') {
+      return 4; // Lista Fechada
+    }
+
+    if (nextMatch.status === 'sorteada') {
+      return 5; // Sorteio Realizado
+    }
+
+    if (nextMatch.status === 'encerrada') {
+      return 8; // Default to Avaliações Abertas
+    }
+
+    return 1;
+  };
+
+  const activeStateNum = simulatedState !== null ? simulatedState : getAutoState();
+
+  const highlights = getHighlightsForLastMatch();
+
+  const getCustomMatchStatus = (item: any) => {
+    if (item.status === 'cancelada') return 'cancelada';
+    if (item.status === 'encerrada') {
+      return 'encerrada';
+    }
+    if (item.status === 'sorteada') {
+      const matchDate = new Date(item.date + 'T' + (item.time || '00:00'));
+      const now = new Date();
+      const diffHours = (now.getTime() - matchDate.getTime()) / (1000 * 60 * 60);
+      if (diffHours >= 0 && diffHours <= 3) {
+        return 'em_andamento';
+      }
+      if (diffHours > 3) {
+        return 'avaliacoes';
+      }
+      return 'sorteada';
+    }
+    if (item.status === 'fechada') return 'fechada';
+    if (item.status === 'aguardando_reservas') return 'fechada'; // maps to Lista Fechada
+    if (item.status === 'confirmando') return 'confirmando';
+    return 'agendada';
+  };
+
+  const handleGoToPresences = (matchId: string) => {
+    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'dash' }));
+  };
+
+  const handleGoToTeams = (matchId: string) => {
+    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }));
+  };
+
+  const handleGoToRatings = (matchId: string) => {
+    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'ranking' }));
+  };
+
+  const handleGoToMural = (matchId: string) => {
+    window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'mural' }));
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('open-mural-post', { detail: matchId }));
+    }, 150);
+  };
+
   return (
     <div className="space-y-6" id="calendar-manager-panel">
       
@@ -688,6 +958,8 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
         </button>
       </ResponsiveTabsContainer>
 
+      {/* Progress Bar removed */}
+
       {/* SUCCESS / ERROR NOTIFICATIONS */}
       {successMsg && (
         <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs text-emerald-400 font-mono flex items-center justify-between gap-2">
@@ -725,39 +997,101 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
       {activeSubTab === 'matches' && (
         <div className="space-y-4">
           
-          <div className="flex justify-between items-center bg-zinc-950/20 p-3 rounded-lg border border-zinc-900 flex-wrap gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-white font-display uppercase">Grade de Rodadas</h3>
-              <p className="text-[10px] text-zinc-500 font-mono leading-none mt-1">
-                Temporada Escopo: <span className="text-emerald-400 font-black">{activeSeason ? activeSeason.name : 'Nenhuma Ativa'}</span>
-              </p>
+          {/* HERO — CENTRAL DA TEMPORADA */}
+          <div className="bg-gradient-to-br from-zinc-900 to-black border border-zinc-800/80 rounded-2xl p-6 shadow-xl space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-zinc-800/60">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-emerald-400 tracking-widest uppercase bg-emerald-500/10 px-2.5 py-1 rounded-full">
+                  Central da Temporada
+                </span>
+                <h2 className="text-xl sm:text-2xl font-sans font-black text-white mt-1.5 tracking-tight">
+                  {currentSeasonName}
+                </h2>
+                <p className="text-xs text-zinc-400 font-mono mt-1">
+                  Total de rodadas: <span className="text-white font-bold">{totalRounds}</span>
+                </p>
+              </div>
+
+              {isAdmin && (
+                <div className="flex gap-2 self-stretch md:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsBulkDeleteMode(!isBulkDeleteMode);
+                      setSelectedMatchIds([]);
+                      setShowBulkDeleteConfirm(false);
+                    }}
+                    className={`flex-1 md:flex-none font-mono font-bold text-[10px] uppercase tracking-wider px-3.5 py-2 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition border ${
+                      isBulkDeleteMode 
+                        ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
+                        : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-850'
+                    }`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{isBulkDeleteMode ? 'Desativar Seleção' : 'Excluir em Massa'}</span>
+                  </button>
+                  <button
+                    onClick={() => setShowMatchForm(!showMatchForm)}
+                    className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase tracking-wider px-3.5 py-2 rounded-lg flex items-center justify-center gap-1.5 cursor-pointer transition inline-flex"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Agendar Racha</span>
+                  </button>
+                </div>
+              )}
             </div>
 
-            {isAdmin && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsBulkDeleteMode(!isBulkDeleteMode);
-                    setSelectedMatchIds([]);
-                    setShowBulkDeleteConfirm(false);
-                  }}
-                  className={`font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition border ${
-                    isBulkDeleteMode 
-                      ? 'bg-rose-500/20 border-rose-500/40 text-rose-400'
-                      : 'bg-zinc-900 border-zinc-800 text-zinc-300 hover:bg-zinc-800'
-                  }`}
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>{isBulkDeleteMode ? 'Desativar Seleção' : 'Excluir em Massa'}</span>
-                </button>
-                <button
-                  onClick={() => setShowMatchForm(!showMatchForm)}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase tracking-wider px-3 py-1.5 rounded-lg flex items-center gap-1 cursor-pointer transition inline-flex"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Agendar Racha</span>
-                </button>
+            {/* NEXT MATCH HERO CARD */}
+            {nextMatch ? (
+              <div className="bg-zinc-950/40 border border-emerald-500/20 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-2xl -z-10" />
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                      Próximo Jogo Confirmado
+                    </span>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <h3 className="text-base sm:text-lg font-sans font-extrabold text-white">
+                      📅 {nextMatch.date.split('-').reverse().join('/')} às {nextMatch.time}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-zinc-400 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-zinc-500" />
+                      <span>{nextMatch.location}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto">
+                  <div className="bg-zinc-900/80 px-4 py-2.5 rounded-lg border border-zinc-850 text-center sm:text-left">
+                    <span className="text-[9px] text-zinc-500 font-mono uppercase block">Atletas Confirmados</span>
+                    <span className="text-white font-mono text-sm font-extrabold">
+                      {nextMatch.confirmedCount} <span className="text-zinc-500 font-normal">de</span> {nextMatch.maxPlayers || 15}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setHighlightedMatchId(nextMatch.id);
+                      setExpandedMatchId(nextMatch.id);
+                      setTimeout(() => {
+                        const el = document.getElementById(`match-card-${nextMatch.id}`);
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }, 100);
+                    }}
+                    className="bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/20 text-emerald-450 text-[10px] font-mono font-bold uppercase tracking-wider px-4 py-3 rounded-lg transition text-center cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Ver Detalhes</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 text-xs font-mono text-zinc-500 bg-zinc-950/20 rounded-xl border border-zinc-900">
+                Não há próximos rachas agendados no momento.
               </div>
             )}
           </div>
@@ -967,499 +1301,644 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
                 </div>
               )}
             </div>
-          ) : (
-            <div className="space-y-3">
-              {matches.map((item: any) => {
-                const matchResult = results.find(r => r.matchId === item.id);
-                const hasHistory = item.hasPresences || item.hasDraws || item.hasResults;
-                const isSelected = selectedMatchIds.includes(item.id);
-                
-                return (
-                  <div key={item.id} className="flex gap-3 items-stretch">
-                    {isBulkDeleteMode && isAdmin && (
-                      <div className="flex flex-col justify-center items-center bg-[#09090b] px-3.5 py-4 rounded-xl border border-zinc-900 flex-shrink-0 animate-slideRight">
-                        {hasHistory ? (
-                          <div className="text-zinc-650 text-xs font-bold" title="Partidas com histórico não podem ser excluídas em massa para preservar estatísticas.">
-                            🔒
-                          </div>
-                        ) : (
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              setShowBulkDeleteConfirm(false);
-                              if (isSelected) {
-                                setSelectedMatchIds(selectedMatchIds.filter(id => id !== item.id));
-                              } else {
-                                setSelectedMatchIds([...selectedMatchIds, item.id]);
-                              }
-                            }}
-                            className="w-4 h-4 cursor-pointer accent-emerald-500 rounded border-zinc-800 bg-zinc-950 text-emerald-500 focus:ring-0 focus:ring-offset-0"
-                          />
-                        )}
-                      </div>
-                    )}
-                    <div 
-                      id={`match-card-${item.id}`}
-                      className={`flex-1 p-4 rounded-xl border ${
-                        highlightedMatchId === item.id
-                          ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-500 bg-emerald-950/20 scale-[1.01]'
-                          : item.status === 'confirmando' 
-                            ? 'border-amber-500/20 bg-amber-500/5' 
-                            : item.status === 'aguardando_reservas'
-                              ? 'border-indigo-500/20 bg-indigo-500/5'
-                              : item.status === 'fechada'
-                                ? 'border-purple-500/20 bg-purple-500/5'
-                                : item.status === 'sorteada'
-                                  ? 'border-sky-500/20 bg-sky-500/5'
-                                  : item.status === 'encerrada'
-                                    ? 'border-emerald-500/10 bg-emerald-500/5'
-                                    : item.status === 'cancelada'
-                                      ? 'border-zinc-900 bg-zinc-950/10 opacity-60'
-                                      : 'border-zinc-900 bg-zinc-950/30'
-                      } transition flex flex-col space-y-4`}
-                    >
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-                      <div className="space-y-1.5 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-sans text-white font-extrabold flex items-center gap-1 font-mono">
-                            📅 {item.date.split('-').reverse().join('/')}
+          ) : (() => {
+            const chronologicalMatches = [...matches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const matchesWithRound = matches.map(m => {
+              const chronoIndex = chronologicalMatches.findIndex(x => x.id === m.id);
+              return {
+                ...m,
+                roundNum: chronoIndex !== -1 ? chronoIndex + 1 : 1
+              };
+            });
+
+            const sortedMatches = [...matchesWithRound].sort((a, b) => {
+              const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
+              if (dateDiff !== 0) return dateDiff;
+              return b.time.localeCompare(a.time);
+            });
+
+            const itemsPerPage = 5;
+            const totalPages = Math.ceil(sortedMatches.length / itemsPerPage);
+            const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages || 1);
+            const startIndex = (safeCurrentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedMatches = sortedMatches.slice(startIndex, endIndex);
+
+            return (
+              <div className="space-y-6">
+                <div className="relative border-l-2 border-zinc-850 ml-4 sm:ml-6 pl-6 sm:pl-10 space-y-6 py-4">
+                  {paginatedMatches.map((item: any) => {
+                    const roundNum = item.roundNum;
+                    const matchResult = results.find(r => r.matchId === item.id);
+                    const customStatus = getCustomMatchStatus(item);
+                    const isSelected = selectedMatchIds.includes(item.id);
+                    const isCardExpanded = expandedMatchId === item.id;
+
+                    // Museum Content Availability
+                    const matchMedias = muralPosts.filter(p => p.matchId === item.id && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
+                    const hasMuseumContent = matchMedias.length > 0;
+
+                    // Remaining spots logic
+                    const maxPlayers = item.maxPlayers || 15;
+                    const confirmedCount = item.confirmedCount || 0;
+                    const remainingSpots = Math.max(0, maxPlayers - confirmedCount);
+
+                    return (
+                      <div key={item.id} className="relative group" id={`match-card-${item.id}`}>
+                        {/* Timeline Node Icon Indicator */}
+                        <div className={`absolute -left-[31px] sm:-left-[47px] top-4 -translate-x-1/2 w-8 h-8 rounded-full border bg-zinc-950 flex items-center justify-center z-10 transition-all duration-300 ${
+                          isCardExpanded ? 'ring-4 ring-emerald-500/25 border-emerald-500 scale-110' : 'border-zinc-800 group-hover:border-zinc-650'
+                        }`}>
+                          <span className="text-xs">
+                            {customStatus === 'agendada' && '🟢'}
+                            {customStatus === 'confirmando' && '🟡'}
+                            {(customStatus === 'fechada' || customStatus === 'sorteada') && '🔵'}
+                            {(customStatus === 'em_andamento' || customStatus === 'avaliacoes') && '🟣'}
+                            {customStatus === 'encerrada' && '⚫'}
+                            {customStatus === 'cancelada' && '❌'}
                           </span>
-                          {getMatchStatusBadge(item.status)}
                         </div>
 
-                        <div className="space-y-1 text-[11px] text-zinc-400 font-mono">
-                          <div className="flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5 text-zinc-500" />
-                            <span>Horário: {item.time} ({item.durationMinutes} min)</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <MapPin className="w-3.5 h-3.5 text-zinc-500" />
-                            <span className="truncate max-w-sm">{item.location}</span>
-                          </div>
-                        </div>
+                        {/* Card Container */}
+                        <div className={`rounded-2xl border backdrop-blur-sm p-4 transition-all duration-300 space-y-3 ${
+                          isCardExpanded 
+                            ? 'border-emerald-500/50 shadow-lg shadow-emerald-500/5 bg-zinc-900/10' 
+                            : 'border-zinc-900 hover:border-zinc-850 bg-zinc-950/15'
+                        }`}>
+                          {/* Card Content Row */}
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            {/* Left Side: General Round Info */}
+                            <div className="space-y-1.5 min-w-0 flex-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[10px] font-mono font-black text-emerald-400 uppercase tracking-widest bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10">
+                                  Rodada #{roundNum}
+                                </span>
+                                
+                                {/* Status badge wrapper according to ETAPA 5 */}
+                                {(() => {
+                                  switch (customStatus) {
+                                    case 'agendada':
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                          Agendada
+                                        </span>
+                                      );
+                                    case 'confirmando':
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+                                          Confirmações
+                                        </span>
+                                      );
+                                    case 'fechada':
+                                    case 'sorteada':
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                                          Sorteio
+                                        </span>
+                                      );
+                                    case 'em_andamento':
+                                    case 'avaliacoes':
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/25 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+                                          Em andamento
+                                        </span>
+                                      );
+                                    case 'encerrada':
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                                          Encerrada
+                                        </span>
+                                      );
+                                    case 'cancelada':
+                                    default:
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                          Cancelada
+                                        </span>
+                                      );
+                                  }
+                                })()}
 
-                        {item.status !== 'agendada' && (
-                          <div className="flex flex-col gap-1 text-[11px] pt-1.5 font-mono text-zinc-400 uppercase">
-                            <div>⚽ Atletas Confirmados: <span className="text-emerald-400 font-extrabold">{item.confirmedCount} de {item.maxPlayers || 15}</span></div>
-                            
-                            {item.status === 'confirmando' && item.deadlineDateStr && (
-                              <div className="text-[10px] text-amber-500 font-semibold lowercase">
-                                ⏳ prazo limite: <span className="font-extrabold">{item.deadlineDateStr}</span>
+                                {/* Bulk Selection Checkbox */}
+                                {isBulkDeleteMode && isAdmin && (
+                                  <label className="inline-flex items-center gap-1.5 bg-zinc-950 border border-zinc-900 rounded px-1.5 py-0.5 text-[9px] font-mono text-zinc-500 cursor-pointer">
+                                    <span>SELECIONAR</span>
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      disabled={item.hasDraws || item.hasResults}
+                                      onChange={() => {
+                                        setShowBulkDeleteConfirm(false);
+                                        if (isSelected) {
+                                          setSelectedMatchIds(selectedMatchIds.filter(id => id !== item.id));
+                                        } else {
+                                          setSelectedMatchIds([...selectedMatchIds, item.id]);
+                                        }
+                                      }}
+                                      className="w-3 h-3 cursor-pointer accent-rose-500 rounded border-zinc-800 bg-zinc-950 text-rose-500 focus:ring-0 focus:ring-offset-0 disabled:opacity-40"
+                                    />
+                                  </label>
+                                )}
                               </div>
-                            )}
 
-                            {item.status === 'aguardando_reservas' && (
-                              <div className="text-[10px] text-indigo-400 font-semibold">
-                                📢 Faltam <span className="font-extrabold">{Math.max(0, 15 - item.confirmedCount)}</span> atletas
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-300 font-sans">
+                                <span className="font-bold text-white">📅 {item.date.split('-').reverse().join('/')} <span className="text-zinc-500 font-normal">às</span> {item.time}</span>
+                                <span className="text-zinc-500 hidden sm:inline">•</span>
+                                <span className="flex items-center gap-1 text-zinc-400 truncate">
+                                  <MapPin className="w-3 h-3 text-zinc-500 flex-shrink-0" />
+                                  <span className="truncate">{item.location}</span>
+                                </span>
                               </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
+                            </div>
 
-                      {/* ACTIONS BAR */}
-                      <div className="flex flex-wrap gap-1.5 self-end sm:self-auto items-center">
-                        
-                        {/* Se a partida for finalizada (encerrada), exibimos o WhatsApp / Ver Resultado */}
-                        {item.status === 'encerrada' && (
-                          <div className="flex items-center gap-1.5 font-mono">
-                            {matchResult && (
-                              <button
-                                onClick={() => handleShareResult(item, matchResult)}
-                                title="Compartilhar resultado no WhatsApp"
-                                className="bg-emerald-600 hover:bg-emerald-500 text-white font-sans font-bold text-[10px] px-2.5 py-1.5 rounded uppercase flex items-center gap-1 cursor-pointer transition"
-                              >
-                                💚 WhatsApp Resultados
-                              </button>
-                            )}
-                          </div>
-                        )}
+                            {/* Right Side: Participant Count & Result summaries */}
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 justify-between md:justify-end text-right font-mono text-xs text-zinc-400">
+                              {/* Show results dynamically based on ETAPA 6 / 8 */}
+                              {item.status === 'encerrada' && matchResult ? (
+                                <div className="text-left md:text-right space-y-0.5">
+                                  <span className="block text-[11px] font-bold text-emerald-400">
+                                    🏆 Campeã: {matchResult.champions.map((c: string) => c === 'Azul' ? 'Equipe A' : c === 'Vermelho' ? 'Equipe B' : 'Equipe C').join(' + ')}
+                                  </span>
+                                  <span className="block text-[10px] text-zinc-500">
+                                    (A: {matchResult.winsBlue}v | B: {matchResult.winsRed}v | C: {matchResult.winsGreen}v)
+                                  </span>
+                                  <span className="block text-[10px] text-zinc-400 font-semibold">{confirmedCount} participantes</span>
+                                </div>
+                              ) : (
+                                <div className="text-left md:text-right space-y-0.5">
+                                  <span className="block font-bold text-white">{confirmedCount} / {maxPlayers} confirmados</span>
+                                  <span className="block text-[10px] text-zinc-500">
+                                    {remainingSpots > 0 ? `🟢 ${remainingSpots} vagas restantes` : '🔴 Vagas esgotadas'}
+                                  </span>
+                                </div>
+                              )}
 
-                        {/* Se a partida estiver cancelada */}
-                        {isAdmin && item.status === 'cancelada' && (
-                          <div className="flex items-center gap-1.5">
-                            <button
-                              onClick={() => handleUpdateMatchStatus(item.id, 'agendada')}
-                              className="bg-zinc-850 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                              title="Reabrir racha"
-                            >
-                              Reabrir
-                            </button>
-                            {!item.hasPresences && (
+                              {/* Toggle Accordion Detail Button */}
                               <button
+                                type="button"
                                 onClick={() => {
-                                  setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
-                                  setShowResultFormId(null);
+                                  if (isCardExpanded) {
+                                    setExpandedMatchId(null);
+                                  } else {
+                                    setExpandedMatchId(item.id);
+                                    setActiveDetailTab('presences');
+                                  }
+                                  setTimeout(() => {
+                                    const el = document.getElementById(`match-card-${item.id}`);
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  }, 120);
                                 }}
-                                className={`p-1.5 rounded-lg border transition ${
-                                  showDeleteConfirmId === item.id
-                                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 font-bold'
-                                    : 'bg-zinc-950 border-zinc-900 text-rose-500 hover:bg-rose-500/10'
+                                className={`px-3 py-2 rounded-xl text-xs font-bold font-sans transition flex items-center gap-1 cursor-pointer border ${
+                                  isCardExpanded
+                                    ? 'bg-emerald-600 border-emerald-500 text-white shadow shadow-emerald-500/10'
+                                    : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-850'
                                 }`}
-                                title="Opções de Exclusão da Partida"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <span>{isCardExpanded ? 'Fechar detalhes' : 'Ver detalhes'}</span>
+                                {isCardExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                               </button>
-                            )}
+                            </div>
                           </div>
-                        )}
 
-                        {/* Se a partida estiver ativa e o usuário for Administrador */}
-                        {isAdmin && item.status !== 'encerrada' && item.status !== 'cancelada' && (
-                          <div className="flex flex-wrap gap-1.5 items-center">
-                            
-                            {/* ESTADO: AGENDADA */}
-                            {item.status === 'agendada' && (
-                              <>
+                          {/* ACCORDION EXPANDED AREA FOR DETAILS & TAB SELECTIONS */}
+                          {isCardExpanded && (
+                            <div className="mt-4 pt-4 border-t border-zinc-900/60 space-y-4 animate-slideDown text-left">
+                              {/* Dynamic Tab bar according to ETAPA 3 */}
+                              <div className="flex flex-wrap gap-1.5 pb-2.5 border-b border-zinc-900/40">
                                 <button
-                                  onClick={() => handleUpdateMatchStatus(item.id, 'confirmando')}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition animate-pulse"
-                                  title="Iniciar confirmação de presenças"
+                                  type="button"
+                                  onClick={() => setActiveDetailTab('presences')}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition flex items-center gap-1 cursor-pointer ${
+                                    activeDetailTab === 'presences'
+                                      ? 'bg-emerald-650/20 border border-emerald-500/35 text-emerald-400'
+                                      : 'bg-zinc-900/60 border border-transparent text-zinc-400 hover:text-white'
+                                  }`}
                                 >
-                                  Abrir Confirmações
+                                  <CheckSquare className="w-3.5 h-3.5" />
+                                  <span>Presenças</span>
                                 </button>
                                 
                                 <button
-                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
-                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Cancelar racha"
+                                  type="button"
+                                  onClick={() => setActiveDetailTab('teams')}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition flex items-center gap-1 cursor-pointer ${
+                                    activeDetailTab === 'teams'
+                                      ? 'bg-emerald-650/20 border border-emerald-500/35 text-emerald-400'
+                                      : 'bg-zinc-900/60 border border-transparent text-zinc-400 hover:text-white'
+                                  }`}
                                 >
-                                  Cancelar
-                                </button>
-                              </>
-                            )}
-
-                            {/* ESTADO: CONFIRMANDO (Confirmações Abertas) */}
-                            {item.status === 'confirmando' && (
-                              <>
-                                <button
-                                  onClick={() => handleShareMatchOnWhatsApp(item)}
-                                  className="bg-[#128C7E] hover:bg-[#075e54] text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition inline-flex items-center gap-1"
-                                  title="Compartilhar lista de chamada no WhatsApp"
-                                >
-                                  💚 Compartilhar
+                                  <ListOrdered className="w-3.5 h-3.5" />
+                                  <span>Equipes</span>
                                 </button>
 
-                                <button
-                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
-                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Cancelar racha"
-                                >
-                                  Cancelar
-                                </button>
-                              </>
-                            )}
-
-                            {/* ESTADO: AGUARDANDO_RESERVAS */}
-                            {item.status === 'aguardando_reservas' && (
-                              <>
-                                <button
-                                  onClick={() => handleConvocarReservas(item)}
-                                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Convocar atletas reservas no WhatsApp"
-                                >
-                                  Convocar Reservas
-                                </button>
-
-                                <button
-                                  onClick={() => handleShareMatchOnWhatsApp(item)}
-                                  className="bg-[#128C7E] hover:bg-[#075e54] text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition inline-flex items-center gap-1"
-                                  title="Compartilhar lista de chamada"
-                                >
-                                  💚 Compartilhar
-                                </button>
-
-                                <button
-                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
-                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Cancelar racha"
-                                >
-                                  Cancelar
-                                </button>
-                              </>
-                            )}
-
-                            {/* ESTADO: FECHADA */}
-                            {item.status === 'fechada' && (
-                              <>
-                                <button
-                                  onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }))}
-                                  className="bg-purple-600 hover:bg-purple-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition animate-bounce"
-                                  title="Iniciar sorteio de equipes"
-                                >
-                                  Realizar Sorteio
-                                </button>
-
-                                <button
-                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
-                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Cancelar racha"
-                                >
-                                  Cancelar
-                                </button>
-                              </>
-                            )}
-
-                            {/* ESTADO: SORTEADA */}
-                            {item.status === 'sorteada' && (
-                              <>
-                                <button
-                                  onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'draw' }))}
-                                  className="bg-sky-600 hover:bg-sky-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Visualizar o sorteio já realizado"
-                                >
-                                  Visualizar Sorteio
-                                </button>
-
-                                <button
-                                  onClick={() => {
-                                    setShowResultFormId(showResultFormId === item.id ? null : item.id);
-                                    setShowDeleteConfirmId(null);
-                                    setWinsBlue('0');
-                                    setWinsRed('0');
-                                    setWinsGreen('0');
-                                  }}
-                                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Registrar Vitórias das Equipes e Encerrar Racha"
-                                >
-                                  {showResultFormId === item.id ? 'Fechar Placar' : 'Gravar Placar / Encerrar'}
-                                </button>
-
-                                <button
-                                  onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
-                                  className="bg-red-950/40 hover:bg-red-950/80 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-2.5 py-1.5 rounded uppercase cursor-pointer transition"
-                                  title="Cancelar racha"
-                                >
-                                  Cancelar
-                                </button>
-                              </>
-                            )}
-
-                            {/* BOTÃO DE DELETAR / LIXEIRA (Disponível apenas para AGENDADA por segurança e precisão do fluxo) */}
-                            {item.status === 'agendada' && (
-                              <button
-                                onClick={() => {
-                                  setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
-                                  setShowResultFormId(null);
-                                }}
-                                className={`p-1.5 rounded-lg border transition ${
-                                  showDeleteConfirmId === item.id
-                                    ? 'bg-rose-500/10 border-rose-500/40 text-rose-400 font-bold'
-                                    : 'bg-zinc-950 border-zinc-900 text-rose-500 hover:bg-rose-500/10'
-                                }`}
-                                title="Opções de Exclusão da Partida"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            )}
-
-                          </div>
-                        )}
-                        
-                      </div>
-                    </div>
-
-                    {/* SHOW RESULTS RIBBON IF ENDED */}
-                    {item.status === 'encerrada' && matchResult && (
-                      <div className="bg-zinc-900/40 border border-emerald-500/15 rounded-lg p-3 font-mono text-[11px] leading-relaxed text-zinc-300 space-y-1">
-                        <div className="flex items-center gap-2 font-display text-xs text-white uppercase font-black tracking-tight border-b border-zinc-800 pb-1.5">
-                          <span>🏆 Resultados do Racha</span>
-                          <span className="text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded text-[9.5px]">
-                            Campeão: Time {matchResult.champions.join(' + ')}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-center pt-1.5">
-                          <div className="bg-blue-600/10 border border-blue-500/20 rounded py-1">
-                            <span className="text-[10px] text-zinc-400 uppercase block mb-0.5">🔵 Azul</span>
-                            <span className="text-white text-xs font-extrabold">{matchResult.winsBlue} vitórias</span>
-                          </div>
-                          <div className="bg-rose-600/10 border border-rose-500/20 rounded py-1">
-                            <span className="text-[10px] text-zinc-400 uppercase block mb-0.5">🔴 Vermelho</span>
-                            <span className="text-white text-xs font-extrabold">{matchResult.winsRed} vitórias</span>
-                          </div>
-                          <div className="bg-emerald-600/10 border border-emerald-500/20 rounded py-1">
-                            <span className="text-[10px] text-zinc-400 uppercase block mb-0.5">🟢 Verde</span>
-                            <span className="text-white text-xs font-extrabold">{matchResult.winsGreen} vitórias</span>
-                          </div>
-                        </div>
-
-                        {/* Link to Mural */}
-                        <button
-                          onClick={() => {
-                            window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'mural' }));
-                            setTimeout(() => {
-                              window.dispatchEvent(new CustomEvent('open-mural-post', { detail: item.id }));
-                            }, 150);
-                          }}
-                          className="w-full mt-3 bg-emerald-950/40 hover:bg-emerald-950/70 text-emerald-450 border border-emerald-500/20 rounded py-2 text-[10px] font-bold transition flex items-center justify-center gap-1.5 cursor-pointer uppercase font-mono tracking-wider"
-                        >
-                          🖼️ Ver Mural desta Partida
-                        </button>
-                      </div>
-                    )}
-
-                    {/* RECORD INLINE SCORES FORM */}
-                    {showResultFormId === item.id && (
-                      <div className="p-4 bg-zinc-950/80 border border-emerald-500/30 rounded-xl space-y-3 font-mono text-xs">
-                        <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
-                          <span className="font-bold text-white uppercase text-[10px] text-emerald-400">🏆 Registrar Placar do Racha</span>
-                          <button 
-                            type="button" 
-                            onClick={() => setShowResultFormId(null)}
-                            className="text-zinc-500 hover:text-white"
-                          >
-                            Fechar [X]
-                          </button>
-                        </div>
-                        
-                        <div className="grid grid-cols-3 gap-2">
-                          <div className="bg-blue-950/20 border border-blue-500/20 rounded-lg p-2.5 text-center">
-                            <label className="block text-[9px] font-bold text-blue-400 uppercase mb-1">Time Azul</label>
-                            <input 
-                              type="number"
-                              min="0"
-                              value={winsBlue}
-                              onChange={(e) => setWinsBlue(e.target.value)}
-                              className="w-full bg-[#1c1c1e] text-center text-white border border-zinc-800 rounded py-1.5 text-xs font-bold focus:outline-none focus:border-blue-500"
-                            />
-                          </div>
-
-                          <div className="bg-rose-950/20 border border-rose-500/20 rounded-lg p-2.5 text-center">
-                            <label className="block text-[9px] font-bold text-rose-400 uppercase mb-1">Time Vermelho</label>
-                            <input 
-                              type="number"
-                              min="0"
-                              value={winsRed}
-                              onChange={(e) => setWinsRed(e.target.value)}
-                              className="w-full bg-[#1c1c1e] text-center text-white border border-zinc-800 rounded py-1.5 text-xs font-bold focus:outline-none focus:border-rose-500"
-                            />
-                          </div>
-
-                          <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-lg p-2.5 text-center">
-                            <label className="block text-[9px] font-bold text-emerald-400 uppercase mb-1">Time Verde</label>
-                            <input 
-                              type="number"
-                              min="0"
-                              value={winsGreen}
-                              onChange={(e) => setWinsGreen(e.target.value)}
-                              className="w-full bg-[#1c1c1e] text-center text-white border border-zinc-800 rounded py-1.5 text-xs font-bold focus:outline-none focus:border-emerald-500"
-                            />
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => handleSaveMatchResult(item.id)}
-                          disabled={actionLoading}
-                          className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase py-2.5 rounded-lg cursor-pointer transition shadow"
-                        >
-                          Salvar e Encerrar a Rodada
-                        </button>
-                      </div>
-                    )}
-
-                    {/* INLINE DELETE CONFIRMATION OR EXPLANATION AREA */}
-                    {showDeleteConfirmId === item.id && (
-                      <div className="p-4 bg-[#09090b] border border-zinc-900 rounded-xl space-y-3 font-mono text-xs animate-fadeIn mt-2" id={`delete-panel-${item.id}`}>
-                        <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
-                          <span className="font-bold text-white uppercase text-[10.5px] text-rose-400 flex items-center gap-1.5">
-                            <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
-                            Excluir Rodada do Calendário
-                          </span>
-                          <button 
-                            type="button" 
-                            onClick={() => setShowDeleteConfirmId(null)}
-                            className="text-zinc-500 hover:text-white"
-                          >
-                            Fechar [X]
-                          </button>
-                        </div>
-
-                        {/* CASE 1: MATCH HAS HISTORY (CANNOT BE DELETED) */}
-                        {item.hasPresences || item.hasDraws || item.hasResults ? (
-                          <div className="space-y-3">
-                            <p className="text-zinc-350 leading-relaxed text-[11px]">
-                              ⚠️ <span className="font-extrabold text-white">Não é possível excluir esta partida permanentemente</span> porque ela já possui movimentação histórica no sistema:
-                            </p>
-                            <ul className="list-disc list-inside space-y-1 text-zinc-400 pl-1 text-[11px]">
-                              {item.hasPresences && (
-                                <li>Respostas de presença ativas (<span className="text-amber-500">confirmados, recusados ou em espera</span>).</li>
-                              )}
-                              {item.hasDraws && (
-                                <li>Histórico de times ou sorteio de racha realizado.</li>
-                              )}
-                              {item.hasResults && (
-                                <li>Placar ou resultado final gravado.</li>
-                              )}
-                            </ul>
-                            
-                            <div className="p-2.5 bg-rose-500/5 border border-rose-500/10 rounded-lg text-rose-350 leading-relaxed text-[10.5px]">
-                              Para manter as estatísticas e pontuações do grupo intactas, rachas com histórico não são excluídos fisicamente. Se a partida não for realizada, cancele-a.
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                              {item.status !== 'cancelada' ? (
                                 <button
                                   type="button"
-                                  onClick={async () => {
-                                    setShowDeleteConfirmId(null);
-                                    await handleUpdateMatchStatus(item.id, 'cancelada');
-                                  }}
-                                  className="flex-1 bg-red-950/40 hover:bg-red-900/30 border border-red-500/30 text-rose-400 py-2 px-3 rounded text-[10px] font-bold transition uppercase cursor-pointer"
+                                  onClick={() => setActiveDetailTab('result')}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition flex items-center gap-1 cursor-pointer ${
+                                    activeDetailTab === 'result'
+                                      ? 'bg-emerald-650/20 border border-emerald-500/35 text-emerald-400'
+                                      : 'bg-zinc-900/60 border border-transparent text-zinc-400 hover:text-white'
+                                  }`}
                                 >
-                                  Cancelar Rodada Preservando Histórico
+                                  <Trophy className="w-3.5 h-3.5" />
+                                  <span>Resultado</span>
                                 </button>
-                              ) : (
-                                <div className="text-[10px] text-zinc-500 italic p-1">
-                                  Esta partida já foi cancelada. Seu histórico continua preservado.
+
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveDetailTab('ratings')}
+                                  className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition flex items-center gap-1 cursor-pointer ${
+                                    activeDetailTab === 'ratings'
+                                      ? 'bg-emerald-650/20 border border-emerald-500/35 text-emerald-400'
+                                      : 'bg-zinc-900/60 border border-transparent text-zinc-400 hover:text-white'
+                                  }`}
+                                >
+                                  <Star className="w-3.5 h-3.5" />
+                                  <span>Avaliações</span>
+                                </button>
+
+                                {hasMuseumContent && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveDetailTab('museum')}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition flex items-center gap-1 cursor-pointer ${
+                                      activeDetailTab === 'museum'
+                                        ? 'bg-emerald-650/20 border border-emerald-500/35 text-emerald-400'
+                                        : 'bg-zinc-900/60 border border-transparent text-zinc-400 hover:text-white'
+                                    }`}
+                                  >
+                                    <Image className="w-3.5 h-3.5" />
+                                    <span>Museu</span>
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* On-demand Detail Tabs loading area */}
+                              <div className="pt-2 animate-fadeIn min-h-[40px]">
+                                {activeDetailTab === 'presences' && (
+                                  <DetailPresences matchId={item.id} players={players} />
+                                )}
+                                {activeDetailTab === 'teams' && (
+                                  <DetailTeams matchId={item.id} players={players} />
+                                )}
+                                {activeDetailTab === 'result' && (
+                                  <DetailResult matchId={item.id} matchResult={matchResult} />
+                                )}
+                                {activeDetailTab === 'ratings' && (
+                                  <DetailRatings matchId={item.id} players={players} />
+                                )}
+                                {activeDetailTab === 'museum' && (
+                                  <DetailMuseum matchId={item.id} muralPosts={muralPosts} />
+                                )}
+                              </div>
+
+                              {/* CONFIGURAÇÃO DA RODADA / ADMIN PANEL */}
+                              {isAdmin && (
+                                <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900 space-y-3 text-left mt-4">
+                                  <span className="text-[10px] font-mono text-zinc-500 uppercase font-bold block mb-1">Configuração da Rodada</span>
+                                  
+                                  {editingMatchId === item.id ? (
+                                    <div className="space-y-3 font-sans text-xs">
+                                      <div className="grid grid-cols-2 gap-3">
+                                        <div>
+                                          <label className="block text-[10px] font-mono text-zinc-400 uppercase font-bold mb-1">Data</label>
+                                          <input
+                                            type="date"
+                                            value={editMatchDate}
+                                            onChange={(e) => setEditMatchDate(e.target.value)}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                                          />
+                                        </div>
+                                        <div>
+                                          <label className="block text-[10px] font-mono text-zinc-400 uppercase font-bold mb-1">Horário</label>
+                                          <input
+                                            type="time"
+                                            value={editMatchTime}
+                                            onChange={(e) => setEditMatchTime(e.target.value)}
+                                            className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-mono text-zinc-400 uppercase font-bold mb-1">Local da Partida</label>
+                                        <input
+                                          type="text"
+                                          value={editMatchLocation}
+                                          onChange={(e) => setEditMatchLocation(e.target.value)}
+                                          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-white text-xs focus:outline-none focus:border-emerald-500"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-[10px] font-mono text-zinc-400 uppercase font-bold mb-1">Dias para Limite de Confirmação</label>
+                                        <input
+                                          type="number"
+                                          value={editMatchDeadline}
+                                          onChange={(e) => setEditMatchDeadline(e.target.value)}
+                                          className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-white font-mono text-xs focus:outline-none focus:border-emerald-500"
+                                        />
+                                      </div>
+                                      <div className="flex gap-2 pt-1 font-mono text-[9px] font-bold">
+                                        <button
+                                          type="button"
+                                          onClick={() => handleSaveMatchEdit(item.id)}
+                                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded uppercase transition cursor-pointer"
+                                        >
+                                          Salvar
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingMatchId(null)}
+                                          className="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 px-3 py-1.5 rounded uppercase transition cursor-pointer"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingMatchId(item.id);
+                                            setEditMatchDate(item.date);
+                                            setEditMatchTime(item.time);
+                                            setEditMatchLocation(item.location || 'Arena Furacão');
+                                            setEditMatchDeadline(item.confirmationDeadlineDaysBefore?.toString() || '2');
+                                          }}
+                                          className="bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[9px] px-3 py-1.5 rounded-lg uppercase cursor-pointer transition flex items-center gap-1"
+                                        >
+                                          Editar Rodada
+                                        </button>
+                                        
+                                        {item.status !== 'cancelada' && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateMatchStatus(item.id, 'cancelada')}
+                                            className="bg-red-950/40 hover:bg-red-900/30 border border-red-500/20 text-red-400 font-mono font-bold text-[9px] px-3 py-1.5 rounded-lg uppercase cursor-pointer transition"
+                                          >
+                                            Cancelar Racha
+                                          </button>
+                                        )}
+                                        
+                                        {item.status === 'cancelada' && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleUpdateMatchStatus(item.id, 'agendada')}
+                                            className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-mono font-bold text-[9px] px-3 py-1.5 rounded-lg uppercase cursor-pointer transition"
+                                          >
+                                            Reativar Racha
+                                          </button>
+                                        )}
+
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setShowDeleteConfirmId(showDeleteConfirmId === item.id ? null : item.id);
+                                          }}
+                                          className="p-1.5 rounded-lg border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 transition cursor-pointer flex items-center justify-center"
+                                          title="Deletar Rodada"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+
+                                        {item.status === 'encerrada' && matchResult && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleShareResult(item, matchResult)}
+                                            className="bg-[#128C7E] hover:bg-[#075e54] text-white font-mono font-bold text-[9px] px-3 py-1.5 rounded-lg uppercase cursor-pointer transition inline-flex items-center gap-1"
+                                          >
+                                            Compartilhar Resultado
+                                          </button>
+                                        )}
+                                      </div>
+                                      
+                                      {/* Active operational matches redirect to Cockpit */}
+                                      {(item.status === 'confirmando' || item.status === 'aguardando_reservas' || item.status === 'fechada' || item.status === 'sorteada') && (
+                                        <div className="text-[10px] font-mono text-zinc-400 leading-relaxed py-1 block mt-2 border-t border-zinc-900 pt-2">
+                                          Esta rodada está em andamento operacional. As ações de confirmação de presença, sorteio de equipes e lançamento de placar devem ser realizadas diretamente no <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'dash' }))} className="text-emerald-400 font-bold underline cursor-pointer hover:text-emerald-300 transition">Painel Administrativo da Home</button>.
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+
+
                                 </div>
                               )}
-                              <button
-                                type="button"
-                                onClick={() => setShowDeleteConfirmId(null)}
-                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 py-2 px-3 rounded text-[10.5px] font-bold transition cursor-pointer space-x-1"
+                            </div>
+                          )}
+                        </div>
+
+                        {/* RECORD INLINE SCORES FORM */}
+                        {showResultFormId === item.id && (
+                          <div className="p-4 bg-zinc-950/80 border border-emerald-500/30 rounded-xl space-y-3 font-mono text-xs mt-2">
+                            <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
+                              <span className="font-bold text-white uppercase text-[10px] text-emerald-400">🏆 Registrar Placar do Racha</span>
+                              <button 
+                                type="button" 
+                                onClick={() => setShowResultFormId(null)}
+                                className="text-zinc-500 hover:text-white"
                               >
-                                Voltar
+                                Fechar [X]
                               </button>
                             </div>
+                            
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="bg-blue-950/20 border border-blue-500/20 rounded-lg p-2.5 text-center">
+                                <label className="block text-[9px] font-bold text-blue-400 uppercase mb-1">Equipe A (Azul)</label>
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  value={winsBlue}
+                                  onChange={(e) => setWinsBlue(e.target.value)}
+                                  className="w-full bg-[#1c1c1e] text-center text-white border border-zinc-800 rounded py-1.5 text-xs font-bold focus:outline-none focus:border-blue-500"
+                                />
+                              </div>
+
+                              <div className="bg-rose-950/20 border border-rose-500/20 rounded-lg p-2.5 text-center">
+                                <label className="block text-[9px] font-bold text-rose-400 uppercase mb-1">Equipe B (Vermelho)</label>
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  value={winsRed}
+                                  onChange={(e) => setWinsRed(e.target.value)}
+                                  className="w-full bg-[#1c1c1e] text-center text-white border border-zinc-800 rounded py-1.5 text-xs font-bold focus:outline-none focus:border-rose-500"
+                                />
+                              </div>
+
+                              <div className="bg-emerald-950/20 border border-emerald-500/20 rounded-lg p-2.5 text-center">
+                                <label className="block text-[9px] font-bold text-emerald-400 uppercase mb-1">Equipe C (Verde)</label>
+                                <input 
+                                  type="number"
+                                  min="0"
+                                  value={winsGreen}
+                                  onChange={(e) => setWinsGreen(e.target.value)}
+                                  className="w-full bg-[#1c1c1e] text-center text-white border border-zinc-800 rounded py-1.5 text-xs font-bold focus:outline-none focus:border-emerald-500"
+                                />
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => handleSaveMatchResult(item.id)}
+                              disabled={actionLoading}
+                              className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase py-2.5 rounded-lg cursor-pointer transition shadow"
+                            >
+                              Salvar e Encerrar a Rodada
+                            </button>
                           </div>
-                        ) : (
-                          /* CASE 2: FRESH MATCH (CAN BE DELETED) */
-                          <div className="space-y-3">
-                            <p className="text-zinc-350 leading-relaxed text-[11px]">
-                              Esta partida está vazia (sem presenças cadastradas, sorteios ou resultados) e <span className="text-emerald-400 font-bold">pode ser excluída permanentemente</span> do racha.
-                            </p>
-                            <p className="text-red-400 font-extrabold text-[10px] uppercase">
-                              ⚠️ Atenção: Esta ação é definitiva e removerá completamente este registro do banco de dados!
-                            </p>
-                            <div className="flex gap-2 pt-1 font-mono">
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteMatch(item.id)}
-                                disabled={actionLoading}
-                                className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded text-[11px] uppercase transition cursor-pointer"
-                              >
-                                {actionLoading ? 'Excluindo...' : 'Sim, Excluir Definitivamente'}
-                              </button>
-                              <button
-                                type="button"
+                        )}
+
+                        {/* INLINE DELETE CONFIRMATION OR EXPLANATION AREA */}
+                        {showDeleteConfirmId === item.id && (
+                          <div className="p-4 bg-[#09090b] border border-zinc-900 rounded-xl space-y-3 font-mono text-xs animate-fadeIn mt-2" id={`delete-panel-${item.id}`}>
+                            <div className="flex justify-between items-center border-b border-zinc-900 pb-2">
+                              <span className="font-bold text-white uppercase text-[10.5px] text-rose-400 flex items-center gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
+                                Excluir Rodada do Calendário
+                              </span>
+                              <button 
+                                type="button" 
                                 onClick={() => setShowDeleteConfirmId(null)}
-                                className="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 px-4 py-2 rounded text-[11px] font-bold transition cursor-pointer"
+                                className="text-zinc-500 hover:text-white"
                               >
-                                Não, Voltar
+                                Fechar [X]
                               </button>
                             </div>
+
+                            {/* CASE 1: MATCH HAS HISTORY (CANNOT BE DELETED) */}
+                            {item.hasDraws || item.hasResults ? (
+                              <div className="space-y-3">
+                                <p className="text-zinc-350 leading-relaxed text-[11px]">
+                                  ⚠️ <span className="font-extrabold text-white">Não é possível excluir esta partida permanentemente</span> porque ela já possui sorteio realizado ou resultados salvos:
+                                </p>
+                                <ul className="list-disc list-inside space-y-1 text-zinc-400 pl-1 text-[11px]">
+                                  {item.hasDraws && (
+                                    <li>Histórico de times ou sorteio de racha realizado.</li>
+                                  )}
+                                  {item.hasResults && (
+                                    <li>Placar ou resultado final gravado.</li>
+                                  )}
+                                </ul>
+                                
+                                <div className="p-2.5 bg-rose-500/5 border border-rose-500/10 rounded-lg text-rose-350 leading-relaxed text-[10.5px]">
+                                  Para manter as estatísticas e pontuações do grupo intactas, rachas com sorteio não são excluídos fisicamente. Se a partida não for realizada, cancele-a.
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                                  {item.status !== 'cancelada' ? (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        setShowDeleteConfirmId(null);
+                                        await handleUpdateMatchStatus(item.id, 'cancelada');
+                                      }}
+                                      className="flex-1 bg-red-950/40 hover:bg-red-900/30 border border-red-500/30 text-rose-400 py-2 px-3 rounded text-[10px] font-bold transition uppercase cursor-pointer"
+                                    >
+                                      Cancelar Rodada Preservando Histórico
+                                    </button>
+                                  ) : (
+                                    <div className="text-[10px] text-zinc-500 italic p-1">
+                                      Esta partida já foi cancelada. Seu histórico continua preservado.
+                                    </div>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirmId(null)}
+                                    className="bg-zinc-900 hover:bg-zinc-850 text-zinc-300 py-2 px-3 rounded text-[10.5px] font-bold transition cursor-pointer"
+                                  >
+                                    Voltar
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* CASE 2: FRESH MATCH (CAN BE DELETED) */
+                              <div className="space-y-3">
+                                <p className="text-zinc-350 leading-relaxed text-[11px]">
+                                  {item.hasPresences ? (
+                                    <span>Esta partida possui <span className="text-amber-500 font-bold">respostas de presença registradas</span>, mas como <span className="text-emerald-450 font-bold">não teve sorteio realizado</span>, ela pode ser excluída permanentemente. As confirmações dos atletas serão apagadas junto com a partida.</span>
+                                  ) : (
+                                    <span>Esta partida está vazia (sem presenças cadastradas, sorteios ou resultados) e <span className="text-emerald-450 font-bold">pode ser excluída permanentemente</span> do racha.</span>
+                                  )}
+                                </p>
+                                <p className="text-red-400 font-extrabold text-[10px] uppercase">
+                                  ⚠️ Atenção: Esta ação é definitiva e removerá completamente este registro do banco de dados!
+                                </p>
+                                <div className="flex gap-2 pt-1 font-mono">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteMatch(item.id)}
+                                    disabled={actionLoading}
+                                    className="flex-1 bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 rounded text-[11px] uppercase transition cursor-pointer"
+                                  >
+                                    {actionLoading ? 'Excluindo...' : 'Sim, Excluir Definitivamente'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowDeleteConfirmId(null)}
+                                    className="bg-zinc-900 hover:bg-zinc-800 text-zinc-350 px-4 py-2 rounded text-[11px] font-bold transition cursor-pointer"
+                                  >
+                                    Não, Voltar
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
-                );
-              })}
-            </div>
-          )}
+
+                {/* PAGINATION CONTROLS */}
+                {totalPages > 1 && (
+                  <div className="flex flex-col sm:flex-row items-center justify-between border-t border-zinc-900 pt-6 mt-6 gap-4">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase">
+                      Página <strong className="text-zinc-300 font-extrabold">{safeCurrentPage}</strong> de <strong className="text-zinc-300 font-extrabold">{totalPages}</strong> ({sortedMatches.length} rodadas)
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={safeCurrentPage === 1}
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        className="px-3 py-1.5 rounded-lg border border-zinc-900 bg-zinc-950/40 text-zinc-400 hover:text-white hover:bg-zinc-900 text-xs font-mono disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                      >
+                        Anterior
+                      </button>
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => setCurrentPage(page)}
+                          className={`w-8 h-8 rounded-lg border text-xs font-mono font-bold transition cursor-pointer ${
+                            safeCurrentPage === page
+                              ? 'bg-emerald-650/15 border-emerald-500/30 text-emerald-400'
+                              : 'border-zinc-900 bg-zinc-950/40 text-zinc-400 hover:text-white hover:bg-zinc-900'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        disabled={safeCurrentPage === totalPages}
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        className="px-3 py-1.5 rounded-lg border border-zinc-900 bg-zinc-950/40 text-zinc-400 hover:text-white hover:bg-zinc-900 text-xs font-mono disabled:opacity-30 disabled:pointer-events-none transition cursor-pointer"
+                      >
+                        Próximo
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
         </div>
       )}
@@ -1854,3 +2333,329 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     </div>
   );
 }
+
+// =========================================================================
+// --- SPRINT 3.1: DETAILED TAB SUB-COMPONENTS FOR ACCORDION DETAIL WORK ---
+// =========================================================================
+
+function DetailPresences({ matchId, players }: { matchId: string; players: Player[] }) {
+  const [data, setData] = useState<{ match: any; presences: any[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/matches/${matchId}/presences`)
+      .then(res => res.json())
+      .then(resData => {
+        if (active) {
+          setData(resData);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [matchId]);
+
+  if (loading) {
+    return <div className="text-zinc-500 text-[11px] font-mono animate-pulse py-4 text-center">Buscando presença dos atletas...</div>;
+  }
+
+  if (!data || !data.presences || data.presences.length === 0) {
+    return <div className="text-zinc-500 text-[11px] font-mono py-4 text-center">Nenhuma presença confirmada para esta rodada.</div>;
+  }
+
+  const confirmed = data.presences.filter(p => p.status === 'confirmado');
+  const waiting = data.presences.filter(p => p.status === 'espera');
+  const refused = data.presences.filter(p => p.status === 'recusado' || p.status === 'desistente');
+
+  return (
+    <div className="space-y-4 font-sans text-xs">
+      {confirmed.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-[10px] font-mono text-zinc-400 uppercase font-black tracking-wider block">🟢 Confirmados ({confirmed.length})</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {confirmed.map(p => (
+              <div key={p.playerId} className="bg-zinc-950/60 border border-zinc-900 rounded-lg px-2.5 py-1.5 flex items-center justify-between">
+                <span className="font-semibold text-white truncate">{p.playerName}</span>
+                <span className="text-[8px] font-mono text-zinc-500 uppercase ml-2">{p.playerStatus === 'mensalista' ? 'Mens' : 'Diar'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {waiting.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-[10px] font-mono text-amber-400 uppercase font-black tracking-wider block">🟡 Lista de Espera ({waiting.length})</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {waiting.map(p => (
+              <div key={p.playerId} className="bg-zinc-950/60 border border-amber-500/10 rounded-lg px-2.5 py-1.5 flex items-center justify-between">
+                <span className="font-semibold text-white truncate">{p.playerName}</span>
+                <span className="text-[9px] font-mono text-amber-500 font-extrabold ml-2">#{p.priorityOrder || 1}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {refused.length > 0 && (
+        <div className="space-y-1.5">
+          <span className="text-[10px] font-mono text-zinc-500 uppercase font-black tracking-wider block">❌ Recusados / Ausentes ({refused.length})</span>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {refused.map(p => (
+              <div key={p.playerId} className="bg-zinc-950/40 border border-zinc-950 rounded-lg px-2.5 py-1.5 flex items-center justify-between">
+                <span className="text-zinc-500 truncate">{p.playerName}</span>
+                <span className="text-[8px] font-mono text-zinc-600 uppercase ml-2">Ausente</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DetailTeams({ matchId, players }: { matchId: string; players: Player[] }) {
+  const [draw, setDraw] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch(`/api/matches/${matchId}/draw`)
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(resData => {
+        if (active) {
+          setDraw(resData);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setDraw(null);
+          setLoading(false);
+        }
+      });
+    return () => { active = false; };
+  }, [matchId]);
+
+  if (loading) {
+    return <div className="text-zinc-500 text-[11px] font-mono animate-pulse py-4 text-center">Buscando equipes sorteadas...</div>;
+  }
+
+  if (!draw || !draw.teams || draw.teams.length === 0) {
+    return (
+      <div className="text-zinc-500 text-[11px] font-mono py-4 text-center">
+        🎲 Sorteio de equipes ainda não realizado para esta rodada. 
+        <div className="text-[9.5px] mt-1 text-zinc-600">
+          Você pode realizar o sorteio no painel principal quando as confirmações estiverem fechadas.
+        </div>
+      </div>
+    );
+  }
+
+  const getPlayerName = (id: string) => {
+    const p = players.find(x => x.id === id);
+    return p ? p.name : 'Atleta Desconhecido';
+  };
+
+  const getPlayerOVR = (id: string) => {
+    const p = players.find(x => x.id === id);
+    return p ? (p as any).ovr || (p as any).overall || 60 : 60;
+  };
+
+  const getPlayerPosition = (id: string) => {
+    const p = players.find(x => x.id === id);
+    if (!p) return 'LIN';
+    if (p.primaryPosition === 'goleiro') return 'GOL';
+    if (p.primaryPosition === 'zagueiro' || p.primaryPosition === 'volante') return 'DEF';
+    if (p.primaryPosition === 'meio_campo') return 'MEI';
+    return 'ATA';
+  };
+
+  return (
+    <div className="space-y-4 font-sans text-xs">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {draw.teams.map((team: any) => {
+          const isBlue = team.name === 'Azul';
+          const isRed = team.name === 'Vermelho';
+          const title = isBlue ? '🔵 Equipe A (Azul)' : isRed ? '🔴 Equipe B (Vermelho)' : '🟢 Equipe C (Verde)';
+          const bgHeader = isBlue ? 'bg-blue-600/10 border-blue-500/20 text-blue-400' : isRed ? 'bg-rose-600/10 border-rose-500/20 text-rose-400' : 'bg-emerald-600/10 border-emerald-500/20 text-emerald-400';
+          const overall = isBlue ? draw.overallBlue : isRed ? draw.overallRed : draw.overallGreen;
+
+          return (
+            <div key={team.name} className="bg-zinc-950/40 border border-zinc-900 rounded-xl overflow-hidden">
+              <div className={`px-3 py-2 border-b flex items-center justify-between font-bold ${bgHeader}`}>
+                <span>{title}</span>
+                {overall && <span className="text-[10px] font-mono bg-zinc-950 px-1.5 py-0.5 rounded text-white border border-zinc-850">OVR {Math.round(overall)}</span>}
+              </div>
+              <div className="p-2.5 space-y-1.5">
+                {team.playerIds.map((pid: string) => {
+                  const isCaptain = team.captainPlayerId === pid;
+                  return (
+                    <div key={pid} className="flex items-center justify-between bg-zinc-950/80 px-2 py-1 rounded border border-zinc-900/60">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[8px] px-1 bg-zinc-900 rounded text-zinc-400 font-mono font-bold uppercase">{getPlayerPosition(pid)}</span>
+                        <span className="font-semibold text-white truncate text-[11px]">{getPlayerName(pid)}</span>
+                        {isCaptain && <span className="text-[8.5px] bg-amber-500/15 border border-amber-500/25 text-amber-400 px-1 py-0.2 rounded font-mono font-bold leading-none scale-90">CAP</span>}
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-500">★{getPlayerOVR(pid)}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DetailResult({ matchId, matchResult }: { matchId: string; matchResult: any }) {
+  if (!matchResult) {
+    return (
+      <div className="text-zinc-500 text-[11px] font-mono py-4 text-center">
+        🏆 O placar final e resultado da rodada ainda não foram gravados.
+        <div className="text-[9.5px] mt-1 text-zinc-600">
+          As rodadas encerradas mostram o placar consolidado aqui após o fechamento técnico.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 font-sans text-xs">
+      <div className="bg-zinc-950/60 border border-zinc-900 rounded-xl p-4 max-w-md mx-auto space-y-3">
+        <span className="text-[10px] font-mono text-zinc-500 uppercase font-black block tracking-wider text-center border-b border-zinc-900 pb-2">📊 Resultado Oficial</span>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between bg-blue-950/20 border border-blue-500/10 px-3 py-2 rounded-lg">
+            <span className="font-semibold text-blue-400">🔵 Equipe A</span>
+            <span className="font-mono font-extrabold text-white text-sm">{matchResult.winsBlue} vitórias</span>
+          </div>
+          <div className="flex items-center justify-between bg-rose-950/20 border border-rose-500/10 px-3 py-2 rounded-lg">
+            <span className="font-semibold text-rose-400">🔴 Equipe B</span>
+            <span className="font-mono font-extrabold text-white text-sm">{matchResult.winsRed} vitórias</span>
+          </div>
+          <div className="flex items-center justify-between bg-emerald-950/20 border border-emerald-500/10 px-3 py-2 rounded-lg">
+            <span className="font-semibold text-emerald-400">🟢 Equipe C</span>
+            <span className="font-mono font-extrabold text-white text-sm">{matchResult.winsGreen} vitórias</span>
+          </div>
+        </div>
+        <div className="pt-2 border-t border-zinc-900 text-center">
+          <div className="inline-flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-xl text-emerald-400 font-bold font-mono">
+            <span>🏆 Campeã:</span>
+            <span>{matchResult.champions.map((c: string) => c === 'Azul' ? 'Equipe A' : c === 'Vermelho' ? 'Equipe B' : 'Equipe C').join(' + ')}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DetailRatings({ matchId, players }: { matchId: string; players: Player[] }) {
+  const [summaries, setSummaries] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetch('/api/evaluations/summary')
+      .then(res => res.json())
+      .then(resData => {
+        if (active) {
+          setSummaries(resData || []);
+          setLoading(false);
+        }
+      })
+      .catch(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
+
+  if (loading) {
+    return <div className="text-zinc-500 text-[11px] font-mono animate-pulse py-4 text-center">Buscando avaliações dos atletas...</div>;
+  }
+
+  if (summaries.length === 0) {
+    return <div className="text-zinc-500 text-[11px] font-mono py-4 text-center">Nenhuma avaliação registrada ainda.</div>;
+  }
+
+  const sorted = [...summaries]
+    .filter(s => players.some(p => p.id === s.playerId))
+    .sort((a, b) => (b.overall || 0) - (a.overall || 0))
+    .slice(0, 6);
+
+  return (
+    <div className="space-y-3 font-sans text-xs">
+      <span className="text-[10px] font-mono text-zinc-400 uppercase font-black block mb-1">⭐ Top Atletas & Desempenho Técnico</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {sorted.map(s => {
+          const p = players.find(x => x.id === s.playerId);
+          if (!p) return null;
+          return (
+            <div key={s.playerId} className="bg-zinc-950/60 border border-zinc-900 rounded-lg p-2 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <span className="block font-bold text-white truncate">{p.name}</span>
+                <span className="block text-[9px] font-mono text-zinc-500 uppercase mt-0.5">{p.primaryPosition} • {p.status}</span>
+              </div>
+              <div className="text-right font-mono">
+                <span className="block text-emerald-400 font-extrabold text-xs">★{(s.overall ?? 0).toFixed(1)}</span>
+                <span className="block text-[8px] text-zinc-500">Votos: {s.evalCount ?? 0}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function DetailMuseum({ matchId, muralPosts }: { matchId: string; muralPosts: any[] }) {
+  const matchMedias = muralPosts.filter(p => p.matchId === matchId && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
+
+  if (matchMedias.length === 0) {
+    return (
+      <div className="text-zinc-500 text-[11px] font-mono py-4 text-center">
+        🖼️ Nenhum registro visual ou memória guardada para esta rodada.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 font-sans text-xs">
+      <span className="text-[10px] font-mono text-zinc-400 uppercase font-black block mb-1">🖼️ Memórias do Museu ({matchMedias.length})</span>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {matchMedias.map((post: any) => (
+          <div key={post.id} className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden flex flex-col justify-between">
+            {post.imageUrl && (
+              <div className="relative aspect-video w-full bg-zinc-900 overflow-hidden">
+                <img
+                  src={post.imageUrl}
+                  alt={post.title}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <div className="p-3 space-y-1.5 flex-1 flex flex-col justify-between">
+              <div>
+                <h5 className="font-bold text-white text-xs line-clamp-1">{post.title}</h5>
+                <p className="text-zinc-400 text-[11px] line-clamp-2 leading-relaxed mt-1">{post.description || 'Sem descrição.'}</p>
+              </div>
+              <div className="pt-2 border-t border-zinc-900/60 flex items-center justify-between text-[9px] font-mono text-zinc-500">
+                <span>Por: {post.authorName}</span>
+                <span>{new Date(post.createdAt).toLocaleDateString('pt-BR')}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+

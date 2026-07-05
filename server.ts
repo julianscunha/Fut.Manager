@@ -291,10 +291,17 @@ async function startServer() {
       // Determine computed state
       let computedLifecycle = oldLifecycle || 'SCHEDULED';
       
+      // Se o status for alterado para um estado ativo, removemos o ciclo de vida terminal para reavaliar
+      if (['agendada', 'confirmando', 'aguardando_reservas', 'fechada'].includes(oldStatus)) {
+        if (computedLifecycle === 'ARCHIVED' || computedLifecycle === 'MATCH_FINISHED') {
+          computedLifecycle = 'SCHEDULED';
+        }
+      }
+
       // If it was already archived or if it was marked as cancelled, it's ARCHIVED
-      if (oldLifecycle === 'ARCHIVED' || oldStatus === 'cancelada') {
+      if (computedLifecycle === 'ARCHIVED' || oldStatus === 'cancelada') {
         computedLifecycle = 'ARCHIVED';
-      } else if (oldLifecycle === 'MATCH_FINISHED' || oldStatus === 'encerrada') {
+      } else if (computedLifecycle === 'MATCH_FINISHED' || oldStatus === 'encerrada') {
         computedLifecycle = 'MATCH_FINISHED';
       } else {
         const hasResults = (db.results || []).some((r: any) => r.matchId === m.id);
@@ -323,10 +330,13 @@ async function startServer() {
 
             if (confirmedCount >= limit) {
               computedLifecycle = 'CHECKIN_CLOSED';
-            } else if (oldStatus === 'agendada') {
-              computedLifecycle = 'SCHEDULED';
             } else {
-              computedLifecycle = 'CHECKIN_OPEN';
+              const hasAnyDeclarations = computedList.some((p: any) => p.presenceStatus === 'confirmado' || (p.presenceStatus === 'cancelado' && p.category !== 'reserva'));
+              if (oldStatus === 'agendada' && !hasAnyDeclarations) {
+                computedLifecycle = 'SCHEDULED';
+              } else {
+                computedLifecycle = 'CHECKIN_OPEN';
+              }
             }
           }
         }
@@ -2295,8 +2305,8 @@ async function startServer() {
       }
 
       const previousStatus = db.matches[index].status;
-      if (previousStatus === 'sorteada' && status && status !== 'sorteada' && status !== 'encerrada') {
-        return res.status(400).json({ error: 'Após o sorteio ser realizado, não é permitido reabrir confirmações ou cancelar a rodada.' });
+      if (previousStatus === 'sorteada' && status && status !== 'sorteada' && status !== 'encerrada' && status !== 'cancelada') {
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, não é permitido reabrir confirmações (exceto para cancelamento).' });
       }
 
       const dateChanged = date && date !== db.matches[index].date;
@@ -2528,11 +2538,10 @@ async function startServer() {
       const toDelete: string[] = [];
 
       for (const id of matchIds) {
-        const hasPresences = (db.presences || []).some((p) => p.matchId === id && p.status === 'confirmado');
         const hasDraws = (db.draws || []).some((d) => d.matchId === id);
         const hasResults = (db.results || []).some((r) => r.matchId === id);
 
-        if (hasPresences || hasDraws || hasResults) {
+        if (hasDraws || hasResults) {
           undeletable.push(id);
         } else {
           toDelete.push(id);
@@ -2540,7 +2549,7 @@ async function startServer() {
       }
 
       if (toDelete.length === 0) {
-        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluída, pois possuem histórico ou são inválidas.' });
+        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluída, pois possuem sorteio realizado ou resultados registrados.' });
       }
 
       db.matches = (db.matches || []).filter((m) => !toDelete.includes(m.id));
@@ -2575,17 +2584,15 @@ async function startServer() {
       const { id } = req.params;
       const db = readDb();
 
-      const hasPresences = (db.presences || []).some((p) => p.matchId === id && p.status === 'confirmado');
       const hasDraws = (db.draws || []).some((d) => d.matchId === id);
       const hasResults = (db.results || []).some((r) => r.matchId === id);
 
-      if (hasPresences || hasDraws || hasResults) {
+      if (hasDraws || hasResults) {
         const reasons = [];
-        if (hasPresences) reasons.push('presenças confirmadas/recusadas/talvez');
         if (hasDraws) reasons.push('times sorteados/parciais');
         if (hasResults) reasons.push('placar/resultados registrados');
         return res.status(400).json({ 
-          error: `Esta partida possui movimentação histórica (${reasons.join(', ')}) e não pode ser excluída. Apenas a opção de 'Cancelar Partida' é permitida para preservar o histórico.` 
+          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e não pode ser excluída.` 
         });
       }
 
@@ -4015,6 +4022,23 @@ async function startServer() {
   });
 
   // Post/register results for a match
+  app.post('/api/matches/:matchId/release-evaluations', (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const db = readDb();
+      const match = db.matches.find((m: any) => m.id === matchId);
+      if (!match) return res.status(404).json({ error: 'Partida não encontrada.' });
+      
+      match.evaluationsReleased = true;
+      writeDb(db);
+      
+      return res.json({ message: 'Avaliações liberadas com sucesso!', match });
+    } catch (err) {
+      console.error('[Error releasing evaluations]', err);
+      return res.status(500).json({ error: 'Erro ao liberar avaliações.' });
+    }
+  });
+
   app.post('/api/matches/:matchId/results', (req, res) => {
     try {
       const { matchId } = req.params;
@@ -4060,6 +4084,7 @@ async function startServer() {
       // Transition match state to MATCH_FINISHED
       match.lifecycleState = 'MATCH_FINISHED';
       match.status = 'encerrada';
+      match.evaluationsReleased = true;
 
       // Safe initialization of collections
       db.results = db.results || [];
@@ -4478,11 +4503,7 @@ async function startServer() {
         db.snapshots = db.snapshots.filter((s: any) => s.matchId !== matchId);
         db.snapshots.push(snapshot);
 
-        // 2. Promote the lifecycleState of this round to ARCHIVED (operational cycle ended)
-        match.lifecycleState = 'ARCHIVED';
-
-        // 3. Clear the transient draw/operational states for this match
-        db.draws = (db.draws || []).filter(d => d.matchId !== matchId);
+        // Remove the automatic promotion to ARCHIVED here so the admin has to click the button
       } catch (autoErr) {
         console.error('[Error generating automatic mural post]', autoErr);
       }
@@ -4498,6 +4519,31 @@ async function startServer() {
   // ==========================================
   // --- CONTROL OF RESERVES ALERTS & PRIO ---
   // ==========================================
+
+  app.post('/api/matches/:matchId/archive', (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const db = readDb();
+      const match = db.matches.find((m) => m.id === matchId);
+      
+      if (!match) {
+        return res.status(404).json({ error: 'Partida não encontrada.' });
+      }
+      
+      match.lifecycleState = 'ARCHIVED';
+      match.status = 'encerrada';
+
+      // Clear the transient draw/operational states for this match
+      db.draws = (db.draws || []).filter(d => d.matchId !== matchId);
+      
+      writeDb(db);
+      
+      return res.json({ message: 'Rodada arquivada com sucesso!', match });
+    } catch (err) {
+      console.error('[Error archiving match]', err);
+      return res.status(500).json({ error: 'Erro interno ao arquivar a rodada.' });
+    }
+  });
 
   app.get('/api/reserves/order', (req, res) => {
     try {

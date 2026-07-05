@@ -545,19 +545,19 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
                       </div>
 
                       {/* Painel Administrativo Rápido (Inline) */}
-                      {currentUser.role === 'admin' && !isRoot && (
+                      {currentUser.role === 'admin' && (
                         <div className="mt-2.5 pt-2.5 border-t border-zinc-900/65 grid grid-cols-1 sm:grid-cols-2 gap-2 animate-fadeIn">
                           {/* Nível de Acesso (Delegar permissão) */}
                           <div className="flex flex-col gap-1 text-left">
                             <label className="text-[9px] text-zinc-500 uppercase font-mono tracking-wider font-extrabold">Cargo / Acesso:</label>
                             <select
                               value={user.role}
-                              disabled={inlineUpdatingId === user.id}
+                              disabled={inlineUpdatingId === user.id || isRoot}
                               onChange={async (e) => {
                                 const newRole = e.target.value as UserRole;
                                 await handleInlineRoleAndLink(user.id, newRole, user.playerId || '');
                               }}
-                              className="w-full bg-[#0d1310] border border-zinc-900 hover:border-zinc-800 rounded-lg text-xs text-zinc-200 p-2 focus:outline-none focus:border-emerald-555 cursor-pointer font-bold leading-none"
+                              className="w-full bg-[#0d1310] border border-zinc-900 hover:border-zinc-800 rounded-lg text-xs text-zinc-200 p-2 focus:outline-none focus:border-emerald-555 cursor-pointer font-bold leading-none disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <option value="jogador">Jogador</option>
                               <option value="auxiliar">Auxiliar</option>
@@ -577,7 +577,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
                               }}
                               className="w-full bg-[#0d1310] border border-zinc-900 hover:border-zinc-800 rounded-lg text-xs text-zinc-200 p-2 focus:outline-none focus:border-emerald-555 cursor-pointer"
                             >
-                              <option value="">-- Sem Vínculo (Não associado) --</option>
+                              {!isRoot && <option value="">-- Sem Vínculo (Não associado) --</option>}
                               {players.map(p => (
                                 <option key={p.id} value={p.id}>
                                   {p.name} ({p.category === 'mensalista' ? 'Mensalista' : 'Reserva'})
@@ -1078,7 +1078,9 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
 
                       {log.details && (
                         <div className="text-[10px] text-emerald-400 font-mono italic mt-1 bg-zinc-950/60 p-1.5 rounded border border-zinc-900 w-full max-w-xl">
-                          ℹ️ {log.details}
+                          ℹ️ {typeof log.details === 'object'
+                            ? (log.details.loggedMessage || JSON.stringify(log.details))
+                            : String(log.details)}
                         </div>
                       )}
 

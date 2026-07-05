@@ -9,6 +9,17 @@ import AuthScreens from './components/AuthScreens';
 import { authFetch } from './lib/authFetch';
 import DashboardStatus from './components/DashboardStatus';
 import PlayerCard from './components/PlayerCard';
+import { PlayerHero } from './components/PlayerHero';
+import { 
+  PlayerStatCard, 
+  PlayerPerformanceCard, 
+  PlayerAchievementsCard, 
+  PlayerProgressCard, 
+  PlayerHistoryCard, 
+  PlayerIdentityCard, 
+  PlayerComparisonCard, 
+  PlayerGoalsCard 
+} from './components/PlayerDomainCards';
 import PlayerForm from './components/PlayerForm';
 import UserApprovalList from './components/UserApprovalList';
 import TechnicalRanking from './components/TechnicalRanking';
@@ -30,7 +41,12 @@ import {
   DollarSign,
   Gift,
   AlertTriangle,
-  X
+  Activity,
+  Trophy,
+  TrendingUp,
+  X,
+  FlaskConical,
+  Settings
 } from 'lucide-react';
 import CalendarManager from './components/CalendarManager';
 import DrawManager from './components/DrawManager';
@@ -38,11 +54,13 @@ import FinanceManager from './components/FinanceManager';
 import EventManager from './components/EventManager';
 import MuralManager from './components/MuralManager';
 import NotificationCenter from './components/NotificationCenter';
+import LaboratorioManager from './components/LaboratorioManager';
 import { Camera } from 'lucide-react';
 
-type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances' | 'events' | 'mural';
+type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances' | 'events' | 'mural' | 'profile' | 'laboratorio' | 'administration';
 
 export default function App() {
+  const [adminSubTab, setAdminSubTab] = useState<'approvals' | 'laboratorio'>('approvals');
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('racha_user');
     return saved ? JSON.parse(saved) : null;
@@ -50,15 +68,62 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<NavTab>(() => {
     const saved = localStorage.getItem('racha_active_tab');
-    return (saved as NavTab) || 'dash';
+    const tab = (saved as NavTab) || 'dash';
+    return tab === 'profile' ? 'players' : tab;
   });
 
+  const [featuredPlayerId, setFeaturedPlayerId] = useState<string | null>(null);
+
   useEffect(() => {
-    localStorage.setItem('racha_active_tab', activeTab);
+    if (activeTab !== 'profile') {
+      localStorage.setItem('racha_active_tab', activeTab);
+    }
   }, [activeTab]);
+
   const [players, setPlayers] = useState<Player[]>([]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash;
+      const match = hash.match(/^#\/players\/(.+)$/);
+      if (match) {
+        const id = match[1];
+        setFeaturedPlayerId(id);
+        setActiveTab('profile');
+      } else if (hash === '#/players' || hash === '#/jogadores') {
+        setActiveTab('players');
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange(); // Execute initially
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+  // Sync URL hash based on activeTab to prevent getting stuck in navigation
+  useEffect(() => {
+    if (activeTab === 'profile') {
+      if (featuredPlayerId && window.location.hash !== `#/players/${featuredPlayerId}`) {
+        window.location.hash = `#/players/${featuredPlayerId}`;
+      }
+    } else if (activeTab === 'players') {
+      if (window.location.hash !== '#/players') {
+        window.location.hash = '#/players';
+      }
+    } else {
+      // Clear player-related hash for other tabs to allow seamless navigation
+      if (window.location.hash.startsWith('#/players')) {
+        window.location.hash = '';
+      }
+    }
+  }, [activeTab, featuredPlayerId]);
+
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [simulatedState, setSimulatedState] = useState<number | null>(null);
 
   // Player search and filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,6 +135,112 @@ export default function App() {
   // Modal / Form state
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
+
+  // States for domain showcase components
+  const [featuredMetrics, setFeaturedMetrics] = useState<any>(null);
+  const [featuredRachaStats, setFeaturedRachaStats] = useState<any>(null);
+  const [allPlayersStats, setAllPlayersStats] = useState<any[]>([]);
+  const [featuredResults, setFeaturedResults] = useState<('V' | 'D' | 'E' | 'NP')[]>([]);
+
+  // Fetch domain metrics and statistics for the selected featured player
+  useEffect(() => {
+    if (!currentUser || !players || players.length === 0) return;
+    
+    // Find matching self or fallback featured player
+    const matchingSelfPlayer = players.find(p => p.email?.toLowerCase() === currentUser?.email?.toLowerCase());
+    const defaultFeaturedPlayer = matchingSelfPlayer || players[0];
+    const featured = players.find(p => p.id === featuredPlayerId) || defaultFeaturedPlayer;
+
+    if (!featured) return;
+
+    let active = true;
+
+    const loadData = async () => {
+      try {
+        const [evalsRes, statsRes, resultsRes] = await Promise.all([
+          fetch(`/api/players/${featured.id}/evaluations?evaluatorUserId=${currentUser.id}`),
+          fetch('/api/stats'),
+          fetch('/api/results')
+        ]);
+
+        if (!active) return;
+
+        let fetchedMetrics = null;
+        if (evalsRes.ok) {
+          const data = await evalsRes.json();
+          fetchedMetrics = data.metrics;
+          setFeaturedMetrics(data.metrics);
+        }
+
+        let fetchedRachaStats = null;
+        if (statsRes.ok) {
+          const statsData = await statsRes.json();
+          if (statsData.individual) {
+            setAllPlayersStats(statsData.individual);
+            const found = statsData.individual.find((s: any) => s.playerId === featured.id);
+            if (found) {
+              fetchedRachaStats = found;
+              setFeaturedRachaStats(found);
+            }
+          }
+        }
+
+        if (resultsRes.ok) {
+          const resultsData = await resultsRes.json();
+          const sortedResults = [...resultsData];
+          let pWins = 0;
+          let pLosses = 0;
+          let pDraws = 0;
+          let pPresences = 0;
+
+          const last5Results = sortedResults.slice(-5);
+          const recentOutcomes = last5Results.map(resObj => {
+            const isGoalkeeper = featured.primaryPosition === 'goleiro';
+            const blueTeam = resObj.teams?.find((t: any) => t.name === 'Azul')?.playerIds || [];
+            const redTeam = resObj.teams?.find((t: any) => t.name === 'Vermelho')?.playerIds || [];
+            const greenTeam = resObj.teams?.find((t: any) => t.name === 'Verde')?.playerIds || [];
+
+            const isBlue = blueTeam.includes(featured.id);
+            const isRed = redTeam.includes(featured.id);
+            const isGreen = greenTeam.includes(featured.id);
+
+            const hasPlayed = isBlue || isRed || isGreen;
+            if (!hasPlayed) return 'NP';
+
+            pPresences++;
+            const champTeams = resObj.champions || [];
+            if (resObj.isSharedGoalkeepers && isGoalkeeper) {
+              pWins++;
+              return champTeams.length > 0 ? 'V' : 'E';
+            }
+
+            const playerTeam = isBlue ? 'Azul' : isRed ? 'Vermelho' : isGreen ? 'Verde' : null;
+            if (!playerTeam) return 'NP';
+
+            if (champTeams.length === 0 || champTeams.length > 1) {
+              pDraws++;
+              return 'E';
+            }
+            if (champTeams.includes(playerTeam)) {
+              pWins++;
+              return 'V';
+            }
+            pLosses++;
+            return 'D';
+          });
+
+          setFeaturedResults(recentOutcomes);
+        }
+      } catch (err) {
+        console.error('Error fetching Player Domain details in App.tsx:', err);
+      }
+    };
+
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, [featuredPlayerId, players, currentUser?.id]);
 
   // Custom confirmation modal state
   const [confirmModal, setConfirmModal] = useState<{
@@ -365,6 +536,11 @@ export default function App() {
     return matchesSearch && matchesCategory && matchesStatus && matchesSoftDelete;
   });
 
+  // Featured Player calculation
+  const matchingSelfPlayer = players.find(p => p.email?.toLowerCase() === currentUser?.email?.toLowerCase());
+  const defaultFeaturedPlayer = matchingSelfPlayer || players[0];
+  const featuredPlayer = players.find(p => p.id === featuredPlayerId) || defaultFeaturedPlayer;
+
   // Sort logic for players
   const positionOrder: Record<string, number> = {
     goleiro: 1,
@@ -428,20 +604,7 @@ export default function App() {
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Início</span>
-            </button>
-
-            <button
-              id="tab-players"
-              onClick={() => { setActiveTab('players'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
-                activeTab === 'players'
-                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Jogadores</span>
+              <span>Home</span>
             </button>
 
             <button
@@ -454,7 +617,20 @@ export default function App() {
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              <span>Calendário</span>
+              <span>Rodadas</span>
+            </button>
+
+            <button
+              id="tab-players"
+              onClick={() => { setActiveTab('players'); setIsFormOpen(false); }}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
+                activeTab === 'players'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Atletas</span>
             </button>
 
             <button
@@ -480,7 +656,20 @@ export default function App() {
               }`}
             >
               <Award className="w-3.5 h-3.5" />
-              <span>Ranking</span>
+              <span>Performance</span>
+            </button>
+
+            <button
+              id="tab-mural"
+              onClick={() => { setActiveTab('mural'); setIsFormOpen(false); }}
+              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
+                activeTab === 'mural'
+                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
+                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>Museu</span>
             </button>
 
             <button
@@ -493,7 +682,7 @@ export default function App() {
               }`}
             >
               <DollarSign className="w-3.5 h-3.5" />
-              <span>Financeiro</span>
+              <span>Tesouraria</span>
             </button>
 
             <button
@@ -509,31 +698,18 @@ export default function App() {
               <span>Eventos</span>
             </button>
 
-            <button
-              id="tab-mural"
-              onClick={() => { setActiveTab('mural'); setIsFormOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
-                activeTab === 'mural'
-                  ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
-                  : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
-              }`}
-            >
-              <Camera className="w-3.5 h-3.5" />
-              <span>Mural</span>
-            </button>
-
             {isEditor && (
               <button
-                id="tab-approvals"
-                onClick={() => { setActiveTab('approvals'); setIsFormOpen(false); }}
+                id="tab-administration"
+                onClick={() => { setActiveTab('administration'); setIsFormOpen(false); }}
                 className={`relative px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 transition-all duration-200 active:scale-[0.96] cursor-pointer ${
-                  activeTab === 'approvals'
+                  activeTab === 'administration'
                     ? 'bg-emerald-600 text-white shadow shadow-emerald-600/10'
                     : 'text-zinc-400 hover:text-white hover:bg-zinc-800/40'
                 }`}
               >
-                <CheckSquare className="w-3.5 h-3.5" />
-                <span>Aprovações</span>
+                <Settings className="w-3.5 h-3.5" />
+                <span>Administração</span>
                 {pendingApprovalsCount > 0 && (
                   <span className="absolute -top-1 -right-1.5 bg-amber-500 text-zinc-950 font-black px-1 rounded-full text-[9px] min-w-4 text-center ring-2 ring-[#0d1612]">
                     {pendingApprovalsCount}
@@ -545,10 +721,21 @@ export default function App() {
 
           {/* User profile actions summary */}
           <div className="flex items-center gap-3">
-            <div className="hidden md:flex flex-col text-right font-sans">
-              <span className="text-[11px] font-bold text-white">{currentUser.name}</span>
-              <span className="text-[9px] font-mono text-zinc-500 uppercase">{currentUser.role}</span>
-            </div>
+            <button
+              onClick={() => {
+                const selfPlayer = players.find(p => p.email?.toLowerCase() === currentUser?.email?.toLowerCase());
+                if (selfPlayer) {
+                  setFeaturedPlayerId(selfPlayer.id);
+                  setActiveTab('profile');
+                  window.location.hash = `#/players/${selfPlayer.id}`;
+                }
+              }}
+              className="hidden md:flex flex-col text-right font-sans hover:text-emerald-400 text-white cursor-pointer transition text-left group"
+              title="Visualizar meu perfil de atleta"
+            >
+              <span className="text-[11px] font-bold group-hover:text-[#22c55e] transition-colors">{currentUser.name}</span>
+              <span className="text-[9px] font-mono text-zinc-500 uppercase">{currentUser.role === 'admin' ? 'Administrador' : currentUser.role === 'auxiliar' ? 'Auxiliar Técnico' : 'Atleta'}</span>
+            </button>
             
             {/* Unified Notification Center */}
             <NotificationCenter currentUser={currentUser} />
@@ -604,12 +791,24 @@ export default function App() {
               </div>
 
               {/* Connected Active Profile info card */}
-              <div className="bg-zinc-950/60 p-3 rounded-xl border border-zinc-900/40 flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs uppercase">
+              <div 
+                onClick={() => {
+                  const selfPlayer = players.find(p => p.email?.toLowerCase() === currentUser?.email?.toLowerCase());
+                  if (selfPlayer) {
+                    setFeaturedPlayerId(selfPlayer.id);
+                    setActiveTab('profile');
+                    window.location.hash = `#/players/${selfPlayer.id}`;
+                    setIsMobileMenuOpen(false);
+                  }
+                }}
+                className="bg-zinc-950/60 p-3 rounded-xl border border-zinc-900/40 flex items-center gap-2.5 cursor-pointer hover:border-emerald-500/30 transition group"
+                title="Visualizar meu perfil de atleta"
+              >
+                <div className="w-9 h-9 rounded-full bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-bold text-xs uppercase group-hover:bg-emerald-600/30 transition-colors">
                   {currentUser.name?.slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold text-white truncate leading-tight">{currentUser.name}</span>
+                  <span className="block text-xs font-bold text-white truncate leading-tight group-hover:text-[#22c55e] transition-colors">{currentUser.name}</span>
                   <span className="block text-[8px] font-mono text-emerald-400 uppercase tracking-wider mt-0.5">{currentUser.role === 'admin' ? 'Administrador' : currentUser.role === 'auxiliar' ? 'Auxiliar Técnico' : 'Atleta'}</span>
                 </div>
               </div>
@@ -617,15 +816,17 @@ export default function App() {
               {/* Navigation Items list (Interactive and touch-safe) */}
               <nav className="flex flex-col gap-1.5 font-sans">
                 {[
-                  { id: 'dash', label: 'Início', icon: LayoutDashboard },
-                  { id: 'players', label: 'Jogadores', icon: Users },
-                  { id: 'calendar', label: 'Calendário', icon: Calendar },
+                  { id: 'dash', label: 'Home', icon: LayoutDashboard },
+                  { id: 'calendar', label: 'Rodadas', icon: Calendar },
+                  { id: 'players', label: 'Atletas', icon: Users },
                   { id: 'draw', label: 'Sorteio', icon: Sparkles },
-                  { id: 'ranking', label: 'Ranking', icon: Award },
-                  { id: 'finances', label: 'Financeiro', icon: DollarSign },
+                  { id: 'ranking', label: 'Performance', icon: Award },
+                  { id: 'mural', label: 'Museu', icon: Camera },
+                  { id: 'finances', label: 'Tesouraria', icon: DollarSign },
                   { id: 'events', label: 'Eventos', icon: Gift },
-                  { id: 'mural', label: 'Mural', icon: Camera },
-                  ...(isEditor ? [{ id: 'approvals', label: 'Aprovações', icon: CheckSquare, showBadge: true }] : [])
+                  ...(isEditor ? [
+                    { id: 'administration', label: 'Administração', icon: Settings, showBadge: true }
+                  ] : [])
                 ].map((item) => {
                   const IconComp = item.icon;
                   const isCurActive = activeTab === item.id;
@@ -723,6 +924,8 @@ export default function App() {
             onNavigateToApprovals={isEditor ? (() => setActiveTab('approvals')) : undefined}
             onNavigateToFinances={() => setActiveTab('finances')}
             pendingApprovalsCount={pendingApprovalsCount}
+            simulatedState={simulatedState}
+            setSimulatedState={setSimulatedState}
           />
         )}
 
@@ -738,7 +941,11 @@ export default function App() {
 
         {/* TAB 5 - CALENDARIO, TEMPORADAS E RESERVAS */}
         {activeTab === 'calendar' && (
-          <CalendarManager currentUser={currentUser} />
+          <CalendarManager 
+            currentUser={currentUser} 
+            simulatedState={simulatedState}
+            setSimulatedState={setSimulatedState}
+          />
         )}
 
         {/* TAB - DRAW MANAGER BALANCING */}
@@ -882,6 +1089,11 @@ export default function App() {
                         onInactivate={handleInactivatePlayer}
                         onRestore={handleRestorePlayer}
                         onEvaluationSavedGlobal={() => fetchPlayers()}
+                        onSelect={(p) => {
+                          setFeaturedPlayerId(p.id);
+                          setActiveTab('profile');
+                          window.location.hash = `#/players/${p.id}`;
+                        }}
                       />
                     ))}
                   </div>
@@ -900,9 +1112,196 @@ export default function App() {
           </div>
         )}
 
-        {/* TAB 3 - APROVAÇÕES GRUPO */}
-        {activeTab === 'approvals' && isEditor && (
-          <UserApprovalList currentUser={currentUser} />
+        {/* TAB - PERFIL DO ATLETA (STANDALONE FULL PAGE) */}
+        {activeTab === 'profile' && featuredPlayer && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-4">
+              <div>
+                <button
+                  onClick={() => {
+                    setActiveTab('players');
+                    window.location.hash = '#/players';
+                  }}
+                  className="px-3.5 py-1.5 bg-zinc-900 border border-zinc-800 hover:bg-[#1a1c1a] text-zinc-350 hover:text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition mb-2"
+                >
+                  ← Voltar para Jogadores
+                </button>
+                <h2 className="font-display font-extrabold text-xl text-white">Perfil do Atleta</h2>
+                <p className="text-zinc-500 text-xs mt-0.5">Ficha técnica, métricas e conquistas completas do atleta.</p>
+              </div>
+            </div>
+
+            <div className="bg-[#111815] border border-zinc-850/80 rounded-3xl p-6 shadow-xl relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/5 via-transparent to-transparent pointer-events-none" />
+              
+              <PlayerHero 
+                player={featuredPlayer}
+                currentUser={currentUser}
+                isAdmin={currentUser?.role === 'admin'}
+              />
+
+              {/* DETAILED ATHLETE DOMAIN COMPONENTS SHOWCASE */}
+              <div className="mt-8 pt-8 border-t border-zinc-900 space-y-6">
+                <div className="flex flex-col gap-1">
+                  <h4 className="font-display font-black text-sm text-zinc-100 uppercase tracking-tight">
+                    Dashboard de Rendimento do Atleta
+                  </h4>
+                  <p className="text-[11px] text-zinc-500 font-mono">
+                    Métricas e análises geradas dinamicamente com base nas rodadas desta temporada.
+                  </p>
+                </div>
+
+                {/* 1. Stat Cards Grid */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <PlayerStatCard 
+                    title="MÉDIA OVR"
+                    value={(featuredMetrics?.overall || 3.5).toFixed(1)}
+                    subtitle={`Baseado em ${featuredMetrics?.evalCount || 0} avaliações`}
+                    icon={<Activity className="w-4 h-4 text-emerald-400" />}
+                    trend={(featuredMetrics?.overall || 3.5) >= 3.5 ? 'up' : 'down'}
+                    trendLabel={`${(featuredMetrics?.overall || 3.5) >= 3.5 ? '+' : ''}${((featuredMetrics?.overall || 3.5) - 3.5).toFixed(1)}`}
+                    glowColor="green"
+                  />
+                  <PlayerStatCard 
+                    title="RANKING GERAL"
+                    value={featuredRachaStats?.rank ? `${featuredRachaStats.rank}º` : '—'}
+                    subtitle="Posição nesta temporada"
+                    icon={<Trophy className="w-4 h-4 text-amber-500" />}
+                    trend={featuredRachaStats?.rank && featuredRachaStats.rank <= 5 ? 'up' : 'neutral'}
+                    trendLabel={featuredRachaStats?.rank ? `Top ${featuredRachaStats.rank}` : undefined}
+                    glowColor="sky"
+                  />
+                  <PlayerStatCard 
+                    title="VITÓRIAS"
+                    value={featuredRachaStats?.vitorias || 0}
+                    subtitle={`${featuredRachaStats?.presences || 0} partidas jogadas`}
+                    icon={<Award className="w-4 h-4 text-purple-400" />}
+                    trend={(featuredRachaStats?.vitorias || 0) >= 5 ? 'up' : 'neutral'}
+                    trendLabel="Foco ativo"
+                    glowColor="purple"
+                  />
+                  <PlayerStatCard 
+                    title="APROVEITAMENTO"
+                    value={featuredRachaStats ? `${featuredRachaStats.aproveitamento}%` : '0%'}
+                    subtitle="Taxa de vitória geral"
+                    icon={<TrendingUp className="w-4 h-4 text-sky-400" />}
+                    trend={featuredRachaStats && featuredRachaStats.aproveitamento >= 50 ? 'up' : 'neutral'}
+                    trendLabel={featuredRachaStats ? `${featuredRachaStats.aproveitamento}%` : '0%'}
+                    glowColor="none"
+                  />
+                </div>
+
+                {/* Remaining 7 Components Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Column 1 */}
+                  <div className="space-y-6">
+                    {/* 2. Identity Card */}
+                    <PlayerIdentityCard 
+                      player={featuredPlayer}
+                      displayOvr={(featuredMetrics?.overall || 3.5).toFixed(1)}
+                    />
+
+                    {/* 3. Performance Card */}
+                    <PlayerPerformanceCard 
+                      player={featuredPlayer}
+                      metrics={featuredMetrics}
+                    />
+
+                    {/* 4. Goals Card */}
+                    <PlayerGoalsCard 
+                      player={featuredPlayer}
+                      rachaStats={featuredRachaStats}
+                      metrics={featuredMetrics}
+                    />
+                  </div>
+
+                  {/* Column 2 */}
+                  <div className="space-y-6">
+                    {/* 5. Achievements Card */}
+                    <PlayerAchievementsCard 
+                      player={featuredPlayer}
+                      rachaStats={featuredRachaStats}
+                      metrics={featuredMetrics}
+                    />
+
+                    {/* 6. Progress Card */}
+                    <PlayerProgressCard 
+                      player={featuredPlayer}
+                      rachaStats={featuredRachaStats}
+                      metrics={featuredMetrics}
+                    />
+
+                    {/* 7. History Card */}
+                    <PlayerHistoryCard 
+                      player={featuredPlayer}
+                      recentResults={featuredResults}
+                    />
+
+                    {/* 8. Comparison Card */}
+                    <PlayerComparisonCard 
+                      player={featuredPlayer}
+                      rachaStats={featuredRachaStats}
+                      allPlayersStats={allPlayersStats}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB - ADMINISTRAÇÃO PAINEL UNIFICADO */}
+        {activeTab === 'administration' && isEditor && (
+          <div className="space-y-6">
+            <div className="flex flex-col gap-1 border-b border-zinc-900 pb-4">
+              <h2 className="font-display font-extrabold text-xl text-white">⚙️ Painel de Administração</h2>
+              <p className="text-zinc-500 text-xs">Acesse e gerencie as ferramentas administrativas e estados do racha fofim.</p>
+            </div>
+
+            <div className="flex gap-2 bg-[#121c16] p-1 rounded-xl border border-zinc-850 max-w-max">
+              <button
+                type="button"
+                onClick={() => setAdminSubTab('approvals')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  adminSubTab === 'approvals'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>Aprovações</span>
+                {pendingApprovalsCount > 0 && (
+                  <span className="bg-amber-500 text-zinc-950 font-black px-1.5 py-0.5 rounded-full text-[9px] leading-none">
+                    {pendingApprovalsCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAdminSubTab('laboratorio')}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  adminSubTab === 'laboratorio'
+                    ? 'bg-emerald-600 text-white shadow'
+                    : 'text-zinc-400 hover:text-white'
+                }`}
+              >
+                <FlaskConical className="w-3.5 h-3.5" />
+                <span>Laboratório de Estados</span>
+              </button>
+            </div>
+
+            <div className="pt-2">
+              {adminSubTab === 'approvals' ? (
+                <UserApprovalList currentUser={currentUser} />
+              ) : (
+                <LaboratorioManager 
+                  currentUser={currentUser}
+                  simulatedState={simulatedState}
+                  setSimulatedState={setSimulatedState}
+                />
+              )}
+            </div>
+          </div>
         )}
 
         {/* TAB 4 - RANKING TÉCNICO */}
