@@ -17,6 +17,29 @@ Resumo executivo do estado atual do sistema:
 
 Lista cronológica de entregas técnicas e correções de governança:
 
+### 2026-07-04
+
+Feature:
+Remoção do Placar Consolidado, Ajustes de Ações de Fim de Jogo, Responsividade e Paginação do Museu, Correções de Renderização e Limpeza de Produção
+
+Resultado:
+* **Remoção do Placar Consolidado:** Removido o bloco de "Placar Consolidado" na tela de pós-jogo finalizado (`PARTIDA_ENCERRADA`) em `DashboardStatus.tsx` para atender aos novos requisitos de layout.
+* **Filtro de Compartilhamento de Convocação:** Ocultado o botão "Compartilhar Convocações" nas ações rápidas administrativas quando o status da partida for encerrado (`PARTIDA_ENCERRADA`).
+* **Responsividade do Museu do Clube:** Menu de abas de navegação do Museu do Clube atualizado com comportamento responsivo (`flex-wrap`) para mobile, eliminando cortes de botões e garantindo visualização perfeita em qualquer dispositivo.
+* **Limitação e Paginação de Itens no Museu:** Implementada paginação dinâmica limitando o feed cronológico de memórias e os itens do visualizador de álbuns a um limite estrito de até 10 itens por página com controles elegantes de navegação ("Anterior" e "Próximo").
+* **Correção de Renderização de Auditoria:** Resolvido o erro `Uncaught Error: Objects are not valid as a React child` no componente `UserApprovalList.tsx` tratando de forma segura propriedades de log complexas com objetos no log de auditorias (ex. `details.loggedMessage`).
+* **Preparações para Produção:** Remoção do botão de desenvolvimento "Gerar 10 Atletas" do cabeçalho de gerenciamento e purga completa do banco de dados fictício/mockado (`database.json` e semente no `server/db.ts`) para disponibilizar um ambiente de dados limpo e seguro para produção contendo apenas a conta administrativa padrão (`admin@racha.com` / `admin`).
+
+Arquivos:
+* `src/components/DashboardStatus.tsx`
+* `src/components/MuralManager.tsx`
+* `src/components/UserApprovalList.tsx`
+* `src/App.tsx`
+* `server/db.ts`
+* `data/database.json`
+
+---
+
 ### 2026-06-24
 
 Feature:
