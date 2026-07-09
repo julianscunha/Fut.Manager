@@ -1,6 +1,6 @@
 # Checklist de Deploy — "Racha do Fofim" (Supabase + Render)
 
-Checklist detalhado complementar ao `.DEPLOY.md`. Use para não esquecer nenhuma etapa antes, durante e depois do deploy.
+Checklist detalhado complementar ao [`DEPLOY.md`](DEPLOY.md). Use para não esquecer nenhuma etapa antes, durante e depois do deploy.
 
 ---
 
@@ -11,13 +11,13 @@ Checklist detalhado complementar ao `.DEPLOY.md`. Use para não esquecer nenhuma
 - [ ] Project URL guardado (`SUPABASE_URL`)
 - [ ] Service Role Key guardado (`SUPABASE_SERVICE_ROLE_KEY`, aba Settings → API)
 - [ ] Storage bucket `Uploads` (com U maiúsculo) criado e marcado como público
-- [ ] Schema SQL (Parte 2 do `.DEPLOY.md`) executado com sucesso no SQL Editor
+- [ ] Schema SQL (Parte 2 do `DEPLOY.md`) executado com sucesso no SQL Editor
 - [ ] Admin padrão (`user-admin` / `admin@racha.com` / senha `admin`, já com hash bcrypt) inserido
 - [ ] Temporada padrão (`season-2026`), config recorrente e config financeira inseridas
 
 ### Preparação do código
 - [ ] `npm install` rodado
-- [ ] `.env.local` criado com: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `GEMINI_API_KEY`, `ALLOWED_ORIGINS="http://localhost:3000"`
+- [ ] `.env.local` criado com: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `OPENROUTER_API_KEY` (ou `GEMINI_API_KEY` como alternativa), `ALLOWED_ORIGINS="http://localhost:3000"`
 - [ ] `.gitignore` cobre `.env*`, `data/database.json`, `data/database.json.backup`, `data/uploads/`
 
 ### Testes locais
@@ -30,7 +30,9 @@ Checklist detalhado complementar ao `.DEPLOY.md`. Use para não esquecer nenhuma
 - [ ] `GET /api/users` com `Authorization: Bearer <token>` do login → 200, lista de usuários
 - [ ] Cadastro de jogador → confirma no Supabase (Table Editor → `players`)
 - [ ] Upload de imagem (mural ou avatar) → aparece no bucket `Uploads` do Supabase Storage, URL pública abre sem autenticação
-- [ ] Upload de arquivo não-imagem disfarçado (ex: `.txt` renomeado para `.png`) → rejeitado (validação por magic bytes)
+- [ ] Upload de arquivo não-imagem disfarçado (ex: `.txt` renomeado para `.png`) → rejeitado (validação por magic bytes via `file-type`)
+- [ ] Qualquer rota de negócio (`/api/matches`, `/api/players`, etc.) sem `Authorization: Bearer` → `401` (gate global de autenticação em `server.ts`)
+- [ ] Rotas públicas (`/api/auth/login`, `/api/mural/public-posts`, `/api/public/next-match`) seguem acessíveis sem token
 - [ ] 6 tentativas de login com senha errada seguidas → `429` a partir da 5ª
 - [ ] `npm run build` gera `dist/` sem erros
 - [ ] `npm start` (produção local) roda e serve frontend + API na mesma porta
@@ -56,7 +58,8 @@ Checklist detalhado complementar ao `.DEPLOY.md`. Use para não esquecer nenhuma
 - [ ] Plan: Free (ou Starter, se cold start incomodar)
 
 ### Variáveis de Ambiente (Render Dashboard → Environment)
-- [ ] `GEMINI_API_KEY`
+- [ ] `OPENROUTER_API_KEY` (recomendado) e/ou `GEMINI_API_KEY` (ao menos um definido — ver `AvatarProviderFactory` em `server/avatarProvider.ts`)
+- [ ] `OPENROUTER_MODEL` (opcional, padrão `openai/gpt-image-1`)
 - [ ] `SUPABASE_URL`
 - [ ] `SUPABASE_SERVICE_ROLE_KEY`
 - [ ] `JWT_SECRET` (valor diferente do usado em dev/local)

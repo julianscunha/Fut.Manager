@@ -526,8 +526,10 @@ Substitui por completo o antigo `readDb()`/`writeDb()` baseado em `data/database
 ### `server.ts` — rotas
 
 - `getAuthenticatedUser` lê o header `Authorization: Bearer <token>`, valida o JWT e busca o usuário no banco. O antigo header `x-user-id` (forjável por qualquer cliente) foi removido.
+- **Gate global de autenticação**: um middleware montado em `app.use('/api', ...)`, logo após o parsing do body e antes de todas as rotas, exige `getAuthenticatedUser(req)` bem-sucedido para qualquer requisição a `/api/*`, exceto uma allowlist explícita (`PUBLIC_API_ROUTES`: login, registro, forgot/reset-password, mural público, próximo jogo público). Cobre por padrão todas as rotas de negócio, presentes e futuras — não depende de cada rota lembrar de checar autenticação individualmente.
 - `helmet()`, `cors()` (allowlist via `ALLOWED_ORIGINS`) e `express-rate-limit` nas rotas `/api/auth/*` (5 tentativas / 15 min).
-- `/api/upload-s3` e `/api/mural/upload` sobem para o Supabase Storage (bucket `Uploads`), validando o tipo real do arquivo por magic bytes (`file-type`) e o tamanho real do buffer decodificado — não a extensão/tamanho que o cliente declarar.
+- `/api/upload-s3` e `/api/mural/upload` sobem para o Supabase Storage (bucket `Uploads`), validando o tipo real do arquivo por magic bytes (`file-type` v22+) e o tamanho real do buffer decodificado — não a extensão/tamanho que o cliente declarar. Cada um também faz sua própria checagem de `getAuthenticatedUser` como defesa em profundidade, além do gate global.
+- Geração de avatar com IA via `AvatarProviderFactory` (`server/avatarProvider.ts`): usa **OpenRouter** (`OPENROUTER_API_KEY`, modelo padrão `openai/gpt-image-1`) se configurado, com fallback para **Gemini direto** (`GEMINI_API_KEY`). Ver `.env.example` para as duas opções documentadas.
 
 ### Frontend (`src/`)
 
@@ -541,7 +543,11 @@ Substitui por completo o antigo `readDb()`/`writeDb()` baseado em `data/database
 ### Passo 4.1: Configurar `.env.local`
 
 ```
-GEMINI_API_KEY="<sua-chave>"
+# Geração de avatar com IA — escolha uma opção (OpenRouter é a recomendada)
+OPENROUTER_API_KEY="<sua-chave-openrouter>"
+OPENROUTER_MODEL="openai/gpt-image-1"
+# GEMINI_API_KEY="<sua-chave-gemini>"   # alternativa, usada só se OPENROUTER_API_KEY não estiver definida
+
 APP_URL="http://localhost:3000"
 SUPABASE_URL="https://xxxxxxxxxxxxx.supabase.co"
 SUPABASE_SERVICE_ROLE_KEY="<chave-service-role>"
@@ -566,7 +572,7 @@ npm run dev
 Acesse `http://localhost:3000`.
 
 **Testes manuais recomendados**:
-1. **Forjar autenticação**: chame `GET /api/users` sem header nenhum → deve retornar 401. Com o header antigo `x-user-id: user-admin` → também 401 (o header não existe mais).
+1. **Forjar autenticação**: chame `GET /api/users` (ou qualquer outra rota de negócio) sem header nenhum → deve retornar 401. Com o header antigo `x-user-id: user-admin` → também 401 (o header não existe mais; o gate global exige `Authorization: Bearer <token>` válido).
 2. **Login**: `admin@racha.com` / `admin` → resposta deve incluir um `token` (JWT).
 3. **Cadastro de jogador**: criar um jogador → confirmar que aparece na tabela `players` no Supabase (aba "Table Editor").
 4. **Upload de mídia**: enviar uma imagem no mural ou no formulário de jogador → confirmar que aparece no bucket `Uploads` do Supabase Storage e que a URL abre sem autenticação.
@@ -612,7 +618,9 @@ Na seção **"Environment"** do formulário de criação (ou depois, em Settings
 
 | Variável | Valor |
 |---|---|
-| `GEMINI_API_KEY` | sua chave Gemini |
+| `OPENROUTER_API_KEY` | sua chave OpenRouter (recomendado — ver `.env.example`) |
+| `OPENROUTER_MODEL` | `openai/gpt-image-1` (opcional, é o padrão) |
+| `GEMINI_API_KEY` | alternativa ao OpenRouter, se preferir usar o Gemini direto |
 | `SUPABASE_URL` | URL do seu projeto Supabase |
 | `SUPABASE_SERVICE_ROLE_KEY` | chave service role do Supabase |
 | `JWT_SECRET` | uma string aleatória forte (gere com o comando do Passo 4.1 — **use um valor diferente do de dev**) |

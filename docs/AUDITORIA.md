@@ -82,7 +82,7 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
     *   **Uploads:** fotos de jogador e mídia do mural migradas para Supabase Storage (bucket `Uploads`, público), com validação real de tipo por magic bytes (`file-type`) e tamanho real do buffer — antes a "integração com S3" era inteiramente simulada (URL fake, sem upload de verdade).
     *   **Schema sem foreign keys:** decisão deliberada — o sistema original (JSON) nunca teve integridade referencial no banco, sempre gerenciada em código; manter esse modelo permite escrita independente por tabela sem se preocupar com ordem de dependências.
     *   **Hospedagem:** Render (Web Service único via Docker), servindo frontend + API no mesmo processo — decisão de custo-benefício frente a separar frontend (Amplify) e backend (App Runner), que sairia mais caro para o volume de uso deste grupo.
-*   **Guia completo:** ver `.DEPLOY.md` (passo a passo de setup) e `.DEPLOY-CHECKLIST.md` (checklist de verificação).
+*   **Guia completo:** ver [`DEPLOY.md`](DEPLOY.md) (passo a passo de setup) e [`DEPLOY-CHECKLIST.md`](DEPLOY-CHECKLIST.md) (checklist de verificação).
 
 ### 15. Hardening de Segurança (achados críticos corrigidos na migração)
 Auditoria de segurança encontrou e corrigiu, antes de expor o sistema publicamente:
@@ -118,6 +118,15 @@ Testado de ponta a ponta pela interface real (não só leitura de código), com 
     *   Modelo `openai/gpt-image-1` via OpenRouter **gerou com sucesso** um retrato realista completo (uniforme do Flamengo com patrocinador e escudo corretos, fundo de estádio) — confirmando toda a integração (requisição, autenticação, parsing de resposta, gravação no Storage) funcional de ponta a ponta. Definido como modelo padrão em `.env.example`.
 *   **Fallback de erro validado:** quando a geração falha (por qualquer motivo), o sistema corretamente marca `avatarStatus: 'ERRO'` e limpa `avatarCard`/`avatarEsportivo`, sem deixar o registro em estado inconsistente ou travado em "processando".
 
+### 18. Validação Final de Segurança Pré-Produção (antes de exposição pública)
+
+Segunda rodada de auditoria, mais ampla que a de migração (§15), feita rota a rota em todo `server.ts` (~90 endpoints), já com o sistema no modelo final (Supabase + JWT):
+
+*   **Ausência de autenticação em ~80 rotas de negócio (Crítico):** apesar da migração de `x-user-id` para JWT (§15), as rotas em si (`/api/players`, `/api/matches`, `/api/finances`, `/api/mural`, `/api/draws`, etc.) não tinham nenhuma chamada a `getAuthenticatedUser` — dependiam apenas de checagens pontuais e inconsistentes espalhadas pelo código. Qualquer requisição sem token conseguia ler/gravar dados de negócio diretamente. **Corrigido:** middleware global `app.use('/api', ...)` adicionado logo após o parsing do body, antes de todas as rotas, exigindo `getAuthenticatedUser(req)` bem-sucedido para qualquer rota não listada em um allowlist explícito de rotas públicas (`PUBLIC_API_ROUTES`: login, registro, forgot/reset-password, mural público, próximo jogo público). Verificado com `curl` (rotas públicas sem token → 200; rotas protegidas sem token → 401; qualquer rota com token válido → 200) e com passagem completa de ponta a ponta via Playwright (login real + navegação por todas as 8 abas principais, zero requisições `/api/*` com erro e zero erros de console).
+    *   **Detalhe de implementação:** como o middleware é montado com `app.use('/api', middleware)`, o Express remove o prefixo `/api` de `req.path` dentro dele — os regexes do allowlist não incluem esse prefixo (ex. `/^\/auth\/login$/`, não `/^\/api\/auth\/login$/`). Erro cometido e corrigido na própria implementação: uma primeira versão incluía `/api` nos regexes, o que bloqueava indevidamente também as rotas que deveriam ser públicas.
+*   **Endpoints de upload sem checagem de autenticação própria (Alto):** `/api/upload-s3` e `/api/mural/upload` dependiam só da proteção do gate global (acima). Como camada adicional de defesa em profundidade, cada um passou a fazer sua própria checagem explícita de `getAuthenticatedUser(req)` logo no início do handler, independente do middleware global.
+*   **CVE de DoS na biblioteca `file-type` (Moderado):** versões 13.0.0–21.3.0 possuem um loop infinito conhecido ao processar entrada ASF malformada. **Corrigido:** atualizado de `18.7.0` para `22.0.1`. Como a partir da v19 o pacote é ESM puro, a compatibilidade foi validada explicitamente tanto em desenvolvimento (`tsx`) quanto no bundle de produção real (`node dist/server.cjs`, Node v24, usando o suporte nativo a `require(esm)`), com upload de imagem real testado em ambos os modos — não apenas assumida.
+
 ---
 
 ## 🛠️ Correções Implementadas
@@ -130,3 +139,4 @@ Testado de ponta a ponta pela interface real (não só leitura de código), com 
 3.  **Migração de hospedagem para Supabase + Render** (ver §14), com hardening de segurança completo (ver §15).
 4.  **Auditoria de frontend/mobile e limpeza de legado** (ver §16): affordance de scroll, alvo de toque global, ~620 linhas de código morto/órfão removidas.
 5.  **Dois bugs de regressão corrigidos via validação end-to-end do avatar com IA** (ver §17): condição de corrida no processamento em background e violação de constraint única de e-mail.
+6.  **Validação final de segurança pré-produção** (ver §18): gate global de autenticação cobrindo ~80 rotas de negócio antes desprotegidas, checagem própria de autenticação nos endpoints de upload, e correção de CVE de DoS na biblioteca `file-type`.
