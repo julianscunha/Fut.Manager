@@ -33,7 +33,6 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
   const [numeroFavorito, setNumeroFavorito] = useState<number>(10);
   const [peDominante, setPeDominante] = useState<string>('Direito');
 
-  // AWS S3 upload simulation states
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
@@ -119,7 +118,6 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       reader.onload = async (e) => {
         const base64Data = e.target?.result as string;
         
-        // POST to S3 Upload API
         const res = await authFetch('/api/upload-s3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -131,7 +129,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
         });
 
         if (!res.ok) {
-          throw new Error('Falha no upload para o servidor S3.');
+          throw new Error('Falha no upload da imagem.');
         }
 
         const data = await res.json();
@@ -394,7 +392,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
         <div className="flex flex-col gap-1.5 md:col-span-2">
           <label className="text-zinc-300 font-medium flex items-center gap-1.5">
             <span>Foto Original do Atleta</span>
-            <span className="text-[10px] text-zinc-500 font-mono">(Upload direto local via S3)</span>
+            <span className="text-[10px] text-zinc-500 font-mono">(Upload direto para armazenamento em nuvem)</span>
           </label>
           
           {photoOriginal ? (
@@ -460,7 +458,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
                   Arraste e solte sua foto aqui, ou clique para navegar
                 </p>
                 <p className="text-[10px] text-zinc-500 font-mono">
-                  Upload direto para AWS S3 • JPG, JPEG, PNG ou WEBP (Max 5MB)
+                  JPG, JPEG, PNG ou WEBP (Max 5MB)
                 </p>
               </label>
             </div>

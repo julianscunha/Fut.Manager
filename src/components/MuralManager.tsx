@@ -646,7 +646,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
         const titleSuffix = uploadItems.length > 1 ? ` (${i + 1}/${uploadItems.length})` : '';
         const finalTitle = `${formTitle.trim()}${titleSuffix}`;
 
-        // 1. Upload base64 file to Express simulated S3 storage (Original)
+        // 1. Upload original file to Supabase Storage
         const uploadRes = await authFetch('/api/mural/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

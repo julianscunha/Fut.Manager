@@ -1273,8 +1273,7 @@ async function startServer() {
       return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem cadastrar novos atletas manualmente.' });
     }
 
-    const playerData = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'>;
-    const { responsibleName } = req.body as { responsibleName?: string };
+    const { responsibleName, ...playerData } = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'> & { responsibleName?: string };
 
     if (!playerData.name || !playerData.category || !playerData.status || !playerData.primaryPosition) {
       return res.status(400).json({ error: 'Nome, categoria, status e posição principal são obrigatórios.' });
@@ -1525,8 +1524,7 @@ async function startServer() {
   // Jogadores: Atualizar Jogador
   app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
-    const updateData = req.body as Partial<Player>;
-    const { responsibleName } = req.body as any;
+    const { responsibleName, ...updateData } = req.body as Partial<Player> & { responsibleName?: string };
 
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
