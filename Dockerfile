@@ -31,8 +31,7 @@ RUN npm ci --only=production && \
 # Copiar build gerado do stage anterior
 COPY --from=builder /app/dist ./dist
 
-# Copiar configuração de ambiente padrão
-COPY .env.example .env.local
+# Variáveis de ambiente reais são injetadas pela plataforma (Render), não pela imagem.
 
 # Expor porta
 EXPOSE 3000
