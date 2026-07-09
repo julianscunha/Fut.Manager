@@ -8,7 +8,7 @@ import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckC
 import { User } from '../types';
 
 interface AuthScreensProps {
-  onLoginSuccess: (user: User) => void;
+  onLoginSuccess: (user: User, token: string) => void;
 }
 
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
@@ -100,7 +100,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
       }
 
       setSuccessMsg('Login efetuado com sucesso!');
-      onLoginSuccess(data.user);
+      onLoginSuccess(data.user, data.token);
     } catch (err: any) {
       setErrorMsg(err.message || 'E-mail ou senha incorretos.');
     } finally {
@@ -199,7 +199,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
       const res = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: recoveryUserId, newPassword })
+        body: JSON.stringify({ userId: recoveryUserId, token: simulatedToken, newPassword })
       });
 
       const data = await res.json();

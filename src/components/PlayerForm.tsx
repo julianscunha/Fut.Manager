@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { Player, PlayerPosition, PlayerCategory, PlayerStatus, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
 import { Shield, Sparkles, X, Heart, Settings, UserPlus, Save, Phone, FileText } from 'lucide-react';
 
@@ -54,7 +55,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       setStatusEndDate(player.statusEndDate || '');
       setPrimaryPosition(player.primaryPosition);
       setSecondaryPositions(player.secondaryPositions || []);
-      setS3Path(player.photoOriginal && player.photoOriginal.startsWith('http') && player.photoOriginal.includes('amazonaws.com') ? player.photoOriginal : '');
+      setS3Path(player.photoOriginal && player.photoOriginal.startsWith('http') ? player.photoOriginal : '');
       setNumeroFavorito(player.numeroFavorito || 10);
       setPeDominante(player.peDominante || 'Direito');
     } else {
@@ -119,7 +120,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
         const base64Data = e.target?.result as string;
         
         // POST to S3 Upload API
-        const res = await fetch('/api/upload-s3', {
+        const res = await authFetch('/api/upload-s3', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -134,8 +135,8 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
         }
 
         const data = await res.json();
-        setPhotoOriginal(data.previewData); // Base64 is stored so preview always works instantly
-        setS3Path(data.s3Url); // Simulated AWS S3 URL for architectural record
+        setPhotoOriginal(data.url);
+        setS3Path(data.url);
       };
       reader.readAsDataURL(file);
     } catch (err: any) {
@@ -402,9 +403,9 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
                 <img src={photoOriginal} alt="Preview" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
               </div>
               <div className="flex-1 space-y-1 min-w-0">
-                <span className="text-[10px] font-bold text-emerald-450 block font-mono bg-emerald-550/10 px-2 py-0.5 rounded border border-emerald-500/20 w-fit">● AWS S3: PRONTO_OK</span>
+                <span className="text-[10px] font-bold text-emerald-450 block font-mono bg-emerald-550/10 px-2 py-0.5 rounded border border-emerald-500/20 w-fit">● UPLOAD: PRONTO_OK</span>
                 <p className="text-[11px] text-zinc-500 truncate font-mono mt-1 select-all" title={s3Path}>
-                  {s3Path || 'https://racha-do-fofim.s3.sa-east-1.amazonaws.com/uploads/original-image.png'}
+                  {s3Path}
                 </p>
                 <div className="flex items-center gap-2 pt-1.5">
                   <label className="text-xs text-white bg-zinc-800 hover:bg-zinc-700 hover:text-emerald-450 border border-zinc-750 px-3 py-1.5 rounded-lg cursor-pointer transition font-mono font-medium flex items-center gap-1">

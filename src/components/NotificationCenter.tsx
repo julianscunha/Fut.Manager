@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { 
   Bell, 
   Settings, 
@@ -45,7 +46,7 @@ export default function NotificationCenter({ currentUser }: NotificationCenterPr
   // Load notifications
   const loadNotifications = async () => {
     try {
-      const res = await fetch(`/api/notifications?userId=${currentUser.id}&email=${currentUser.email}`);
+      const res = await authFetch(`/api/notifications?userId=${currentUser.id}&email=${currentUser.email}`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -59,7 +60,7 @@ export default function NotificationCenter({ currentUser }: NotificationCenterPr
   // Load preferences
   const loadPreferences = async () => {
     try {
-      const res = await fetch(`/api/notifications/preferences?userId=${currentUser.id}`);
+      const res = await authFetch(`/api/notifications/preferences?userId=${currentUser.id}`);
       if (res.ok) {
         const data = await res.json();
         setPreferences(data);
@@ -84,7 +85,7 @@ export default function NotificationCenter({ currentUser }: NotificationCenterPr
   // Handle Mark Single Notification as Read
   const handleMarkRead = async (id: string) => {
     try {
-      const res = await fetch('/api/notifications/mark-read', {
+      const res = await authFetch('/api/notifications/mark-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id })
@@ -102,7 +103,7 @@ export default function NotificationCenter({ currentUser }: NotificationCenterPr
   // Handle Mark All as Read
   const handleMarkAllRead = async () => {
     try {
-      const res = await fetch('/api/notifications/mark-all-read', {
+      const res = await authFetch('/api/notifications/mark-all-read', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentUser.id, email: currentUser.email })
@@ -138,7 +139,7 @@ export default function NotificationCenter({ currentUser }: NotificationCenterPr
     setSavingPref(true);
 
     try {
-      const res = await fetch('/api/notifications/preferences', {
+      const res = await authFetch('/api/notifications/preferences', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: currentUser.id, preferences: updated })

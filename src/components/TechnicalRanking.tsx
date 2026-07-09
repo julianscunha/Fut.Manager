@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { Player, User, POSITION_LABELS, FAVORITE_TEAMS } from '../types';
 import { 
   Award, Medal, Trophy, Sparkles, RefreshCw, Star, Shield, 
@@ -66,7 +67,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
   const fetchSummaries = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/evaluations/summary');
+      const res = await authFetch('/api/evaluations/summary');
       if (res.ok) {
         const data = await res.json();
         setSummaries(data);
@@ -84,7 +85,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
     try {
       // 1. Fetch seasons if empty
       if (seasonsList.length === 0) {
-        const sRes = await fetch('/api/seasons');
+        const sRes = await authFetch('/api/seasons');
         if (sRes.ok) {
           const seasons = await sRes.json();
           setSeasonsList(seasons || []);
@@ -104,7 +105,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
       }
 
       const q = targetSeasonId ? `?seasonId=${targetSeasonId}` : '';
-      const statsRes = await fetch(`/api/stats${q}`);
+      const statsRes = await authFetch(`/api/stats${q}`);
       if (statsRes.ok) {
         const data = await statsRes.json();
         setRachaStats(data);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
@@ -242,7 +243,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   const fetchMetrics = async () => {
     setLoadingMetrics(true);
     try {
-      const res = await fetch(`/api/players/${player.id}/evaluations?evaluatorUserId=${currentUser.id}`);
+      const res = await authFetch(`/api/players/${player.id}/evaluations?evaluatorUserId=${currentUser.id}`);
       if (res.ok) {
         const contentType = res.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
@@ -252,7 +253,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       }
 
       let currentRachaStats: any = null;
-      const statsRes = await fetch('/api/stats');
+      const statsRes = await authFetch('/api/stats');
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setAllStats(statsData);
@@ -263,7 +264,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         }
       }
 
-      const resultsRes = await fetch('/api/results');
+      const resultsRes = await authFetch('/api/results');
       if (resultsRes.ok) {
         const resultsData = await resultsRes.json();
         const sortedResults = [...resultsData];
@@ -345,7 +346,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         });
       }
 
-      const transRes = await fetch(`/api/players/${player.id}/transitions`);
+      const transRes = await authFetch(`/api/players/${player.id}/transitions`);
       if (transRes.ok) {
         const transData = await transRes.json();
         setCategoryHistory(transData || []);
@@ -367,7 +368,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     setIsRegenerating(true);
     setSaveSuccessMsg('⌛ Processando Avatar Inteligente...');
     try {
-      const res = await fetch(`/api/players/${player.id}/generate-avatar`, {
+      const res = await authFetch(`/api/players/${player.id}/generate-avatar`, {
          method: 'POST'
       });
       if (res.ok) {

@@ -10,6 +10,7 @@ import {
   Search, Filter, Edit2, History, UserCheck, RefreshCw, UserCog, CheckCircle2, AlertTriangle, ArrowRight, Phone, Award, Sparkle
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
+import { authFetch } from '../lib/authFetch';
 
 interface UserApprovalListProps {
   currentUser: User;
@@ -54,18 +55,18 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
     setLoading(true);
     setError('');
     try {
-      const uRes = await fetch('/api/users');
+      const uRes = await authFetch('/api/users');
       if (!uRes.ok) throw new Error('Não foi possível carregar os usuários.');
       const uData = await uRes.json();
       setUsers(uData);
 
-      const pRes = await fetch('/api/players');
+      const pRes = await authFetch('/api/players');
       if (pRes.ok) {
         const pData = await pRes.json();
         setPlayers(pData);
       }
 
-      const aRes = await fetch('/api/users/audits');
+      const aRes = await authFetch('/api/users/audits');
       if (aRes.ok) {
         const aData = await aRes.json();
         setAudits([...aData].reverse());
@@ -123,7 +124,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
     }
 
     try {
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -179,7 +180,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
         favoriteTeamId: linkOption === 'create' ? favoriteTeamId : undefined
       };
 
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -202,7 +203,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
     setError('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -232,7 +233,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
     setSuccessMsg('');
     setInlineUpdatingId(userId);
     try {
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { Match, Player, DrawTeam, TeamDraw } from '../types';
 import { 
   Users, 
@@ -211,7 +212,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   const fetchMatches = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/matches');
+      const res = await authFetch('/api/matches');
       if (res.ok) {
         const data = await res.json();
         // Sort matches starting with nearest date
@@ -236,9 +237,9 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     try {
       setErrorMsg('');
       // Get presences and compute overalls
-      const presRes = await fetch(`/api/matches/${matchId}/presences`);
-      const playersRes = await fetch('/api/players');
-      const ratingsRes = await fetch('/api/evaluations/summary');
+      const presRes = await authFetch(`/api/matches/${matchId}/presences`);
+      const playersRes = await authFetch('/api/players');
+      const ratingsRes = await authFetch('/api/evaluations/summary');
 
       if (presRes.ok && playersRes.ok && ratingsRes.ok) {
         const presData = await presRes.json();
@@ -269,7 +270,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
 
   const fetchActiveDraw = async (matchId: string) => {
     try {
-      const res = await fetch(`/api/matches/${matchId}/draw`);
+      const res = await authFetch(`/api/matches/${matchId}/draw`);
       if (res.ok) {
         const draw = await res.json();
         setActiveDraw(draw);
@@ -299,7 +300,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       setErrorMsg('');
       setSuccessMsg('');
 
-      const res = await fetch(`/api/matches/${selectedMatch.id}/draw`, {
+      const res = await authFetch(`/api/matches/${selectedMatch.id}/draw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -352,7 +353,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         };
       });
 
-      const res = await fetch(`/api/draws/${activeDraw.id}/update-manual`, {
+      const res = await authFetch(`/api/draws/${activeDraw.id}/update-manual`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teams: updatedTeams })
@@ -411,7 +412,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         };
       });
 
-      const res = await fetch(`/api/draws/${activeDraw.id}/update-manual`, {
+      const res = await authFetch(`/api/draws/${activeDraw.id}/update-manual`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ teams: updatedTeams })
@@ -437,7 +438,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       setErrorMsg('');
       setSuccessMsg('');
 
-      const res = await fetch(`/api/draws/${activeDraw.id}/confirm-lock`, {
+      const res = await authFetch(`/api/draws/${activeDraw.id}/confirm-lock`, {
         method: 'POST'
       });
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS, Player, FAVORITE_TEAMS } from '../types';
+import { authFetch } from '../lib/authFetch';
 import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
 import { getRoundStatus } from '../utils/roundStatus';
 import { 
@@ -226,7 +227,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${nextMatch.id}`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'fechada' })
@@ -247,7 +248,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${nextMatch.id}/draw`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}/draw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -273,7 +274,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/draws/${matchDraw.id}/confirm-lock`, {
+      const res = await authFetch(`/api/draws/${matchDraw.id}/confirm-lock`, {
         method: 'POST'
       });
       const data = await res.json();
@@ -297,7 +298,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/matches', {
+      const res = await authFetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -326,7 +327,7 @@ export default function DashboardStatus({
       
       // Fetch upcoming events
       try {
-        const eventsRes = await fetch(`/api/events?playerId=${currentUser.id}`);
+        const eventsRes = await authFetch(`/api/events?playerId=${currentUser.id}`);
         if (eventsRes.ok) {
           const eventsData = await eventsRes.json();
           // Filter to only display 'agendado' or 'confirmando' (active) events
@@ -352,7 +353,7 @@ export default function DashboardStatus({
         console.error('Falha ao ler eventos no dashboard:', err);
       }
 
-      const matchRes = await fetch('/api/matches');
+      const matchRes = await authFetch('/api/matches');
       if (!matchRes.ok) throw new Error('Falha ao listar partidas.');
       const matches = await matchRes.json();
       setAllMatches(matches || []);
@@ -386,7 +387,7 @@ export default function DashboardStatus({
         // Fetch draw details if match exists (unconditionally, to verify if there's any active draw)
         if (targetMatch) {
           try {
-            const drawRes = await fetch(`/api/matches/${targetMatch.id}/draw`);
+            const drawRes = await authFetch(`/api/matches/${targetMatch.id}/draw`);
             if (drawRes.ok) {
               const drawDetails = await drawRes.json();
               setMatchDraw(drawDetails);
@@ -400,7 +401,7 @@ export default function DashboardStatus({
 
           // Fetch the results for this targetMatch specifically
           try {
-            const resRes = await fetch('/api/results');
+            const resRes = await authFetch('/api/results');
             if (resRes.ok) {
               const resData = await resRes.json();
               const found = resData.find((r: any) => r.matchId === targetMatch.id);
@@ -420,7 +421,7 @@ export default function DashboardStatus({
         // Fetch presences and reserve queue for this match if there's an active targetMatch
         if (targetMatch) {
           try {
-            const queueRes = await fetch(`/api/matches/${targetMatch.id}/reserve-queue`);
+            const queueRes = await authFetch(`/api/matches/${targetMatch.id}/reserve-queue`);
             if (queueRes.ok) {
               const qData = await queueRes.json();
               setReserveQueue(qData);
@@ -432,7 +433,7 @@ export default function DashboardStatus({
             setReserveQueue(null);
           }
 
-          const presRes = await fetch(`/api/matches/${targetMatch.id}/presences`);
+          const presRes = await authFetch(`/api/matches/${targetMatch.id}/presences`);
           if (presRes.ok) {
             const presData = await presRes.json();
             setPresences(presData.presences || []);
@@ -441,7 +442,7 @@ export default function DashboardStatus({
             let linkedAthleteCategory = 'reserva';
             let linkedPlayerId = currentUser.playerId || null;
             try {
-              const playersRes = await fetch('/api/players');
+              const playersRes = await authFetch('/api/players');
               if (playersRes.ok) {
                 const playersList = await playersRes.json();
                 setPlayers(playersList || []);
@@ -495,7 +496,7 @@ export default function DashboardStatus({
           let linkedAthleteCategory = 'reserva';
           let linkedPlayerId = currentUser.playerId || null;
           try {
-            const playersRes = await fetch('/api/players');
+            const playersRes = await authFetch('/api/players');
             if (playersRes.ok) {
               const playersList = await playersRes.json();
               setPlayers(playersList || []);
@@ -526,14 +527,14 @@ export default function DashboardStatus({
 
       // Fetch pending reserve alerts for administrators
       if (currentUser.role === 'admin' || currentUser.role === 'auxiliar') {
-        const alertsRes = await fetch('/api/reserve-alerts');
+        const alertsRes = await authFetch('/api/reserve-alerts');
         if (alertsRes.ok) {
           const alertsData = await alertsRes.json();
           setReserveAlerts(alertsData || []);
         }
 
         try {
-          const uRes = await fetch('/api/users');
+          const uRes = await authFetch('/api/users');
           if (uRes.ok) {
             const allUsers = await uRes.json();
             setAllUsersList(allUsers || []);
@@ -545,7 +546,7 @@ export default function DashboardStatus({
       }
 
       // Fetch stats
-      const statsRes = await fetch('/api/stats');
+      const statsRes = await authFetch('/api/stats');
       if (statsRes.ok) {
         const statsData = await statsRes.json();
         setStats(statsData);
@@ -553,7 +554,7 @@ export default function DashboardStatus({
 
       // Fetch player summaries (OVR)
       try {
-        const sumRes = await fetch('/api/evaluations/summary');
+        const sumRes = await authFetch('/api/evaluations/summary');
         if (sumRes.ok) {
           const sumData = await sumRes.json();
           setSummaries(sumData || []);
@@ -563,7 +564,7 @@ export default function DashboardStatus({
       }
 
       // Fetch latest result
-      const resultsRes = await fetch('/api/results');
+      const resultsRes = await authFetch('/api/results');
       if (resultsRes.ok) {
         const resultsData = await resultsRes.json();
         if (resultsData && resultsData.length > 0) {
@@ -574,7 +575,7 @@ export default function DashboardStatus({
 
       // Fetch financial details
       try {
-        const finRes = await fetch(`/api/finances?email=${encodeURIComponent(currentUser.email)}&role=${currentUser.role}`);
+        const finRes = await authFetch(`/api/finances?email=${encodeURIComponent(currentUser.email)}&role=${currentUser.role}`);
         if (finRes.ok) {
           const finData = await finRes.json();
           setFinData(finData);
@@ -585,7 +586,7 @@ export default function DashboardStatus({
 
       // Fetch Mural Highlight
       try {
-        const muralRes = await fetch('/api/mural/posts');
+        const muralRes = await authFetch('/api/mural/posts');
         if (muralRes.ok) {
           const muralPosts = await muralRes.json();
           const hl = muralPosts.find((p: any) => p.isHighlighted);
@@ -597,7 +598,7 @@ export default function DashboardStatus({
 
       // Fetch Latest Notifications
       try {
-        const notifRes = await fetch(`/api/notifications?userId=${currentUser.id}&email=${currentUser.email}`);
+        const notifRes = await authFetch(`/api/notifications?userId=${currentUser.id}&email=${currentUser.email}`);
         if (notifRes.ok) {
           const notifData = await notifRes.json();
           setNotifications(notifData.notifications || []);
@@ -664,7 +665,7 @@ export default function DashboardStatus({
     const children = tempEventChildren[eventId] || 0;
 
     try {
-      const res = await fetch(`/api/events/${eventId}/confirm`, {
+      const res = await authFetch(`/api/events/${eventId}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -703,7 +704,7 @@ export default function DashboardStatus({
         setSuccessMsg('');
 
         try {
-          const res = await fetch(`/api/events/${eventId}/confirm`, {
+          const res = await authFetch(`/api/events/${eventId}/confirm`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -738,7 +739,7 @@ export default function DashboardStatus({
     if (!isExpanded && !eventParticipantsMap[eventId]) {
       setLoadingParticipantsMap(prev => ({ ...prev, [eventId]: true }));
       try {
-        const res = await fetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
+        const res = await authFetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
         if (res.ok) {
           const data = await res.json();
           setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
@@ -754,7 +755,7 @@ export default function DashboardStatus({
   // Re-fetch list dynamically on RSVP updates
   const refreshParticipantsList = async (eventId: string) => {
     try {
-      const res = await fetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
+      const res = await authFetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
       if (res.ok) {
         const data = await res.json();
         setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
@@ -770,7 +771,7 @@ export default function DashboardStatus({
     if (!list) {
       setLoadingParticipantsMap(prev => ({ ...prev, [evt.id]: true }));
       try {
-        const res = await fetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
+        const res = await authFetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
         if (res.ok) {
           list = await res.json();
           setEventParticipantsMap(prev => ({ ...prev, [evt.id]: list }));
@@ -854,7 +855,7 @@ export default function DashboardStatus({
     }
 
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
+      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId: currentUser.id, status })
@@ -890,7 +891,7 @@ export default function DashboardStatus({
   const handleSummonReserve = async (alertId: string) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/reserve-alerts/${alertId}/summon`, { method: 'POST' });
+      const response = await authFetch(`/api/reserve-alerts/${alertId}/summon`, { method: 'POST' });
       if (!response.ok) throw new Error('Não foi possível realizar a convocação.');
       
       setSuccessMsg('Reserva convocado e incluído na lista de confirmados com sucesso!');
@@ -906,7 +907,7 @@ export default function DashboardStatus({
   const handleClearAlert = async (alertId: string) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/reserve-alerts/${alertId}/clear`, { method: 'POST' });
+      const response = await authFetch(`/api/reserve-alerts/${alertId}/clear`, { method: 'POST' });
       if (!response.ok) throw new Error('Não foi possível dispensar o alerta.');
       
       setSuccessMsg('Alerta de substituição dispensado com sucesso.');
@@ -925,7 +926,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/reserve-queue/summon-next`, { method: 'POST' });
+      const response = await authFetch(`/api/matches/${nextMatch.id}/reserve-queue/summon-next`, { method: 'POST' });
       const resData = await response.json();
       if (!response.ok) throw new Error(resData.error || 'Erro ao realizar convocação.');
 
@@ -944,7 +945,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/reserve-queue/ignore-player`, {
+      const response = await authFetch(`/api/matches/${nextMatch.id}/reserve-queue/ignore-player`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId })
@@ -967,7 +968,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/reserve-alerts/${alertId}/respond`, {
+      const response = await authFetch(`/api/reserve-alerts/${alertId}/respond`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status })
@@ -990,7 +991,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
+      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId, status, manuallyApproved: status === 'confirmado' })
@@ -1013,7 +1014,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1042,7 +1043,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1067,7 +1068,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch('/api/users/action', {
+      const res = await authFetch('/api/users/action', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1097,7 +1098,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${matchId}/results`, {
+      const res = await authFetch(`/api/matches/${matchId}/results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1125,7 +1126,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch('/api/finances/toggle', {
+      const response = await authFetch('/api/finances/toggle', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1150,7 +1151,7 @@ export default function DashboardStatus({
   const fetchReservesOrder = async () => {
     setLoadingReserves(true);
     try {
-      const res = await fetch('/api/reserves/order');
+      const res = await authFetch('/api/reserves/order');
       if (res.ok) {
         const data = await res.json();
         const reservesList = Array.isArray(data) ? data : (data.reserves || []);
@@ -1169,7 +1170,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${nextMatch.id}`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'confirmando' })
@@ -1190,7 +1191,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${nextMatch.id}`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'cancelada' })
@@ -1211,7 +1212,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${nextMatch.id}/release-reserves`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}/release-reserves`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -1234,7 +1235,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/matches/${nextMatch.id}/clear-presences`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}/clear-presences`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1323,7 +1324,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
+      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerIds: playerIdsToConfirm, status: 'confirmado' })
@@ -1374,7 +1375,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
+      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerIds: playerIdsToConfirm, status: 'confirmado' })
@@ -1398,7 +1399,7 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
+      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerIds: selectedPlayerIds, status })
@@ -2812,7 +2813,7 @@ export default function DashboardStatus({
             setActionLoading(true);
             try {
               if (!nextMatch) throw new Error('Rodada não encontrada.');
-              const response = await fetch(`/api/matches/${nextMatch.id}/archive`, {
+              const response = await authFetch(`/api/matches/${nextMatch.id}/archive`, {
                 method: 'POST'
               });
               

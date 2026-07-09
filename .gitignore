@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Legado: persistência migrou para Supabase (Postgres + Storage). Não versionar mais.
+data/database.json
+data/database.json.backup
+data/uploads/

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, 
@@ -67,9 +68,9 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
         const evalUserId = currentUser?.id || 'guest';
         
         const [evalsRes, statsRes, resultsRes] = await Promise.all([
-          fetch(`/api/players/${player.id}/evaluations?evaluatorUserId=${evalUserId}`),
-          fetch('/api/stats'),
-          fetch('/api/results')
+          authFetch(`/api/players/${player.id}/evaluations?evaluatorUserId=${evalUserId}`),
+          authFetch('/api/stats'),
+          authFetch('/api/results')
         ]);
 
         if (!active) return;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Camera,
@@ -303,18 +304,18 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     setErrorMsg('');
     try {
       const postsUrl = isPublic ? '/api/mural/public-posts' : '/api/mural/posts';
-      const postsRes = await fetch(postsUrl);
+      const postsRes = await authFetch(postsUrl);
       if (!postsRes.ok) throw new Error('Não foi possível carregar as publicações.');
       const postsData = await postsRes.json();
       setPosts(postsData);
 
       // Load configurations, metadata, matches, results, and stats for all users (both public and authenticated)
       const [catRes, assocRes, statsRes, matchesRes, resultsRes] = await Promise.all([
-        fetch('/api/mural/categories'),
-        fetch('/api/mural/associations'),
-        fetch('/api/mural/stats'),
-        fetch('/api/matches'),
-        fetch('/api/results')
+        authFetch('/api/mural/categories'),
+        authFetch('/api/mural/associations'),
+        authFetch('/api/mural/stats'),
+        authFetch('/api/matches'),
+        authFetch('/api/results')
       ]);
 
       if (catRes.ok) setCategories(await catRes.json());
@@ -646,7 +647,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
         const finalTitle = `${formTitle.trim()}${titleSuffix}`;
 
         // 1. Upload base64 file to Express simulated S3 storage (Original)
-        const uploadRes = await fetch('/api/mural/upload', {
+        const uploadRes = await authFetch('/api/mural/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -665,15 +666,15 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
         const uploadResult = await uploadRes.json();
 
         // 2. Generate and Upload Thumbnail and Medium sizes if it is an image
-        let thumbnailUrl = uploadResult.localUrl;
-        let mediumUrl = uploadResult.localUrl;
+        let thumbnailUrl = uploadResult.url;
+        let mediumUrl = uploadResult.url;
 
         const isImage = item.file.type.startsWith('image/');
         if (isImage) {
           try {
             // Generate Thumbnail (max 300px, quality 0.7)
             const thumbData = await createResizedDataUrl(item.file, 300, 0.7);
-            const thumbUploadRes = await fetch('/api/mural/upload', {
+            const thumbUploadRes = await authFetch('/api/mural/upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -685,12 +686,12 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
             });
             if (thumbUploadRes.ok) {
               const thumbRes = await thumbUploadRes.json();
-              thumbnailUrl = thumbRes.localUrl;
+              thumbnailUrl = thumbRes.url;
             }
 
             // Generate Medium (max 1000px, quality 0.8)
             const mediumData = await createResizedDataUrl(item.file, 1000, 0.8);
-            const mediumUploadRes = await fetch('/api/mural/upload', {
+            const mediumUploadRes = await authFetch('/api/mural/upload', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -702,7 +703,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
             });
             if (mediumUploadRes.ok) {
               const medRes = await mediumUploadRes.json();
-              mediumUrl = medRes.localUrl;
+              mediumUrl = medRes.url;
             }
           } catch (resizeErr) {
             console.error('[Error auto-generating optimized versions - falling back to original]', resizeErr);
@@ -725,7 +726,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
         const postPayload = {
           title: finalTitle,
           description: formDescription,
-          mediaUrl: uploadResult.localUrl,
+          mediaUrl: uploadResult.url,
           mediaType: uploadResult.mediaType,
           fileSize: item.file.size,
           category: formCategory,
@@ -741,7 +742,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
           eventDate: formEventDate
         };
 
-        const postRes = await fetch('/api/mural/posts', {
+        const postRes = await authFetch('/api/mural/posts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(postPayload)
@@ -788,7 +789,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${postToEdit.id}`, {
+      const res = await authFetch(`/api/mural/posts/${postToEdit.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -832,7 +833,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${confirmDeleteId}`, {
+      const res = await authFetch(`/api/mural/posts/${confirmDeleteId}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -865,7 +866,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${id}/highlight`, {
+      const res = await authFetch(`/api/mural/posts/${id}/highlight`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -898,7 +899,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${id}/toggle-landing`, {
+      const res = await authFetch(`/api/mural/posts/${id}/toggle-landing`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

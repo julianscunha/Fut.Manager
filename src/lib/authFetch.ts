@@ -1,38 +1,17 @@
 /**
  * Shared authenticated HTTP fetch helper.
- * Automatically injects the authenticated user ID, role, and email headers.
+ * Automatically injects the session token (JWT) issued at login as a Bearer header.
  */
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const savedUserString = localStorage.getItem('racha_user');
-  let userId = '';
-  let userRole = '';
-  let userEmail = '';
-
-  if (savedUserString) {
-    try {
-      const parsed = JSON.parse(savedUserString);
-      userId = parsed?.id || '';
-      userRole = parsed?.role || '';
-      userEmail = parsed?.email || '';
-    } catch (e) {
-      console.error('Error parsing racha_user from localStorage', e);
-    }
-  }
+  const token = localStorage.getItem('racha_token');
 
   const modifiedInit: RequestInit = { ...init };
   const originalHeaders = init?.headers || {};
 
-  // Construct headers
   const headers = new Headers(originalHeaders);
-  
-  if (userId) {
-    headers.set('x-user-id', userId);
-  }
-  if (userRole) {
-    headers.set('x-user-role', userRole);
-  }
-  if (userEmail) {
-    headers.set('x-user-email', userEmail);
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
   }
 
   // Set default content type if not present and body is JSON string
@@ -42,5 +21,14 @@ export async function authFetch(input: RequestInfo | URL, init?: RequestInit): P
 
   modifiedInit.headers = headers;
 
-  return fetch(input, modifiedInit);
+  const response = await fetch(input, modifiedInit);
+
+  // Sessão inválida/ausente/expirada (ex: sessão de antes desta migração, sem token): limpa e volta ao login.
+  if (response.status === 401) {
+    localStorage.removeItem('racha_user');
+    localStorage.removeItem('racha_token');
+    window.location.reload();
+  }
+
+  return response;
 }

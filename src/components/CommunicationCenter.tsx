@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Megaphone,
@@ -90,8 +91,8 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
     setErrorMsg('');
     try {
       const [muralRes, matchesRes] = await Promise.all([
-        fetch('/api/mural/posts'),
-        fetch('/api/matches')
+        authFetch('/api/mural/posts'),
+        authFetch('/api/matches')
       ]);
 
       if (!muralRes.ok) throw new Error('Não foi possível carregar as publicações do mural.');
@@ -185,14 +186,14 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
       let res;
       if (editPost) {
         // Edit existing post
-        res = await fetch(`/api/mural/posts/${editPost.id}`, {
+        res = await authFetch(`/api/mural/posts/${editPost.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
       } else {
         // Create new
-        res = await fetch('/api/mural/posts', {
+        res = await authFetch('/api/mural/posts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -222,7 +223,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${post.id}`, {
+      const res = await authFetch(`/api/mural/posts/${post.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -260,7 +261,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${post.id}`, {
+      const res = await authFetch(`/api/mural/posts/${post.id}`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -290,7 +291,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
     setSuccessMsg('');
 
     try {
-      const res = await fetch(`/api/mural/posts/${post.id}`, {
+      const res = await authFetch(`/api/mural/posts/${post.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -339,7 +340,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
     setSuccessMsg('');
 
     try {
-      await fetch(`/api/mural/posts/${rule.id}`, {
+      await authFetch(`/api/mural/posts/${rule.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -352,7 +353,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
         })
       });
 
-      await fetch(`/api/mural/posts/${targetRule.id}`, {
+      await authFetch(`/api/mural/posts/${targetRule.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

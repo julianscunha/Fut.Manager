@@ -158,9 +158,9 @@ export default function App() {
     const loadData = async () => {
       try {
         const [evalsRes, statsRes, resultsRes] = await Promise.all([
-          fetch(`/api/players/${featured.id}/evaluations?evaluatorUserId=${currentUser.id}`),
-          fetch('/api/stats'),
-          fetch('/api/results')
+          authFetch(`/api/players/${featured.id}/evaluations?evaluatorUserId=${currentUser.id}`),
+          authFetch('/api/stats'),
+          authFetch('/api/results')
         ]);
 
         if (!active) return;
@@ -264,14 +264,16 @@ export default function App() {
   const [mensalistaAlerts, setMensalistaAlerts] = useState<any>(null);
 
   // Save/retrieve session helper
-  const handleLoginSuccess = (user: User) => {
+  const handleLoginSuccess = (user: User, token: string) => {
     localStorage.setItem('racha_user', JSON.stringify(user));
+    localStorage.setItem('racha_token', token);
     setCurrentUser(user);
     setActiveTab('dash');
   };
 
   const handleLogout = () => {
     localStorage.removeItem('racha_user');
+    localStorage.removeItem('racha_token');
     setCurrentUser(null);
     setPlayers([]);
   };

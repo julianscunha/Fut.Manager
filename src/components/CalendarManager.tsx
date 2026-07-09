@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { motion } from 'motion/react';
 import { User, Season, Match, MatchStatus, Player } from '../types';
 import { 
@@ -159,7 +160,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
     setActionLoading(true);
     setErrorMsg('');
     try {
-      const response = await fetch(`/api/matches/${matchId}`, {
+      const response = await authFetch(`/api/matches/${matchId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -191,21 +192,21 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
     setErrorMsg('');
     try {
       // 1. Matches
-      const matchRes = await fetch('/api/matches');
+      const matchRes = await authFetch('/api/matches');
       if (matchRes.ok) {
         const matchData = await matchRes.json();
         setMatches(matchData || []);
       }
 
       // 2. Seasons
-      const seasonRes = await fetch('/api/seasons');
+      const seasonRes = await authFetch('/api/seasons');
       if (seasonRes.ok) {
         const seasonData = await seasonRes.json();
         setSeasons(seasonData || []);
       }
 
       // 3. Recurrence Setup
-      const recurRes = await fetch('/api/recurrent-config');
+      const recurRes = await authFetch('/api/recurrent-config');
       if (recurRes.ok) {
         const recurData = await recurRes.json();
         setRecurrentConfig(recurData);
@@ -225,7 +226,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
       }
 
       // 4. Reserve ordering queue
-      const reserveRes = await fetch('/api/reserves/order');
+      const reserveRes = await authFetch('/api/reserves/order');
       if (reserveRes.ok) {
         const reserveData = await reserveRes.json();
         setReserves(reserveData.reserves || []);
@@ -233,21 +234,21 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
       }
 
       // 5. Match Results
-      const resultsRes = await fetch('/api/results');
+      const resultsRes = await authFetch('/api/results');
       if (resultsRes.ok) {
         const resultsData = await resultsRes.json();
         setResults(resultsData || []);
       }
 
       // 6. Players
-      const playersRes = await fetch('/api/players');
+      const playersRes = await authFetch('/api/players');
       if (playersRes.ok) {
         const playersData = await playersRes.json();
         setPlayers(playersData || []);
       }
 
       // 7. Mural Posts
-      const muralRes = await fetch('/api/mural/posts');
+      const muralRes = await authFetch('/api/mural/posts');
       if (muralRes.ok) {
         const muralData = await muralRes.json();
         setMuralPosts(muralData || []);
@@ -302,7 +303,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
     }
     setActionLoading(true);
     try {
-      const response = await fetch('/api/seasons', {
+      const response = await authFetch('/api/seasons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,7 +334,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
   const handleToggleSeason = async (seasonId: string, status: boolean) => {
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/seasons/${seasonId}`, {
+      const response = await authFetch(`/api/seasons/${seasonId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active: status })
@@ -365,7 +366,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
     setActionLoading(true);
     setErrorMsg('');
     try {
-      const response = await fetch('/api/matches', {
+      const response = await authFetch('/api/matches', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -411,7 +412,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
 
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/matches/${matchId}`, {
+      const response = await authFetch(`/api/matches/${matchId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -448,7 +449,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
     setActionLoading(true);
     setErrorMsg('');
     try {
-      const response = await fetch(`/api/matches/${matchId}/results`, {
+      const response = await authFetch(`/api/matches/${matchId}/results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -475,7 +476,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
   const handleShareResult = async (item: any, matchResult: any) => {
     try {
       setActionLoading(true);
-      const statsRes = await fetch(`/api/stats?seasonId=${item.seasonId}`);
+      const statsRes = await authFetch(`/api/stats?seasonId=${item.seasonId}`);
       if (!statsRes.ok) throw new Error();
       const stats = await statsRes.json();
       
@@ -578,7 +579,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
     setActionLoading(true);
     try {
-      const response = await fetch(`/api/matches/${matchId}`, { method: 'DELETE' });
+      const response = await authFetch(`/api/matches/${matchId}`, { method: 'DELETE' });
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
         throw new Error(errData.error || 'Erro ao excluir rodada.');
@@ -609,7 +610,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
 
     setActionLoading(true);
     try {
-      const response = await fetch('/api/matches/bulk-delete', {
+      const response = await authFetch('/api/matches/bulk-delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ matchIds: selectedMatchIds })
@@ -644,7 +645,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     e.preventDefault();
     setActionLoading(true);
     try {
-      const response = await fetch('/api/recurrent-config', {
+      const response = await authFetch('/api/recurrent-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -675,7 +676,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const response = await fetch('/api/matches/generate-recurrent', { method: 'POST' });
+      const response = await authFetch('/api/matches/generate-recurrent', { method: 'POST' });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao preencher calendário recorrente.');
@@ -712,7 +713,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
     const orderedIds = listCopy.map((r) => r.id);
 
     try {
-      const response = await fetch('/api/reserves/order', {
+      const response = await authFetch('/api/reserves/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reorderedIds: orderedIds })
@@ -2344,7 +2345,7 @@ function DetailPresences({ matchId, players }: { matchId: string; players: Playe
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/matches/${matchId}/presences`)
+    authFetch(`/api/matches/${matchId}/presences`)
       .then(res => res.json())
       .then(resData => {
         if (active) {
@@ -2423,7 +2424,7 @@ function DetailTeams({ matchId, players }: { matchId: string; players: Player[] 
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/matches/${matchId}/draw`)
+    authFetch(`/api/matches/${matchId}/draw`)
       .then(res => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -2563,7 +2564,7 @@ function DetailRatings({ matchId, players }: { matchId: string; players: Player[
 
   useEffect(() => {
     let active = true;
-    fetch('/api/evaluations/summary')
+    authFetch('/api/evaluations/summary')
       .then(res => res.json())
       .then(resData => {
         if (active) {

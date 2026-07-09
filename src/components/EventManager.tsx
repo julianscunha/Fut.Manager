@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { 
   Calendar, MapPin, Clock, Users, DollarSign, Plus, Edit3, Trash2, 
   X, Check, Flame, Award, Gift, Compass, Settings, Share2, 
@@ -113,7 +114,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
 
   const fetchPlayerInfo = async () => {
     try {
-      const res = await fetch('/api/players');
+      const res = await authFetch('/api/players');
       if (res.ok) {
         const playersList = await res.json();
         const meObj = playersList.find((p: any) => p.email === currentUser.email);
@@ -131,7 +132,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     try {
       setLoading(true);
       setErrorMsg('');
-      const res = await fetch(`/api/events?playerId=${currentUser.id}`);
+      const res = await authFetch(`/api/events?playerId=${currentUser.id}`);
       if (!res.ok) throw new Error('Não foi possível carregar os eventos.');
       const data = await res.json();
       setEvents(data || []);
@@ -205,7 +206,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
       const url = editingId ? `/api/events/${editingId}` : '/api/events';
       const method = editingId ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -243,7 +244,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
-          const res = await fetch(`/api/events/${eventId}/cancel`, { method: 'POST' });
+          const res = await authFetch(`/api/events/${eventId}/cancel`, { method: 'POST' });
           if (res.ok) {
             setSuccessMsg('Evento cancelado e cobranças suspensas com sucesso.');
             await loadEvents();
@@ -267,7 +268,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
-          const res = await fetch(`/api/events/${eventId}/end`, { method: 'POST' });
+          const res = await authFetch(`/api/events/${eventId}/end`, { method: 'POST' });
           if (res.ok) {
             setSuccessMsg('Evento encerrado com sucesso!');
             await loadEvents();
@@ -291,7 +292,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
-          const res = await fetch(`/api/events/${eventId}`, { method: 'DELETE' });
+          const res = await authFetch(`/api/events/${eventId}`, { method: 'DELETE' });
           if (res.ok) {
             setSuccessMsg('Evento excluído com sucesso!');
             await loadEvents();
@@ -311,7 +312,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     setActiveParticipantsEvent(evt);
     setLoadingParticipants(true);
     try {
-      const res = await fetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
+      const res = await authFetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
       if (res.ok) {
         const data = await res.json();
         setParticipants(data || []);
@@ -345,7 +346,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     const children = tempChildren[eventId] || 0;
 
     try {
-      const res = await fetch(`/api/events/${eventId}/confirm`, {
+      const res = await authFetch(`/api/events/${eventId}/confirm`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -383,7 +384,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
         setSuccessMsg('');
 
         try {
-          const res = await fetch(`/api/events/${eventId}/confirm`, {
+          const res = await authFetch(`/api/events/${eventId}/confirm`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -418,7 +419,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     if (!isExpanded && !eventParticipantsMap[eventId]) {
       setLoadingParticipantsMap(prev => ({ ...prev, [eventId]: true }));
       try {
-        const res = await fetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
+        const res = await authFetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
         if (res.ok) {
           const data = await res.json();
           setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
@@ -434,7 +435,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
   // Re-fetch list dynamically on RSVP updates
   const refreshParticipantsList = async (eventId: string) => {
     try {
-      const res = await fetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
+      const res = await authFetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
       if (res.ok) {
         const data = await res.json();
         setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
@@ -450,7 +451,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     if (!list) {
       setLoadingParticipantsMap(prev => ({ ...prev, [evt.id]: true }));
       try {
-        const res = await fetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
+        const res = await authFetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
         if (res.ok) {
           list = await res.json();
           setEventParticipantsMap(prev => ({ ...prev, [evt.id]: list }));
@@ -507,7 +508,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const res = await fetch(`/api/events/${eventId}/pay`, {
+      const res = await authFetch(`/api/events/${eventId}/pay`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ playerId: currentUser.id })
@@ -921,7 +922,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                           type="button"
                           onClick={() => {
                             // Quick toggle event to setting open for RSVPs
-                            fetch(`/api/events/${evt.id}`, {
+                            authFetch(`/api/events/${evt.id}`, {
                               method: 'PUT',
                               headers: { 'Content-Type': 'application/json' },
                               body: JSON.stringify({ status: 'confirmando' })

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { authFetch } from '../lib/authFetch';
 import { Player, User, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
 import { X, Award, Shield, Check, Info, AlertTriangle, ArrowLeft, Star } from 'lucide-react';
 
@@ -28,7 +29,7 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
   useEffect(() => {
     async function fetchMyEvaluation() {
       try {
-        const res = await fetch(`/api/players/${player.id}/evaluations?evaluatorUserId=${currentUser.id}`);
+        const res = await authFetch(`/api/players/${player.id}/evaluations?evaluatorUserId=${currentUser.id}`);
         if (res.ok) {
           const contentType = res.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
@@ -85,7 +86,7 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
     setLoading(true);
 
     try {
-      const res = await fetch(`/api/players/${player.id}/evaluate`, {
+      const res = await authFetch(`/api/players/${player.id}/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
