@@ -17,7 +17,7 @@ Checklist detalhado complementar ao [`DEPLOY.md`](DEPLOY.md). Use para não esqu
 
 ### Preparação do código
 - [ ] `npm install` rodado
-- [ ] `.env.local` criado com: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `OPENROUTER_API_KEY` (ou `GEMINI_API_KEY` como alternativa), `ALLOWED_ORIGINS="http://localhost:3000"`
+- [ ] `.env.local` criado com: `APP_NAME` (nome do seu grupo), `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `JWT_SECRET`, `OPENROUTER_API_KEY` (ou `GEMINI_API_KEY` como alternativa), `ALLOWED_ORIGINS="http://localhost:3000"`
 - [ ] `.gitignore` cobre `.env*`, `data/database.json`, `data/database.json.backup`, `data/uploads/`
 
 ### Testes locais
@@ -58,6 +58,7 @@ Checklist detalhado complementar ao [`DEPLOY.md`](DEPLOY.md). Use para não esqu
 - [ ] Plan: Free (ou Starter, se cold start incomodar)
 
 ### Variáveis de Ambiente (Render Dashboard → Environment)
+- [ ] `APP_NAME` (nome do seu grupo/sistema — nunca deixe o nome de outra pessoa/grupo)
 - [ ] `OPENROUTER_API_KEY` (recomendado) e/ou `GEMINI_API_KEY` (ao menos um definido — ver `AvatarProviderFactory` em `server/avatarProvider.ts`)
 - [ ] `OPENROUTER_MODEL` (opcional, padrão `openai/gpt-image-1`)
 - [ ] `SUPABASE_URL`

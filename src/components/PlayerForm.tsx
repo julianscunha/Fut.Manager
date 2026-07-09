@@ -232,7 +232,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ex: Fofim Magalhães"
+            placeholder="Ex: João Magalhães"
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-[#22c55e] placeholder-zinc-600 transition"
           />
         </div>

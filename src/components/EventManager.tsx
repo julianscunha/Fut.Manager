@@ -7,6 +7,7 @@ import {
   ChevronDown, ChevronUp, Baby, User as UserIcon
 } from 'lucide-react';
 import { User, GrupalEvent, GrupalEventType, GrupalEventStatus, CATEGORY_LABELS, PlayerCategory } from '../types';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 interface EventManagerProps {
   currentUser: User;
@@ -59,6 +60,7 @@ const STATUS_CONFIG: Record<GrupalEventStatus, { label: string; bg: string; text
 };
 
 export default function EventManager({ currentUser }: EventManagerProps) {
+  const { appName } = useAppConfig();
   const isEditor = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -171,7 +173,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
     setType('churrasco');
     setDate('');
     setTime('12:00');
-    setLocation('Sede Campestre ou Arena do Fofim');
+    setLocation('Sede Campestre ou Arena do Grupo');
     setAdultPrice('50');
     setChildPrice('25');
     setEventStatus('agendado');
@@ -492,7 +494,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
 
     const formattedDate = evt.date.split('-').reverse().join('/');
 
-    const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\n\uD83D\uDC65 *Confirmados*\n\n${confirmedLines}\n\n*Total previsto:*\n${totalPessoas} pessoas\n\n\uD83D\uDCC5 *Data:* ${formattedDate} às ${evt.time}\n\uD83D\uDCCD *Local:* ${evt.location || 'Não especificado'}`;
+    const textMsg = `\uD83C\uDF89 Evento ${appName}: *${evt.name}*\n\n\uD83D\uDC65 *Confirmados*\n\n${confirmedLines}\n\n*Total previsto:*\n${totalPessoas} pessoas\n\n\uD83D\uDCC5 *Data:* ${formattedDate} às ${evt.time}\n\uD83D\uDCCD *Local:* ${evt.location || 'Não especificado'}`;
     const escapedMsg = encodeURIComponent(textMsg);
     const url = `https://wa.me/?text=${escapedMsg}`;
 
@@ -554,7 +556,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
       ? 'Acesso Grátis' 
       : `Preço por Adulto: R$ ${evt.adultPrice.toFixed(2)} | Crianças: R$ ${evt.childPrice.toFixed(2)}`;
 
-    const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\uD83D\uDCC5 Data: ${evt.date.split('-').reverse().join('/')} às ${evt.time}\n\uD83D\uDCCD Local: ${evt.location || 'Não especificado'}\n\uD83D\uDCB0 Valor: ${valueStr}\n\nConfirme sua presença no aplicativo do Racha do Fofim para garantir sua vaga! \u26BD\uD83C\uDF57\uD83C\uDF7B`;
+    const textMsg = `\uD83C\uDF89 Evento ${appName}: *${evt.name}*\n\uD83D\uDCC5 Data: ${evt.date.split('-').reverse().join('/')} às ${evt.time}\n\uD83D\uDCCD Local: ${evt.location || 'Não especificado'}\n\uD83D\uDCB0 Valor: ${valueStr}\n\nConfirme sua presença no aplicativo do ${appName} para garantir sua vaga! \u26BD\uD83C\uDF57\uD83C\uDF7B`;
     const escapedMsg = encodeURIComponent(textMsg);
     const url = `https://wa.me/?text=${escapedMsg}`;
 

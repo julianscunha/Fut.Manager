@@ -9,6 +9,7 @@ import {
   Trophy, Users, Award, Star, Image, ChevronDown, ChevronUp, CheckSquare, Sparkles
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 const STATUS_METADATA: Record<string, { icon: string; bg: string; text: string; border: string; label: string }> = {
   agendada: {
@@ -76,6 +77,7 @@ interface CalendarManagerProps {
 }
 
 export default function CalendarManager({ currentUser, simulatedState = null, setSimulatedState }: CalendarManagerProps) {
+  const { appName } = useAppConfig();
   const isAdmin = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
 
   const todayVal = new Date();
@@ -500,7 +502,7 @@ ${top5}
 \uD83D\uDC65 *Melhor Dupla:*
 ${bestDuoStr}
 
-*Racha do Fofim* - Acesse para ver as estatísticas completas! \u26BD`;
+*${appName}* - Acesse para ver as estatísticas completas! \u26BD`;
 
       const encoded = encodeURIComponent(text);
       console.log("RAW MESSAGE:", text);
@@ -515,7 +517,7 @@ Time ${matchResult.champions.join(', ')}
 
 \uD83D\uDD35 Azul: ${matchResult.winsBlue} vitórias | \uD83D\uDD34 Vermelho: ${matchResult.winsRed} vitórias | \uD83D\uDFE2 Verde: ${matchResult.winsGreen} vitórias.
 
-Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26BD`;
+Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
 
       const encoded = encodeURIComponent(text);
       console.log("RAW MESSAGE (FALLBACK):", text);
@@ -2201,7 +2203,7 @@ Acesse o sistema *Racha do Fofim* para verificar estatísticas atualizadas! \u26
             </div>
             
             <p className="text-xs text-zinc-400 leading-normal">
-              O Racha do Fofim estabelece prioridades claras: os mensalistas possuem vaga garantida. Os reservas ocupam vagas extras ou cobrem faltas. No cancelamento pós-confirmação, o sistema sugere primeiro o reserva no topo desta fila!
+              O {appName} estabelece prioridades claras: os mensalistas possuem vaga garantida. Os reservas ocupam vagas extras ou cobrem faltas. No cancelamento pós-confirmação, o sistema sugere primeiro o reserva no topo desta fila!
             </p>
 
             {isAdmin && (

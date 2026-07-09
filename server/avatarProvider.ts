@@ -115,7 +115,7 @@ The framing should be chest-up, athletic soccer player pose, professional sports
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
         'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
-        'X-Title': 'Racha do Fofim'
+        'X-Title': process.env.APP_NAME || 'Meu Racha'
       },
       body: JSON.stringify({
         model: this.model,

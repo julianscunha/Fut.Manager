@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Player } from './types';
 import AuthScreens from './components/AuthScreens';
 import { authFetch } from './lib/authFetch';
+import { BrandName, useAppConfig } from './contexts/AppConfigContext';
 import DashboardStatus from './components/DashboardStatus';
 import PlayerCard from './components/PlayerCard';
 import { PlayerHero } from './components/PlayerHero';
@@ -59,6 +60,7 @@ import { Camera } from 'lucide-react';
 type NavTab = 'dash' | 'players' | 'approvals' | 'ranking' | 'calendar' | 'draw' | 'finances' | 'events' | 'mural' | 'profile' | 'laboratorio' | 'administration';
 
 export default function App() {
+  const { appName } = useAppConfig();
   const [adminSubTab, setAdminSubTab] = useState<'approvals' | 'laboratorio'>('approvals');
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('racha_user');
@@ -535,7 +537,7 @@ export default function App() {
               </div>
               <div>
                 <span className="font-display font-black text-sm tracking-tight text-white uppercase">
-                  Racha do <span className="text-[#22c55e]">Fofim</span>
+                  <BrandName />
                 </span>
                 <span className="block text-[8px] font-mono text-zinc-500 uppercase tracking-wide">
                   Private Soccer Group
@@ -724,7 +726,7 @@ export default function App() {
                   </div>
                   <div>
                     <span className="font-display font-black text-sm tracking-tight text-white uppercase block">
-                      Racha do <span className="text-[#22c55e]">Fofim</span>
+                      <BrandName />
                     </span>
                     <span className="text-[8px] font-mono text-zinc-500 uppercase tracking-wider block">
                       Grupo Privado Society
@@ -1290,7 +1292,7 @@ export default function App() {
       )}
 
       <footer className="bg-[#0a0e0c] border-t border-zinc-950 py-5 text-center text-xs text-zinc-600 select-none">
-        <p>© 2026 Racha do Fofim. Sistema PWA preparado para celular e desktop.</p>
+        <p>© 2026 {appName}. Sistema PWA preparado para celular e desktop.</p>
         <p className="text-[10px] text-zinc-700 mt-1">Fundação do Sistema com Controle de Acesso RBAC completo.</p>
       </footer>
     </div>

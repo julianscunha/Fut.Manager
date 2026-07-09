@@ -4,6 +4,7 @@ import { Shield, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, Rota
 import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 import { getAchievementsForPlayer } from '../utils/achievements';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 // Standard high-quality vector Shields/Escudos for major soccer teams to guarantee accurate displays
 export function ClubShield({ clubId, className = "w-6 h-6" }: { clubId?: string, className?: string }) {
@@ -211,6 +212,7 @@ interface PlayerCardProps {
 }
 
 export default function PlayerCard({ player, currentUser, onEdit, onInactivate, onRestore, canEdit, onEvaluationSavedGlobal, onSelect }: PlayerCardProps) {
+  const { appName } = useAppConfig();
   const [faceIndex, setFaceIndex] = useState(0); // 5 distinct pages (0 to 4)
   const [badgeFilter, setBadgeFilter] = useState<'all' | 'vitoria' | 'presenca' | 'ranking' | 'resenha'>('all');
   const [selectedBadgeId, setSelectedBadgeId] = useState<string>('primeira_vitoria');
@@ -527,7 +529,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   // Social Share event implementation
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const text = `Atleta: ${player.name}\nOVR: ${displayOvr}\nPosição: ${POSITION_LABELS[player.primaryPosition]}\nVitórias: ${rachaStats?.vitorias || 0}\nPartidas: ${rachaStats?.presences || 0}\nAproveitamento: ${rachaStats ? rachaStats.aproveitamento : 0}%\nConfira no Racha do Fofim!`;
+    const text = `Atleta: ${player.name}\nOVR: ${displayOvr}\nPosição: ${POSITION_LABELS[player.primaryPosition]}\nVitórias: ${rachaStats?.vitorias || 0}\nPartidas: ${rachaStats?.presences || 0}\nAproveitamento: ${rachaStats ? rachaStats.aproveitamento : 0}%\nConfira no ${appName}!`;
     if (navigator.share) {
       navigator.share({
         title: `${player.name} - Card de Atleta`,
@@ -717,7 +719,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         id: 'elite_fofim',
         category: 'ranking' as const,
         icon: '🥇',
-        name: 'Elite do Fofim',
+        name: `Elite do ${appName}`,
         desc: 'Está no Top 3 geral do racha.',
         status: (rank > 0 && rank <= 3) ? ('Conquistado' as const) : ('Bloqueado' as const),
         date: (rank > 0 && rank <= 3) ? dateStr : null,

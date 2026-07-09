@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { SportsButton } from './UI';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 function computeTacticalAssignments(playersList: Player[]): Record<string, { position: string; isAdapted: boolean }> {
   const positions = ['goleiro', 'zagueiro', 'meio_campo', 'volante', 'atacante'];
@@ -97,6 +98,7 @@ export default function DashboardStatus({
   simulatedState,
   setSimulatedState
 }: DashboardStatusProps) {
+  const { appName } = useAppConfig();
   const isAdmin = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
   const [nextMatch, setNextMatch] = useState<any>(null);
   const [presences, setPresences] = useState<any[]>([]);
@@ -1916,7 +1918,7 @@ export default function DashboardStatus({
               <div className="border-b border-zinc-900 pb-3 flex justify-between items-center">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest block">Mural & Resenha</span>
-                  <h3 className="text-white font-display font-black text-base uppercase tracking-tight">📸 Mural do Racha do Fofim</h3>
+                  <h3 className="text-white font-display font-black text-base uppercase tracking-tight">📸 Mural do {appName}</h3>
                 </div>
                 <span className="text-[10px] font-mono font-black bg-violet-500/10 border border-violet-500/20 text-violet-400 px-2.5 py-1 rounded-md uppercase tracking-wide">
                   Mural Ativo
@@ -1944,7 +1946,7 @@ export default function DashboardStatus({
               ) : (
                 <div className="p-5 rounded-xl border border-dashed border-zinc-800 bg-zinc-950/40 text-center space-y-2">
                   <p className="text-xs text-zinc-400 leading-relaxed">
-                    Nenhum post destacado no momento. O Racha do Fofim possui um Mural ativo para compartilhamento de lances marcantes, fotos e vídeos da resenha pós-racha!
+                    Nenhum post destacado no momento. O {appName} possui um Mural ativo para compartilhamento de lances marcantes, fotos e vídeos da resenha pós-racha!
                   </p>
                   <p className="text-[10px] text-zinc-500 font-mono">
                     Acesse a aba "Mural" para interagir e eternizar momentos marcantes.

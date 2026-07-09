@@ -21,6 +21,10 @@ import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, Matc
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
 
+// Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
+// Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
+const APP_NAME = process.env.APP_NAME || 'Meu Racha';
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -622,6 +626,7 @@ async function startServer() {
     { method: 'POST', path: /^\/auth\/reset-password$/ },
     { method: 'GET', path: /^\/mural\/public-posts$/ },
     { method: 'GET', path: /^\/public\/next-match$/ },
+    { method: 'GET', path: /^\/public\/app-config$/ },
   ];
 
   app.use('/api', async (req, res, next) => {
@@ -1095,7 +1100,7 @@ async function startServer() {
       notify(db, {
         category: 'jogador',
         title: '🎉 Cadastro Aprovado!',
-        message: `Seu cadastro no Racha do Fofim foi aprovado como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}. Seja bem-vindo ao grupo!`,
+        message: `Seu cadastro no ${APP_NAME} foi aprovado como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}. Seja bem-vindo ao grupo!`,
         targetUserId: userId,
         actionUrl: 'players'
       });
@@ -4569,7 +4574,7 @@ async function startServer() {
           fileSize: autoPostMediaUrl.length,
           category: 'partida' as const,
           authorId: 'system',
-          authorName: 'Racha do Fofim Bot',
+          authorName: `${APP_NAME} Bot`,
           authorRole: 'admin',
           createdAt: nowIso,
           updatedAt: nowIso,
@@ -5652,6 +5657,11 @@ async function startServer() {
     }
   });
 
+  // Get public app config (nome do sistema, configurável por instalação via APP_NAME)
+  app.get('/api/public/app-config', (req, res) => {
+    res.json({ appName: APP_NAME });
+  });
+
   // Get public Next Match status
   app.get('/api/public/next-match', async (req, res) => {
     try {
@@ -6336,7 +6346,7 @@ async function startServer() {
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server Racha do Fofim running on http://localhost:${PORT}`);
+    console.log(`Server ${APP_NAME} running on http://localhost:${PORT}`);
   });
 }
 

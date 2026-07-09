@@ -530,6 +530,7 @@ Substitui por completo o antigo `readDb()`/`writeDb()` baseado em `data/database
 - `helmet()`, `cors()` (allowlist via `ALLOWED_ORIGINS`) e `express-rate-limit` nas rotas `/api/auth/*` (5 tentativas / 15 min).
 - `/api/upload-s3` e `/api/mural/upload` sobem para o Supabase Storage (bucket `Uploads`), validando o tipo real do arquivo por magic bytes (`file-type` v22+) e o tamanho real do buffer decodificado — não a extensão/tamanho que o cliente declarar. Cada um também faz sua própria checagem de `getAuthenticatedUser` como defesa em profundidade, além do gate global.
 - Geração de avatar com IA via `AvatarProviderFactory` (`server/avatarProvider.ts`): usa **OpenRouter** (`OPENROUTER_API_KEY`, modelo padrão `openai/gpt-image-1`) se configurado, com fallback para **Gemini direto** (`GEMINI_API_KEY`). Ver `.env.example` para as duas opções documentadas.
+- **Nome do sistema configurável**: nenhum texto da interface tem o nome de um grupo específico hardcoded. `APP_NAME` (backend) é exposto ao frontend via `GET /api/public/app-config` e consumido pelo contexto `src/contexts/AppConfigContext.tsx` (`useAppConfig()`/`<BrandName />`) — troque o valor da variável e o nome muda em toda a interface, mensagens de WhatsApp e notificações, sem qualquer alteração de código.
 
 ### Frontend (`src/`)
 
@@ -543,6 +544,10 @@ Substitui por completo o antigo `readDb()`/`writeDb()` baseado em `data/database
 ### Passo 4.1: Configurar `.env.local`
 
 ```
+# Nome do seu sistema — aparece na interface, notificações e mensagens de WhatsApp/mural.
+# Troque para o nome do seu próprio grupo; nunca deixe o nome de outra pessoa aqui.
+APP_NAME="Meu Racha"
+
 # Geração de avatar com IA — escolha uma opção (OpenRouter é a recomendada)
 OPENROUTER_API_KEY="<sua-chave-openrouter>"
 OPENROUTER_MODEL="openai/gpt-image-1"
@@ -618,6 +623,7 @@ Na seção **"Environment"** do formulário de criação (ou depois, em Settings
 
 | Variável | Valor |
 |---|---|
+| `APP_NAME` | o nome do seu grupo/sistema (ex: `"Racha da Vila"`) — aparece na UI e em mensagens |
 | `OPENROUTER_API_KEY` | sua chave OpenRouter (recomendado — ver `.env.example`) |
 | `OPENROUTER_MODEL` | `openai/gpt-image-1` (opcional, é o padrão) |
 | `GEMINI_API_KEY` | alternativa ao OpenRouter, se preferir usar o Gemini direto |

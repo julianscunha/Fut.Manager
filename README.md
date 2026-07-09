@@ -15,7 +15,7 @@
 
 Todo grupo de futebol society passa pelas mesmas dores: quem vai jogar, quem paga o quê, como sortear times justos, onde ficam as fotos da resenha e quem realmente é bom em campo. O **Racha do Fofim** resolve tudo isso em um único aplicativo web, mobile-first, para o administrador do grupo (e para cada atleta) usar sem depender de planilha, grupo de WhatsApp lotado de enquete ou papel.
 
-Nasceu como o sistema real de um grupo de futebol e evoluiu para uma plataforma completa — hoje roda em produção sobre Postgres (Supabase) e é hospedável em qualquer lugar que rode um container Docker.
+Nasceu como o sistema real de um grupo de futebol (o "Racha do Fofim") e evoluiu para uma plataforma completa e **white-label** — hoje roda em produção sobre Postgres (Supabase), é hospedável em qualquer lugar que rode um container Docker, e o nome exibido na interface é 100% configurável: defina a variável `APP_NAME` no seu `.env` com o nome do seu próprio grupo e ele se propaga automaticamente por toda a UI, notificações e mensagens de compartilhamento — sem tocar em nenhuma linha de código.
 
 ## ✨ Funcionalidades
 
@@ -27,6 +27,7 @@ Nasceu como o sistema real de um grupo de futebol e evoluiu para uma plataforma 
 - **Museu do Clube** — mural social com galeria de memórias, momentos épicos, linha do tempo de rodadas e central de comunicação/avisos.
 - **Avatares de jogador com IA** — geração automática de card/retrato esportivo a partir da foto do atleta, via OpenRouter ou Gemini.
 - **Feito para o campo** — interface mobile-first de verdade: alvos de toque generosos, tabelas que viram cards no celular, menus que não quebram em tela pequena.
+- **White-label por variável de ambiente** — o nome do seu grupo (`APP_NAME`) é a única coisa que muda entre a sua instalação e a de qualquer outra pessoa que clonar este projeto. Nenhum dado pessoal ou nome de grupo fica hardcoded no código-fonte.
 
 ## 🧱 Stack técnica
 
@@ -56,7 +57,7 @@ Arquitetura de monólito único e deliberada: o mesmo processo Express serve a A
 git clone https://github.com/julianscunha/Fut.Manager.git
 cd Fut.Manager
 npm install
-cp .env.example .env.local   # preencha com suas credenciais do Supabase, JWT_SECRET, etc.
+cp .env.example .env.local   # defina APP_NAME com o nome do seu grupo, credenciais do Supabase, JWT_SECRET, etc.
 npm run dev
 ```
 

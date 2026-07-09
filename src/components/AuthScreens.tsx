@@ -6,6 +6,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, X } from 'lucide-react';
 import { User } from '../types';
+import { BrandName } from '../contexts/AppConfigContext';
 
 interface AuthScreensProps {
   onLoginSuccess: (user: User, token: string) => void;
@@ -232,7 +233,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
           <Shield className="w-7 h-7 text-white fill-emerald-800/20" />
         </div>
         <h1 className="font-display font-extrabold text-2xl tracking-tight text-white uppercase sm:text-3xl">
-          Racha do <span className="text-[#22c55e]">Fofim</span>
+          <BrandName />
         </h1>
         <p className="text-zinc-400 text-xs mt-1 max-w-xs font-sans">
           Painel oficial para controle de presença, estatísticas e roster.

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 interface TechnicalRankingProps {
   players: Player[];
@@ -23,6 +24,7 @@ interface PlayerSummary {
 }
 
 export default function TechnicalRanking({ players, currentUser }: TechnicalRankingProps) {
+  const { appName } = useAppConfig();
   // Subtabs: 'overall' | 'racha' | 'hall'
   const [rankingSubTab, setRankingSubTab] = useState<'overall' | 'racha' | 'hall'>('racha');
   
@@ -2201,7 +2203,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
           <div className="bg-[#1f2937]/10 p-4 border border-zinc-900 rounded-xl leading-relaxed">
             <span className="text-zinc-500 font-mono text-[10px] uppercase tracking-widest font-black block mb-1">⭐ SOBRE O HALL DA FAMA</span>
             <p className="text-xs text-zinc-400">
-              O prestígio eterno do Racha do Fofim. Aqui estão imortalizados os atletas com maior rendimento, consistência técnica e vitórias consolidadas em todo o histórico de jogo.
+              O prestígio eterno do {appName}. Aqui estão imortalizados os atletas com maior rendimento, consistência técnica e vitórias consolidadas em todo o histórico de jogo.
             </p>
           </div>
 

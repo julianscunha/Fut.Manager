@@ -6,12 +6,14 @@ import {
   Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, Users, Printer, AlertTriangle, History, X
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 interface FinanceManagerProps {
   currentUser: User;
 }
 
 export default function FinanceManager({ currentUser }: FinanceManagerProps) {
+  const { appName } = useAppConfig();
   const isAdmin = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
 
   // Core financial state
@@ -316,7 +318,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', 'Racha_do_Fofim_Ficha_Financeira.csv');
+      link.setAttribute('download', `${appName.replace(/\s+/g, '_')}_Ficha_Financeira.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

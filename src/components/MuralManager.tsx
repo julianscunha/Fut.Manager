@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { User, MuralPost } from '../types';
 import CommunicationCenter from './CommunicationCenter';
+import { useAppConfig } from '../contexts/AppConfigContext';
 
 interface MuralManagerProps {
   currentUser: User | null;
@@ -193,6 +194,7 @@ const createResizedDataUrl = (file: File, maxDim: number, quality: number = 0.8)
 };
 
 export default function MuralManager({ currentUser, isPublicMode = false }: MuralManagerProps) {
+  const { appName } = useAppConfig();
   // Check if we are in public view mode from the URL or passed prop
   const isPublic = isPublicMode || window.location.search.includes('public=true') || window.location.pathname === '/public-mural';
 
@@ -919,7 +921,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
   // Share Actions
   const handleShareWhatsApp = (post: MuralPost) => {
     const shareUrl = `${window.location.origin}${window.location.pathname}?public=true#post-${post.id}`;
-    const text = `\uD83C\uDFC6 *Mural do Racha do Fofim* \uD83C\uDFC6
+    const text = `\uD83C\uDFC6 *Mural do ${appName}* \uD83C\uDFC6
 Confira a nossa publicação no Mural:
 
 *"${post.title}"*
@@ -1911,7 +1913,7 @@ ${shareUrl}`;
                           <Calendar className="w-4 h-4 text-emerald-500" />
                           <span>
                             {selectedPost.matchId 
-                              ? `Partida do Racha do Fofim` 
+                              ? `Partida do ${appName}`
                               : `Confraternização / Evento do Grupo`}
                           </span>
                         </div>
@@ -2345,7 +2347,7 @@ ${shareUrl}`;
                          ⭐ Destacar na Tela Inicial
                        </span>
                        <span className="block text-[9px] text-zinc-500 leading-normal font-sans">
-                         Esta publicação poderá aparecer na capa do Racha do Fofim antes do login.
+                         Esta publicação poderá aparecer na capa do {appName} antes do login.
                        </span>
                      </div>
                      <label className="relative inline-flex items-center cursor-pointer min-h-[44px]">
@@ -2484,7 +2486,7 @@ ${shareUrl}`;
               🏛️ Museu do Clube
             </h1>
             <p className="text-zinc-300 text-xs md:text-sm leading-relaxed font-sans">
-              O acervo vivo das histórias, resenhas e momentos do Racha do Fofim.
+              O acervo vivo das histórias, resenhas e momentos do {appName}.
             </p>
           </div>
 
@@ -2732,7 +2734,7 @@ ${shareUrl}`;
                     🏆 HALL DA FAMA
                   </h2>
                   <p className="text-zinc-350 text-xs md:text-sm max-w-xl leading-relaxed">
-                    Os acontecimentos históricos, as resenhas lendárias e os lances imortalizados que construíram a lenda do <strong className="text-amber-400">Racha do Fofim</strong>.
+                    Os acontecimentos históricos, as resenhas lendárias e os lances imortalizados que construíram a lenda do <strong className="text-amber-400">{appName}</strong>.
                   </p>
                 </div>
                 <div className="flex items-center gap-3 bg-zinc-950/60 border border-zinc-850 p-4 rounded-xl self-start md:self-auto backdrop-blur">
@@ -2891,7 +2893,7 @@ ${shareUrl}`;
                     📜 HISTÓRIA DO CLUBE
                   </h3>
                   <p className="text-zinc-400 text-xs font-mono">
-                    A trajetória rodada a rodada do Racha do Fofim, seus placares lendários e mídias associadas.
+                    A trajetória rodada a rodada do {appName}, seus placares lendários e mídias associadas.
                   </p>
                 </div>
               </div>

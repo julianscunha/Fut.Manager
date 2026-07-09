@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, POSITION_LABELS } from '../types';
+import { useAppConfig } from '../contexts/AppConfigContext';
 import { 
   Zap, 
   Sliders, 
@@ -46,6 +47,7 @@ export default function LaboratorioManager({
   simulatedState,
   setSimulatedState
 }: LaboratorioManagerProps) {
+  const { appName } = useAppConfig();
   const [labTab, setLabTab] = useState<'simulator' | 'auditoria'>('simulator');
   
   // Auditoria States
@@ -706,7 +708,7 @@ export default function LaboratorioManager({
               <span>Simulador Contínuo de Evolução da Rodada</span>
             </h3>
             <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-              O Racha do Fofim evolui dinamicamente ao longo da semana por 10 fases críticas. Utilize este simulador para forçar o estado ativo da rodada e verificar como toda a interface (convocação, escalações, avaliações, estatísticas e museu) se adapta em tempo real.
+              O {appName} evolui dinamicamente ao longo da semana por 10 fases críticas. Utilize este simulador para forçar o estado ativo da rodada e verificar como toda a interface (convocação, escalações, avaliações, estatísticas e museu) se adapta em tempo real.
             </p>
           </div>
 
