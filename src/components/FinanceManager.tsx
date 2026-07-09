@@ -3,7 +3,7 @@ import { User, Player, Bill, PaymentRecord, RecurrentConfig } from '../types';
 import { authFetch } from '../lib/authFetch';
 import { 
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,
-  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, PieChart, Users, ChevronDown, Printer, AlertTriangle, History, X
+  Sliders, Plus, Trash2, RefreshCw, Calendar, DollarSign, Users, Printer, AlertTriangle, History, X
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 
@@ -117,21 +117,6 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   const monthlyFeeLimitVal = financeConfig?.maxMensalistas ?? recurrentConfig?.maxMensalistas ?? 12;
   const mensalistasAtivosList = players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro');
   const activeMensalistasCount = mensalistasAtivosList.length;
-  const exceedsLimit = activeMensalistasCount > monthlyFeeLimitVal;
-
-  let indicatorColorClass = "text-emerald-400";
-  let indicatorBgClass = "bg-[#0d1612] border-emerald-950/40";
-  let statusText = "Abaixo do Limite";
-  
-  if (activeMensalistasCount === monthlyFeeLimitVal - 1) {
-    indicatorColorClass = "text-amber-400";
-    indicatorBgClass = "bg-[#1a120a] border-amber-950/30";
-    statusText = "Última Vaga";
-  } else if (activeMensalistasCount >= monthlyFeeLimitVal) {
-    indicatorColorClass = "text-rose-400";
-    indicatorBgClass = "bg-[#1d0e11] border-rose-950/35";
-    statusText = exceedsLimit ? "Limite Ultrapassado" : "Limite Atingido";
-  }
 
   // Handle immediate payment confirmation by player
   const handleConfirmPayment = async (billId: string) => {

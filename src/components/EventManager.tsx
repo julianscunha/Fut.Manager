@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { 
-  Calendar, MapPin, Clock, Users, DollarSign, Plus, Edit3, Trash2, 
-  X, Check, Flame, Award, Gift, Compass, Settings, Share2, 
+  Calendar, MapPin, Clock, Users, DollarSign, Plus, Edit3, 
+  X, Flame, Gift, Compass, Settings, Share2, 
   Download, FileText, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw,
   ChevronDown, ChevronUp, Baby, User as UserIcon
 } from 'lucide-react';

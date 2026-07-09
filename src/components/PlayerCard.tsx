@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
-import { Shield, Sparkles, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap, ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { Shield, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES } from '../types';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 import { getAchievementsForPlayer } from '../utils/achievements';
@@ -398,31 +398,6 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       setIsRegenerating(false);
     }
   };
-
-  const getPositionAbbreviation = (pos: PlayerPosition) => {
-    switch (pos) {
-      case 'goleiro': return 'GOL';
-      case 'zagueiro': return 'ZAG';
-      case 'volante': return 'VOL';
-      case 'meio_campo': return 'MEI';
-      case 'atacante': return 'ATA';
-      default: return 'JOG';
-    }
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'disponivel':
-        return <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />;
-      case 'lesionado':
-        return <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />;
-      case 'indisponivel':
-        return <Calendar className="w-3.5 h-3.5 text-amber-400" />;
-      default:
-        return <Shield className="w-3.5 h-3.5 text-zinc-405" />;
-    }
-  };
-
   const isSoftDeleted = !!player.deletedAt;
   const avatarToDisplay = player.avatarCard || player.avatarEsportivo || player.avatarOriginal || player.photoOriginal || '';
 
@@ -510,51 +485,6 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   const rarityTheme = getRarityTheme(rarity);
 
   // Sparkline coordinates calculator
-  const renderSparkline = (historyPoints: any[]) => {
-    if (!historyPoints || historyPoints.length < 2) return null;
-    
-    const width = 280;
-    const height = 40;
-    const padding = 4;
-
-    const xCoords = historyPoints.map((_, i) => padding + (i * (width - 2 * padding) / (historyPoints.length - 1)));
-    const yCoords = historyPoints.map(p => height - padding - ((p.overall - 0.0) * (height - 2 * padding) / 5.0));
-
-    const points = xCoords.map((x, i) => `${x},${yCoords[i]}`).join(' ');
-
-    return (
-      <svg className="w-full" viewBox={`0 0 ${width} ${height}`}>
-        <defs>
-          <linearGradient id={`grad-${player.id}`} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.15" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
-          </linearGradient>
-        </defs>
-        <polygon
-          points={`${padding},${height} ${points} ${width - padding},${height}`}
-          fill={`url(#grad-${player.id})`}
-        />
-        <polyline
-          fill="none"
-          stroke="#10b981"
-          strokeWidth="1.5"
-          points={points}
-        />
-        {xCoords.map((x, i) => (
-          <circle
-            key={i}
-            cx={x}
-            cy={yCoords[i]}
-            r="2"
-            fill="#10b981"
-            stroke="#090d0b"
-            strokeWidth="0.5"
-          />
-        ))}
-      </svg>
-    );
-  };
-
   // Helper to get attribute average from metrics
   const getAttributeAverage = (attrId: string) => {
     if (metrics && metrics.computedAttributes && metrics.computedAttributes[attrId]) {
@@ -594,9 +524,6 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
 
   // OVR Calculation (Real scale 0.0 to 5.0)
   const displayOvr = (metrics?.overall ?? 3.5).toFixed(1);
-
-  const isGoalkeeper = player.primaryPosition === 'goleiro';
-
   // Social Share event implementation
   const handleShare = (e: React.MouseEvent) => {
     e.stopPropagation();

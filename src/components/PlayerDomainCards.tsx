@@ -6,29 +6,25 @@ import {
   Minus, 
   Award, 
   Activity, 
-  Shield, 
   Star, 
   Calendar, 
   Zap, 
   Trophy, 
   Target, 
   Users, 
-  CheckCircle, 
   User,
   Heart,
   CalendarCheck
 } from 'lucide-react';
 import { 
   Player, 
-  PlayerPosition, 
   POSITION_LABELS, 
   CATEGORY_LABELS, 
   STATUS_LABELS, 
   LINE_ATTRIBUTES, 
-  GOALKEEPER_ATTRIBUTES,
-  FAVORITE_TEAMS
+  GOALKEEPER_ATTRIBUTES
 } from '../types';
-import { SportsCard, SportsBadge, SportsIndicator, VISUAL_TOKENS } from './UI';
+import { SportsCard, SportsBadge } from './UI';
 import { ClubShield } from './PlayerCard';
 
 /**
@@ -192,7 +188,6 @@ export const PlayerAchievementsCard: React.FC<PlayerAchievementsCardProps> = ({
   const activeStreak = rachaStats?.currentStreak || player.currentStreak || 0;
 
   const getPlayerBadges = () => {
-    const isGk = player.primaryPosition === 'goleiro';
     return [
       {
         id: 'primeira_vitoria',

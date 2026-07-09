@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { authFetch } from '../lib/authFetch';
-import { motion, AnimatePresence } from 'motion/react';
+import { AnimatePresence } from 'motion/react';
 import {
   Camera,
   Film,
@@ -12,21 +12,14 @@ import {
   Star,
   Calendar,
   Search,
-  Filter,
   RefreshCw,
   X,
   Check,
   Image as ImageIcon,
-  Video as VideoIcon,
-  Globe,
-  Eye,
-  EyeOff,
-  Lock,
   Copy,
   ChevronLeft,
   ChevronRight,
   ArrowLeft,
-  BarChart2,
   AlertCircle,
   Clock,
   Play,
@@ -2953,8 +2946,6 @@ ${shareUrl}`;
                           const hasMedias = matchMedias.length > 0;
 
                           const formattedDate = new Date(match.date + 'T12:00:00').toLocaleDateString('pt-BR');
-                          const isLastOfGroup = matchIdx === roundArr.length - 1;
-
                           return (
                             <div key={match.id} className="relative group">
                               {/* Connector Arrow Icon indicator */}

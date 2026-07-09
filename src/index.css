@@ -80,3 +80,13 @@ html, body, #root {
   scrollbar-color: rgba(156, 163, 175, 0.25) transparent !important;
 }
 
+/* Touch target safety net: guarantees every button meets the ~44px minimum
+   recommended touch size on real touch devices, without changing desktop
+   (mouse/trackpad) density. Opt out with .btn-compact for elements that must
+   stay small by design (e.g. inline pill remove icons, dense table chevrons). */
+@media (pointer: coarse) {
+  button:not(.btn-compact) {
+    min-height: 44px;
+  }
+}
+

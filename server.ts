@@ -1290,6 +1290,11 @@ async function startServer() {
     }
 
     const formattedPhone = playerData.phone || '(85) 99999-9999';
+    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email — normaliza para
+    // undefined quando vazio, senão o 2º jogador sem e-mail colidiria com o 1º na constraint.
+    if (!playerData.email || !playerData.email.trim()) {
+      delete (playerData as any).email;
+    }
 
     const newPlayer: Player = {
       ...playerData,
@@ -1313,15 +1318,6 @@ async function startServer() {
     };
 
     db.players.push(newPlayer);
-
-    // Trigger background generation asynchronously
-    if (newPlayer.photoOriginal) {
-      setImmediate(() => {
-        processarAvatarGamerBackground(newPlayer.id).catch(err => {
-          console.error('[Avatar Background Post] Fail:', err);
-        });
-      });
-    }
 
     // Auditoria: Criação de atleta
     if (!db.userAudits) db.userAudits = [];
@@ -1373,6 +1369,16 @@ async function startServer() {
     });
 
     await writeDb(db);
+
+    // Trigger background generation only after the player is guaranteed persisted —
+    // processarAvatarGamerBackground does its own readDb() and would otherwise race with writeDb() above.
+    if (newPlayer.photoOriginal) {
+      setImmediate(() => {
+        processarAvatarGamerBackground(newPlayer.id).catch(err => {
+          console.error('[Avatar Background Post] Fail:', err);
+        });
+      });
+    }
 
     return res.status(201).json({ message: 'Jogador cadastrado com sucesso!', player: newPlayer });
   });
@@ -1525,6 +1531,11 @@ async function startServer() {
   app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
     const { responsibleName, ...updateData } = req.body as Partial<Player> & { responsibleName?: string };
+    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email — normaliza para
+    // undefined quando vazio, senão dois jogadores sem e-mail colidiriam na constraint.
+    if (updateData.email !== undefined && !updateData.email.trim()) {
+      delete updateData.email;
+    }
 
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);

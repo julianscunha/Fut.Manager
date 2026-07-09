@@ -6,8 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, UserRole, UserStatus, PlayerCategory, PlayerPosition } from '../types';
 import { 
-  Shield, Check, X, Users, AlertCircle, Sparkles, Clock, Ban, 
-  Search, Filter, Edit2, History, UserCheck, RefreshCw, UserCog, CheckCircle2, AlertTriangle, ArrowRight, Phone, Award, Sparkle
+  Check, X, Users, AlertCircle, Sparkles, 
+  Search, Filter, Edit2, History, UserCheck, RefreshCw, UserCog, CheckCircle2, ArrowRight, Phone, Award
 } from 'lucide-react';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 import { authFetch } from '../lib/authFetch';

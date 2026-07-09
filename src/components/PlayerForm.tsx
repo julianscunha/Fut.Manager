@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { Player, PlayerPosition, PlayerCategory, PlayerStatus, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
-import { Shield, Sparkles, X, Heart, Settings, UserPlus, Save, Phone, FileText } from 'lucide-react';
+import { Sparkles, X, Heart, Settings, Save, Phone, FileText } from 'lucide-react';
 
 interface PlayerFormProps {
   player?: Player | null; // If provided, we are editing

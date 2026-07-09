@@ -1,29 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, PresenceStatus, CATEGORY_LABELS, POSITION_LABELS, Player, FAVORITE_TEAMS } from '../types';
+import { User, Player, POSITION_LABELS } from '../types';
 import { authFetch } from '../lib/authFetch';
-import { getAchievementsForPlayer, getMostRecentAchievement } from '../utils/achievements';
+import { getAchievementsForPlayer } from '../utils/achievements';
 import { getRoundStatus } from '../utils/roundStatus';
-import { 
-  Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check, 
-  Users, Users2, Shield, Sparkles, X, ChevronDown, ChevronUp, BellRing,
-  CheckCircle2, AlertTriangle, ArrowDownAZ, VolumeX, Flame, Gift, Compass, Settings,
-  Baby, User as UserIcon, Share2, Crown, PlusCircle, Lock, Play, Send, Archive, RefreshCw, Camera, XCircle,
+import {
+  Calendar, MapPin, Clock, Trophy, AlertCircle, ArrowUpRight, Check,
+  Users, Shield, Sparkles, X,
+  CheckCircle2, AlertTriangle, Gift,
+  Share2, Crown, PlusCircle, Lock, Play, Archive, Camera, XCircle,
   Eye, EyeOff, Star
 } from 'lucide-react';
-import { SportsCard, SportsButton, SportsBadge, SportsHeading, SportsContainer } from './UI';
+import { SportsButton } from './UI';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
-
-const getAbbreviation = (pos: string) => {
-  switch (pos) {
-    case 'goleiro': return 'GK';
-    case 'zagueiro': return 'ZAG';
-    case 'meio_campo': return 'MEI';
-    case 'volante': return 'VOL';
-    case 'atacante': return 'ATA';
-    default: return pos.toUpperCase().slice(0, 3);
-  }
-};
 
 function computeTacticalAssignments(playersList: Player[]): Record<string, { position: string; isAdapted: boolean }> {
   const positions = ['goleiro', 'zagueiro', 'meio_campo', 'volante', 'atacante'];
@@ -95,20 +84,16 @@ function computeTacticalAssignments(playersList: Player[]): Record<string, { pos
 
 interface DashboardStatusProps {
   currentUser: User;
-  onNavigateToPlayers: () => void;
   onNavigateToApprovals?: () => void;
   onNavigateToFinances?: () => void;
-  pendingApprovalsCount: number;
   simulatedState: number | null;
   setSimulatedState: (state: number | null) => void;
 }
 
 export default function DashboardStatus({
   currentUser,
-  onNavigateToPlayers,
   onNavigateToApprovals,
   onNavigateToFinances,
-  pendingApprovalsCount,
   simulatedState,
   setSimulatedState
 }: DashboardStatusProps) {
@@ -643,186 +628,11 @@ export default function DashboardStatus({
   }, [errorMsg]);
 
   // Helper to change event counter values on dashboard
-  const changeEventRsvpCount = (eventId: string, isAdult: boolean, increment: boolean) => {
-    if (isAdult) {
-      const current = tempEventAdults[eventId] || 0;
-      const next = increment ? current + 1 : Math.max(0, current - 1);
-      setTempEventAdults(prev => ({ ...prev, [eventId]: next }));
-    } else {
-      const current = tempEventChildren[eventId] || 0;
-      const next = increment ? current + 1 : Math.max(0, current - 1);
-      setTempEventChildren(prev => ({ ...prev, [eventId]: next }));
-    }
-  };
-
   // Helper to save event RSVP from dashboard
-  const handleSaveEventRsvp = async (eventId: string) => {
-    setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: true }));
-    setErrorMsg('');
-    setSuccessMsg('');
-
-    const adults = tempEventAdults[eventId] || 0;
-    const children = tempEventChildren[eventId] || 0;
-
-    try {
-      const res = await authFetch(`/api/events/${eventId}/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          playerId: currentUser.id,
-          adultsCount: adults,
-          childrenCount: children
-        })
-      });
-
-      if (res.ok) {
-        setSuccessMsg('Presença no evento atualizada com sucesso!');
-        await loadDashboardData();
-        refreshParticipantsList(eventId);
-      } else {
-        const data = await res.json();
-        setErrorMsg(data.error || 'Erro ao registrar sua presença no evento.');
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro de conexão.');
-    } finally {
-      setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: false }));
-    }
-  };
-
   // Helper to cancel/remove event RSVP from dashboard
-  const handleCancelEventRsvp = (eventId: string) => {
-    setConfirmModal({
-      isOpen: true,
-      title: 'Cancelar Presença',
-      message: 'Tem certeza que deseja cancelar sua presença neste evento? Isso removerá seus acompanhantes e cobranças associadas.',
-      confirmText: 'Confirmar Cancelamento',
-      onConfirm: async () => {
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: true }));
-        setErrorMsg('');
-        setSuccessMsg('');
-
-        try {
-          const res = await authFetch(`/api/events/${eventId}/confirm`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              playerId: currentUser.id,
-              adultsCount: 0,
-              childrenCount: 0
-            })
-          });
-
-          if (res.ok) {
-            setSuccessMsg('Sua presença foi cancelada com sucesso!');
-            await loadDashboardData();
-            refreshParticipantsList(eventId);
-          } else {
-            const data = await res.json();
-            setErrorMsg(data.error || 'Erro ao cancelar sua presença.');
-          }
-        } catch (err: any) {
-          setErrorMsg(err.message || 'Erro de conexão.');
-        } finally {
-          setIsSavingEventRsvp(prev => ({ ...prev, [eventId]: false }));
-        }
-      }
-    });
-  };
-
   // Toggle participants list with lazy loading
-  const toggleParticipantsList = async (eventId: string) => {
-    const isExpanded = !!expandedParticipantsMap[eventId];
-    setExpandedParticipantsMap(prev => ({ ...prev, [eventId]: !isExpanded }));
-
-    if (!isExpanded && !eventParticipantsMap[eventId]) {
-      setLoadingParticipantsMap(prev => ({ ...prev, [eventId]: true }));
-      try {
-        const res = await authFetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
-        if (res.ok) {
-          const data = await res.json();
-          setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
-        }
-      } catch (err) {
-        console.error('Erro ao buscar participantes do evento:', err);
-      } finally {
-        setLoadingParticipantsMap(prev => ({ ...prev, [eventId]: false }));
-      }
-    }
-  };
-
   // Re-fetch list dynamically on RSVP updates
-  const refreshParticipantsList = async (eventId: string) => {
-    try {
-      const res = await authFetch(`/api/events/${eventId}/participants?userRole=${currentUser.role}`);
-      if (res.ok) {
-        const data = await res.json();
-        setEventParticipantsMap(prev => ({ ...prev, [eventId]: data }));
-      }
-    } catch (err) {
-      console.error('Erro ao atualizar participantes do evento:', err);
-    }
-  };
-
   // Share confirmed event participants list on WhatsApp
-  const handleShareConfirmedList = async (evt: any) => {
-    let list = eventParticipantsMap[evt.id];
-    if (!list) {
-      setLoadingParticipantsMap(prev => ({ ...prev, [evt.id]: true }));
-      try {
-        const res = await authFetch(`/api/events/${evt.id}/participants?userRole=${currentUser.role}`);
-        if (res.ok) {
-          list = await res.json();
-          setEventParticipantsMap(prev => ({ ...prev, [evt.id]: list }));
-        }
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoadingParticipantsMap(prev => ({ ...prev, [evt.id]: false }));
-      }
-    }
-
-    if (!list || list.length === 0) {
-      alert('Nenhum participante confirmado para gerar a lista de compartilhamento.');
-      return;
-    }
-
-    // Sort: Alphabetically since everyone here has confirmed
-    const sortedList = [...list].sort((a, b) => a.playerName.localeCompare(b.playerName));
-
-    const totalPessoas = sortedList.reduce((sum, p) => sum + p.adultsCount + p.childrenCount, 0);
-
-    const confirmedLines = sortedList.map(p => {
-      const parts: string[] = [];
-      const companionAdults = p.adultsCount - 1;
-      if (companionAdults > 0) {
-        parts.push(`+${companionAdults} adulto${companionAdults > 1 ? 's' : ''}`);
-      }
-      if (p.childrenCount > 0) {
-        parts.push(`+${p.childrenCount} criança${p.childrenCount > 1 ? 's' : ''}`);
-      }
-
-      if (parts.length > 0) {
-        return `${p.playerName} (${parts.join(', ')})`;
-      } else {
-        return `${p.playerName}`;
-      }
-    }).join('\n');
-
-    const formattedDate = evt.date.split('-').reverse().join('/');
-
-    const textMsg = `\uD83C\uDF89 Evento Racha do Fofim: *${evt.name}*\n\n\uD83D\uDC65 *Confirmados*\n\n${confirmedLines}\n\n*Total previsto:*\n${totalPessoas} pessoas\n\n\uD83D\uDCC5 *Data:* ${formattedDate} às ${evt.time}\n\uD83D\uDCCD *Local:* ${evt.location || 'Não especificado'}`;
-    const escapedMsg = encodeURIComponent(textMsg);
-    
-    // Diagnostic logs for WhatsApp sharing (Request Pattern)
-    console.log("textMsg:", textMsg);
-    console.log("encodeURIComponent(textMsg):", escapedMsg);
-    console.log("urlFinal:", `https://wa.me/?text=${escapedMsg}`);
-
-    window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
-  };
-
   // Handle RSVP status toggling
   const handleRsvpHolder = async (status: 'confirmado' | 'cancelado') => {
     if (!nextMatch) return;
@@ -888,37 +698,7 @@ export default function DashboardStatus({
   };
 
   // Summon suggested reserve
-  const handleSummonReserve = async (alertId: string) => {
-    setActionLoading(true);
-    try {
-      const response = await authFetch(`/api/reserve-alerts/${alertId}/summon`, { method: 'POST' });
-      if (!response.ok) throw new Error('Não foi possível realizar a convocação.');
-      
-      setSuccessMsg('Reserva convocado e incluído na lista de confirmados com sucesso!');
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao convocar reserva.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   // Clear reserve alert suggestion
-  const handleClearAlert = async (alertId: string) => {
-    setActionLoading(true);
-    try {
-      const response = await authFetch(`/api/reserve-alerts/${alertId}/clear`, { method: 'POST' });
-      if (!response.ok) throw new Error('Não foi possível dispensar o alerta.');
-      
-      setSuccessMsg('Alerta de substituição dispensado com sucesso.');
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao dispensar alerta.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   // Summon the next reserve in the sequential waitlist
   const handleSummonNextReserve = async () => {
     if (!nextMatch) return;
@@ -1008,61 +788,6 @@ export default function DashboardStatus({
       setActionLoading(false);
     }
   };
-
-  const handleQuickApproveUser = async (userId: string) => {
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await authFetch('/api/users/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          action: 'approve',
-          linkOption: 'create',
-          role: 'jogador',
-          adminName: currentUser.name || 'Admin',
-          playerCategory: 'reserva',
-          primaryPosition: 'atacante'
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao aprovar usuário.');
-      setSuccessMsg('Usuário aprovado com sucesso e atleta correspondente criado!');
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao aprovar usuário.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleQuickRejectUser = async (userId: string) => {
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await authFetch('/api/users/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          action: 'reject',
-          adminName: currentUser.name || 'Admin'
-        })
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao rejeitar usuário.');
-      setSuccessMsg('Solicitação de cadastro rejeitada com sucesso.');
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao processar ação.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleLinkUserToPlayer = async (user: any, playerId: string) => {
     setActionLoading(true);
     setErrorMsg('');
@@ -1120,34 +845,6 @@ export default function DashboardStatus({
       setActionLoading(false);
     }
   };
-
-  const handleQuickConfirmPayment = async (billId: string) => {
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const response = await authFetch('/api/finances/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          billId,
-          email: currentUser.email,
-          role: currentUser.role
-        })
-      });
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.error || 'Erro ao confirmar pagamento.');
-      }
-      setSuccessMsg('Pagamento confirmado e registrado no histórico financeiro!');
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Não foi possível confirmar o pagamento.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const fetchReservesOrder = async () => {
     setLoadingReserves(true);
     try {
@@ -1205,59 +902,6 @@ export default function DashboardStatus({
       setActionLoading(false);
     }
   };
-
-  const handleManualReleaseReserves = async () => {
-    if (!nextMatch) return;
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await authFetch(`/api/matches/${nextMatch.id}/release-reserves`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      if (!res.ok) throw new Error('Falha ao liberar reservas.');
-      setSuccessMsg('Fila de reservas liberada e convocação iniciada!');
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao liberar reservas.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleMassClearConfirmations = async () => {
-    if (!nextMatch) return;
-    if (!window.confirm('Tem certeza que deseja limpar de forma definitiva todas as confirmações e convocações desta rodada cancelada? Esta ação restaurará todos os atletas para o estado "sem resposta" nesta rodada.')) {
-      return;
-    }
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await authFetch(`/api/matches/${nextMatch.id}/clear-presences`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          responsibleId: currentUser.id,
-          responsibleName: currentUser.name,
-          responsibleEmail: currentUser.email
-        })
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Falha ao limpar confirmações.');
-      }
-      const result = await res.json();
-      setSuccessMsg(`Limpeza em massa efetuada com sucesso! ${result.numPresencesRemoved || 0} confirmações removidas e ${result.numAlertsRemoved || 0} convocações de reservas revertidas.`);
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao efetuar limpeza.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const handleShareMatchOnWhatsApp = () => {
     if (!nextMatch) return;
     const formattedDate = nextMatch.date.split('-').reverse().join('/');
@@ -1285,161 +929,6 @@ export default function DashboardStatus({
 
     window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
   };
-
-  const handleToggleSelectPlayer = (pId: string) => {
-    setSelectedPlayerIds(prev =>
-      prev.includes(pId) ? prev.filter(id => id !== pId) : [...prev, pId]
-    );
-  };
-
-  const handleToggleSelectAll = () => {
-    if (selectedPlayerIds.length === presences.length) {
-      setSelectedPlayerIds([]);
-    } else {
-      setSelectedPlayerIds(presences.map(p => p.playerId));
-    }
-  };
-
-  const handleConfirmMensalistasInBulk = async () => {
-    if (!nextMatch) return;
-    const pendingMensalistas = presences.filter(p => {
-      const isMensalista = p.category === 'mensalista';
-      return isMensalista && p.presenceStatus === 'nao_confirmado';
-    });
-    const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
-    const vacancies = Math.max(0, maxPlayersLimit - confirmedCount);
-    
-    if (pendingMensalistas.length === 0) {
-      setErrorMsg('Não há mensalistas pendentes para confirmar.');
-      return;
-    }
-    if (vacancies <= 0) {
-      setErrorMsg('Não há vagas disponíveis neste racha.');
-      return;
-    }
-
-    const playerIdsToConfirm = pendingMensalistas.slice(0, vacancies).map(p => p.playerId);
-    
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerIds: playerIdsToConfirm, status: 'confirmado' })
-      });
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.error || 'Erro ao confirmar mensalistas em lote.');
-      }
-      setSuccessMsg(`Foram confirmados ${playerIdsToConfirm.length} mensalistas pendentes com sucesso!`);
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao realizar confirmação coletiva de mensalistas.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleConfirmReservesInBulk = async () => {
-    if (!nextMatch) return;
-    const pendingReservesToConfirm = presences.filter(p => {
-      return p.category === 'reserva' && p.declaredPresence === true && p.presenceStatus === 'nao_confirmado';
-    });
-    
-    const priorityIds = priorityReserves.map(r => r.id);
-    const sortedPendingReserves = [...pendingReservesToConfirm].sort((a, b) => {
-      const idxA = priorityIds.indexOf(a.playerId);
-      const idxB = priorityIds.indexOf(b.playerId);
-      const orderA = idxA !== -1 ? idxA : 999999;
-      const orderB = idxB !== -1 ? idxB : 999999;
-      return orderA - orderB;
-    });
-
-    const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
-    const vacancies = Math.max(0, maxPlayersLimit - confirmedCount);
-
-    if (sortedPendingReserves.length === 0) {
-      setErrorMsg('Não há reservas da fila disponíveis e pendentes para confirmar.');
-      return;
-    }
-    if (vacancies <= 0) {
-      setErrorMsg('Não há vagas disponíveis neste racha.');
-      return;
-    }
-
-    const playerIdsToConfirm = sortedPendingReserves.slice(0, vacancies).map(p => p.playerId);
-
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerIds: playerIdsToConfirm, status: 'confirmado' })
-      });
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.error || 'Erro ao confirmar reservas em lote.');
-      }
-      setSuccessMsg(`Foram confirmados ${playerIdsToConfirm.length} reservas com sucesso!`);
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao realizar confirmação coletiva de reservas.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleBulkTogglePresence = async (status: 'confirmado' | 'cancelado') => {
-    if (!nextMatch || selectedPlayerIds.length === 0) return;
-    setActionLoading(true);
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const response = await authFetch(`/api/matches/${nextMatch.id}/presences/bulk-toggle`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerIds: selectedPlayerIds, status })
-      });
-      const resData = await response.json();
-      if (!response.ok) {
-        throw new Error(resData.error || 'Erro ao alterar as presenças.');
-      }
-      setSuccessMsg(`Presenças (${selectedPlayerIds.length}) alteradas com sucesso pelo administrador!`);
-      setSelectedPlayerIds([]);
-      await loadDashboardData();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao alterar presenças em massa.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
-      case 'auxiliar':
-        return 'bg-sky-500/15 text-sky-400 border-sky-500/30';
-      default:
-        return 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30';
-    }
-  };
-
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'Administrador';
-      case 'auxiliar':
-        return 'Auxiliar Técnico';
-      default:
-        return 'Jogador';
-    }
-  };
-
   // Aggregate stats from matching list
   const POSITION_ORDER = ['goleiro', 'zagueiro', 'volante', 'meio_campo', 'atacante'];
 
@@ -1530,7 +1019,6 @@ export default function DashboardStatus({
 
   const confirmedCount = roundStatus.confirmed;
   const maxPlayersLimit = roundStatus.totalSlots;
-  const missingCount = roundStatus.vacancies;
   const isDeadlineExpired = nextMatch ? nextMatch.isDeadlineExpired : false;
   const areReservesReleased = nextMatch ? (nextMatch.reservesReleased === true) : false;
 
@@ -1552,12 +1040,6 @@ export default function DashboardStatus({
   });
 
   const pendingBills = (finData?.bills || []).filter((b: any) => b.status === 'pendente');
-
-  const getPlayerNameForBill = (playerId: string) => {
-    const playerObj = (finData?.players || []).find((p: any) => p.id === playerId);
-    return playerObj ? playerObj.name : 'Jogador';
-  };
-
   const getSuggestedPlayer = (user: any, playersList: any[]) => {
     if (!user || !playersList) return null;
     if (user.email) {
@@ -1605,11 +1087,7 @@ export default function DashboardStatus({
   };
 
   const adminState = getAdminOperationalState();
-  const hasPendingActions = isAdmin && adminState !== null;
-
   // Check if there are any administrative pendencies to display the block
-  const unlinkedUsersCount = allUsersList.filter((u: any) => u.status === 'approved' && !u.playerId && !ignoredUserIds.includes(u.id)).length;
-  
   // Build the list of active administrative pendencies
   const adminPendenciesList = [];
 
@@ -1743,18 +1221,6 @@ export default function DashboardStatus({
   };
 
   const bestKeeper = getBestKeeper();
-
-  const getPositionEmoji = (pos: string) => {
-    switch (pos) {
-      case 'goleiro': return '🧤';
-      case 'zagueiro': return '🛡️';
-      case 'volante': return '🧠';
-      case 'meio_campo': return '🧠';
-      case 'atacante': return '⚡';
-      default: return '🏃';
-    }
-  };
-
   const getMatchState = (): 'AGENDADO' | 'CONFIRMACOES_ABERTAS' | 'RACHA_FECHADO' | 'SORTEIO_REALIZADO' | 'PARTIDA_ENCERRADA' | null => {
     if (!nextMatch) return null;
     if (nextMatch.status === 'agendada') return 'AGENDADO';
@@ -2491,52 +1957,6 @@ export default function DashboardStatus({
       </AnimatePresence>
     );
   };
-
-  const getMyTeamInfo = () => {
-    if (!matchDraw || !matchDraw.teams || !resolvedPlayerId) return null;
-    const myTeamObj = matchDraw.teams.find((t: any) => t.playerIds.includes(resolvedPlayerId));
-    if (!myTeamObj) return null;
-
-    const playerObj = players.find(p => p.id === resolvedPlayerId);
-    const position = playerObj ? playerObj.primaryPosition : 'Jogador';
-
-    const teamOverall = myTeamObj.name === 'Azul'
-      ? matchDraw.overallBlue
-      : myTeamObj.name === 'Vermelho'
-        ? matchDraw.overallRed
-        : matchDraw.overallGreen;
-
-    return {
-      teamName: myTeamObj.name,
-      position: position,
-      teamOverall: teamOverall,
-    };
-  };
-
-  const getMyTeamResultInfo = () => {
-    if (!matchDraw || !matchDraw.teams || !resolvedPlayerId) return null;
-    const myTeamObj = matchDraw.teams.find((t: any) => t.playerIds.includes(resolvedPlayerId));
-    if (!myTeamObj) return null;
-
-    const myTeamName = myTeamObj.name;
-    const teamWins = [
-      { name: 'Azul', wins: simWinsBlue },
-      { name: 'Vermelho', wins: simWinsRed },
-      { name: 'Verde', wins: simWinsGreen },
-    ];
-    const sortedTeams = [...teamWins].sort((a, b) => b.wins - a.wins);
-
-    const myWins = teamWins.find(t => t.name === myTeamName)?.wins ?? 0;
-    const myPlaceIndex = sortedTeams.findIndex(t => t.name === myTeamName);
-    const myPlace = myPlaceIndex !== -1 ? myPlaceIndex + 1 : 1;
-
-    return {
-      teamName: myTeamName,
-      wins: myWins,
-      place: myPlace,
-    };
-  };
-
   const renderClosedMuseumScreen = () => {
     const isCancelled = nextMatch?.status === 'cancelada';
     return (
@@ -4066,30 +3486,6 @@ export default function DashboardStatus({
       </div>
     );
   }
-
-  const getStatusLabel = (stateNum: number) => {
-    switch (stateNum) {
-      case 1: return "Agendada";
-      case 2: return "Confirmações Abertas";
-      case 3: return "Lista Quase Completa";
-      case 4: return "Lista Fechada";
-      case 5: return "Sorteio Realizado";
-      case 6: return "Dia de Racha";
-      case 7: return "Jogo Encerrado (Aguardando Placar)";
-      case 8: return "Avaliações Abertas";
-      case 9: return "Resultado Consolidado";
-      case 10: return "Museu & Galeria Atualizados";
-      default: return "Aguardando";
-    }
-  };
-
-  const getAthleteStatus = () => {
-    if (myPresence === 'confirmado') return 'confirmado';
-    if (myPresence === 'cancelado') return 'indisponível';
-    if (currentUserCategory === 'reserva' && myPresence === 'nao_confirmado') return 'reserva';
-    return 'aguardando';
-  };
-
   return (
     <div className="space-y-6 flex flex-col pt-2 pb-12 animate-fadeIn" id="dashboard-status-main-container">
       {/* SUCCESS & ERROR MESSAGE FLOATING NOTIFICATIONS */}

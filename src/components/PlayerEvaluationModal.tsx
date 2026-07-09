@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
-import { Player, User, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
-import { X, Award, Shield, Check, Info, AlertTriangle, ArrowLeft, Star } from 'lucide-react';
+import { Player, User, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, FAVORITE_TEAMS } from '../types';
+import { X, Award, Check, Info, AlertTriangle, ArrowLeft, Star } from 'lucide-react';
 
 interface PlayerEvaluationModalProps {
   player: Player;
@@ -13,8 +13,6 @@ interface PlayerEvaluationModalProps {
 export default function PlayerEvaluationModal({ player, currentUser, onClose, onEvaluationSaved }: PlayerEvaluationModalProps) {
   const isGk = player.primaryPosition === 'goleiro';
   const attributes = isGk ? GOALKEEPER_ATTRIBUTES : LINE_ATTRIBUTES;
-  const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
-
   const [ratings, setRatings] = useState<Record<string, number>>({});
   const [metrics, setMetrics] = useState<any>(null);
   const [loading, setLoading] = useState(false);

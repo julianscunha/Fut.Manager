@@ -11,15 +11,11 @@ import {
   Archive,
   ArrowUp,
   ArrowDown,
-  AlertTriangle,
   History,
   Clock,
   CheckCircle,
   X,
   AlertCircle,
-  HelpCircle,
-  Eye,
-  EyeOff,
   User,
   RotateCcw
 } from 'lucide-react';
@@ -378,11 +374,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
 
   // Filtering list based on selected view tab
   const getFilteredItems = () => {
-    const today = new Date().toISOString().split('T')[0];
-
     // Find completed match IDs
-    const completedMatchIds = new Set(matches.filter(m => m.status === 'encerrada').map(m => m.id));
-
     if (activeTab === 'regra') {
       return posts.filter(p => p.category === 'regra' && !p.isDeleted && !p.isArchived)
                   .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));

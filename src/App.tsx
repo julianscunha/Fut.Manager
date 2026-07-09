@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Player, POSITION_LABELS, CATEGORY_LABELS, FAVORITE_TEAMS } from './types';
+import { User, Player } from './types';
 import AuthScreens from './components/AuthScreens';
 import { authFetch } from './lib/authFetch';
 import DashboardStatus from './components/DashboardStatus';
@@ -31,7 +31,6 @@ import {
   CheckSquare,
   PlusCircle,
   Search,
-  Filter,
   AlertCircle,
   Sparkles,
   RefreshCw,
@@ -164,22 +163,16 @@ export default function App() {
         ]);
 
         if (!active) return;
-
-        let fetchedMetrics = null;
         if (evalsRes.ok) {
           const data = await evalsRes.json();
-          fetchedMetrics = data.metrics;
           setFeaturedMetrics(data.metrics);
         }
-
-        let fetchedRachaStats = null;
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           if (statsData.individual) {
             setAllPlayersStats(statsData.individual);
             const found = statsData.individual.find((s: any) => s.playerId === featured.id);
             if (found) {
-              fetchedRachaStats = found;
               setFeaturedRachaStats(found);
             }
           }
@@ -314,31 +307,6 @@ export default function App() {
       console.error('Falha ao sincronizar alertas de mensalistas', err);
     }
   };
-
-  const handleQuickPromote = async (playerId: string) => {
-    setErrorMsg('');
-    setSuccessMsg('');
-    try {
-      const res = await authFetch(`/api/players/${playerId}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          category: 'mensalista',
-          responsibleName: currentUser?.name || 'Administrador'
-        })
-      });
-      if (res.ok) {
-        setSuccessMsg('Atleta promovido a mensalista com sucesso!');
-        await fetchPlayers();
-        setTimeout(() => setSuccessMsg(''), 5000);
-      } else {
-        const data = await res.json();
-        setErrorMsg(data.error || 'Erro ao promover atleta.');
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro de conexão.');
-    }
-  };
-
   // Fetch pending registrations countdown (Admin/Auxiliar)
   const fetchPendingCount = async () => {
     if (!currentUser) return;
@@ -904,10 +872,8 @@ export default function App() {
         {activeTab === 'dash' && (
           <DashboardStatus
             currentUser={currentUser}
-            onNavigateToPlayers={() => setActiveTab('players')}
             onNavigateToApprovals={isEditor ? (() => setActiveTab('approvals')) : undefined}
             onNavigateToFinances={() => setActiveTab('finances')}
-            pendingApprovalsCount={pendingApprovalsCount}
             simulatedState={simulatedState}
             setSimulatedState={setSimulatedState}
           />

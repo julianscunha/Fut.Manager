@@ -10,8 +10,7 @@ import {
   DollarSign, 
   Gift, 
   UserPlus, 
-  Dice5, 
-  Menu 
+  Dice5 
 } from 'lucide-react';
 import { Notification, NotificationCategory, NotificationPreferences } from '../types';
 

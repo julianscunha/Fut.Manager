@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, Image as ImageIcon, Calendar, MapPin, Clock, Eye, X } from 'lucide-react';
+import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, X } from 'lucide-react';
 import { User } from '../types';
 
 interface AuthScreensProps {

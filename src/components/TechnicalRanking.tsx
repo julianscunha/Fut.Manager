@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { Player, User, POSITION_LABELS, FAVORITE_TEAMS } from '../types';
 import { 
-  Award, Medal, Trophy, Sparkles, RefreshCw, Star, Shield, 
-  Users, Users2, Flame, UserCheck, Calendar, Activity, Zap, Compass,
-  Sliders, Download, CheckCircle2, XCircle, FileText, TrendingUp,
-  TrendingDown, ArrowUp, ArrowDown, Minus, Crown, Search, Target
+  Award, Trophy, Sparkles, RefreshCw, Star, Shield, 
+  Users, Users2, Flame, Calendar, Activity, Zap, Compass,
+  Sliders, Download, CheckCircle2, XCircle, FileText, TrendingUp, ArrowUp, ArrowDown, Minus, Crown, Search, Target
 } from 'lucide-react';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 import ResponsiveTabsContainer from './ResponsiveTabsContainer';
@@ -40,8 +39,6 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
   const [evaluationPlayer, setEvaluationPlayer] = useState<Player | null>(null);
   const [successToast, setSuccessToast] = useState('');
 
-  // States to compile legacy/unreachable auditoria JSX without errors
-  const [activeScenario, setActiveScenario] = useState<string>('default');
   const [auditSimCount, setAuditSimCount] = useState<number>(100);
   const [auditLoading, setAuditLoading] = useState<boolean>(false);
   const [maxOvrDiffTarget, setMaxOvrDiffTarget] = useState<number>(0.5);
@@ -453,8 +450,6 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
             deviation: Math.round(dev * 10) / 10
           };
         });
-        const maxColorDeviation = Math.round(Math.max(...athleteColorData.map(a => a.deviation)) * 10) / 10;
-
         // 3. OVR Difference Histogram calculations (Etapa 5)
         const histogramBins = [
           { range: '0.00 - 0.05', count: 0 },
@@ -990,10 +985,6 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
         const thirdPlace = top3List[2];
 
         // Comparison against Top 3 Average
-        const avgTop3Ovr = top3List.reduce((acc: number, p: any) => acc + getPlayerOvr(p.playerId), 0) / Math.max(1, top3List.length);
-        const avgTop3Wins = top3List.reduce((acc: number, p: any) => acc + p.vitorias, 0) / Math.max(1, top3List.length);
-        const avgTop3Aprov = top3List.reduce((acc: number, p: any) => acc + p.aproveitamento, 0) / Math.max(1, top3List.length);
-
         // Trend icon generator
         const getTrendIcon = (player: any) => {
           const isUp = player.currentStreak >= 2;
@@ -2419,316 +2410,6 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
 
       {/* ==================================================== */}
-      {/* ---------- SUBTAB 4: HOMOLOGAÇÃO DE BADGES --------- */}
-      {/* ==================================================== */}
-      {false && (
-        <div className="space-y-6 animate-fadeIn" id="homologacao-badges-panel">
-          <div className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-900/60">
-            <h3 className="text-white font-bold text-base flex items-center gap-2">
-              <Shield className="w-5 h-5 text-emerald-400" />
-              <span>Ambiente de Homologação Operacional de Badges</span>
-            </h3>
-            <p className="text-xs text-zinc-400 mt-1.5 leading-relaxed font-sans">
-              Como o banco de dados atual não possui massa crítica de dados reais para as novas badges de presença,
-              esta interface serve como um <strong>banco de testes de cenários controlados</strong>. Ela valida as regras de negócios
-              em tempo real contra dados de testes isolados e comprova a integridade e precisão dos desbloqueios.
-            </p>
-          </div>
-
-          {/* Scenario Selector */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            {[
-              { id: 'A', title: 'Cenário A', badge: '⏰ Pontual', desc: 'Atleta confirma antecipadamente' },
-              { id: 'B', title: 'Cenário B', badge: '📲 Comprometido', desc: 'Confirmas consecutivas' },
-              { id: 'C', title: 'Cenário C', badge: '🤝 Fechamento', desc: 'Vagas mínimas da rodada' },
-              { id: 'D', title: 'Cenário D', badge: '🌿 Inabalável', desc: 'Sequência sem faltas' },
-            ].map((sc) => (
-              <button
-                key={sc.id}
-                onClick={() => setActiveScenario(sc.id as any)}
-                className={`p-3.5 rounded-xl border text-left transition duration-250 cursor-pointer ${
-                  activeScenario === sc.id
-                    ? 'bg-emerald-950/20 border-emerald-500/40 shadow-md shadow-emerald-500/5'
-                    : 'bg-zinc-950/30 border-zinc-900/80 hover:border-zinc-800'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-[10px] font-bold font-mono px-1.5 py-0.5 rounded uppercase ${
-                    activeScenario === sc.id ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-900 text-zinc-500'
-                  }`}>{sc.title}</span>
-                  <span className="text-sm">{sc.badge.split(' ')[0]}</span>
-                </div>
-                <h4 className="font-sans font-bold text-white text-xs mt-2">{sc.badge.split(' ').slice(1).join(' ')}</h4>
-                <p className="text-[10px] text-zinc-500 mt-1 font-mono leading-tight">{sc.desc}</p>
-              </button>
-            ))}
-          </div>
-
-          {/* Active Scenario Card */}
-          {(() => {
-            const sc = [
-              {
-                id: 'A',
-                title: 'Cenário A: Confirmação Antecipada (Badges de Presença)',
-                badge: '⏰ Pontual',
-                description: 'Neste cenário, simula-se um atleta (Pedro Pontual) que faz sua confirmação de presença com antecedência, ou seja, antes de estourar o limite de dias estipulado no prazo de confirmação da rodada.',
-                athlete: {
-                  name: 'Pedro Pontual (Simulado)',
-                  presencesCount: 3,
-                  absencesCount: 0,
-                  earlyConfirmationsCount: 1, // elegivel para Pontual
-                  consecutivePresencesCount: 1,
-                  completedMinimumVacanciesCount: 0,
-                },
-                expectations: {
-                  pontual: true,
-                  comprometido: false,
-                  fechamento: false,
-                  inabalavel: false
-                }
-              },
-              {
-                id: 'B',
-                title: 'Cenário B: Confirmações Consecutivas',
-                badge: '📲 Comprometido',
-                description: 'Simula um atleta (Carlos Comprometido) que demonstra consistência confirmando presença em várias rodadas consecutivas de forma ininterrupta.',
-                athlete: {
-                  name: 'Carlos Comprometido (Simulado)',
-                  presencesCount: 6,
-                  absencesCount: 0,
-                  earlyConfirmationsCount: 0,
-                  consecutivePresencesCount: 6, // elegivel para Comprometido e Inabalável (6 presenças, 0 faltas)
-                  completedMinimumVacanciesCount: 0,
-                },
-                expectations: {
-                  pontual: false,
-                  comprometido: true,
-                  fechamento: false,
-                  inabalavel: true
-                }
-              },
-              {
-                id: 'C',
-                title: 'Cenário C: Completar Vagas Mínimas',
-                badge: '🤝 Fechamento',
-                description: 'Simula o "parceiro de última hora" ou o cara que ajuda a salvar a rodada (Felipe Fechamento), que confirma presença preenchendo as vagas mínimas indispensáveis para o racha acontecer.',
-                athlete: {
-                  name: 'Felipe Fechamento (Simulado)',
-                  presencesCount: 4,
-                  absencesCount: 0,
-                  earlyConfirmationsCount: 0,
-                  consecutivePresencesCount: 2,
-                  completedMinimumVacanciesCount: 1, // elegivel para Fechamento
-                },
-                expectations: {
-                  pontual: false,
-                  comprometido: false,
-                  fechamento: true,
-                  inabalavel: false
-                }
-              },
-              {
-                id: 'D',
-                title: 'Cenário D: Sequência sem Faltas',
-                badge: '🌿 Inabalável',
-                description: 'Simula o atleta com frequência impecável (Igor Inabalável) que mantém uma sequência de participações consistente sem registrar nenhuma ausência ou cancelamento de última hora.',
-                athlete: {
-                  name: 'Igor Inabalável (Simulado)',
-                  presencesCount: 5,
-                  absencesCount: 0,
-                  earlyConfirmationsCount: 0,
-                  consecutivePresencesCount: 5,
-                  completedMinimumVacanciesCount: 0, // elegivel para Inabalável e Comprometido (5 consecutivas)
-                },
-                expectations: {
-                  pontual: false,
-                  comprometido: true,
-                  fechamento: false,
-                  inabalavel: true
-                }
-              }
-            ].find(s => s.id === activeScenario)!;
-
-            const evaluateBadge = (badgeId: string, athleteData: typeof sc['athlete']) => {
-              const { presencesCount, absencesCount, earlyConfirmationsCount, consecutivePresencesCount, completedMinimumVacanciesCount } = athleteData;
-              if (badgeId === 'pontual') {
-                return (presencesCount >= 10 || earlyConfirmationsCount >= 1);
-              }
-              if (badgeId === 'comprometido') {
-                return (presencesCount >= 25 || consecutivePresencesCount >= 5);
-              }
-              if (badgeId === 'fechamento') {
-                return (completedMinimumVacanciesCount >= 1);
-              }
-              if (badgeId === 'inabalavel') {
-                return (absencesCount === 0 && presencesCount >= 5);
-              }
-              return false;
-            };
-
-            const badgesList = [
-              { id: 'pontual', icon: '⏰', name: 'Pontual', criteria: 'Confirmação antecipada antes do prazo limite' },
-              { id: 'comprometido', icon: '📲', name: 'Comprometido', criteria: 'Mínimo 5 confirmações consecutivas' },
-              { id: 'fechamento', icon: '🤝', name: 'Fechamento', criteria: 'Completa as vagas mínimas exigidas na rodada' },
-              { id: 'inabalavel', icon: '🌿', name: 'Inabalável', criteria: 'Sequência sólida de 5+ jogos sem nenhuma falta/cancelamento' },
-            ];
-
-            return (
-              <div className="space-y-6">
-                {/* Scenario details card */}
-                <div className="bg-zinc-950/30 rounded-2xl border border-zinc-900 p-5 space-y-4">
-                  <div>
-                    <h4 className="text-white font-bold text-sm">{sc.title}</h4>
-                    <p className="text-xs text-zinc-400 mt-1 leading-relaxed">{sc.description}</p>
-                  </div>
-
-                  {/* Simulated metrics readout */}
-                  <div className="bg-zinc-950/60 rounded-xl border border-zinc-900 p-4 font-mono text-xs">
-                    <div className="text-emerald-400 font-bold mb-2 uppercase tracking-wide text-[10px]">📊 Dados do Atleta no Banco de Teste</div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-[11px] text-zinc-300">
-                      <div className="bg-zinc-900/50 p-2 rounded border border-zinc-850">
-                        <span className="text-[10px] text-zinc-500 block uppercase">Atleta</span>
-                        <span className="font-semibold text-white font-sans">{sc.athlete.name}</span>
-                      </div>
-                      <div className="bg-zinc-900/50 p-2 rounded border border-zinc-850 text-center">
-                        <span className="text-[10px] text-zinc-500 block uppercase">Presenças Totais</span>
-                        <span className="font-extrabold text-white text-sm">{sc.athlete.presencesCount}</span>
-                      </div>
-                      <div className="bg-zinc-900/50 p-2 rounded border border-zinc-850 text-center">
-                        <span className="text-[10px] text-zinc-500 block uppercase">Faltas/Cancelados</span>
-                        <span className="font-extrabold text-white text-sm">{sc.athlete.absencesCount}</span>
-                      </div>
-                      <div className="bg-zinc-900/50 p-2 rounded border border-zinc-850 text-center">
-                        <span className="text-[10px] text-zinc-500 block uppercase">Presenças Consecutivas</span>
-                        <span className="font-extrabold text-amber-400 text-sm">{sc.athlete.consecutivePresencesCount}</span>
-                      </div>
-                      <div className="bg-zinc-900/50 p-2 rounded border border-zinc-850 text-center">
-                        <span className="text-[10px] text-zinc-500 block uppercase">Confirmado Antes Prazo</span>
-                        <span className="font-extrabold text-emerald-400 text-sm">{sc.athlete.earlyConfirmationsCount}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* THE MATRIX OF TESTS */}
-                <div className="bg-zinc-950/20 rounded-2xl border border-zinc-900 overflow-hidden shadow-xl" id="matriz-testes-container">
-                  <div className="bg-[#1f2937]/30 px-4 py-3 border-b border-zinc-900 text-zinc-300 text-xs font-mono font-bold uppercase tracking-wider flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-emerald-500" />
-                      <span>Matriz de Teste Operacional - {sc.id}</span>
-                    </div>
-                    <span className="text-[10px] text-emerald-400 font-black">Massa Controlada Ativa</span>
-                  </div>
-
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs font-mono text-zinc-300">
-                      <thead>
-                        <tr className="border-b border-zinc-900 bg-zinc-950/50 text-[10px] text-zinc-500 uppercase">
-                          <th className="py-3 px-4">Badge</th>
-                          <th className="py-3 px-3">Critério de Elegibilidade</th>
-                          <th className="py-3 px-3 text-center w-28">Elegível (Mock)</th>
-                          <th className="py-3 px-3 text-center w-28">Recebeu (Code)</th>
-                          <th className="py-3 px-4 text-center w-32">Resultado</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-zinc-900/60 font-mono">
-                        {badgesList.map((badge) => {
-                          const isEligible = sc.expectations[badge.id as keyof typeof sc.expectations];
-                          const hasReceived = evaluateBadge(badge.id, sc.athlete);
-                          const pass = isEligible === hasReceived;
-
-                          return (
-                            <tr key={badge.id} className="hover:bg-zinc-900/10 transition">
-                              <td className="py-3 px-4">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-lg leading-none shrink-0">{badge.icon}</span>
-                                  <span className="font-sans font-bold text-white text-[13px]">{badge.name}</span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-3 text-zinc-400 text-[11px] font-sans">
-                                {badge.criteria}
-                              </td>
-                              <td className="py-3 px-3 text-center">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                  isEligible ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-900 text-zinc-500'
-                                }`}>
-                                  {isEligible ? 'SIM' : 'NÃO'}
-                                </span>
-                              </td>
-                              <td className="py-3 px-3 text-center">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
-                                  hasReceived ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-900 text-zinc-500'
-                                }`}>
-                                  {hasReceived ? 'SIM' : 'NÃO'}
-                                </span>
-                              </td>
-                              <td className="py-3 px-4 text-center font-bold">
-                                {pass ? (
-                                  <span className="inline-flex items-center gap-1 text-emerald-400 text-xs bg-emerald-500/5 px-2.5 py-1 rounded border border-emerald-500/15">
-                                    🟢 Aprovado
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 text-rose-400 text-xs bg-rose-500/5 px-2.5 py-1 rounded border border-rose-500/15">
-                                    🔴 Falhou
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* VALIDATION BREAKDOWN CARD */}
-                <div className="bg-zinc-950/40 rounded-2xl border border-zinc-900/80 p-5 space-y-4">
-                  <h4 className="text-white font-bold text-xs uppercase tracking-wide font-mono text-zinc-400">🔍 Relatório de Auditoria de Integridade</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-zinc-500">🔓 Desbloqueio Correto:</span>
-                        <span className="text-emerald-400 font-bold flex items-center gap-1">
-                          Verificado 🟢
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-zinc-500">🔒 Bloqueio Correto:</span>
-                        <span className="text-emerald-400 font-bold flex items-center gap-1">
-                          Verificado 🟢
-                        </span>
-                      </div>
-                    </div>
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-zinc-500">🛡️ Ausência de Falsos Positivos:</span>
-                        <span className="text-emerald-400 font-bold flex items-center gap-1">
-                          100% OK 🟢
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs font-mono">
-                        <span className="text-zinc-500">🛡️ Ausência de Falsos Negativos:</span>
-                        <span className="text-emerald-400 font-bold flex items-center gap-1">
-                          100% OK 🟢
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-3 text-[11px] text-emerald-400 font-sans leading-relaxed flex items-start gap-2">
-                    <span className="text-sm shrink-0">✨</span>
-                    <span>
-                      <strong>Comprovação Prática de Funcionamento Concluída:</strong> Todas as regras operacionais foram testadas, garantindo que o algoritmo de badges de presença reaja em perfeita conformidade física de acordo com a massa de dados injetada.
-                    </span>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-
-      {/* ==================================================== */}
       {/* ---------- SUBTAB 5: AUDITORIA DO SORTEIO --------- */}
       {/* ==================================================== */}
       {rankingSubTab === 'auditoria' && (
@@ -3217,7 +2898,6 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {auditResult.athleteDiversityData.map((row: any) => {
                           const isExcellent = row.status === 'Excelente';
-                          const isGood = row.status === 'Bom' || row.status === 'Excelente';
                           return (
                             <div key={row.id} className="bg-zinc-950/40 p-3.5 rounded-xl border border-zinc-900/60 space-y-2">
                               <div className="flex justify-between items-center">

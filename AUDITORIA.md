@@ -11,7 +11,9 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
 | **Integridade de Regra de Negócio** | ✅ Excelente (92%) | Tratamento de isenções financeiras de goleiros e reservas perfeitamente integrado no backend. |
 | **Consistência de Banco de Dados** | ⚠️ Alerta (Médio) | Duplicidade potencial no incremento de afinidades de duplas/trios caso as rotas `confirm-lock` e `results` sejam acionadas sequencialmente na mesma semana. |
 | **Lógica Estatística (Streaks)** | 🛠️ Corrigido (Crítico) | O motor estatístico utilizava valores globais estáticos em vez dos streak maps cronológicos recalculados dinamicamente na filtragem por temporada. |
-| **Responsividade Mobile-First**| ✅ Excelente (95%) | Design limpo seguindo estilo Cartola / SofaScore, adaptável de 320px a telas de Desktop. |
+| **Responsividade Mobile-First**| ⚠️ Corrigido (era superestimado) | A alegação original de "95% excelente" não se sustentou em auditoria independente (ver §16) — corrigidos: affordance de scroll ausente nas sub-abas, alvo de toque inconsistente (agora padronizado globalmente via CSS), ~400 linhas de código morto/órfão removidas. |
+| **Persistência de Dados** | ✅ Migrado | De arquivo JSON local (`data/database.json`) para Postgres via Supabase, com Storage para uploads. Ver §14. |
+| **Autenticação** | 🛠️ Corrigido (Crítico) | Header `x-user-id` forjável substituído por JWT assinado + bcrypt. Ver §15. |
 
 ---
 
@@ -71,6 +73,48 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
     *   **375px / 390px / 414px (Dispositivos Modernos):** UI limpa, com botões de tamanho de toque recomendável (>44px) e inputs de fácil digitação.
 *   **Nomenclatura Consolidada:** Utilização de termos em português correspondentes aos exigidos ("Racha", "Partida", "Jogador", "Auxiliar", "Administrador" e "Mensalista").
 
+> **Nota (atualização posterior):** a avaliação acima (item 13) foi a auto-avaliação original do sistema. Uma auditoria independente subsequente (§16) verificou os componentes linha a linha e encontrou divergências reais em relação a essa nota — ver §16 para os achados corrigidos.
+
+### 14. Migração de Hospedagem: Supabase (Postgres + Storage) + Render
+*   **Motivação:** o sistema rodava inteiramente sobre um arquivo `data/database.json` local (sem banco de dados real) e uploads gravados em disco local, inviabilizando qualquer hospedagem em nuvem persistente.
+*   **O que mudou:**
+    *   **Persistência:** `server/db.ts` reescrito para usar Postgres via Supabase. `readDb()`/`writeDb()` fazem leitura/escrita em lote de 31 tabelas (schema espelhando `src/types.ts` campo a campo), com rastreamento de "sujeira" (snapshot) para só regravar tabelas que realmente mudaram a cada requisição.
+    *   **Uploads:** fotos de jogador e mídia do mural migradas para Supabase Storage (bucket `Uploads`, público), com validação real de tipo por magic bytes (`file-type`) e tamanho real do buffer — antes a "integração com S3" era inteiramente simulada (URL fake, sem upload de verdade).
+    *   **Schema sem foreign keys:** decisão deliberada — o sistema original (JSON) nunca teve integridade referencial no banco, sempre gerenciada em código; manter esse modelo permite escrita independente por tabela sem se preocupar com ordem de dependências.
+    *   **Hospedagem:** Render (Web Service único via Docker), servindo frontend + API no mesmo processo — decisão de custo-benefício frente a separar frontend (Amplify) e backend (App Runner), que sairia mais caro para o volume de uso deste grupo.
+*   **Guia completo:** ver `.DEPLOY.md` (passo a passo de setup) e `.DEPLOY-CHECKLIST.md` (checklist de verificação).
+
+### 15. Hardening de Segurança (achados críticos corrigidos na migração)
+Auditoria de segurança encontrou e corrigiu, antes de expor o sistema publicamente:
+
+1.  **Impersonation total (Crítico):** `getAuthenticatedUser` confiava cegamente no header `x-user-id` enviado pelo cliente — qualquer requisição podia forjar esse header e agir como qualquer usuário, inclusive admin. **Corrigido:** autenticação por JWT assinado (`server/auth.ts`), verificado via header `Authorization: Bearer <token>`. Testado explicitamente: forjar o header antigo agora retorna 401.
+2.  **Senha em texto puro (Crítico):** senhas armazenadas sem hash. **Corrigido:** hash bcrypt (10 rounds) via `bcryptjs`, com seed inicial gerado por `pgcrypto` no próprio SQL.
+3.  **Reset de senha sem validar token (Crítico):** `/api/auth/reset-password` trocava a senha de qualquer usuário sem checar o token gerado em `/forgot-password`. **Corrigido:** token com expiração de 15 minutos, validado e descartado após uso único.
+4.  **Vazamento de dados de usuários (Crítico):** `GET /api/users` retornava a lista completa (incluindo e-mails) sem autenticação nenhuma. **Corrigido:** exige role admin/auxiliar.
+5.  **Confiança em `role` vindo do cliente (Alto):** ~7 rotas (mural, eventos, financeiro) liam `reqUserRole`/`req.query.userRole` do body/query do cliente para decidir permissões — um usuário comum podia se passar por admin manipulando o payload. **Corrigido:** role sempre derivado do usuário autenticado no servidor.
+6.  **Upload sem validação real (Alto):** validava só extensão/mimetype declarado pelo cliente. **Corrigido:** validação por magic bytes + tamanho real do buffer.
+7.  **Sem rate limiting (Crítico):** zero proteção contra força bruta em login/reset. **Corrigido:** `express-rate-limit` (5 tentativas / 15 min) nas rotas de auth.
+8.  **Sem CORS/Helmet:** **Corrigido:** `helmet()` + `cors()` com allowlist via `ALLOWED_ORIGINS`.
+
+### 16. Auditoria de Frontend, Mobile e Limpeza de Legado
+Auditoria independente (screenshots reais em viewport mobile via Playwright/Chromium, com emulação de toque `pointer: coarse`) encontrou e corrigiu:
+
+*   **Affordance de scroll ausente (Alto):** sub-abas de Tesouraria, Administração e Rodadas usam um componente compartilhado (`ResponsiveTabsContainer`) que já era rolável horizontalmente, mas cortava o texto abruptamente na borda sem nenhuma pista visual — parecia quebrado, mas era só falta de indicação. **Corrigido:** fade via `mask-image` nas bordas (aparece/some dinamicamente conforme a posição de scroll), aplicado de uma vez em todas as telas que usam o componente.
+*   **Alvo de toque inconsistente (Alto):** ~620 botões espalhados por 17 componentes, com menos de 5% usando `min-h-[44px]` explicitamente. Refatorar botão a botão foi descartado por risco/esforço desproporcional; **corrigido via CSS global** (`@media (pointer: coarse) { button:not(.btn-compact) { min-height: 44px; } }`) — aplica altura mínima de toque em todo botão do app em dispositivos reais de toque, sem afetar a densidade do desktop (mouse) e sem exigir tocar em nenhum componente individual. Validado visualmente em 5 telas sem regressão de layout.
+*   **Painel de teste morto em produção (`TechnicalRanking.tsx`):** um bloco inteiro de ~310 linhas ("Homologação de Badges" — seletor de cenários, matriz de teste, relatório de auditoria mock) estava gated atrás de `{false && (...)}` — nunca renderizava, mas era compilado e mantido junto ao código real. Removido por completo.
+*   **Código órfão generalizado:** varredura com `tsc --noUnusedLocals` encontrou 245 declarações não usadas (imports, variáveis, funções) em 22 arquivos. Destaque: `DashboardStatus.tsx` (o Home real do app) tinha **29 funções inteiras órfãs** (`handleQuickApproveUser`, `handleBulkTogglePresence`, `handleMassClearConfirmations` etc.) — funcionalidades completas e implementadas, mas sem nenhum botão as chamando mais, provavelmente substituídas por `UserApprovalList.tsx` e outros componentes dedicados sem a limpeza correspondente. Removidas com segurança estrutural via `ts-morph` (não regex), com validação de compilação a cada etapa.
+*   **Feature morta em `FinanceManager.tsx`:** um indicador de "limite de mensalistas quase atingido" (cor/texto calculados) nunca era exibido em nenhum lugar da UI — o cálculo existia, mas o resultado nunca chegava a ser renderizado. Removido.
+*   **Texto residual "AWS S3"/legado:** referências a "upload direto para AWS S3" e um rótulo "AWS S3: PRONTO_OK" sobreviveram à migração de código mas não à limpeza de texto — corrigidos para refletir o Supabase Storage real.
+*   **2 bugs reais de regressão encontrados via teste end-to-end do avatar com IA** (ver §17): condição de corrida no disparo do processamento em background, e violação de constraint única de e-mail — ambos corrigidos e testados.
+
+### 17. Validação de Geração de Avatar com IA (Gemini)
+Testado de ponta a ponta pela interface real (não só leitura de código), com uma chave Gemini real fornecida para o teste:
+
+*   **Bug encontrado e corrigido — condição de corrida:** o disparo do processamento de avatar em background (`setImmediate(() => processarAvatarGamerBackground(...))`) ocorria **antes** do `await writeDb(db)` que persiste o novo jogador. No sistema antigo (síncrono) isso nunca foi um problema, porque a escrita bloqueava o processo até terminar antes de qualquer callback assíncrono rodar; a migração para I/O assíncrono (Supabase) introduziu a corrida, fazendo o processamento de avatar falhar com "Atleta não encontrado" em toda criação de jogador com foto. **Corrigido:** o disparo agora ocorre só depois do `writeDb` completar.
+*   **Bug encontrado e corrigido — constraint única de e-mail:** jogadores sem e-mail eram salvos com `email: ''` (string vazia). Postgres trata múltiplas strings vazias como valores duplicados sob uma constraint `UNIQUE` (diferente de `NULL`, que pode se repetir livremente) — o segundo jogador cadastrado sem e-mail sempre falhava com `duplicate key value violates unique constraint`. **Corrigido:** e-mail vazio é normalizado para ausente (vira `NULL` no banco) antes de gravar.
+*   **Integração com a Gemini API confirmada funcional:** após as correções acima, o fluxo completo (upload de foto → criação do jogador → disparo em background → chamada real à API do Gemini) funcionou de ponta a ponta. A chamada à Gemini retornou `429 RESOURCE_EXHAUSTED` (cota zero no tier gratuito para o modelo `gemini-2.5-flash-preview-image` no projeto Google Cloud da chave testada) — **isto não é um bug de código**: a autenticação e o formato da requisição estão corretos (um erro de autenticação retornaria 401/403, não 429). Para gerar avatares com sucesso em produção, é necessário habilitar billing no projeto Google Cloud associado à `GEMINI_API_KEY` (o tier gratuito deste modelo específico de geração de imagem tem limite 0).
+*   **Fallback de erro validado:** quando a geração falha (por qualquer motivo), o sistema corretamente marca `avatarStatus: 'ERRO'` e limpa `avatarCard`/`avatarEsportivo`, sem deixar o registro em estado inconsistente ou travado em "processando".
+
 ---
 
 ## 🛠️ Correções Implementadas
@@ -80,3 +124,6 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
     *   *Depois:* Utiliza os mapas computados dinamicamente com base nas datas das partidas da temporada: `currentStreakMap[p.id]` e `maxStreakMap[p.id]`.
 2.  **Painel de Aprovações Unificado (UserApprovalList.tsx):**
     *   Criação de centro completo de administração de acessos com listagem geral, análise individualizada do perfil inicial na aprovação, verificação visual clara do vínculo do atleta com base em e-mail e aba de auditorias em tempo real.
+3.  **Migração de hospedagem para Supabase + Render** (ver §14), com hardening de segurança completo (ver §15).
+4.  **Auditoria de frontend/mobile e limpeza de legado** (ver §16): affordance de scroll, alvo de toque global, ~620 linhas de código morto/órfão removidas.
+5.  **Dois bugs de regressão corrigidos via validação end-to-end do avatar com IA** (ver §17): condição de corrida no processamento em background e violação de constraint única de e-mail.

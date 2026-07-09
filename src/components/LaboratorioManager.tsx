@@ -8,16 +8,9 @@ import {
   XCircle, 
   FileText, 
   Download, 
-  Clock, 
-  AlertTriangle,
-  Play,
+  Clock,
   RotateCcw,
-  Shield,
-  ArrowUp,
-  ArrowDown,
-  Scale,
-  Users,
-  Award
+  Shield
 } from 'lucide-react';
 
 interface LaboratorioManagerProps {
@@ -323,8 +316,6 @@ export default function LaboratorioManager({
             classification
           };
         });
-
-        const totalPositionsAudited = positionCounts.Goleiros.total + positionCounts.Zagueiros.total + positionCounts.Laterais.total + positionCounts.Meias.total + positionCounts.Atacantes.total;
         const positionTableData = (['Goleiros', 'Zagueiros', 'Laterais', 'Meias', 'Atacantes'] as const).map(cat => {
           const statsCat = positionCounts[cat];
           const catTotal = statsCat.total;
@@ -956,8 +947,6 @@ export default function LaboratorioManager({
           {/* Core Analytics Dashboard */}
           {!auditLoading && auditResult && (() => {
             const maxPositionDeviation = auditResult.maxPositionDeviation || 0;
-            const neymarViniPct = auditResult.neymarViniPct || 0;
-
             const meetsOvr = auditResult.meanDiffGlobal <= maxOvrDiffTarget;
             const meetsPos = auditResult.positionTableData.every((p: any) => p.deviation <= maxDistDevTarget);
             const maxCompPct = auditResult.top10CompanionsMost[0].obtainedTogetherPct;

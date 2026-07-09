@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import { 
   User, 
   TrendingUp, 
@@ -8,19 +8,15 @@ import {
   Minus, 
   Flame, 
   Award, 
-  Calendar, 
   Activity, 
-  ChevronRight,
-  Shield, 
+  ChevronRight, 
   Zap, 
   Trophy,
-  CheckCircle,
-  Clock,
   Sparkles
 } from 'lucide-react';
-import { Player, PlayerPosition, PlayerCategory, POSITION_LABELS, CATEGORY_LABELS, STATUS_LABELS } from '../types';
+import { Player, POSITION_LABELS, CATEGORY_LABELS, STATUS_LABELS } from '../types';
 import { ClubShield } from './PlayerCard';
-import { SportsCard, SportsBadge, SportsIndicator, SportsButton, VISUAL_TOKENS } from './UI';
+import { SportsBadge, SportsIndicator, VISUAL_TOKENS } from './UI';
 
 interface PlayerHeroProps {
   player: Player;
@@ -74,11 +70,8 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
         ]);
 
         if (!active) return;
-
-        let fetchedMetrics = metricsProp;
         if (evalsRes.ok && !metricsProp) {
           const data = await evalsRes.json();
-          fetchedMetrics = data.metrics;
           setMetrics(data.metrics);
         }
 
@@ -181,8 +174,6 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
   // Custom Badges lists calculations matches PlayerCard.tsx
   const getPlayerBadges = () => {
     const isGk = player.primaryPosition === 'goleiro';
-    const dateStr = player.createdAt ? new Date(player.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }) : '20/06';
-    
     const badgesList = [
       {
         id: 'primeira_vitoria',

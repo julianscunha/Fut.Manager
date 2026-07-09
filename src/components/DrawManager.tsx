@@ -8,30 +8,16 @@ import {
   Share2, 
   CheckCircle2, 
   Copy, 
-  RefreshCw, 
   ArrowLeftRight, 
   Crown, 
   ShieldAlert, 
-  UserPlus, 
-  MapPin, 
-  TrendingUp, 
-  AlertTriangle,
-  Lock,
-  Unlock,
-  Check
+  TrendingUp,
+  Lock
 } from 'lucide-react';
 
 interface DrawManagerProps {
   currentUser: { id: string; name: string; role: 'admin' | 'auxiliar' | 'jogador' };
 }
-
-const POS_SQUAD_ORDER: Record<string, number> = {
-  goleiro: 1,
-  zagueiro: 2,
-  meio_campo: 3,
-  volante: 4,
-  atacante: 5,
-};
 
 const getAbbreviation = (pos: string) => {
   switch (pos) {
@@ -430,32 +416,6 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       setErrorMsg(err.message || 'Erro ao realizar rebalanceamento manual.');
     }
   };
-
-  const handleLockDraw = async () => {
-    if (!activeDraw) return;
-    try {
-      setLoading(true);
-      setErrorMsg('');
-      setSuccessMsg('');
-
-      const res = await authFetch(`/api/draws/${activeDraw.id}/confirm-lock`, {
-        method: 'POST'
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Falha ao fechar racha.');
-      }
-
-      setSuccessMsg('Sorteio consolidado com sucesso! Afinidade de parcerias acumulada.');
-      setIsLocked(true);
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao consolidar sorteio.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Helper formatting to extract names
   const getPlayerName = (pid: string) => {
     const p = confirmedPlayers.find((x) => x.id === pid);
