@@ -1,4 +1,4 @@
-# ⚽ Racha do Fofim
+# ⚽ Fut Manager
 
 **O cockpit completo para quem administra um racha.** Mensalistas, reservas, sorteio de times equilibrado, financeiro, mural social e ranking técnico — tudo em um só lugar, pensado para ser usado no campo, pelo celular, minutos antes da bola rolar.
 
