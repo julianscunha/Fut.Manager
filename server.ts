@@ -606,11 +606,45 @@ async function startServer() {
   app.use(express.json({ limit: '250mb' }));
   app.use(express.urlencoded({ limit: '250mb', extended: true }));
 
+  // --- Global authentication gate for /api/* ---
+  // Auditoria pré-produção encontrou dezenas de rotas de negócio (partidas, financeiro, sorteio,
+  // presenças) sem NENHUMA checagem de autenticação — qualquer visitante anônimo da internet
+  // conseguia criar/editar/excluir dados. Em vez de tocar rota por rota (~80 rotas), um gate
+  // global exige login válido para tudo em /api/*, com uma lista explícita e pequena do que
+  // realmente precisa ser público (login/registro/recuperação de senha e as duas telas públicas
+  // pré-login: mural público e próxima partida — confirmado via teste real de navegação).
+  // Nota: middleware montado via app.use('/api', ...) recebe req.path já SEM o prefixo /api
+  // (relativo ao ponto de montagem) — por isso as regex abaixo não incluem "/api".
+  const PUBLIC_API_ROUTES: { method: string; path: RegExp }[] = [
+    { method: 'POST', path: /^\/auth\/register$/ },
+    { method: 'POST', path: /^\/auth\/login$/ },
+    { method: 'POST', path: /^\/auth\/forgot-password$/ },
+    { method: 'POST', path: /^\/auth\/reset-password$/ },
+    { method: 'GET', path: /^\/mural\/public-posts$/ },
+    { method: 'GET', path: /^\/public\/next-match$/ },
+  ];
+
+  app.use('/api', async (req, res, next) => {
+    const isPublic = PUBLIC_API_ROUTES.some((r) => r.method === req.method && r.path.test(req.path));
+    if (isPublic) return next();
+
+    const requestingUser = await getAuthenticatedUser(req);
+    if (!requestingUser) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+    next();
+  });
+
   // --- API Routes ---
 
   // Upload: S3 image upload simulation
   app.post('/api/upload-s3', async (req, res) => {
     try {
+      const requestingUser = await getAuthenticatedUser(req);
+      if (!requestingUser) {
+        return res.status(401).json({ error: 'Não autenticado.' });
+      }
+
       const { filename, fileType, fileData } = req.body;
 
       if (!filename || !fileType || !fileData) {
@@ -5679,6 +5713,11 @@ async function startServer() {
   // Upload endpoint with validation
   app.post('/api/mural/upload', async (req, res) => {
     try {
+      const requestingUser = await getAuthenticatedUser(req);
+      if (!requestingUser) {
+        return res.status(401).json({ error: 'Não autenticado.' });
+      }
+
       const { filename, fileData, size } = req.body;
 
       if (!filename || !fileData) {
