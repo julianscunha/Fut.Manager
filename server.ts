@@ -635,6 +635,7 @@ async function startServer() {
     { method: 'GET', path: /^\/mural\/public-posts$/ },
     { method: 'GET', path: /^\/public\/next-match$/ },
     { method: 'GET', path: /^\/public\/app-config$/ },
+    { method: 'GET', path: /^\/public\/health$/ },
   ];
 
   app.use('/api', async (req, res, next) => {
@@ -5688,6 +5689,19 @@ async function startServer() {
   // Get public app config (nome do sistema, configurável por instalação via APP_NAME)
   app.get('/api/public/app-config', (req, res) => {
     res.json({ appName: APP_NAME });
+  });
+
+  // Health check: usado pelo Render (Health Check Path) para reiniciar o serviço
+  // automaticamente se a conexão com o Supabase cair, não só se o processo Node está de pé.
+  app.get('/api/public/health', async (req, res) => {
+    try {
+      const { error } = await getSupabaseClient().from('users').select('id').limit(1);
+      if (error) throw error;
+      return res.json({ status: 'ok' });
+    } catch (err) {
+      console.error('[API GET /api/public/health]', err);
+      return res.status(503).json({ status: 'error', error: 'Falha ao conectar ao banco de dados.' });
+    }
   });
 
   // Get public Next Match status

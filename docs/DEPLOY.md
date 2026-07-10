@@ -615,6 +615,7 @@ git push origin main
    - **Name**: `fut-manager`
    - **Runtime**: Docker (Render detecta o `Dockerfile` automaticamente)
    - **Plan**: Free (ou Starter, se o cold start do free incomodar)
+   - **Health Check Path**: `/api/public/health` — verifica também a conexão com o Supabase (não só se o processo Node está de pé), então o Render reinicia o serviço automaticamente se o banco ficar inacessível.
 5. **Não clique em criar ainda** — configure as variáveis de ambiente primeiro (próximo passo).
 
 ### Passo 5.3: Configurar variáveis de ambiente no Render
