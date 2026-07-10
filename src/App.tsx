@@ -125,6 +125,7 @@ export default function App() {
   const [pendingApprovalsCount, setPendingApprovalsCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [simulatedState, setSimulatedState] = useState<number | null>(null);
+  const [footerYear, setFooterYear] = useState(new Date().getFullYear());
 
   // Player search and filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -333,6 +334,22 @@ export default function App() {
       fetchMensalistaAlerts();
     }
   }, [currentUser, activeTab]);
+
+  // Ano do rodapé: usa o ano da temporada ativa (se houver), com fallback pro ano corrente.
+  useEffect(() => {
+    if (!currentUser) return;
+    (async () => {
+      try {
+        const res = await authFetch('/api/seasons');
+        if (!res.ok) return;
+        const seasons: { year: number; active: boolean }[] = await res.json();
+        const activeSeason = seasons.find((s) => s.active);
+        if (activeSeason) setFooterYear(activeSeason.year);
+      } catch (err) {
+        console.error('Falha ao carregar temporada ativa para o rodapé', err);
+      }
+    })();
+  }, [currentUser]);
 
   useEffect(() => {
     const handleSetActiveTabEvent = (e: Event) => {
@@ -1292,7 +1309,7 @@ export default function App() {
       )}
 
       <footer className="bg-[#0a0e0c] border-t border-zinc-950 py-5 text-center text-xs text-zinc-600 select-none">
-        <p>© 2026 {appName}. Sistema PWA preparado para celular e desktop.</p>
+        <p>© {footerYear} {appName}. Sistema PWA preparado para celular e desktop.</p>
         <p className="text-[10px] text-zinc-700 mt-1">Fundação do Sistema com Controle de Acesso RBAC completo.</p>
       </footer>
     </div>
