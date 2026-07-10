@@ -681,22 +681,24 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
         </div>
       )}
 
-      {/* 6. Default credentials box for easy grading */}
-      <div className="w-full max-w-md mt-4 p-4 rounded-xl border border-dashed border-[#10b981]/25 bg-emerald-950/10 text-xs text-zinc-400 space-y-1 relative z-10 text-center">
-        <p className="font-bold text-[#4ade80] flex items-center justify-center gap-1.5 font-mono text-[10px] uppercase">
-          <Shield className="w-3.5 h-3.5" />
-          <span>Contas de Acesso (Dica para Testes)</span>
-        </p>
-        <p className="text-[11px] leading-relaxed">
-          Para ver o fluxo completo de Admin (aprovar usuários, CRUD de atletas), utilize:
-        </p>
-        <p className="font-mono text-white select-all text-[11px] mt-1 bg-zinc-950/60 p-1.5 rounded inline-block">
-          admin@racha.com / admin
-        </p>
-        <p className="text-[10px] text-zinc-500 dark:text-zinc-650 font-sans mt-1">
-          Novos registros começam pendentes de decisão do Administrador.
-        </p>
-      </div>
+      {/* 6. Default credentials box for easy grading — só em build de desenvolvimento (nunca em produção). */}
+      {import.meta.env.DEV && (
+        <div className="w-full max-w-md mt-4 p-4 rounded-xl border border-dashed border-[#10b981]/25 bg-emerald-950/10 text-xs text-zinc-400 space-y-1 relative z-10 text-center">
+          <p className="font-bold text-[#4ade80] flex items-center justify-center gap-1.5 font-mono text-[10px] uppercase">
+            <Shield className="w-3.5 h-3.5" />
+            <span>Contas de Acesso (Dica para Testes)</span>
+          </p>
+          <p className="text-[11px] leading-relaxed">
+            Para ver o fluxo completo de Admin (aprovar usuários, CRUD de atletas), utilize:
+          </p>
+          <p className="font-mono text-white select-all text-[11px] mt-1 bg-zinc-950/60 p-1.5 rounded inline-block">
+            admin@racha.com / admin
+          </p>
+          <p className="text-[10px] text-zinc-500 dark:text-zinc-650 font-sans mt-1">
+            Novos registros começam pendentes de decisão do Administrador.
+          </p>
+        </div>
+      )}
 
       {/* FULL RESPONSIVE LIGHTBOX PORTAL */}
       {selectedLightboxPost && (

@@ -25,6 +25,14 @@ import { AvatarProviderFactory } from './server/avatarProvider';
 // Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
 const APP_NAME = process.env.APP_NAME || 'Meu Racha';
 
+// Rede de segurança: uma promise rejeitada sem catch (ex.: erro de configuração como
+// JWT_SECRET ausente) derrubaria o processo inteiro em produção sem nenhuma resposta
+// chegar ao cliente (o que aparece no browser como "Unexpected end of JSON input").
+// Aqui só logamos, para o processo seguir vivo e o erro aparecer nos logs do Render.
+process.on('unhandledRejection', (reason) => {
+  console.error('[unhandledRejection]', reason);
+});
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -697,179 +705,199 @@ async function startServer() {
 
   // Auth: Registrar Usuário
   app.post('/api/auth/register', authRateLimiter, async (req, res) => {
-    const { name, email, password, confirmPassword } = req.body;
+    try {
+      const { name, email, password, confirmPassword } = req.body;
 
-    if (!name || !email || !password || !confirmPassword) {
-      return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
-    }
+      if (!name || !email || !password || !confirmPassword) {
+        return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+      }
 
-    if (password !== confirmPassword) {
-      return res.status(400).json({ error: 'As senhas não coincidem.' });
-    }
+      if (password !== confirmPassword) {
+        return res.status(400).json({ error: 'As senhas não coincidem.' });
+      }
 
-    const db = await readDb();
-    const normalizedEmail = email.toLowerCase().trim();
+      const db = await readDb();
+      const normalizedEmail = email.toLowerCase().trim();
 
-    const existingUser = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
-    if (existingUser) {
-      return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
-    }
+      const existingUser = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
+      if (existingUser) {
+        return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
+      }
 
-    // Automatically seek matching athlete folder or create a new one
-    let matchingPlayer = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === normalizedEmail);
-    if (!matchingPlayer) {
-      const newPlayerId = 'player-' + Date.now();
-      matchingPlayer = {
-        id: newPlayerId,
+      // Automatically seek matching athlete folder or create a new one
+      let matchingPlayer = db.players.find((p: any) => p.email && p.email.toLowerCase().trim() === normalizedEmail);
+      if (!matchingPlayer) {
+        const newPlayerId = 'player-' + Date.now();
+        matchingPlayer = {
+          id: newPlayerId,
+          name: name.trim(),
+          phone: '(85) 99999-9999',
+          email: normalizedEmail,
+          photoOriginal: '',
+          playerCardUrl: '',
+          favoriteTeamId: 'out',
+          category: 'reserva',
+          status: 'disponivel',
+          primaryPosition: 'meio_campo',
+          secondaryPositions: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        db.players.push(matchingPlayer);
+      }
+
+      const newUserId = 'user-' + Date.now();
+      const newUser: User = {
+        id: newUserId,
         name: name.trim(),
-        phone: '(85) 99999-9999',
         email: normalizedEmail,
-        photoOriginal: '',
-        playerCardUrl: '',
-        favoriteTeamId: 'out',
-        category: 'reserva',
-        status: 'disponivel',
-        primaryPosition: 'meio_campo',
-        secondaryPositions: [],
+        role: 'jogador', // default role
+        status: 'pending', // Waiting admin approval
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        playerId: matchingPlayer.id,
+        athlete_id: matchingPlayer.id
       };
-      db.players.push(matchingPlayer);
+
+      db.users.push(newUser);
+      db.passwords[newUserId] = await hashPassword(password);
+
+      await writeDb(db);
+
+      return res.status(201).json({
+        message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador para acesso.',
+        user: newUser
+      });
+    } catch (err) {
+      console.error('[API POST /api/auth/register]', err);
+      return res.status(500).json({ error: 'Erro ao efetuar cadastro. Tente novamente em instantes.' });
     }
-
-    const newUserId = 'user-' + Date.now();
-    const newUser: User = {
-      id: newUserId,
-      name: name.trim(),
-      email: normalizedEmail,
-      role: 'jogador', // default role
-      status: 'pending', // Waiting admin approval
-      createdAt: new Date().toISOString(),
-      playerId: matchingPlayer.id,
-      athlete_id: matchingPlayer.id
-    };
-
-    db.users.push(newUser);
-    db.passwords[newUserId] = await hashPassword(password);
-
-    await writeDb(db);
-
-    return res.status(201).json({
-      message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador para acesso.',
-      user: newUser
-    });
   });
 
   // Auth: Login
   app.post('/api/auth/login', authRateLimiter, async (req, res) => {
-    const { email, password } = req.body;
+    try {
+      const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
-    }
+      if (!email || !password) {
+        return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+      }
 
-    const db = await readDb();
-    const normalizedEmail = email.toLowerCase().trim();
+      const db = await readDb();
+      const normalizedEmail = email.toLowerCase().trim();
 
-    const user = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
-    if (!user) {
-      return res.status(401).json({ error: 'Credenciais inválidas.' });
-    }
+      const user = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
+      if (!user) {
+        return res.status(401).json({ error: 'Credenciais inválidas.' });
+      }
 
-    const storedHash = db.passwords[user.id];
-    if (!storedHash || !(await verifyPassword(password, storedHash))) {
-      return res.status(401).json({ error: 'Credenciais inválidas.' });
-    }
+      const storedHash = db.passwords[user.id];
+      if (!storedHash || !(await verifyPassword(password, storedHash))) {
+        return res.status(401).json({ error: 'Credenciais inválidas.' });
+      }
 
-    // Check Approval Status
-    if (user.status === 'pending') {
-      return res.status(403).json({
-        error: 'Sua conta está aguardando aprovação administrativa. Entre em contato com o organizador.',
-        status: 'pending'
+      // Check Approval Status
+      if (user.status === 'pending') {
+        return res.status(403).json({
+          error: 'Sua conta está aguardando aprovação administrativa. Entre em contato com o organizador.',
+          status: 'pending'
+        });
+      }
+
+      if (user.status === 'rejected') {
+        return res.status(403).json({
+          error: 'Sua solicitação de cadastro foi negada pelo administrador.',
+          status: 'rejected'
+        });
+      }
+
+      const token = signSessionToken(user.id);
+
+      return res.json({
+        message: 'Login realizado com sucesso!',
+        user,
+        token
       });
+    } catch (err) {
+      console.error('[API POST /api/auth/login]', err);
+      return res.status(500).json({ error: 'Erro ao efetuar login. Tente novamente em instantes.' });
     }
-
-    if (user.status === 'rejected') {
-      return res.status(403).json({
-        error: 'Sua solicitação de cadastro foi negada pelo administrador.',
-        status: 'rejected'
-      });
-    }
-
-    const token = signSessionToken(user.id);
-
-    return res.json({
-      message: 'Login realizado com sucesso!',
-      user,
-      token
-    });
   });
 
   // Auth: Redefinição de senha (Esqueci minha senha)
   app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
-    const { email } = req.body;
+    try {
+      const { email } = req.body;
 
-    if (!email) {
-      return res.status(400).json({ error: 'O e-mail é obrigatório.' });
-    }
+      if (!email) {
+        return res.status(400).json({ error: 'O e-mail é obrigatório.' });
+      }
 
-    const db = await readDb();
-    const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
+      const db = await readDb();
+      const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
 
-    if (!user) {
-      // For security, don't reveal if user exists or not, but return success
+      if (!user) {
+        // For security, don't reveal if user exists or not, but return success
+        return res.json({
+          message: 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.',
+          simulatedToken: null
+        });
+      }
+
+      // Generate a recovery token with expiration and persist it for validation on reset
+      const token = 'recovery-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
+
+      if (!db.passwordResetTokens) db.passwordResetTokens = {};
+      db.passwordResetTokens[user.id] = { token, expiresAt };
+      await writeDb(db);
+
+      // In a real application, we would send this via mail. For our sandbox applet,
+      // we return the simulated token to easily complete the flow in the frontend!
       return res.json({
-        message: 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.',
-        simulatedToken: null
+        message: 'E-mail de redefinição enviado com sucesso!',
+        simulatedToken: token,
+        userId: user.id
       });
+    } catch (err) {
+      console.error('[API POST /api/auth/forgot-password]', err);
+      return res.status(500).json({ error: 'Erro ao processar solicitação. Tente novamente em instantes.' });
     }
-
-    // Generate a recovery token with expiration and persist it for validation on reset
-    const token = 'recovery-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
-
-    if (!db.passwordResetTokens) db.passwordResetTokens = {};
-    db.passwordResetTokens[user.id] = { token, expiresAt };
-    await writeDb(db);
-
-    // In a real application, we would send this via mail. For our sandbox applet,
-    // we return the simulated token to easily complete the flow in the frontend!
-    return res.json({
-      message: 'E-mail de redefinição enviado com sucesso!',
-      simulatedToken: token,
-      userId: user.id
-    });
   });
 
   // Auth: Resetar Senha
   app.post('/api/auth/reset-password', authRateLimiter, async (req, res) => {
-    const { userId, token, newPassword } = req.body;
+    try {
+      const { userId, token, newPassword } = req.body;
 
-    if (!userId || !token || !newPassword) {
-      return res.status(400).json({ error: 'Informações inválidas para redefinição.' });
-    }
+      if (!userId || !token || !newPassword) {
+        return res.status(400).json({ error: 'Informações inválidas para redefinição.' });
+      }
 
-    const db = await readDb();
-    if (!db.passwords[userId]) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
-    }
+      const db = await readDb();
+      if (!db.passwords[userId]) {
+        return res.status(404).json({ error: 'Usuário não encontrado.' });
+      }
 
-    const storedToken = db.passwordResetTokens?.[userId];
-    if (!storedToken || storedToken.token !== token) {
-      return res.status(401).json({ error: 'Token de redefinição inválido.' });
-    }
+      const storedToken = db.passwordResetTokens?.[userId];
+      if (!storedToken || storedToken.token !== token) {
+        return res.status(401).json({ error: 'Token de redefinição inválido.' });
+      }
 
-    if (new Date(storedToken.expiresAt).getTime() < Date.now()) {
+      if (new Date(storedToken.expiresAt).getTime() < Date.now()) {
+        delete db.passwordResetTokens![userId];
+        await writeDb(db);
+        return res.status(401).json({ error: 'Token de redefinição expirado. Solicite uma nova recuperação.' });
+      }
+
+      db.passwords[userId] = await hashPassword(newPassword);
       delete db.passwordResetTokens![userId];
       await writeDb(db);
-      return res.status(401).json({ error: 'Token de redefinição expirado. Solicite uma nova recuperação.' });
+
+      return res.json({ message: 'Senha redefinida com sucesso! Você já pode fazer login.' });
+    } catch (err) {
+      console.error('[API POST /api/auth/reset-password]', err);
+      return res.status(500).json({ error: 'Erro ao redefinir senha. Tente novamente em instantes.' });
     }
-
-    db.passwords[userId] = await hashPassword(newPassword);
-    delete db.passwordResetTokens![userId];
-    await writeDb(db);
-
-    return res.json({ message: 'Senha redefinida com sucesso! Você já pode fazer login.' });
   });
 
   // Usuários: Listar usuários para aprovação (Apenas Admin/Auxiliar)
