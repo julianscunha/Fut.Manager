@@ -10,6 +10,13 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Config local de ferramentas (MCP aponta pro project_ref do Supabase pessoal do
+# desenvolvedor — não deve ser compartilhado entre instalações white-label).
+.mcp.json
+# .claude/skills são symlinks pra .agents/skills/ (aqui viram cópias no Windows) —
+# regenerados via `npx skills add supabase/agent-skills`, não precisam ser versionados.
+.claude/
+
 # Legado: persistência migrou para Supabase (Postgres + Storage). Não versionar mais.
 data/database.json
 data/database.json.backup
