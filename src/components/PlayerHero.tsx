@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { motion } from 'motion/react';
-import { 
-  User, 
-  TrendingUp, 
-  TrendingDown, 
-  Minus, 
-  Flame, 
-  Award, 
-  Activity, 
-  ChevronRight, 
-  Zap, 
+import {
+  User,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Flame,
+  Award,
+  Activity,
+  ChevronRight,
+  Zap,
   Trophy,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { Player, POSITION_LABELS, CATEGORY_LABELS, STATUS_LABELS } from '../types';
 import { ClubShield } from './PlayerCard';
@@ -39,6 +40,7 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
 }) => {
   const [metrics, setMetrics] = useState<any>(metricsProp || null);
   const [rachaStats, setRachaStats] = useState<any>(rachaStatsProp || null);
+  const [isPhotoExpanded, setIsPhotoExpanded] = useState(false);
   const [loading, setLoading] = useState(!metricsProp || !rachaStatsProp);
   const [personalHistory, setPersonalHistory] = useState<{
     vitorias: number;
@@ -291,7 +293,14 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
           <div className="lg:col-span-7 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
             {/* AVATAR DE IA OU ORIGINAL */}
             <div className="relative group">
-              <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-500/30 group-hover:border-emerald-500/60 transition-all duration-300 shadow-xl relative bg-zinc-900 flex items-center justify-center">
+              <div
+                onClick={() => {
+                  if (player.avatarEsportivo || player.photoOriginal) setIsPhotoExpanded(true);
+                }}
+                className={`w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-500/30 group-hover:border-emerald-500/60 transition-all duration-300 shadow-xl relative bg-zinc-900 flex items-center justify-center ${
+                  player.avatarEsportivo || player.photoOriginal ? 'cursor-zoom-in' : ''
+                }`}
+              >
                 {player.avatarEsportivo || player.photoOriginal ? (
                   <img
                     src={player.avatarEsportivo || player.photoOriginal}
@@ -302,11 +311,11 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
                 ) : (
                   <User className="w-12 h-12 text-zinc-600" />
                 )}
-                
+
                 {/* Glowing border effect */}
                 <div className="absolute inset-0 rounded-full border border-emerald-400/20 animate-pulse" />
               </div>
-              
+
               {/* FAV ICON CORAÇÃO ESCUDO DEITADO */}
               {player.favoriteTeamId && (
                 <div className="absolute -bottom-1 -right-1 bg-zinc-950 p-1.5 rounded-full border border-zinc-800 shadow-lg">
@@ -314,6 +323,29 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
                 </div>
               )}
             </div>
+
+            {/* LIGHTBOX: foto ampliada ao clicar no avatar */}
+            {isPhotoExpanded && (player.avatarEsportivo || player.photoOriginal) && (
+              <div
+                onClick={() => setIsPhotoExpanded(false)}
+                className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 cursor-zoom-out animate-fadeIn"
+              >
+                <button
+                  onClick={() => setIsPhotoExpanded(false)}
+                  className="absolute top-4 right-4 p-2 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700 rounded-full text-white transition cursor-pointer"
+                  title="Fechar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <img
+                  src={player.avatarEsportivo || player.photoOriginal}
+                  alt={player.name}
+                  referrerPolicy="no-referrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="max-w-full max-h-[85vh] rounded-2xl border-2 border-emerald-500/30 shadow-2xl object-contain"
+                />
+              </div>
+            )}
 
             {/* PLAYER INFO AND NAME */}
             <div className="space-y-1.5">

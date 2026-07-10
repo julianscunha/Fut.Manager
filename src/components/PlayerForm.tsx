@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { Player, PlayerPosition, PlayerCategory, PlayerStatus, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
-import { Sparkles, X, Heart, Settings, Save, Phone, FileText } from 'lucide-react';
+import { X, Heart, Settings, Save, Phone, FileText } from 'lucide-react';
 
 interface PlayerFormProps {
   player?: Player | null; // If provided, we are editing
@@ -463,36 +463,6 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
               </label>
             </div>
           )}
-        </div>
-
-        {/* Card do Jogador (⚽ Card do Atleta) RENAME COMPLETED */}
-        <div className="flex flex-col gap-2 bg-[#091510] border border-emerald-500/10 p-4 rounded-xl md:col-span-2">
-          <label className="text-zinc-300 font-bold flex items-center gap-1.5 text-[10px] text-[#4ade80] uppercase tracking-wider font-mono">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
-            <span>⚽ Card do Atleta</span>
-          </label>
-          <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-16 h-20 rounded-lg border border-emerald-550/20 bg-emerald-950/20 flex flex-col items-center justify-center text-center p-2 text-emerald-500 flex-shrink-0 shadow-inner">
-              <svg className="w-8 h-8 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-              </svg>
-              <span className="text-[7px] font-mono mt-1 text-emerald-450 font-bold uppercase tracking-wider">CARDS 2026</span>
-            </div>
-            <div className="space-y-1 text-left flex-1 min-w-0">
-              <p className="text-xs text-zinc-350 font-bold">Imagem Personalizada Estilo Figurinha</p>
-              <p className="text-[11px] text-zinc-500 leading-relaxed">
-                Este atleta utilizará o time do coração {selectedTeamDetails ? `(${selectedTeamDetails.name})` : ''} para sintetizar o card final personalizado da temporada 2026.
-              </p>
-              <input
-                id="input-player-card-url"
-                type="text"
-                placeholder="Insira uma URL direta para o Card Gerado / figurinha do futebol"
-                value={playerCardUrl}
-                onChange={(e) => setPlayerCardUrl(e.target.value)}
-                className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-zinc-650 font-mono focus:outline-none focus:border-[#22c55e]"
-              />
-            </div>
-          </div>
         </div>
 
         {/* Primary Position */}
