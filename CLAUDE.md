@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## O que é este projeto
 
-"Racha do Fofim" — cockpit de gestão de um grupo privado de futebol society (mensalistas, reservas, sorteio de times, financeiro, mural social, ranking). Projeto originado no Google AI Studio, com integração à Gemini API para geração de avatares/cards de jogadores.
+**Fut.Manager** — cockpit de gestão de um grupo privado de futebol society (mensalistas, reservas, sorteio de times, financeiro, mural social, ranking). Projeto originado no Google AI Studio, com integração à Gemini API para geração de avatares/cards de jogadores. O nome do grupo exibido na interface é configurável via `APP_NAME` (ver seção de variáveis de ambiente) — nunca hardcode o nome de um grupo específico no código.
 
 ## Comandos
 

@@ -531,13 +531,13 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
 
   const handleShareMatchOnWhatsApp = (match: any) => {
     const formattedDate = match.date.split('-').reverse().join('/');
-    const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
+    const textMsg = `\u26BD *${appName.toUpperCase()} - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
       `\uD83D\uDCC5 *Data:* ${formattedDate} às ${match.time}\n` +
       `\uD83D\uDCCD *Local:* ${match.location}\n\n` +
       `\uD83D\uDC65 *Confirmados (${match.confirmedCount}/15):*\n\n` +
       `\u26A0\uFE0F *Vagas em aberto:* ${match.vacancies} vagas disponíveis!\n\n` +
       `Por favor, atualizem seus status de presença no app oficial:\n` +
-      `\uD83D\uDC49 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `\uD83D\uDC49 Acesse e confirme: ${window.location.origin}\n\n` +
       `Abraços e bom racha!`;
       
     const escapedMsg = encodeURIComponent(textMsg);
@@ -549,12 +549,12 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
 
   const handleConvocarReservas = (match: any) => {
     const formattedDate = match.date.split('-').reverse().join('/');
-    const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCAÇÃO DE RESERVAS!* \u26BD\n` +
+    const textMsg = `\u26BD *${appName.toUpperCase()} - CONVOCAÇÃO DE RESERVAS!* \u26BD\n` +
       `\uD83D\uDCC5 *Data:* ${formattedDate} às ${match.time}\n` +
       `\uD83D\uDCCD *Local:* ${match.location}\n\n` +
       `\u26A0\uFE0F Atenção reservas da fila de prioridade: O prazo de confirmação de mensalistas encerrou e ainda temos *${15 - match.confirmedCount} vagas em aberto*!\n\n` +
       `Por favor, os próximos da fila de reservas acessem o app para registrar presença:\n` +
-      `\uD83D\uDC49 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `\uD83D\uDC49 Acesse e confirme: ${window.location.origin}\n\n` +
       `Abraços!`;
     const escapedMsg = encodeURIComponent(textMsg);
     console.log("RAW MESSAGE (RESERVES):", textMsg);

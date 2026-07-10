@@ -1,7 +1,7 @@
 # FASE 2 — UX/UI ESPORTIVO
 # ETAPA 1 — INVENTÁRIO E ARQUITETURA DA HOME DINÂMICA
 
-Este documento estabelece a especificação completa da nova **Home Dinâmica** do **Racha do Fofim**, servindo como o *blueprint* oficial para a implementação visual da Sprint 1. O design é focado na experiência mobile-first (smartphone), centralizando as decisões em torno do ciclo da rodada atual.
+Este documento estabelece a especificação completa da nova **Home Dinâmica** do **Fut.Manager**, servindo como o *blueprint* oficial para a implementação visual da Sprint 1. O design é focado na experiência mobile-first (smartphone), centralizando as decisões em torno do ciclo da rodada atual.
 
 ---
 
@@ -147,7 +147,7 @@ Validação de usabilidade para garantir leitura rápida sem esforço sob luz do
 +-------------------------------------------------------------------+
 | RECORTE COGNITIVO EM 3 SEGUNDOS:                                  |
 |                                                                   |
-| 1. Onde estou? --------> Home Dinâmica do Racha do Fofim          |
+| 1. Onde estou? --------> Home Dinâmica do Fut.Manager          |
 | 2. O que aconteceu? ----> Convocação iniciou para quarta-feira    |
 | 3. O que preciso fazer? -> Clicar em "Confirmar Presença"         |
 | 4. Qual minha situação? -> Pendente (Não confirmado ainda)        |

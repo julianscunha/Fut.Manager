@@ -1198,7 +1198,7 @@ export default function App() {
           <div className="space-y-6">
             <div className="flex flex-col gap-1 border-b border-zinc-900 pb-4">
               <h2 className="font-display font-extrabold text-xl text-white">⚙️ Painel de Administração</h2>
-              <p className="text-zinc-500 text-xs">Acesse e gerencie as ferramentas administrativas e estados do racha fofim.</p>
+              <p className="text-zinc-500 text-xs">Acesse e gerencie as ferramentas administrativas e estados do racha.</p>
             </div>
 
             <div className="flex gap-2 bg-[#121c16] p-1 rounded-xl border border-zinc-850 max-w-max">

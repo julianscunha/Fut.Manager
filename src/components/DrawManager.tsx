@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
+import { useAppConfig } from '../contexts/AppConfigContext';
 import { Match, Player, DrawTeam, TeamDraw } from '../types';
 import { 
   Users, 
@@ -99,6 +100,7 @@ export function computeTacticalAssignments(players: Player[]): Record<string, { 
 }
 
 export default function DrawManager({ currentUser }: DrawManagerProps) {
+  const { appName } = useAppConfig();
   const isEditor = currentUser.role === 'admin' || currentUser.role === 'auxiliar';
 
   // State
@@ -463,7 +465,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
       return `${parts[2]}/${parts[1]}/${parts[0]}`;
     };
 
-    let text = `⚽ RACHA DO FOFIM - ESCALAÇÃO OFICIAL ⚽\n\n`;
+    let text = `⚽ ${appName.toUpperCase()} - ESCALAÇÃO OFICIAL ⚽\n\n`;
     text += `📅 Data: ${formatDate(selectedMatch.date)} às ${selectedMatch.time}\n`;
     text += `📍 Local: ${selectedMatch.location}\n\n`;
     text += `Diferença Técnica: ${activeDraw.maxDifference.toFixed(1)}\n\n`;

@@ -1,12 +1,12 @@
 # FASE 2 — UX/UI ESPORTIVO
 # ETAPA 3 — DIREÇÃO DE ARTE E COMPOSIÇÃO DA HOME
 
-Este documento define as diretrizes estéticas e a **Direção de Arte** oficial para a Home Dinâmica do **Racha do Fofim**. Ele atua como o manual visual obrigatório para a construção das interfaces, garantindo consistência, emoção esportiva e alta legibilidade em todas as circunstâncias de jogo.
+Este documento define as diretrizes estéticas e a **Direção de Arte** oficial para a Home Dinâmica do **Fut.Manager**. Ele atua como o manual visual obrigatório para a construção das interfaces, garantindo consistência, emoção esportiva e alta legibilidade em todas as circunstâncias de jogo.
 
 ---
 
 ## 🎨 1. CONCEITO CENTRAL: "APLICATIVO DE CLUBE"
-A Home do Racha do Fofim não deve remeter a um painel corporativo, planilha de escritório ou ferramenta financeira genérica. Ela foi projetada para emular os aplicativos oficiais de grandes ligas esportivas (NFL, FIFA, UEFA Champion League), onde o atleta se sente imerso na atmosfera tática de um vestiário minutos antes de entrar em campo.
+A Home do Fut.Manager não deve remeter a um painel corporativo, planilha de escritório ou ferramenta financeira genérica. Ela foi projetada para emular os aplicativos oficiais de grandes ligas esportivas (NFL, FIFA, UEFA Champion League), onde o atleta se sente imerso na atmosfera tática de um vestiário minutos antes de entrar em campo.
 
 ### Princípios Diretores:
 * **Sentimento de Pertencimento:** "Ao abrir o app, eu não vejo apenas estatísticas, eu sinto que faço parte de um time oficial."
@@ -113,4 +113,4 @@ Conforme especificado pelo fluxo regulamentar, a próxima etapa consistirá na e
 2. **Rascunho B:** Visão do Atleta no Estado "Times Sorteados" (Foco na experiência "Meu Time" e táticas).
 3. **Rascunho C:** Visão do Administrador no Estado "Convocação Encerrada" (Foco em ferramentas de governança discretas).
 
-Este guia está formalmente consolidado e servirá como a bíblia estética do Racha do Fofim.
+Este guia está formalmente consolidado e servirá como a bíblia estética do Fut.Manager.

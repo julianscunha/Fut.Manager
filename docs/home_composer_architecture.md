@@ -1,7 +1,7 @@
 # FASE 2 — UX/UI ESPORTIVO
 # ETAPA 2 — HOME COMPOSER (ARQUITETURA FINAL DA HOME DINÂMICA)
 
-Este documento estabelece o blueprint definitivo e a especificação de arquitetura de software para o **Home Composer**, a engine de composição tridimensional inteligente que orquestra a experiência da Home Page do **Racha do Fofim**.
+Este documento estabelece o blueprint definitivo e a especificação de arquitetura de software para o **Home Composer**, a engine de composição tridimensional inteligente que orquestra a experiência da Home Page do **Fut.Manager**.
 
 ---
 
@@ -92,7 +92,7 @@ O Hero deixa de ser um bloco de código monolítico. Ele passa a ser composto po
 ```
 ┌───────────────────────────────────────────────────────────┐
 │ 1. CAMADA PERMANENTE                                      │
-│    [Racha do Fofim - Rodada #42]                         │
+│    [Fut.Manager - Rodada #42]                         │
 │    Data: Quarta, 19:30 | Arena Principal                 │
 ├───────────────────────────────────────────────────────────┤
 │ 2. CAMADA CONTEXTUAL (Fase da Rodada)                    │
@@ -147,7 +147,7 @@ Quando o sorteio por Monte Carlo é publicado (`Estado: DRAWN`), o atleta não d
 
 Nas 6 horas antecedentes ao apito inicial, a interface assume um "Modo de Prontidão" imersivo para preparar a logística física do jogo:
 
-* **Hero de Impacto:** `🏟️ HOJE É DIA DE RACHA DO FOFIM!`
+* **Hero de Impacto:** `🏟️ HOJE É DIA DE FUT.MANAGER!`
 * **Widget Logístico Integrado:**
   * Mapa tático da Arena com botão direto para traçar rota no **Google Maps** ou **Waze**.
   * Temperatura em tempo real e previsão de chuva para o horário do racha.

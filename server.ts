@@ -1393,7 +1393,7 @@ async function startServer() {
       timestamp: new Date().toISOString(),
       userId: 'system',
       userName: newPlayer.name,
-      userEmail: playerData.email || 'atleta@racha.fofim',
+      userEmail: playerData.email || 'atleta@sistema.local',
       action: 'Criação de Atleta',
       previousRole: '',
       newRole: '',
@@ -1409,7 +1409,7 @@ async function startServer() {
       timestamp: new Date().toISOString(),
       userId: 'system',
       userName: newPlayer.name,
-      userEmail: playerData.email || 'atleta@racha.fofim',
+      userEmail: playerData.email || 'atleta@sistema.local',
       action: 'Troca de categoria',
       previousRole: '',
       newRole: '',
@@ -1425,7 +1425,7 @@ async function startServer() {
       timestamp: new Date().toISOString(),
       userId: 'system',
       userName: newPlayer.name,
-      userEmail: playerData.email || 'atleta@racha.fofim',
+      userEmail: playerData.email || 'atleta@sistema.local',
       action: 'Alteração de telefone',
       previousRole: '',
       newRole: '',
@@ -1531,7 +1531,7 @@ async function startServer() {
         attempt++;
       }
 
-      const cleanEmail = `${fn.toLowerCase()}.${ln.toLowerCase()}@racha.fofim.com`.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const cleanEmail = `${fn.toLowerCase()}.${ln.toLowerCase()}@sistema.local`.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const cleanPhone = `(85) 9${Math.floor(8000 + Math.random() * 1999)}-${Math.floor(1000 + Math.random() * 8999)}`;
       const photo = unsplashPhotos[i % unsplashPhotos.length];
       const team = teams[Math.floor(Math.random() * teams.length)];
@@ -1682,7 +1682,7 @@ async function startServer() {
         timestamp: new Date().toISOString(),
         userId: 'system',
         userName: existingPlayer.name,
-        userEmail: existingPlayer.email || 'atleta@racha.fofim',
+        userEmail: existingPlayer.email || 'atleta@sistema.local',
         action: 'Troca de categoria',
         previousRole: '',
         newRole: '',
@@ -1700,7 +1700,7 @@ async function startServer() {
         timestamp: new Date().toISOString(),
         userId: 'system',
         userName: existingPlayer.name,
-        userEmail: existingPlayer.email || 'atleta@racha.fofim',
+        userEmail: existingPlayer.email || 'atleta@sistema.local',
         action: 'Alteração de telefone',
         previousRole: '',
         newRole: '',
@@ -2534,7 +2534,7 @@ async function startServer() {
             timestamp: new Date().toISOString(),
             userId: responsibleId || 'system',
             userName: responsibleName || 'Administrador',
-            userEmail: responsibleEmail || 'admin@racha.fofim',
+            userEmail: responsibleEmail || 'admin@sistema.local',
             action: 'Sorteio Invalidado',
             previousRole: '',
             newRole: '',
@@ -2560,7 +2560,7 @@ async function startServer() {
             timestamp: new Date().toISOString(),
             userId: responsibleId || 'system',
             userName: responsibleName || 'Atleta',
-            userEmail: responsibleEmail || 'atleta@racha.fofim',
+            userEmail: responsibleEmail || 'atleta@sistema.local',
             action: 'Limpeza em Massa de Confirmações',
             previousRole: '',
             newRole: '',
@@ -2627,7 +2627,7 @@ async function startServer() {
         timestamp: new Date().toISOString(),
         userId: responsibleId || 'system',
         userName: responsibleName || 'Administrador',
-        userEmail: responsibleEmail || 'admin@racha.fofim',
+        userEmail: responsibleEmail || 'admin@sistema.local',
         action: 'Limpeza em Massa de Confirmações',
         previousRole: '',
         newRole: '',
@@ -3824,7 +3824,7 @@ async function startServer() {
           timestamp: new Date().toISOString(),
           userId: 'system',
           userName: 'Sistema de Sorteio',
-          userEmail: 'sistema@racha.fofim',
+          userEmail: 'sistema@sistema.local',
           action: `Re-sorteio de Times (Sequência: #${redrawCount} / 2)`,
           previousRole: '',
           newRole: '',
@@ -4090,7 +4090,7 @@ async function startServer() {
         timestamp: new Date().toISOString(),
         action: 'Registro de Afinidades de Time',
         userName: 'Coordenador',
-        userEmail: 'sistema@racha.fofim',
+        userEmail: 'sistema@sistema.local',
         userId: 'system',
         previousRole: 'system',
         newRole: 'system',
@@ -4336,7 +4336,7 @@ async function startServer() {
           timestamp: new Date().toISOString(),
           action: 'Registro de Afinidades de Time',
           userName: 'Coordenador',
-          userEmail: 'sistema@racha.fofim',
+          userEmail: 'sistema@sistema.local',
           userId: 'system',
           previousRole: 'system',
           newRole: 'system',
@@ -4550,7 +4550,7 @@ async function startServer() {
   </g>
 
   <text x="400" y="55" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="14" fill="#22c55e" letter-spacing="3" text-anchor="middle" opacity="0.8">
-    RACHA DO FOFIM • REGISTRO AUTOMÁTICO
+    ${APP_NAME.toUpperCase()} • REGISTRO AUTOMÁTICO
   </text>
   
   <text x="400" y="90" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle" filter="url(#shadow)">

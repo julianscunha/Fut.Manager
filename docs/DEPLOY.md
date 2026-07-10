@@ -1,4 +1,4 @@
-# .DEPLOY.md — Guia de Deploy "Racha do Fofim" para Render + Supabase
+# .DEPLOY.md — Guia de Deploy do Fut.Manager para Render + Supabase
 
 Este documento descreve a arquitetura de produção já implementada no repositório (Postgres + Storage via Supabase, autenticação própria com bcrypt + JWT, hospedagem no Render) e o roteiro para colocar o app no ar.
 
@@ -13,7 +13,7 @@ Este documento descreve a arquitetura de produção já implementada no reposit�
 1. Acesse [https://supabase.com](https://supabase.com) e faça login (ou crie uma conta gratuita).
 2. Clique em **"New project"**.
 3. Preencha:
-   - **Project name**: `racha-do-fofim` (ou nome à sua escolha)
+   - **Project name**: `fut-manager` (ou nome à sua escolha)
    - **Database password**: gere uma senha forte (usada só internamente pelo Supabase; você não vai precisar dela diretamente, já que o app fala com o Supabase via API/service role, não via conexão Postgres direta)
    - **Region**: a mais próxima (ex: `South America (São Paulo)`)
    - **Pricing plan**: Free
@@ -447,7 +447,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 INSERT INTO users (id, name, email, role, status, created_at, player_id, athlete_id)
 VALUES (
   'user-admin',
-  'Administrador do Fofim',
+  'Administrador',
   'admin@racha.com',
   'admin',
   'approved',
@@ -466,7 +466,7 @@ INSERT INTO players (
   category, status, primary_position, secondary_positions, created_at, updated_at
 ) VALUES (
   'player-admin',
-  'Administrador do Fofim',
+  'Administrador',
   'admin@racha.com',
   '(85) 99999-9999',
   '',
@@ -612,7 +612,7 @@ git push origin main
 2. **"New"** → **"Web Service"**.
 3. Conecte o repositório GitHub.
 4. Preencha:
-   - **Name**: `racha-do-fofim`
+   - **Name**: `fut-manager`
    - **Runtime**: Docker (Render detecta o `Dockerfile` automaticamente)
    - **Plan**: Free (ou Starter, se o cold start do free incomodar)
 5. **Não clique em criar ainda** — configure as variáveis de ambiente primeiro (próximo passo).

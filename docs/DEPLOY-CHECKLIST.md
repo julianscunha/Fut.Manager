@@ -1,4 +1,4 @@
-# Checklist de Deploy — "Racha do Fofim" (Supabase + Render)
+# Checklist de Deploy — Fut.Manager (Supabase + Render)
 
 Checklist detalhado complementar ao [`DEPLOY.md`](DEPLOY.md). Use para não esquecer nenhuma etapa antes, durante e depois do deploy.
 

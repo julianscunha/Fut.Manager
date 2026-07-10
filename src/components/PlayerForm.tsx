@@ -261,7 +261,7 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Ex: fofim@racha.com"
+            placeholder="Ex: nome@email.com"
             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3.5 py-2 text-white focus:outline-none focus:border-[#22c55e] placeholder-zinc-600 transition"
           />
         </div>

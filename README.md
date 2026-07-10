@@ -1,4 +1,4 @@
-# ⚽ Fut Manager
+# ⚽ Fut.Manager
 
 **O cockpit completo para quem administra um racha.** Mensalistas, reservas, sorteio de times equilibrado, financeiro, mural social e ranking técnico — tudo em um só lugar, pensado para ser usado no campo, pelo celular, minutos antes da bola rolar.
 
@@ -13,9 +13,9 @@
 
 ## O que é isso
 
-Todo grupo de futebol society passa pelas mesmas dores: quem vai jogar, quem paga o quê, como sortear times justos, onde ficam as fotos da resenha e quem realmente é bom em campo. O **Racha do Fofim** resolve tudo isso em um único aplicativo web, mobile-first, para o administrador do grupo (e para cada atleta) usar sem depender de planilha, grupo de WhatsApp lotado de enquete ou papel.
+Todo grupo de futebol society passa pelas mesmas dores: quem vai jogar, quem paga o quê, como sortear times justos, onde ficam as fotos da resenha e quem realmente é bom em campo. O **Fut.Manager** resolve tudo isso em um único aplicativo web, mobile-first, para o administrador do grupo (e para cada atleta) usar sem depender de planilha, grupo de WhatsApp lotado de enquete ou papel.
 
-Nasceu como o sistema real de um grupo de futebol (o "Racha do Fofim") e evoluiu para uma plataforma completa e **white-label** — hoje roda em produção sobre Postgres (Supabase), é hospedável em qualquer lugar que rode um container Docker, e o nome exibido na interface é 100% configurável: defina a variável `APP_NAME` no seu `.env` com o nome do seu próprio grupo e ele se propaga automaticamente por toda a UI, notificações e mensagens de compartilhamento — sem tocar em nenhuma linha de código.
+Nasceu como o sistema real de um grupo de futebol e evoluiu para uma plataforma completa e **white-label** — hoje roda em produção sobre Postgres (Supabase), é hospedável em qualquer lugar que rode um container Docker, e o nome exibido na interface é 100% configurável: defina a variável `APP_NAME` no seu `.env` com o nome do seu próprio grupo e ele se propaga automaticamente por toda a UI, notificações e mensagens de compartilhamento — sem tocar em nenhuma linha de código.
 
 ## ✨ Funcionalidades
 

@@ -1,6 +1,6 @@
-# Relatório de Auditoria Operacional e UX — Racha do Fofim
+# Relatório de Auditoria Operacional e UX — Fut.Manager
 
-Este documento consolida as análises de arquitetura, fluxos funcionais, lógica matemática de estatística, regras financeiras, comportamento mobile e segurança do sistema **Racha do Fofim**.
+Este documento consolida as análises de arquitetura, fluxos funcionais, lógica matemática de estatística, regras financeiras, comportamento mobile e segurança do sistema **Fut.Manager**.
 
 ---
 

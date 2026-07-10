@@ -912,14 +912,14 @@ export default function DashboardStatus({
     const maxPlayersLimit = nextMatch.maxPlayers !== undefined && nextMatch.maxPlayers !== null ? nextMatch.maxPlayers : 15;
     const vacanciesCount = Math.max(0, maxPlayersLimit - confirmedCount);
     
-    const textMsg = `\u26BD *RACHA DO FOFIM - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
+    const textMsg = `\u26BD *${appName.toUpperCase()} - CONVOCADOS PARA O DIA ${formattedDate}!* \u26BD\n` +
       `\uD83D\uDCC5 *Data:* ${formattedDate} às ${nextMatch.time}\n` +
       `\uD83D\uDCCD *Local:* ${nextMatch.location}\n\n` +
       `\uD83D\uDC65 *Confirmados (${confirmedCount}/${maxPlayersLimit}):*\n${confirmedList || '_Nenhum jogador confirmado ainda_'}\n\n` +
       `\u274C *Não Vão (${cancelPlayers.length}):*\n${absentList || '_Nenhuma recusa registrada_'}\n\n` +
       `\u26A0\uFE0F *Vagas em aberto:* ${vacanciesCount} vagas disponíveis!\n\n` +
       `Por favor, atualizem seus status de presença no app oficial:\n` +
-      `\uD83D\uDC49 Acesse e confirme: https://racha-do-fofim.com\n\n` +
+      `\uD83D\uDC49 Acesse e confirme: ${window.location.origin}\n\n` +
       `Abraços e bom racha!`;
       
     const escapedMsg = encodeURIComponent(textMsg);
@@ -1330,9 +1330,9 @@ export default function DashboardStatus({
           };
         case 6:
           return {
-            badge: "HOJE TEM RACHA!",
+            badge: `HOJE TEM ${appName.toUpperCase()}!`,
             badgeClass: "text-red-400 bg-red-500/10 border-red-500/25 animate-pulse font-black",
-            title: "🏟️ HOJE É DIA DE RACHA DO FOFIM!",
+            title: `🏟️ HOJE É DIA DE ${appName.toUpperCase()}!`,
             subtitle: "O apito inicial está próximo. Confira as informações da rodada!",
             glow: "shadow-[0_0_60px_rgba(239,68,68,0.08)] border-red-500/30 ring-2 ring-red-500/10"
           };
@@ -1662,7 +1662,7 @@ export default function DashboardStatus({
               </div>
               <div className="space-y-1">
                 <span className="text-[10px] font-mono font-black text-red-500 uppercase tracking-widest block">🏟️ DIA DE RACHA</span>
-                <h3 className="text-white font-display font-extrabold text-sm uppercase tracking-wider">HOJE TEM RACHA DO FOFIM!</h3>
+                <h3 className="text-white font-display font-extrabold text-sm uppercase tracking-wider">{`HOJE TEM ${appName.toUpperCase()}!`}</h3>
                 <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
                   A rodada acontece hoje às <span className="text-white font-extrabold font-mono">{matchDateObj.time || '19:30'}</span> na <span className="text-emerald-400 font-extrabold">{matchDateObj.location || 'Quadra Principal'}</span>. Chegue no horário para garantir o início das partidas!
                 </p>

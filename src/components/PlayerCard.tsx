@@ -716,7 +716,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         customProg: rank > 0 ? `Rank #${rank}` : 'Sem Rank',
       },
       {
-        id: 'elite_fofim',
+        id: 'elite_geral',
         category: 'ranking' as const,
         icon: '🥇',
         name: `Elite do ${appName}`,
