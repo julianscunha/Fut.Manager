@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile, Notification, NotificationPreferences, FinanceConfig } from '../src/types';
 
 interface DatabaseSchema {
@@ -48,7 +49,14 @@ function getSupabase(): SupabaseClient {
     if (!url || !key) {
       throw new Error('SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios (ver .env.example).');
     }
-    supabaseClient = createClient(url, key, { auth: { persistSession: false } });
+    // Node < 22 (ex.: runtime padrão do Render) não expõe WebSocket nativo global,
+    // e o realtime-js do supabase-js falha ao construir o client mesmo sem usar
+    // Realtime. Injeta o `ws` explicitamente para evitar o erro
+    // "Node.js detected but native WebSocket not found.".
+    supabaseClient = createClient(url, key, {
+      auth: { persistSession: false },
+      realtime: { transport: WebSocket as any }
+    });
   }
   return supabaseClient;
 }
