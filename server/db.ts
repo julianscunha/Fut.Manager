@@ -296,6 +296,27 @@ function captureSnapshot(db: DatabaseSchema): Record<string, string> {
   return snap;
 }
 
+// --- Cache de leitura (readDb) ---
+// readDb() é chamado ~1x por rota da API (dezenas de vezes por carregamento de tela),
+// e cada chamada buscava as ~24 tabelas inteiras do Postgres do zero. As duas otimizações
+// abaixo não mudam nenhum comportamento visível: apenas evitam refazer a mesma busca
+// completa quando várias chamadas acontecem quase juntas.
+let inFlightRead: Promise<DatabaseSchema> | null = null;
+let cachedRead: { db: DatabaseSchema; snapshot: Record<string, string>; expiresAt: number } | null = null;
+let cacheGeneration = 0;
+const READ_CACHE_TTL_MS = 300; // janela curta só pra colapsar rajadas de chamadas do mesmo carregamento de tela
+
+// Nunca devolve o objeto compartilhado do cache — cada chamador recebe seu próprio clone,
+// livre pra mutar em memória antes de chamar writeDb(), como o resto do código já faz.
+// Propaga o snapshot pro clone (em vez de recapturar) pra preservar o diff por tabela que
+// writeDb() já faz (ver captureSnapshot acima) — sem isso, todo writeDb() reescreveria as
+// 24 tabelas, mesmo as que não mudaram.
+function cloneDbForCaller(db: DatabaseSchema, snapshot: Record<string, string>): DatabaseSchema {
+  const clone = structuredClone(db);
+  snapshotMap.set(clone, snapshot);
+  return clone;
+}
+
 // --- lógica de negócio contínua (portada do db.ts baseado em arquivo, sem as migrações
 //     de compatibilidade retroativa que só existiam para corrigir JSON antigo) ---
 
@@ -649,7 +670,7 @@ export async function ensureDbExists(): Promise<void> {
   console.log('[DB] Supabase conectado com sucesso.');
 }
 
-export async function readDb(): Promise<DatabaseSchema> {
+async function fetchAndSyncDb(): Promise<DatabaseSchema> {
   const [
     generic,
     reservesOrder,
@@ -721,12 +742,45 @@ export async function readDb(): Promise<DatabaseSchema> {
     console.error('[DB] Erro ao auto-arquivar posts do mural:', err);
   }
 
-  await writeDb(db);
+  // Persiste efeitos colaterais da própria busca (bilhetes gerados automaticamente,
+  // sincronização de status etc.) — não é uma escrita "externa", então não deve
+  // invalidar o cache de leitura que está prestes a ser preenchido com este resultado.
+  await writeDb(db, { skipCacheInvalidation: true });
 
   return db;
 }
 
-export async function writeDb(db: DatabaseSchema): Promise<void> {
+export async function readDb(): Promise<DatabaseSchema> {
+  const now = Date.now();
+  if (cachedRead && cachedRead.expiresAt > now) {
+    return cloneDbForCaller(cachedRead.db, cachedRead.snapshot);
+  }
+  if (inFlightRead) {
+    const db = await inFlightRead;
+    return cloneDbForCaller(db, snapshotMap.get(db) || captureSnapshot(db));
+  }
+
+  const generationBefore = cacheGeneration;
+  const fetchPromise = fetchAndSyncDb();
+  inFlightRead = fetchPromise;
+  try {
+    const db = await fetchPromise;
+    const snapshot = snapshotMap.get(db) || captureSnapshot(db);
+    if (cacheGeneration === generationBefore) {
+      cachedRead = { db, snapshot, expiresAt: Date.now() + READ_CACHE_TTL_MS };
+    }
+    return cloneDbForCaller(db, snapshot);
+  } finally {
+    inFlightRead = null;
+  }
+}
+
+export async function writeDb(db: DatabaseSchema, opts?: { skipCacheInvalidation?: boolean }): Promise<void> {
+  if (!opts?.skipCacheInvalidation) {
+    cacheGeneration++;
+    cachedRead = null;
+  }
+
   syncMatchStatuses(db);
 
   const prevSnapshot = snapshotMap.get(db) || {};
