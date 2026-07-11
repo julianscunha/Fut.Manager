@@ -3224,6 +3224,7 @@ async function startServer() {
           playerName: player ? player.name : 'Jogador Desconhecido',
           category: player ? player.category : 'reserva',
           photoOriginal: player ? player.photoOriginal : '',
+          avatarEsportivo: player ? player.avatarEsportivo : '',
           adultsCount: part.adultsCount,
           childrenCount: part.childrenCount,
           confirmedAt: part.confirmedAt,

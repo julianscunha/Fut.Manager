@@ -756,7 +756,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                 <div key={player.id} className="bg-zinc-950/40 p-4 rounded-xl border border-zinc-900 flex justify-between gap-4 font-mono">
                   <div className="flex gap-3">
                     <img 
-                      src={player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'} 
+                      src={player.avatarEsportivo || player.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=100'}
                       alt={player.name}
                       referrerPolicy="no-referrer"
                       className="w-11 h-11 rounded-full object-cover border border-zinc-800"
@@ -905,12 +905,12 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                       {/* Top Row: Athlete link details & Competence */}
                       <div className="flex justify-between items-center gap-2">
                         <div className="flex items-center gap-2 min-w-0">
-                          {ply?.photoOriginal ? (
-                            <img 
-                              src={ply.photoOriginal} 
-                              alt="atleta" 
+                          {ply?.avatarEsportivo || ply?.photoOriginal ? (
+                            <img
+                              src={ply.avatarEsportivo || ply.photoOriginal}
+                              alt="atleta"
                               referrerPolicy="no-referrer"
-                              className="w-6 h-6 rounded-full object-cover flex-shrink-0" 
+                              className="w-6 h-6 rounded-full object-cover flex-shrink-0"
                             />
                           ) : (
                             <div className="w-6 h-6 rounded-full bg-zinc-850 flex items-center justify-center text-[10px] text-zinc-400 font-bold flex-shrink-0 font-mono">
@@ -1009,12 +1009,12 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                           <tr key={bill.id} className="hover:bg-zinc-900/20 text-zinc-300 font-mono">
                             <td className="p-3 font-semibold text-white">
                               <div className="flex items-center gap-2">
-                                {ply?.photoOriginal && (
-                                  <img 
-                                    src={ply.photoOriginal} 
-                                    alt="atleta" 
+                                {(ply?.avatarEsportivo || ply?.photoOriginal) && (
+                                  <img
+                                    src={ply.avatarEsportivo || ply.photoOriginal}
+                                    alt="atleta"
                                     referrerPolicy="no-referrer"
-                                    className="w-5 h-5 rounded-full object-cover flex-shrink-0" 
+                                    className="w-5 h-5 rounded-full object-cover flex-shrink-0"
                                   />
                                 )}
                                 <span>{ply ? ply.name : 'Jogador Desconhecido'}</span>

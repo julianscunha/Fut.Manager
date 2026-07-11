@@ -1067,8 +1067,8 @@ export default function EventManager({ currentUser }: EventManagerProps) {
 
                                 return (
                                   <div key={p.id} className="bg-zinc-900 border border-zinc-850 p-1.5 rounded flex items-center gap-2">
-                                    {p.photoOriginal ? (
-                                      <img src={p.photoOriginal} alt="" className="w-6 h-6 rounded-full object-cover border border-zinc-850" referralPolicy="no-referrer" />
+                                    {p.avatarEsportivo || p.photoOriginal ? (
+                                      <img src={p.avatarEsportivo || p.photoOriginal} alt="" className="w-6 h-6 rounded-full object-cover border border-zinc-850" referralPolicy="no-referrer" />
                                     ) : (
                                       <div className="w-6 h-6 rounded-full bg-zinc-805 flex items-center justify-center text-zinc-400 font-sans border border-zinc-750 text-[8px]">
                                         {p.playerName?.slice(0, 2).toUpperCase()}
@@ -1368,8 +1368,8 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                       {participants.map((p) => (
                         <tr key={p.id} className="hover:bg-zinc-950/60 transition text-zinc-300">
                           <td className="p-3 font-bold text-white flex items-center gap-2">
-                            {p.photoOriginal && (
-                              <img src={p.photoOriginal} alt="" className="w-6 h-6 rounded-full object-cover border border-zinc-800" referralPolicy="no-referrer" />
+                            {(p.avatarEsportivo || p.photoOriginal) && (
+                              <img src={p.avatarEsportivo || p.photoOriginal} alt="" className="w-6 h-6 rounded-full object-cover border border-zinc-800" referralPolicy="no-referrer" />
                             )}
                             <span>{p.playerName}</span>
                           </td>
