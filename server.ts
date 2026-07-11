@@ -1782,6 +1782,13 @@ async function startServer() {
 
     if (forceRegenerate) {
       updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO';
+      // Sem foto original não há como gerar/manter o avatar de IA — limpa para não continuar
+      // exibindo um avatar antigo (a foto que o originou já não existe mais).
+      if (!updatedPlayer.photoOriginal) {
+        updatedPlayer.avatarEsportivo = null;
+        updatedPlayer.avatarCard = null;
+        updatedPlayer.avatarOriginal = null;
+      }
     }
 
     const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
