@@ -22,6 +22,7 @@ import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
+import { isEmailConfigured, sendEmail } from './server/email';
 
 // Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
 // Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
@@ -850,11 +851,16 @@ async function startServer() {
       const db = await readDb();
       const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
 
-      // Resposta idêntica exista ou não o usuário — não revela se o e-mail está cadastrado.
-      const genericResponse = { message: 'A recuperação automática de senha está temporariamente indisponível. Entre em contato com um administrador do grupo para redefinir sua senha.' };
+      // Resposta idêntica exista ou não o usuário/SMTP configurado — não revela se o e-mail está cadastrado.
+      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.' };
+      const unavailableResponse = { message: 'A recuperação automática de senha está temporariamente indisponível. Entre em contato com um administrador do grupo para redefinir sua senha.' };
+
+      if (!isEmailConfigured()) {
+        return res.json(unavailableResponse);
+      }
 
       if (!user) {
-        return res.json(genericResponse);
+        return res.json(sentResponse);
       }
 
       // Generate a recovery token with expiration and persist it for validation on reset
@@ -865,11 +871,24 @@ async function startServer() {
       db.passwordResetTokens[user.id] = { token, expiresAt };
       await writeDb(db);
 
-      // TODO: envio real de e-mail com o link de redefinição ainda não está implementado
-      // (nenhum provedor de e-mail configurado neste projeto). Até lá, o token nunca deve
-      // ser devolvido na resposta da API — isso permitiria a qualquer pessoa redefinir a
-      // senha de qualquer usuário só sabendo o e-mail dele, sem nunca acessar a caixa de entrada.
-      return res.json(genericResponse);
+      const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/?resetToken=${encodeURIComponent(token)}&resetUserId=${encodeURIComponent(user.id)}`;
+      try {
+        await sendEmail(
+          user.email,
+          `Redefinição de senha — ${APP_NAME}`,
+          `<p>Olá, ${user.name}!</p>
+           <p>Recebemos um pedido de redefinição de senha para sua conta no ${APP_NAME}.</p>
+           <p><a href="${resetUrl}">Clique aqui para definir uma nova senha</a> (link válido por 15 minutos).</p>
+           <p>Se você não pediu essa redefinição, ignore este e-mail.</p>`
+        );
+      } catch (emailErr) {
+        console.error('[API POST /api/auth/forgot-password] Falha ao enviar e-mail:', emailErr);
+        delete db.passwordResetTokens[user.id];
+        await writeDb(db);
+        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefinição. Tente novamente em instantes.' });
+      }
+
+      return res.json(sentResponse);
     } catch (err) {
       console.error('[API POST /api/auth/forgot-password]', err);
       return res.status(500).json({ error: 'Erro ao processar solicitação. Tente novamente em instantes.' });

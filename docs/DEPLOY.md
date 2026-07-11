@@ -567,6 +567,7 @@ Substitui por completo o antigo `readDb()`/`writeDb()` baseado em `data/database
 - `helmet()`, `cors()` (allowlist via `ALLOWED_ORIGINS`) e `express-rate-limit` nas rotas `/api/auth/*` (5 tentativas / 15 min).
 - `/api/upload-s3` e `/api/mural/upload` sobem para o Supabase Storage (bucket `Uploads`), validando o tipo real do arquivo por magic bytes (`file-type` v22+) e o tamanho real do buffer decodificado — não a extensão/tamanho que o cliente declarar. Cada um também faz sua própria checagem de `getAuthenticatedUser` como defesa em profundidade, além do gate global.
 - Geração de avatar com IA via `AvatarProviderFactory` (`server/avatarProvider.ts`): usa **OpenRouter** (`OPENROUTER_API_KEY`, modelo padrão `openai/gpt-image-1`) se configurado, com fallback para **Gemini direto** (`GEMINI_API_KEY`). Ver `.env.example` para as duas opções documentadas.
+- **E-mail transacional** (`server/email.ts`, hoje usado só pelo link de "esqueci minha senha" em `POST /api/auth/forgot-password`): SMTP genérico via `nodemailer`, não amarrado a nenhum provedor específico — configure `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`EMAIL_FROM` com as credenciais de qualquer serviço (Resend, SendGrid, Mailgun, SES, Gmail, servidor próprio). Se `SMTP_HOST` não estiver definido, a rota responde educadamente que a recuperação automática está indisponível, orientando a procurar um administrador — a conta de ninguém trava por falta dessa configuração.
 - **Nome do sistema configurável**: nenhum texto da interface tem o nome de um grupo específico hardcoded. `APP_NAME` (backend) é exposto ao frontend via `GET /api/public/app-config` e consumido pelo contexto `src/contexts/AppConfigContext.tsx` (`useAppConfig()`/`<BrandName />`) — troque o valor da variável e o nome muda em toda a interface, mensagens de WhatsApp e notificações, sem qualquer alteração de código.
 
 ### Frontend (`src/`)
@@ -597,6 +598,15 @@ ALLOWED_ORIGINS="http://localhost:3000"
 JWT_SECRET="<gere com o comando abaixo>"
 ENABLE_AVATAR_AI=false
 NODE_ENV="development"
+
+# E-mail transacional (opcional) — sem isso, "esqueci minha senha" fica indisponível e orienta
+# a procurar um admin. SMTP genérico: funciona com qualquer provedor (exemplo com Resend abaixo,
+# mas SendGrid/Mailgun/SES/Gmail/servidor próprio também servem, só trocando host/porta/credenciais).
+SMTP_HOST="smtp.resend.com"
+SMTP_PORT="587"
+SMTP_USER="resend"
+SMTP_PASS="<sua-api-key-resend>"
+EMAIL_FROM="Meu Racha <naoresponda@seudominio.com>"
 ```
 
 Gerar um `JWT_SECRET` forte:
@@ -670,6 +680,7 @@ Na seção **"Environment"** do formulário de criação (ou depois, em Settings
 | `JWT_SECRET` | uma string aleatória forte (gere com o comando do Passo 4.1 — **use um valor diferente do de dev**) |
 | `NODE_ENV` | `production` |
 | `ALLOWED_ORIGINS` | `https://<seu-dominio>.onrender.com` (você só sabe o domínio definitivo depois do primeiro deploy; pode editar essa variável e re-deployar depois) |
+| `SMTP_HOST`/`SMTP_PORT`/`SMTP_USER`/`SMTP_PASS`/`EMAIL_FROM` | opcional — credenciais SMTP de qualquer provedor (ex.: Resend), para o link de "esqueci minha senha" funcionar de verdade. Sem isso, essa tela só orienta o usuário a procurar um administrador. |
 
 Clique em **"Create Web Service"**. O Render builda a imagem Docker e sobe o serviço (alguns minutos no primeiro deploy).
 
