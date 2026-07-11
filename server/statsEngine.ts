@@ -280,7 +280,7 @@ export function computeStatsForSeason({
   });
 
   // Compile individual stats
-  const individualStatsList: Array<PlayerStats & { name: string; photoOriginal: string; primaryPosition: string }> = activePlayers.map(p => {
+  const individualStatsList: Array<PlayerStats & { name: string; photoOriginal: string; avatarEsportivo?: string; primaryPosition: string }> = activePlayers.map(p => {
     const presences = presenceCountMap[p.id] || 0;
     const vitorias = winCountMap[p.id] || 0;
     const derrotas = lossCountMap[p.id] || 0;
@@ -292,6 +292,7 @@ export function computeStatsForSeason({
       playerId: p.id,
       name: p.name,
       photoOriginal: p.photoOriginal,
+      avatarEsportivo: p.avatarEsportivo,
       primaryPosition: p.primaryPosition,
       presences,
       vitorias,
