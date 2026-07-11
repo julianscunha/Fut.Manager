@@ -39,5 +39,7 @@ EXPOSE 3000
 # Variáveis de ambiente críticas
 ENV NODE_ENV=production
 
-# Rodar aplicação
-CMD ["npm", "start"]
+# Roda o processo Node diretamente (não via "npm start") para que SIGTERM chegue limpo durante
+# o rolling deploy do Render — via npm, o Node não recebia o sinal corretamente, gerando um
+# "npm error signal SIGTERM" ruidoso (porém inofensivo) nos logs a cada deploy.
+CMD ["node", "dist/server.cjs"]
