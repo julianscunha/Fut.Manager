@@ -16,6 +16,7 @@ import { readDb, writeDb, generateMonthlyBillingsIfNeeded, getSupabaseClient } f
 import { hashPassword, verifyPassword, signSessionToken, verifySessionToken } from './server/auth';
 import { fileTypeFromBuffer } from 'file-type';
 import sharp from 'sharp';
+import compression from 'compression';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
@@ -596,6 +597,10 @@ async function startServer() {
   app.use(helmet({
     contentSecurityPolicy: false // Vite dev/inline scripts precisam de CSP customizado; revisitar em produção
   }));
+
+  // Comprime respostas (JSON de API + bundle JS/CSS estático) com gzip/brotli — sem isso,
+  // o bundle de produção (~2MB) e os payloads JSON trafegam sem nenhuma compactação.
+  app.use(compression());
 
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
     .split(',')
@@ -6424,8 +6429,19 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      // Os arquivos em assets/ têm hash de conteúdo no nome (Vite) — seguro cachear por 1 ano.
+      // O index.html não tem hash e referencia esses arquivos, então precisa ficar sempre fresco.
+      maxAge: '1y',
+      immutable: true,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('index.html')) {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
+      }
+    }));
     app.get('*', async (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distPath, 'index.html'));
     });
   }
