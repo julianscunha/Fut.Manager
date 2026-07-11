@@ -1208,8 +1208,12 @@ async function startServer() {
   });
 
   // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pública do Supabase Storage.
-  // Ignora silenciosamente URLs que não são do nosso bucket (ex.: nunca chegou a ser migrada,
-  // ou já é null/undefined) — não há o que apagar nesses casos.
+  // photoOriginal/avatarEsportivo/avatarCard chegam direto do body de PUT /api/players — um
+  // cliente mal-intencionado poderia setar esses campos com a URL do arquivo de outro jogador
+  // e, numa edição seguinte, forçar a exclusão dele. Por isso, antes de apagar: (1) só aceita
+  // caminhos no formato exato gerado pelos nossos próprios uploads (sem barras/traversal fora
+  // do esperado) e (2) confirma que nenhum outro registro de jogador ainda referencia essa
+  // mesma URL em qualquer um dos 4 campos de foto/avatar.
   async function deleteStorageFileByUrl(url: string | null | undefined): Promise<void> {
     if (!url) return;
     const marker = '/storage/v1/object/public/Uploads/';
@@ -1217,6 +1221,22 @@ async function startServer() {
     if (idx === -1) return;
 
     const path = decodeURIComponent(url.slice(idx + marker.length));
+
+    const looksLikeOwnUpload = /^\d+-[a-z0-9.-]+\.webp$/.test(path) || /^avatars\/[^/]+-esportivo-\d+\.webp$/.test(path);
+    if (!looksLikeOwnUpload) {
+      console.warn('[Storage] Ignorando exclusão de caminho fora do padrão esperado:', path);
+      return;
+    }
+
+    const db = await readDb();
+    const stillInUse = db.players.some(p =>
+      p.photoOriginal === url || p.avatarOriginal === url || p.avatarEsportivo === url || p.avatarCard === url
+    );
+    if (stillInUse) {
+      console.warn('[Storage] Arquivo ainda referenciado por um jogador, exclusão cancelada:', path);
+      return;
+    }
+
     const supabase = getSupabaseClient();
     const { error } = await supabase.storage.from('Uploads').remove([path]);
     if (error) {
