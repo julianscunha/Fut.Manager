@@ -856,7 +856,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     <div
       id={`player-card-${player.id}`}
       onClick={() => onSelect?.(player)}
-      className={`relative w-full h-[495px] select-none transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+      className={`relative w-full h-[523px] select-none transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
         isSoftDeleted ? 'opacity-65 grayscale' : ''
       }`}
     >
