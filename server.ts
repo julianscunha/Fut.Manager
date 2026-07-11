@@ -1207,6 +1207,23 @@ async function startServer() {
     return res.json({ message: 'Ação realizada com sucesso!', user: db.users[userIndex] });
   });
 
+  // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pública do Supabase Storage.
+  // Ignora silenciosamente URLs que não são do nosso bucket (ex.: nunca chegou a ser migrada,
+  // ou já é null/undefined) — não há o que apagar nesses casos.
+  async function deleteStorageFileByUrl(url: string | null | undefined): Promise<void> {
+    if (!url) return;
+    const marker = '/storage/v1/object/public/Uploads/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return;
+
+    const path = decodeURIComponent(url.slice(idx + marker.length));
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.storage.from('Uploads').remove([path]);
+    if (error) {
+      console.error('[Storage] Falha ao remover arquivo órfão:', path, error.message);
+    }
+  }
+
   // Providers de avatar retornam a imagem gerada como data URL base64 inline. Salvar isso direto
   // na coluna do Postgres (em vez de só a URL) faz o payload de GET /api/players carregar todo
   // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — daí
@@ -1304,19 +1321,23 @@ async function startServer() {
     let player = db.players[playerIndex];
     if (!player.photoOriginal) {
       console.log(`[Avatar Inteligente] Sem foto original válida. Encerrando.`);
+      const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
       player.avatarEsportivo = null;
       await writeDb(db);
+      await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
       return;
     }
 
     if (process.env.ENABLE_AVATAR_AI !== 'true') {
       console.log(`[Avatar Inteligente] Geração suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
+      const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
       player.avatarEsportivo = null;
       await writeDb(db);
+      await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
       return;
     }
 
@@ -1331,6 +1352,7 @@ async function startServer() {
       playerIndex = db.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
         player = db.players[playerIndex];
+        const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
         player.avatarOriginal = generatedPlayer.avatarOriginal;
 
         const isFallback = !generatedPlayer.avatarEsportivo || generatedPlayer.avatarEsportivo === generatedPlayer.photoOriginal;
@@ -1347,6 +1369,10 @@ async function startServer() {
 
         await writeDb(db);
         console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
+
+        // Apaga a versão anterior do avatar no Storage, já substituída ou zerada acima.
+        if (oldCard !== player.avatarCard) await deleteStorageFileByUrl(oldCard);
+        if (oldEsportivo !== oldCard && oldEsportivo !== player.avatarEsportivo) await deleteStorageFileByUrl(oldEsportivo);
       }
     } catch (err) {
       console.error(`[Avatar Inteligente] Falha no background:`, err);
@@ -1354,10 +1380,12 @@ async function startServer() {
       playerIndex = db.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
         player = db.players[playerIndex];
+        const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
         player.avatarStatus = 'ERRO';
         player.avatarCard = null;
         player.avatarEsportivo = null;
         await writeDb(db);
+        await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
       }
     }
   }
@@ -1837,6 +1865,22 @@ async function startServer() {
 
     db.players[index] = updatedPlayer;
     await writeDb(db);
+
+    // Foto trocada/removida: a antiga não é mais referenciada por ninguém, apaga do Storage.
+    // (Se a foto só mudou mas o avatar de IA vai ser regenerado, o background cuida do avatar antigo.)
+    if (photoChanged && existingPlayer.photoOriginal && existingPlayer.photoOriginal !== updatedPlayer.photoOriginal) {
+      deleteStorageFileByUrl(existingPlayer.photoOriginal).catch(err => {
+        console.error('[Storage] Falha ao remover foto antiga:', err);
+      });
+    }
+    // Foto removida por completo: também apaga o avatar de IA vinculado a ela, já zerado acima.
+    if (!updatedPlayer.photoOriginal && existingPlayer.photoOriginal) {
+      const oldCard = existingPlayer.avatarCard;
+      const oldEsportivo = existingPlayer.avatarEsportivo;
+      Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]).catch(err => {
+        console.error('[Storage] Falha ao remover avatar antigo:', err);
+      });
+    }
 
     // Trigger background generation asynchronously if forced
     if (forceRegenerate && updatedPlayer.photoOriginal) {
