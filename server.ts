@@ -1193,6 +1193,30 @@ async function startServer() {
     return res.json({ message: 'Ação realizada com sucesso!', user: db.users[userIndex] });
   });
 
+  // Providers de avatar retornam a imagem gerada como data URL base64 inline. Salvar isso direto
+  // na coluna do Postgres (em vez de só a URL) faz o payload de GET /api/players carregar todo
+  // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — daí
+  // o upload pro Storage aqui, igual ao que /api/upload-s3 já faz pra foto original.
+  async function uploadAvatarDataUrlToStorage(dataUrl: string, pathPrefix: string): Promise<string> {
+    const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!match) return dataUrl; // já não é base64 inline (ex.: URL retornada por engano) — nada a fazer
+
+    const mimeType = match[1];
+    const buffer = Buffer.from(match[2], 'base64');
+    const ext = mimeType.split('/')[1]?.split('+')[0] || 'png';
+    const filename = `${pathPrefix}-${Date.now()}.${ext}`;
+
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.storage.from('Uploads').upload(filename, buffer, { contentType: mimeType });
+    if (error) {
+      console.error('[Avatar Inteligente] Falha ao enviar avatar gerado para o Storage:', error.message);
+      throw error;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from('Uploads').getPublicUrl(filename);
+    return publicUrlData.publicUrl;
+  }
+
   // Gerar Avatar Esportivo Inteligente usando o AvatarProviderFactory desacoplado
   async function gerarAvatarEsportivo(player: Player, forceRegenerate = false): Promise<Player> {
     const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
@@ -1287,17 +1311,20 @@ async function startServer() {
       playerIndex = db.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
         player = db.players[playerIndex];
-        player.avatarCard = generatedPlayer.avatarEsportivo;
-        player.avatarEsportivo = generatedPlayer.avatarEsportivo;
         player.avatarOriginal = generatedPlayer.avatarOriginal;
-        
+
         const isFallback = !generatedPlayer.avatarEsportivo || generatedPlayer.avatarEsportivo === generatedPlayer.photoOriginal;
-        player.avatarStatus = isFallback ? 'ERRO' : 'CONCLUÍDO';
         if (isFallback) {
+          player.avatarStatus = 'ERRO';
           player.avatarCard = null;
           player.avatarEsportivo = null;
+        } else {
+          const avatarUrl = await uploadAvatarDataUrlToStorage(generatedPlayer.avatarEsportivo!, `avatars/${playerId}-esportivo`);
+          player.avatarCard = avatarUrl;
+          player.avatarEsportivo = avatarUrl;
+          player.avatarStatus = 'CONCLUÍDO';
         }
-        
+
         await writeDb(db);
         console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
       }

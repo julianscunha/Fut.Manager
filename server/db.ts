@@ -304,7 +304,11 @@ function captureSnapshot(db: DatabaseSchema): Record<string, string> {
 let inFlightRead: Promise<DatabaseSchema> | null = null;
 let cachedRead: { db: DatabaseSchema; snapshot: Record<string, string>; expiresAt: number } | null = null;
 let cacheGeneration = 0;
-const READ_CACHE_TTL_MS = 300; // janela curta só pra colapsar rajadas de chamadas do mesmo carregamento de tela
+// 5s em vez de uma janela curta: toda escrita real (writeDb) já invalida o cache na hora
+// via cacheGeneration++, então um TTL maior não arrisca servir dado desatualizado após uma
+// mudança — só evita reler as tabelas inteiras (inclusive os avatares base64 de players,
+// que dominam o tempo de query) a cada poucas centenas de ms em picos de leitura.
+const READ_CACHE_TTL_MS = 5000;
 
 // Nunca devolve o objeto compartilhado do cache — cada chamador recebe seu próprio clone,
 // livre pra mutar em memória antes de chamar writeDb(), como o resto do código já faz.

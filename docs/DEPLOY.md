@@ -15,7 +15,7 @@ Este documento descreve a arquitetura de produção já implementada no reposit�
 3. Preencha:
    - **Project name**: `fut-manager` (ou nome à sua escolha)
    - **Database password**: gere uma senha forte (usada só internamente pelo Supabase; você não vai precisar dela diretamente, já que o app fala com o Supabase via API/service role, não via conexão Postgres direta)
-   - **Region**: a mais próxima (ex: `South America (São Paulo)`)
+   - **Region**: a mesma região do seu serviço Render (ver Passo 5.2) — não necessariamente a mais próxima fisicamente de você. Toda leitura/escrita do app passa pelo backend no Render, então o que importa é a latência Render↔Supabase, não a latência usuário↔Supabase. Ex.: se o Render vai rodar em `Virginia (US East)` (a região do Render mais próxima do Brasil, já que o Render não tem região na América do Sul), escolha `East US (North Virginia)` aqui também.
    - **Pricing plan**: Free
 4. Clique em **"Create new project"** e aguarde ~2 minutos.
 5. Em **Settings → API**, guarde:
@@ -427,6 +427,43 @@ CREATE INDEX idx_matches_season_id ON matches(season_id);
 CREATE INDEX idx_bills_player_id ON bills(player_id);
 CREATE INDEX idx_mural_posts_created_at ON mural_posts(created_at DESC);
 CREATE INDEX idx_notifications_target_user_id ON notifications(target_user_id);
+
+-- Row Level Security: o app nunca usa a chave "anon" do Supabase (frontend só fala com
+-- o backend Express, que usa exclusivamente SUPABASE_SERVICE_ROLE_KEY — role que ignora
+-- RLS por padrão). Habilitar RLS sem nenhuma política, em todas as tabelas, fecha o acesso
+-- direto via API REST do Supabase com a chave anon, sem afetar em nada o funcionamento do app.
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE passwords ENABLE ROW LEVEL SECURITY;
+ALTER TABLE players ENABLE ROW LEVEL SECURITY;
+ALTER TABLE seasons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
+ALTER TABLE presences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE category_transitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE draws ENABLE ROW LEVEL SECURITY;
+ALTER TABLE duo_affinities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE trio_affinities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE results ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_evaluations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE player_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recurrent_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reserve_queue_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reserves_order ENABLE ROW LEVEL SECURITY;
+ALTER TABLE bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE competences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE finance_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE eventos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_participants ENABLE ROW LEVEL SECURITY;
+ALTER TABLE event_bills ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mural_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mural_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mural_highlights ENABLE ROW LEVEL SECURITY;
+ALTER TABLE mural_files ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_preferences ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deadline_audits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE snapshots ENABLE ROW LEVEL SECURITY;
 ```
 
 Clique em **"Run"**.
