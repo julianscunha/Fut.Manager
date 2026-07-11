@@ -192,8 +192,8 @@ export default function PlayerEvaluationModal({ player, currentUser, onClose, on
 
             {/* Photo */}
             <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-500/30 bg-zinc-950 flex-shrink-0 flex items-center justify-center mb-3">
-              {player.photoOriginal ? (
-                <img src={player.photoOriginal} alt={player.name} className="w-full h-full object-cover" />
+              {player.avatarEsportivo || player.photoOriginal ? (
+                <img src={player.avatarEsportivo || player.photoOriginal} alt={player.name} className="w-full h-full object-cover" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-zinc-650 bg-zinc-950 text-[10px] font-mono font-black">ATLETA</div>
               )}
