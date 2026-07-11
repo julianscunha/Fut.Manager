@@ -12,7 +12,7 @@ interface AuthScreensProps {
   onLoginSuccess: (user: User, token: string) => void;
 }
 
-type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
+type AuthMode = 'login' | 'register' | 'forgot';
 
 export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   const [mode, setMode] = useState<AuthMode>('login');
@@ -27,11 +27,8 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
 
-  // Forgot password & reset password state
+  // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
-  const [simulatedToken, setSimulatedToken] = useState<string | null>(null);
-  const [recoveryUserId, setRecoveryUserId] = useState<string | null>(null);
-  const [newPassword, setNewPassword] = useState('');
 
   // Global messages
   const [errorMsg, setErrorMsg] = useState('');
@@ -177,44 +174,6 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
       if (!res.ok) throw new Error(data.error || 'Erro na recuperação.');
 
       setSuccessMsg(data.message);
-      if (data.simulatedToken) {
-        setSimulatedToken(data.simulatedToken);
-        setRecoveryUserId(data.userId);
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!recoveryUserId || !newPassword) return;
-
-    setErrorMsg('');
-    setSuccessMsg('');
-    setLoading(true);
-
-    try {
-      const res = await fetch('/api/auth/reset-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: recoveryUserId, token: simulatedToken, newPassword })
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Erro ao redefinir.');
-
-      setSuccessMsg(data.message);
-      setSimulatedToken(null);
-      setRecoveryUserId(null);
-      setNewPassword('');
-      
-      setTimeout(() => {
-        setMode('login');
-        setSuccessMsg('');
-      }, 3000);
     } catch (err: any) {
       setErrorMsg(err.message);
     } finally {
@@ -438,7 +397,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
           <form onSubmit={handleForgotPassword} className="space-y-4">
             <div className="space-y-1 text-center">
               <h2 className="font-display font-bold text-lg text-white">Esqueci minha senha</h2>
-              <p className="text-xs text-zinc-400">Informe seu e-mail cadastrado para buscar e simular o link seguro.</p>
+              <p className="text-xs text-zinc-400">Informe seu e-mail cadastrado. A recuperação automática está temporariamente indisponível — em caso de dúvida, procure um administrador do grupo.</p>
             </div>
 
             <div className="space-y-3 pt-2">
@@ -455,45 +414,19 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
               </div>
             </div>
 
-            {simulatedToken ? (
-              <div className="bg-[#101c15] p-3.5 rounded-xl border border-emerald-500/20 text-xs space-y-2">
-                <p className="text-emerald-400 font-semibold flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" />
-                  <span>Simulador de Link de Recuperação</span>
-                </p>
-                <p className="text-zinc-400 leading-relaxed text-[11px]">
-                  Como estamos em ambiente sandboxed, recuperamos o token local instantaneamente. Clique
-                  abaixo para definir uma nova senha:
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('reset');
-                    setErrorMsg('');
-                    setSuccessMsg('');
-                  }}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-lg text-[11px] transition cursor-pointer"
-                >
-                  Redefinir Senha do Usuário Agora
-                </button>
-              </div>
-            ) : (
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 font-bold text-white py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-                <span>{loading ? 'Disparando e-mail...' : 'Disparar Link de Recuperação'}</span>
-              </button>
-            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-emerald-600 hover:bg-emerald-500 font-bold text-white py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer"
+            >
+              <Send className="w-4 h-4" />
+              <span>{loading ? 'Disparando e-mail...' : 'Disparar Link de Recuperação'}</span>
+            </button>
 
             <button
               type="button"
               onClick={() => {
                 setMode('login');
-                setSimulatedToken(null);
-                setRecoveryUserId(null);
                 setErrorMsg('');
                 setSuccessMsg('');
               }}
@@ -501,38 +434,6 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar ao login</span>
-            </button>
-          </form>
-        )}
-
-        {/* RESET PASSWORD MODE */}
-        {mode === 'reset' && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="space-y-1 text-center">
-              <h2 className="font-display font-bold text-lg text-white">Redefinir Senha Secreta</h2>
-              <p className="text-xs text-zinc-400">Insira a nova senha para concluir.</p>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-semibold text-zinc-300">Nova Senha</label>
-                <input
-                  type="password"
-                  required
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Minimo 6 dígitos"
-                  className="w-full bg-zinc-950/70 border border-zinc-850 focus:border-[#22c55e] rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none transition"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full bg-emerald-600 hover:bg-emerald-500 font-bold text-white py-3 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition cursor-pointer"
-            >
-              <KeyRound className="w-4 h-4" />
-              <span>Salvar Nova Senha</span>
             </button>
           </form>
         )}

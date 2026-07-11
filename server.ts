@@ -850,12 +850,11 @@ async function startServer() {
       const db = await readDb();
       const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
 
+      // Resposta idêntica exista ou não o usuário — não revela se o e-mail está cadastrado.
+      const genericResponse = { message: 'A recuperação automática de senha está temporariamente indisponível. Entre em contato com um administrador do grupo para redefinir sua senha.' };
+
       if (!user) {
-        // For security, don't reveal if user exists or not, but return success
-        return res.json({
-          message: 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.',
-          simulatedToken: null
-        });
+        return res.json(genericResponse);
       }
 
       // Generate a recovery token with expiration and persist it for validation on reset
@@ -866,13 +865,11 @@ async function startServer() {
       db.passwordResetTokens[user.id] = { token, expiresAt };
       await writeDb(db);
 
-      // In a real application, we would send this via mail. For our sandbox applet,
-      // we return the simulated token to easily complete the flow in the frontend!
-      return res.json({
-        message: 'E-mail de redefinição enviado com sucesso!',
-        simulatedToken: token,
-        userId: user.id
-      });
+      // TODO: envio real de e-mail com o link de redefinição ainda não está implementado
+      // (nenhum provedor de e-mail configurado neste projeto). Até lá, o token nunca deve
+      // ser devolvido na resposta da API — isso permitiria a qualquer pessoa redefinir a
+      // senha de qualquer usuário só sabendo o e-mail dele, sem nunca acessar a caixa de entrada.
+      return res.json(genericResponse);
     } catch (err) {
       console.error('[API POST /api/auth/forgot-password]', err);
       return res.status(500).json({ error: 'Erro ao processar solicitação. Tente novamente em instantes.' });
