@@ -15,6 +15,7 @@ import { createServer as createViteServer } from 'vite';
 import { readDb, writeDb, generateMonthlyBillingsIfNeeded, getSupabaseClient } from './server/db';
 import { hashPassword, verifyPassword, signSessionToken, verifySessionToken } from './server/auth';
 import { fileTypeFromBuffer } from 'file-type';
+import sharp from 'sharp';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
@@ -679,13 +680,21 @@ async function startServer() {
         return res.status(400).json({ error: 'A imagem excede o limite permitido de 5 MB.' });
       }
 
-      const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.]/g, '-');
-      const uniqueFilename = `${Date.now()}-${sanitizedFilename}`;
+      // Foto de perfil não precisa de resolução maior que isso — recomprime pra WEBP
+      // (bem menor que o JPEG/PNG original) e evita fotos de vários MB pesando no roster.
+      const compressedBuffer = await sharp(buffer)
+        .rotate() // aplica a orientação EXIF antes de descartá-la, senão fotos de celular saem giradas
+        .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toBuffer();
+
+      const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.]/g, '-').replace(/\.[^.]+$/, '');
+      const uniqueFilename = `${Date.now()}-${sanitizedFilename}.webp`;
 
       const supabase = getSupabaseClient();
       const { error: uploadError } = await supabase.storage
         .from('Uploads')
-        .upload(uniqueFilename, buffer, { contentType: detectedType.mime });
+        .upload(uniqueFilename, compressedBuffer, { contentType: 'image/webp' });
 
       if (uploadError) {
         console.error('[Upload Supabase Storage]', uploadError);
@@ -1201,13 +1210,19 @@ async function startServer() {
     const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
     if (!match) return dataUrl; // já não é base64 inline (ex.: URL retornada por engano) — nada a fazer
 
-    const mimeType = match[1];
-    const buffer = Buffer.from(match[2], 'base64');
-    const ext = mimeType.split('/')[1]?.split('+')[0] || 'png';
-    const filename = `${pathPrefix}-${Date.now()}.${ext}`;
+    const rawBuffer = Buffer.from(match[2], 'base64');
+
+    // Providers de IA retornam PNG em alta resolução (2-3MB) — recomprime pra WEBP, já que
+    // o avatar só é exibido em cards/miniaturas, nunca em tela cheia de alta resolução.
+    const compressedBuffer = await sharp(rawBuffer)
+      .resize({ width: 1000, height: 1000, fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer();
+
+    const filename = `${pathPrefix}-${Date.now()}.webp`;
 
     const supabase = getSupabaseClient();
-    const { error } = await supabase.storage.from('Uploads').upload(filename, buffer, { contentType: mimeType });
+    const { error } = await supabase.storage.from('Uploads').upload(filename, compressedBuffer, { contentType: 'image/webp' });
     if (error) {
       console.error('[Avatar Inteligente] Falha ao enviar avatar gerado para o Storage:', error.message);
       throw error;
