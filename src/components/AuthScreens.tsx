@@ -95,7 +95,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   useEffect(() => {
     if (mode === 'login' && turnstileRef.current && (window as any).turnstile) {
       const widgetId = (window as any).turnstile.render(turnstileRef.current, {
-        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAEBKqvUvhULYnrx4',
         callback: (token: string) => {
           setTurnstileToken(token);
         },
