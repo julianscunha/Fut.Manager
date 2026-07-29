@@ -103,7 +103,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
           setTurnstileToken('');
         },
         theme: 'dark',
-        size: 'compact',
+        size: 'flexible',
       });
 
       return () => {
