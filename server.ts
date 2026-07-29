@@ -792,10 +792,36 @@ async function startServer() {
   // Auth: Login
   app.post('/api/auth/login', authRateLimiter, async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, turnstileToken } = req.body;
 
       if (!email || !password) {
         return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+      }
+
+      // Validação do Cloudflare Turnstile se a secret key estiver configurada
+      const turnstileSecret = process.env.TURNSTILE_SECRET_KEY || process.env.SUPABASE_TURNSTILE_SECRET_KEY;
+      if (turnstileSecret) {
+        if (!turnstileToken) {
+          return res.status(400).json({ error: 'Por favor, complete a verificação de segurança do Turnstile.' });
+        }
+
+        try {
+          const verifyRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              secret: turnstileSecret,
+              response: turnstileToken,
+              remoteip: req.ip
+            })
+          });
+          const verifyData: any = await verifyRes.json();
+          if (!verifyData.success) {
+            return res.status(400).json({ error: 'Falha na verificação de segurança do Turnstile. Tente novamente.' });
+          }
+        } catch (verifyErr) {
+          console.error('[Turnstile Verify Error]', verifyErr);
+        }
       }
 
       const db = await readDb();

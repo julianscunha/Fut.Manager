@@ -26,6 +26,8 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   // Login form
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [turnstileToken, setTurnstileToken] = useState('');
+  const turnstileRef = React.useRef<HTMLDivElement>(null);
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
@@ -89,6 +91,33 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
     return () => clearInterval(interval);
   }, [publicPosts]);
 
+  // Render Cloudflare Turnstile widget when in login mode
+  useEffect(() => {
+    if (mode === 'login' && turnstileRef.current && (window as any).turnstile) {
+      const widgetId = (window as any).turnstile.render(turnstileRef.current, {
+        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA',
+        callback: (token: string) => {
+          setTurnstileToken(token);
+        },
+        'expired-callback': () => {
+          setTurnstileToken('');
+        },
+        theme: 'dark',
+        size: 'compact',
+      });
+
+      return () => {
+        try {
+          if ((window as any).turnstile && widgetId) {
+            (window as any).turnstile.remove(widgetId);
+          }
+        } catch (e) {
+          // ignore cleanup errors
+        }
+      };
+    }
+  }, [mode]);
+
   const highlightPost = useMemo(() => {
     if (publicPosts.length === 0) return null;
     return publicPosts[carouselIndex] || publicPosts[0] || null;
@@ -106,7 +135,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: loginEmail, password: loginPassword })
+        body: JSON.stringify({ email: loginEmail, password: loginPassword, turnstileToken })
       });
 
       const data = await res.json();
@@ -329,6 +358,11 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
                   placeholder="Digite sua senha secreta"
                   className="w-full bg-zinc-950/70 border border-zinc-850 focus:border-[#22c55e] rounded-lg px-3.5 py-2.5 text-xs text-white focus:outline-none transition"
                 />
+              </div>
+
+              {/* Turnstile Widget Compacto e Centralizado */}
+              <div className="flex justify-center pt-1">
+                <div ref={turnstileRef} />
               </div>
             </div>
 
