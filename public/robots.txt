@@ -12,3 +12,6 @@ Allow: /#/profile
 Allow: /#/laboratorio
 Allow: /#/administration
 Allow: /#/approvals
+
+# Substitua o domínio abaixo pelo URL real da sua instalação antes do deploy.
+Sitemap: https://SEU_DOMINIO/sitemap.xml
