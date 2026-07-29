@@ -81,17 +81,17 @@ Antes de ir ao ar, use o **[docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md)*
 
 ## 📚 Documentação
 
-Toda a documentação de arquitetura, decisões de produto e auditorias vive em [`docs/`](docs/):
+Toda a documentação de arquitetura, decisões de produto e auditorias vive em [`openwiki/`](openwiki/):
 
 | Documento | Conteúdo |
 |---|---|
-| [DEPLOY.md](docs/DEPLOY.md) | Guia completo de deploy (Supabase + Render) |
-| [DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md) | Checklist de verificação pré/pós-deploy |
-| [AUDITORIA.md](docs/AUDITORIA.md) | Auditoria funcional, de segurança e de UX/mobile |
-| [handoff.md](docs/handoff.md) | Histórico de entregas e decisões arquiteturais |
-| [home_dynamic_architecture.md](docs/home_dynamic_architecture.md) | Arquitetura da Home dinâmica |
-| [home_composer_architecture.md](docs/home_composer_architecture.md) | Composição de blocos da Home |
- | [home_art_direction.md](docs/home_art_direction.md) | Direção de arte e identidade visual |
+| [Visão Geral da Arquitetura](openwiki/architecture.md) | Arquitetura do sistema (Node/Express + React + Postgres) |
+| [Hardening de Segurança](openwiki/architecture/security.md) | Correções de segurança e autenticação JWT/bcrypt |
+| [Relatório de Auditoria](openwiki/architecture/audit-report.md) | Auditoria funcional, de segurança e de UX/mobile |
+| [Guia de Deploy](openwiki/operations/deploy-guide.md) | Deploy em produção (Supabase + Render) |
+| [Checklist de Deploy](openwiki/operations/deploy-checklist.md) | Checklist de verificação pré/pós-deploy |
+| [Handoff](openwiki/operations/handoff.md) | Histórico de entregas e decisões arquiteturais |
+| [Visual System](openwiki/design/visual-system.md) | Direção de arte e identidade visual |
 | [Permissões do Sistema](openwiki/guide/permissions.md) | Roles (admin, auxiliar, jogador), matriz de capacidades e mapeamento role ↔ category |
 
 Para quem for trabalhar no código com o Claude Code, veja também o [`CLAUDE.md`](CLAUDE.md) na raiz — mapeia a arquitetura e as regras de negócio essenciais.
