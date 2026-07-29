@@ -81,6 +81,24 @@ export default function App() {
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    const titles: Record<string, string> = {
+      dash: 'Dashboard — ' + appName,
+      players: 'Atletas — ' + appName,
+      approvals: 'Aprovações — ' + appName,
+      ranking: 'Ranking — ' + appName,
+      calendar: 'Agenda de Rachas — ' + appName,
+      draw: 'Sorteio de Times — ' + appName,
+      finances: 'Financeiro — ' + appName,
+      events: 'Eventos — ' + appName,
+      mural: 'Museu do Clube — ' + appName,
+      profile: 'Perfil do Atleta — ' + appName,
+      laboratorio: 'Laboratório — ' + appName,
+      administration: 'Administração — ' + appName,
+    };
+    document.title = titles[activeTab] || appName;
+  }, [activeTab, appName]);
+
   const [players, setPlayers] = useState<Player[]>([]);
 
   useEffect(() => {

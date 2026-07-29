@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /#/players
+Allow: /#/dash
+Allow: /#/mural
+Allow: /#/ranking
+Allow: /#/calendar
+Allow: /#/draw
+Allow: /#/finances
+Allow: /#/events
+Allow: /#/profile
+Allow: /#/laboratorio
+Allow: /#/administration
+Allow: /#/approvals

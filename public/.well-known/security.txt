@@ -1,0 +1,5 @@
+Host: https://YOUR_DOMAIN_HERE
+Contact: mailto:security@YOUR_DOMAIN_HERE
+Expires: 2027-07-29T00:00:00-03:00
+Acknowledgements: https://YOUR_DOMAIN_HERE/.well-known/security.txt
+Canonical: https://YOUR_DOMAIN_HERE/.well-known/security.txt
