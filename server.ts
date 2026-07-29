@@ -871,7 +871,7 @@ async function startServer() {
       db.passwordResetTokens[user.id] = { token, expiresAt };
       await writeDb(db);
 
-      const resetUrl = `${process.env.VITE_APP_URL || 'http://localhost:3000'}/?resetToken=${encodeURIComponent(token)}&resetUserId=${encodeURIComponent(user.id)}`;
+      const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/?resetToken=${encodeURIComponent(token)}&resetUserId=${encodeURIComponent(user.id)}`;
       try {
         await sendEmail(
           user.email,

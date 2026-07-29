@@ -97,6 +97,11 @@ export default function App() {
       administration: 'Administração — ' + appName,
     };
     document.title = titles[activeTab] || appName;
+
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) {
+      ogUrl.setAttribute('content', window.location.origin);
+    }
   }, [activeTab, appName]);
 
   const [players, setPlayers] = useState<Player[]>([]);
