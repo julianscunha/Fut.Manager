@@ -114,7 +114,7 @@ The framing should be chest-up, athletic soccer player pose, professional sports
       headers: {
         'Authorization': `Bearer ${this.apiKey}`,
         'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.APP_URL || 'http://localhost:3000',
+        'HTTP-Referer': process.env.VITE_APP_URL || 'http://localhost:3000',
         'X-Title': process.env.APP_NAME || 'Meu Racha'
       },
       body: JSON.stringify({
