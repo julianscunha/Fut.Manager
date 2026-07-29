@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>/ — graphify tree viewer</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      margin: 20px 0 0 24px;
+      font-size: 2.2rem;
+      font-weight: bold;
+      color: #1e3a56;
+    }
+    .controls {
+      margin: 20px 0 15px 24px;
+    }
+    button {
+      margin-right: 10px;
+      padding: 8px 18px;
+      background: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    button:active {
+      background: #004085;
+    }
+    #tree-container {
+      width: calc(100vw - 48px); /* Adjust for body margin/padding */
+      height: 85vh;
+      overflow: auto;
+      border-radius: 8px;
+      background: #fff;
+      margin-left: 24px;
+      margin-right: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      border: 1px solid #ddd;
+    }
+    svg {
+      background: #fff;
+      border-radius: 8px;
+      display: block; /* Important for D3 */
+    }
+    .node circle {
+      stroke-width: 2.5px;
+    }
+    .node text { /* Base style for the <text> container */
+      font: 13px 'Segoe UI', sans-serif;
+      paint-order: stroke fill; /* Ensures text is readable over lines */
+      stroke: #fff; /* White halo */
+      stroke-width: 3px; /* Halo thickness */
+      stroke-linejoin: round;
+      stroke-opacity: 0.85; /* Halo opacity */
+    }
+    .link {
+      fill: none;
+      stroke-opacity: 0.7;
+      stroke-width: 2px;
+    }
+  </style>
+</head>
+<body>
+  <h1>/ — Knowledge Graph</h1>
+  <div class="controls">
+    <button onclick="expandAll()">Expand All</button>
+    <button onclick="collapseAll()">Collapse All</button>
+    <button onclick="resetView()">Reset View</button>
+  </div>
+  <div id="tree-container">
+    <svg id="tree-svg" width="6000" height="8000"></svg>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script>
+    const initialJsonData = {"name":"/","total_count":613,"children":[{"name":".agents","total_count":127,"children":[{"name":"skills","total_count":127,"children":[{"name":"supabase","total_count":24,"children":[{"name":"assets","total_count":4,"children":[{"name":"feedback-issue-template.md","total_count":4,"children":[{"name":"feedback-issue-template.md","total_count":1,"children":[]},{"name":"Fix suggestion","total_count":1,"children":[]},{"name":"Source","total_count":1,"children":[]},{"name":"What happened","total_count":1,"children":[]}]}]},{"name":"CHANGELOG.md","total_count":7,"children":[{"name":"[0.1.3](https://github.com/supabase/agent-skills/compare/v0.1.2...v0.1.3) (2026-06-02)","total_count":1,"children":[]},{"name":"[0.1.4](https://github.com/supabase/agent-skills/compare/v0.1.3...v0.1.4) (2026-06-05)","total_count":1,"children":[]},{"name":"[0.1.5](https://github.com/supabase/agent-skills/compare/v0.1.4...v0.1.5) (2026-07-10)","total_count":1,"children":[]},{"name":"Bug Fixes","total_count":1,"children":[]},{"name":"Changelog","total_count":1,"children":[]},{"name":"Features","total_count":1,"children":[]},{"name":"supabase/CHANGELOG.md","total_count":1,"children":[]}]},{"name":"references","total_count":3,"children":[{"name":"skill-feedback.md","total_count":3,"children":[{"name":"Skill Feedback","total_count":1,"children":[]},{"name":"skill-feedback.md","total_count":1,"children":[]},{"name":"Steps","total_count":1,"children":[]}]}]},{"name":"SKILL.md","total_count":10,"children":[{"name":"Core Principles","total_count":1,"children":[]},{"name":"Making and Committing Schema Changes","total_count":1,"children":[]},{"name":"Option A: Declarative schemas","total_count":1,"children":[]},{"name":"Option B: Imperative migrations","total_count":1,"children":[]},{"name":"Reference Guides","total_count":1,"children":[]},{"name":"Supabase","total_count":1,"children":[]},{"name":"Supabase CLI","total_count":1,"children":[]},{"name":"Supabase Documentation","total_count":1,"children":[]},{"name":"Supabase MCP Server","total_count":1,"children":[]},{"name":"supabase/SKILL.md","total_count":1,"children":[]}]}]},{"name":"supabase-postgres-best-practices","total_count":103,"children":[{"name":"CHANGELOG.md","total_count":7,"children":[{"name":"[1.2.0](https://github.com/supabase/agent-skills/compare/v1.1.1...v1.2.0) (2026-06-02)","total_count":1,"children":[]},{"name":"[1.3.0](https://github.com/supabase/agent-skills/compare/v1.2.0...v1.3.0) (2026-06-05)","total_count":1,"children":[]},{"name":"[1.4.0](https://github.com/supabase/agent-skills/compare/v1.3.0...v1.4.0) (2026-07-10)","total_count":1,"children":[]},{"name":"Bug Fixes","total_count":1,"children":[]},{"name":"Changelog","total_count":1,"children":[]},{"name":"Features","total_count":1,"children":[]},{"name":"supabase-postgres-best-practices/CHANGELOG.md","total_count":1,"children":[]}]},{"name":"references","total_count":90,"children":[{"name":"_contributing.md","total_count":16,"children":[{"name":"1. Concrete Transformation Patterns","total_count":1,"children":[]},{"name":"2. Error-First Structure","total_count":1,"children":[]},{"name":"3. Quantified Impact","total_count":1,"children":[]},{"name":"4. Self-Contained Examples","total_count":1,"children":[]},{"name":"5. Semantic Naming","total_count":1,"children":[]},{"name":"_contributing.md","total_count":1,"children":[]},{"name":"Code Example Standards","total_count":1,"children":[]},{"name":"Comments","total_count":1,"children":[]},{"name":"Impact Level Guidelines","total_count":1,"children":[]},{"name":"Key Principles","total_count":1,"children":[]},{"name":"Language Tags","total_count":1,"children":[]},{"name":"Reference Standards","total_count":1,"children":[]},{"name":"Review Checklist","total_count":1,"children":[]},{"name":"SQL Formatting","total_count":1,"children":[]},{"name":"When to Include Application Code","total_count":1,"children":[]},{"name":"Writing Guidelines for Postgres References","total_count":1,"children":[]}]},{"name":"_sections.md","total_count":10,"children":[{"name":"1. Query Performance (query)","total_count":1,"children":[]},{"name":"2. Connection Management (conn)","total_count":1,"children":[]},{"name":"3. Security & RLS (security)","total_count":1,"children":[]},{"name":"4. Schema Design (schema)","total_count":1,"children":[]},{"name":"5. Concurrency & Locking (lock)","total_count":1,"children":[]},{"name":"6. Data Access Patterns (data)","total_count":1,"children":[]},{"name":"7. Monitoring & Diagnostics (monitor)","total_count":1,"children":[]},{"name":"8. Advanced Features (advanced)","total_count":1,"children":[]},{"name":"_sections.md","total_count":1,"children":[]},{"name":"Section Definitions","total_count":1,"children":[]}]},{"name":"_template.md","total_count":2,"children":[{"name":"[Rule Title]","total_count":1,"children":[]},{"name":"_template.md","total_count":1,"children":[]}]},{"name":"advanced-full-text-search.md","total_count":2,"children":[{"name":"advanced-full-text-search.md","total_count":1,"children":[]},{"name":"Use tsvector for Full-Text Search","total_count":1,"children":[]}]},{"name":"advanced-jsonb-indexing.md","total_count":2,"children":[{"name":"advanced-jsonb-indexing.md","total_count":1,"children":[]},{"name":"Index JSONB Columns for Efficient Querying","total_count":1,"children":[]}]},{"name":"conn-idle-timeout.md","total_count":2,"children":[{"name":"Configure Idle Connection Timeouts","total_count":1,"children":[]},{"name":"conn-idle-timeout.md","total_count":1,"children":[]}]},{"name":"conn-limits.md","total_count":2,"children":[{"name":"conn-limits.md","total_count":1,"children":[]},{"name":"Set Appropriate Connection Limits","total_count":1,"children":[]}]},{"name":"conn-pooling.md","total_count":2,"children":[{"name":"conn-pooling.md","total_count":1,"children":[]},{"name":"Use Connection Pooling for All Applications","total_count":1,"children":[]}]},{"name":"conn-prepared-statements.md","total_count":2,"children":[{"name":"conn-prepared-statements.md","total_count":1,"children":[]},{"name":"Use Prepared Statements Correctly with Pooling","total_count":1,"children":[]}]},{"name":"data-batch-inserts.md","total_count":2,"children":[{"name":"Batch INSERT Statements for Bulk Data","total_count":1,"children":[]},{"name":"data-batch-inserts.md","total_count":1,"children":[]}]},{"name":"data-n-plus-one.md","total_count":2,"children":[{"name":"data-n-plus-one.md","total_count":1,"children":[]},{"name":"Eliminate N+1 Queries with Batch Loading","total_count":1,"children":[]}]},{"name":"data-pagination.md","total_count":2,"children":[{"name":"data-pagination.md","total_count":1,"children":[]},{"name":"Use Cursor-Based Pagination Instead of OFFSET","total_count":1,"children":[]}]},{"name":"data-upsert.md","total_count":2,"children":[{"name":"data-upsert.md","total_count":1,"children":[]},{"name":"Use UPSERT for Insert-or-Update Operations","total_count":1,"children":[]}]},{"name":"lock-advisory.md","total_count":2,"children":[{"name":"lock-advisory.md","total_count":1,"children":[]},{"name":"Use Advisory Locks for Application-Level Locking","total_count":1,"children":[]}]},{"name":"lock-deadlock-prevention.md","total_count":2,"children":[{"name":"lock-deadlock-prevention.md","total_count":1,"children":[]},{"name":"Prevent Deadlocks with Consistent Lock Ordering","total_count":1,"children":[]}]},{"name":"lock-short-transactions.md","total_count":2,"children":[{"name":"Keep Transactions Short to Reduce Lock Contention","total_count":1,"children":[]},{"name":"lock-short-transactions.md","total_count":1,"children":[]}]},{"name":"lock-skip-locked.md","total_count":2,"children":[{"name":"lock-skip-locked.md","total_count":1,"children":[]},{"name":"Use SKIP LOCKED for Non-Blocking Queue Processing","total_count":1,"children":[]}]},{"name":"monitor-explain-analyze.md","total_count":2,"children":[{"name":"monitor-explain-analyze.md","total_count":1,"children":[]},{"name":"Use EXPLAIN ANALYZE to Diagnose Slow Queries","total_count":1,"children":[]}]},{"name":"monitor-pg-stat-statements.md","total_count":2,"children":[{"name":"Enable pg_stat_statements for Query Analysis","total_count":1,"children":[]},{"name":"monitor-pg-stat-statements.md","total_count":1,"children":[]}]},{"name":"monitor-vacuum-analyze.md","total_count":2,"children":[{"name":"Maintain Table Statistics with VACUUM and ANALYZE","total_count":1,"children":[]},{"name":"monitor-vacuum-analyze.md","total_count":1,"children":[]}]},{"name":"query-composite-indexes.md","total_count":2,"children":[{"name":"Create Composite Indexes for Multi-Column Queries","total_count":1,"children":[]},{"name":"query-composite-indexes.md","total_count":1,"children":[]}]},{"name":"query-covering-indexes.md","total_count":2,"children":[{"name":"query-covering-indexes.md","total_count":1,"children":[]},{"name":"Use Covering Indexes to Avoid Table Lookups","total_count":1,"children":[]}]},{"name":"query-index-types.md","total_count":2,"children":[{"name":"Choose the Right Index Type for Your Data","total_count":1,"children":[]},{"name":"query-index-types.md","total_count":1,"children":[]}]},{"name":"query-missing-indexes.md","total_count":2,"children":[{"name":"Add Indexes on WHERE and JOIN Columns","total_count":1,"children":[]},{"name":"query-missing-indexes.md","total_count":1,"children":[]}]},{"name":"query-partial-indexes.md","total_count":2,"children":[{"name":"query-partial-indexes.md","total_count":1,"children":[]},{"name":"Use Partial Indexes for Filtered Queries","total_count":1,"children":[]}]},{"name":"schema-constraints.md","total_count":2,"children":[{"name":"Add Constraints Safely in Migrations","total_count":1,"children":[]},{"name":"schema-constraints.md","total_count":1,"children":[]}]},{"name":"schema-data-types.md","total_count":2,"children":[{"name":"Choose Appropriate Data Types","total_count":1,"children":[]},{"name":"schema-data-types.md","total_count":1,"children":[]}]},{"name":"schema-foreign-key-indexes.md","total_count":2,"children":[{"name":"Index Foreign Key Columns","total_count":1,"children":[]},{"name":"schema-foreign-key-indexes.md","total_count":1,"children":[]}]},{"name":"schema-lowercase-identifiers.md","total_count":2,"children":[{"name":"schema-lowercase-identifiers.md","total_count":1,"children":[]},{"name":"Use Lowercase Identifiers for Compatibility","total_count":1,"children":[]}]},{"name":"schema-partitioning.md","total_count":2,"children":[{"name":"Partition Large Tables for Better Performance","total_count":1,"children":[]},{"name":"schema-partitioning.md","total_count":1,"children":[]}]},{"name":"schema-primary-keys.md","total_count":2,"children":[{"name":"schema-primary-keys.md","total_count":1,"children":[]},{"name":"Select Optimal Primary Key Strategy","total_count":1,"children":[]}]},{"name":"security-privileges.md","total_count":2,"children":[{"name":"Apply Principle of Least Privilege","total_count":1,"children":[]},{"name":"security-privileges.md","total_count":1,"children":[]}]},{"name":"security-rls-basics.md","total_count":2,"children":[{"name":"Enable Row Level Security for Multi-Tenant Data","total_count":1,"children":[]},{"name":"security-rls-basics.md","total_count":1,"children":[]}]},{"name":"security-rls-performance.md","total_count":2,"children":[{"name":"Optimize RLS Policies for Performance","total_count":1,"children":[]},{"name":"security-rls-performance.md","total_count":1,"children":[]}]}]},{"name":"SKILL.md","total_count":6,"children":[{"name":"How to Use","total_count":1,"children":[]},{"name":"References","total_count":1,"children":[]},{"name":"Rule Categories by Priority","total_count":1,"children":[]},{"name":"Supabase Postgres Best Practices","total_count":1,"children":[]},{"name":"supabase-postgres-best-practices/SKILL.md","total_count":1,"children":[]},{"name":"When to Apply","total_count":1,"children":[]}]}]}]}]},{"name":".kilo","total_count":1,"children":[{"name":"plugins","total_count":1,"children":[{"name":"graphify.js","total_count":1,"children":[{"name":"GraphifyPlugin()","total_count":1,"children":[]}]}]}]},{"name":"AGENTS.md","total_count":3,"children":[{"name":"AGENTS.md","total_count":1,"children":[]},{"name":"graphify","total_count":1,"children":[]},{"name":"OpenWiki","total_count":1,"children":[]}]},{"name":"CLAUDE.md","total_count":6,"children":[{"name":"Arquitetura","total_count":1,"children":[]},{"name":"CLAUDE.md","total_count":1,"children":[]},{"name":"Comandos","total_count":1,"children":[]},{"name":"Modelo de dom\u00ednio essencial","total_count":1,"children":[]},{"name":"O que \u00e9 este projeto","total_count":1,"children":[]},{"name":"OpenWiki","total_count":1,"children":[]}]},{"name":"openwiki","total_count":147,"children":[{"name":"architecture","total_count":61,"children":[{"name":"audit-report.md","total_count":20,"children":[{"name":"1. Cadastro, Autentica\u00e7\u00e3o e V\u00ednculos","total_count":1,"children":[]},{"name":"10. Financeiro (Mensalistas, Goleiros e Reservas)","total_count":1,"children":[]},{"name":"11. Eventos Sociais (Isen\u00e7\u00f5es de Churrasco)","total_count":1,"children":[]},{"name":"12. Mural, M\u00eddias e Exibi\u00e7\u00f5es na Inicial","total_count":1,"children":[]},{"name":"13. Responsividade e Performance (Mobile First)","total_count":1,"children":[]},{"name":"14. Migra\u00e7\u00e3o de Hospedagem: Supabase + Render","total_count":1,"children":[]},{"name":"15. Hardening de Seguran\u00e7a (Corre\u00e7\u00f5es Cr\u00edticas)","total_count":1,"children":[]},{"name":"16. Valida\u00e7\u00e3o de Gera\u00e7\u00e3o de Avatar com IA","total_count":1,"children":[]},{"name":"2. Gest\u00e3o de Usu\u00e1rios, Permiss\u00f5es e Auditoria","total_count":1,"children":[]},{"name":"3. Gest\u00e3o e Cadastro de Jogadores (Atletas)","total_count":1,"children":[]},{"name":"4. Avalia\u00e7\u00f5es T\u00e9cnicas, Overall e Hist\u00f3rico","total_count":1,"children":[]},{"name":"5. Partidas (Ciclo de Vida do Racha)","total_count":1,"children":[]},{"name":"6. Presen\u00e7as, Lista de Espera e Convoca\u00e7\u00e3o de Reservas","total_count":1,"children":[]},{"name":"7. Sorteio de Times (Equil\u00edbrio e Afinidades)","total_count":1,"children":[]},{"name":"8. Resultados e Registro de Estat\u00edsticas","total_count":1,"children":[]},{"name":"9. Rankings, Duplas/Trios e Hall da Fama","total_count":1,"children":[]},{"name":"audit-report.md","total_count":1,"children":[]},{"name":"Relat\u00f3rio de Auditoria Operacional e UX \u2014 Fut.Manager","total_count":1,"children":[]},{"name":"\ud83d\udcc5 Resumo Geral da Auditoria","total_count":1,"children":[]},{"name":"\ud83d\udccb Diagn\u00f3stico Detalhado por M\u00f3dulo","total_count":1,"children":[]}]},{"name":"composer.md","total_count":18,"children":[{"name":"Camada 1: Permanente","total_count":1,"children":[]},{"name":"Camada 2: Contextual","total_count":1,"children":[]},{"name":"Camada 3: Individual","total_count":1,"children":[]},{"name":"composer.md","total_count":1,"children":[]},{"name":"Dimens\u00e3o A: Estado da Rodada (Round State)","total_count":1,"children":[]},{"name":"Dimens\u00e3o B: Estado Individual do Atleta (Athlete State)","total_count":1,"children":[]},{"name":"Dimens\u00e3o C: Perfil do Usu\u00e1rio (User Role)","total_count":1,"children":[]},{"name":"Home Composer Architecture Blueprint","total_count":1,"children":[]},{"name":"\u23f1\ufe0f 7. FLUXO POS-JOGO INTEGRADO","total_count":1,"children":[]},{"name":"\u2699\ufe0f 8. EXPERI\u00caNCIA DO ADMINISTRADOR (MODO INVIS\u00cdVEL)","total_count":1,"children":[]},{"name":"\ud83c\udf9a\ufe0f 3. MATRIZ TRIDIMENSIONAL DE COMPOSI\u00c7\u00c3O DE INTERFACE","total_count":1,"children":[]},{"name":"\ud83c\udfa8 4. ARQUITETURA MODULAR DO HERO (HERO COMPOSER)","total_count":1,"children":[]},{"name":"\ud83c\udfd7\ufe0f 1. CONCEITO DO HOME COMPOSER","total_count":1,"children":[]},{"name":"\ud83c\udfdf\ufe0f 6. MODO ESPECIAL: DIA DO RACHA (`MATCH_DAY`)","total_count":1,"children":[]},{"name":"\ud83d\udd04 9. MOTOR DE TRANSI\u00c7\u00c3O E ANIMA\u00c7\u00d5ES","total_count":1,"children":[]},{"name":"\ud83d\udd17 Relacionamentos","total_count":1,"children":[]},{"name":"\ud83d\uddc2\ufe0f 2. DIMENS\u00d5ES DE CONTEXTO DO COMPOSER","total_count":1,"children":[]},{"name":"\ud83d\ude80 5. EXPERI\u00caNCIA DOS TIMES SORTEADOS: \"MEU TIME EM 1\u00ba LUGAR\"","total_count":1,"children":[]}]},{"name":"dynamic-engine.md","total_count":7,"children":[{"name":"dynamic-engine.md","total_count":1,"children":[]},{"name":"ETAPA 1 \u2014 INVENT\u00c1RIO DE COMPONENTES ATUAIS","total_count":1,"children":[]},{"name":"ETAPA 2 \u2014 MAPEAMENTO DOS ESTADOS DA RODADA","total_count":1,"children":[]},{"name":"ETAPA 3 \u2014 MATRIZ DE VISIBILIDADE","total_count":1,"children":[]},{"name":"Home Dynamic Engine Design","total_count":1,"children":[]},{"name":"\ud83d\udd17 Relacionamentos","total_count":1,"children":[]},{"name":"\ud83d\uddfa\ufe0f FILOSOFIA DE DESIGN: \"CENTRAL DA RODADA\"","total_count":1,"children":[]}]},{"name":"home-dynamic.md","total_count":8,"children":[{"name":"1. Filosofia de Design: \"Central da Rodada\"","total_count":1,"children":[]},{"name":"2. Matriz de Visibilidade por Componente e Estado","total_count":1,"children":[]},{"name":"3. Estados da Rodada (Round States)","total_count":1,"children":[]},{"name":"4. Hierarquia Visual Mobile-First","total_count":1,"children":[]},{"name":"Home Dynamic Visual Rendering","total_count":1,"children":[]},{"name":"home-dynamic.md","total_count":1,"children":[]},{"name":"Protocolo de Interface","total_count":1,"children":[]},{"name":"Regra dos 3 Segundos","total_count":1,"children":[]}]},{"name":"overview.md","total_count":7,"children":[{"name":"Autentica\u00e7\u00e3o (`server/auth.ts`)","total_count":1,"children":[]},{"name":"Core Backend (`server.ts`)","total_count":1,"children":[]},{"name":"Frontend (`src/`)","total_count":1,"children":[]},{"name":"overview.md","total_count":1,"children":[]},{"name":"Persist\u00eancia (`server/db.ts`)","total_count":1,"children":[]},{"name":"Vis\u00e3o Geral da Arquitetura","total_count":1,"children":[]},{"name":"Vis\u00e3o Geral t\u00e9cnica","total_count":1,"children":[]}]},{"name":"security.md","total_count":1,"children":[{"name":"Hardening de Seguran\u00e7a Operacional","total_count":1,"children":[]}]}]},{"name":"architecture.md","total_count":7,"children":[{"name":"architecture.md","total_count":1,"children":[]},{"name":"Autentica\u00e7\u00e3o (`server/auth.ts`)","total_count":1,"children":[]},{"name":"Core Backend (`server.ts`)","total_count":1,"children":[]},{"name":"Frontend (`src/`)","total_count":1,"children":[]},{"name":"Persist\u00eancia (`server/db.ts`)","total_count":1,"children":[]},{"name":"Vis\u00e3o Geral da Arquitetura","total_count":1,"children":[]},{"name":"Vis\u00e3o Geral t\u00e9cnica","total_count":1,"children":[]}]},{"name":"design","total_count":14,"children":[{"name":"visual-system.md","total_count":14,"children":[{"name":"Camada 1 \u2014 Hero (O Protagonista)","total_count":1,"children":[]},{"name":"Camada 2 \u2014 A\u00e7\u00e3o Principal (CTA Dominante)","total_count":1,"children":[]},{"name":"Camada 3 \u2014 Status Pessoal (A \"Ficha\" de Jogador)","total_count":1,"children":[]},{"name":"Camada 4 \u2014 Status do Grupo (O Vesti\u00e1rio)","total_count":1,"children":[]},{"name":"Camada 5 \u2014 Social (A Resenha de Fim de Jogo)","total_count":1,"children":[]},{"name":"Guia de Dire\u00e7\u00e3o de Arte e Visual System","total_count":1,"children":[]},{"name":"Princ\u00edpios Diretores:","total_count":1,"children":[]},{"name":"visual-system.md","total_count":1,"children":[]},{"name":"\u26a1 5. MICROINTERA\u00c7\u00d5ES E ANIMA\u00c7\u00d5ES DIN\u00c2MICAS","total_count":1,"children":[]},{"name":"\u270d\ufe0f 4. TIPOGRAFIA E RITMO VISUAL","total_count":1,"children":[]},{"name":"\ud83c\udfa8 1. CONCEITO CENTRAL: \"APLICATIVO DE CLUBE\"","total_count":1,"children":[]},{"name":"\ud83c\udfa8 3. PALETA DE CORES REGULAMENTAR","total_count":1,"children":[]},{"name":"\ud83d\udcd0 2. COMPOSI\u00c7\u00c3O DA HOME EM 5 CAMADAS VISUAIS","total_count":1,"children":[]},{"name":"\ud83d\udcf1 6. DIRETRIZES MOBILE-FIRST E ACESSIBILIDADE","total_count":1,"children":[]}]}]},{"name":"guide","total_count":13,"children":[{"name":"permissions.md","total_count":13,"children":[{"name":"Arquivos-chave","total_count":1,"children":[]},{"name":"Avalia\u00e7\u00f5es e Performance (Ranking)","total_count":1,"children":[]},{"name":"Calend\u00e1rio e Sorteio (Matches & Draws)","total_count":1,"children":[]},{"name":"Capability Matrix","total_count":1,"children":[]},{"name":"Display no Perfil do Atleta (`PlayerHero.tsx`)","total_count":1,"children":[]},{"name":"Eventos e Financeiro","total_count":1,"children":[]},{"name":"Gest\u00e3o de Atletas (Players)","total_count":1,"children":[]},{"name":"Hierarquia de Roles","total_count":1,"children":[]},{"name":"Mapeamento Role \u2192 Athlete Category","total_count":1,"children":[]},{"name":"Museu e Mural (Social)","total_count":1,"children":[]},{"name":"permissions.md","total_count":1,"children":[]},{"name":"Permiss\u00f5es do Sistema","total_count":1,"children":[]},{"name":"Usu\u00e1rios e Permiss\u00f5es (User Management)","total_count":1,"children":[]}]}]},{"name":"INSTRUCTIONS.md","total_count":1,"children":[{"name":"INSTRUCTIONS.md","total_count":1,"children":[]}]},{"name":"operations","total_count":42,"children":[{"name":"deploy-checklist.md","total_count":6,"children":[{"name":"1. Pr\u00e9-Deploy - Supabase","total_count":1,"children":[]},{"name":"2. Pr\u00e9-Deploy - Render / Docker","total_count":1,"children":[]},{"name":"3. Deploy no Render","total_count":1,"children":[]},{"name":"4. P\u00f3s-Deploy","total_count":1,"children":[]},{"name":"Checklist de Deploy","total_count":1,"children":[]},{"name":"deploy-checklist.md","total_count":1,"children":[]}]},{"name":"deploy-guide.md","total_count":20,"children":[{"name":"deploy-guide.md","total_count":1,"children":[]},{"name":"Guia de Deploy do Fut.Manager para Render + Supabase","total_count":1,"children":[]},{"name":"Parte 1: Prepara\u00e7\u00e3o e Setup Supabase","total_count":1,"children":[]},{"name":"Parte 2: Criar o Schema Postgres","total_count":1,"children":[]},{"name":"Parte 3: Configura\u00e7\u00e3o do C\u00f3digo","total_count":1,"children":[]},{"name":"Parte 4: Deploy no Render","total_count":1,"children":[]},{"name":"Passo 1.1: Criar projeto Supabase","total_count":1,"children":[]},{"name":"Passo 1.2: Configurar vari\u00e1veis de ambiente no dashboard Supabase","total_count":1,"children":[]},{"name":"Passo 1.3: Criar Storage bucket para uploads","total_count":1,"children":[]},{"name":"Passo 2.1: Abrir SQL Editor do Supabase","total_count":1,"children":[]},{"name":"Passo 2.2: Criar as tabelas","total_count":1,"children":[]},{"name":"Passo 2.3: Inserir dados padr\u00e3o","total_count":1,"children":[]},{"name":"Passo 3.1: Criar `.env.local`","total_count":1,"children":[]},{"name":"Passo 3.2: `npm install`","total_count":1,"children":[]},{"name":"Passo 3.3: Testes locais","total_count":1,"children":[]},{"name":"Passo 4.1: Preparar Dockerfile","total_count":1,"children":[]},{"name":"Passo 4.2: Criar servi\u00e7o no Render","total_count":1,"children":[]},{"name":"Passo 4.3: Deploy e verifica\u00e7\u00e3o","total_count":1,"children":[]},{"name":"Passo 4.4: Commit e push do `Dockerfile`","total_count":1,"children":[]},{"name":"Relacionamentos","total_count":1,"children":[]}]},{"name":"handoff.md","total_count":16,"children":[{"name":"2026-06-22","total_count":1,"children":[]},{"name":"2026-06-23","total_count":1,"children":[]},{"name":"2026-06-23 (Hotfix)","total_count":1,"children":[]},{"name":"2026-06-24","total_count":1,"children":[]},{"name":"2026-07-04","total_count":1,"children":[]},{"name":"Auditorias Encerradas","total_count":1,"children":[]},{"name":"Automation.Lab Handoff","total_count":1,"children":[]},{"name":"Bloqueio Prematuro de Sorteio (2026-06-22)","total_count":1,"children":[]},{"name":"Crit\u00e9rios para Pr\u00f3xima Sess\u00e3o","total_count":1,"children":[]},{"name":"Decis\u00f5es Arquiteturais Validadas","total_count":1,"children":[]},{"name":"Estado Atual","total_count":1,"children":[]},{"name":"Funcionalidades Conclu\u00eddas","total_count":1,"children":[]},{"name":"handoff.md","total_count":1,"children":[]},{"name":"O Que N\u00c3O Deve Ser Reauditado","total_count":1,"children":[]},{"name":"Pend\u00eancias Priorizadas","total_count":1,"children":[]},{"name":"Pr\u00f3ximo Passo Obrigat\u00f3rio","total_count":1,"children":[]}]}]},{"name":"quickstart.md","total_count":7,"children":[{"name":"Backlog","total_count":1,"children":[]},{"name":"Como come\u00e7ar","total_count":1,"children":[]},{"name":"Desenvolvimento","total_count":1,"children":[]},{"name":"Estrutura da Documenta\u00e7\u00e3o","total_count":1,"children":[]},{"name":"In\u00edcio R\u00e1pido","total_count":1,"children":[]},{"name":"Principais Conceitos","total_count":1,"children":[]},{"name":"quickstart.md","total_count":1,"children":[]}]},{"name":"source-map.md","total_count":2,"children":[{"name":"Repository Source Map","total_count":1,"children":[]},{"name":"source-map.md","total_count":1,"children":[]}]}]},{"name":"package.json","total_count":81,"children":[{"name":"@google/genai","total_count":1,"children":[]},{"name":"@google/genai","total_count":1,"children":[]},{"name":"@supabase/supabase-js","total_count":1,"children":[]},{"name":"@supabase/supabase-js","total_count":1,"children":[]},{"name":"@tailwindcss/vite","total_count":1,"children":[]},{"name":"@tailwindcss/vite","total_count":1,"children":[]},{"name":"@types/bcryptjs","total_count":1,"children":[]},{"name":"@types/bcryptjs","total_count":1,"children":[]},{"name":"@types/compression","total_count":1,"children":[]},{"name":"@types/compression","total_count":1,"children":[]},{"name":"@types/cors","total_count":1,"children":[]},{"name":"@types/cors","total_count":1,"children":[]},{"name":"@types/express","total_count":1,"children":[]},{"name":"@types/express","total_count":1,"children":[]},{"name":"@types/jsonwebtoken","total_count":1,"children":[]},{"name":"@types/jsonwebtoken","total_count":1,"children":[]},{"name":"@types/node","total_count":1,"children":[]},{"name":"@types/node","total_count":1,"children":[]},{"name":"@types/nodemailer","total_count":1,"children":[]},{"name":"@types/nodemailer","total_count":1,"children":[]},{"name":"@types/ws","total_count":1,"children":[]},{"name":"@types/ws","total_count":1,"children":[]},{"name":"@vitejs/plugin-react","total_count":1,"children":[]},{"name":"@vitejs/plugin-react","total_count":1,"children":[]},{"name":"autoprefixer","total_count":1,"children":[]},{"name":"autoprefixer","total_count":1,"children":[]},{"name":"bcryptjs","total_count":1,"children":[]},{"name":"bcryptjs","total_count":1,"children":[]},{"name":"build","total_count":1,"children":[]},{"name":"clean","total_count":1,"children":[]},{"name":"compression","total_count":1,"children":[]},{"name":"compression","total_count":1,"children":[]},{"name":"cors","total_count":1,"children":[]},{"name":"cors","total_count":1,"children":[]},{"name":"dependencies","total_count":1,"children":[]},{"name":"dev","total_count":1,"children":[]},{"name":"devDependencies","total_count":1,"children":[]},{"name":"dotenv","total_count":1,"children":[]},{"name":"dotenv","total_count":1,"children":[]},{"name":"esbuild","total_count":1,"children":[]},{"name":"esbuild","total_count":1,"children":[]},{"name":"express","total_count":1,"children":[]},{"name":"express","total_count":1,"children":[]},{"name":"express-rate-limit","total_count":1,"children":[]},{"name":"express-rate-limit","total_count":1,"children":[]},{"name":"file-type","total_count":1,"children":[]},{"name":"file-type","total_count":1,"children":[]},{"name":"helmet","total_count":1,"children":[]},{"name":"helmet","total_count":1,"children":[]},{"name":"jsonwebtoken","total_count":1,"children":[]},{"name":"jsonwebtoken","total_count":1,"children":[]},{"name":"lint","total_count":1,"children":[]},{"name":"lucide-react","total_count":1,"children":[]},{"name":"lucide-react","total_count":1,"children":[]},{"name":"motion","total_count":1,"children":[]},{"name":"motion","total_count":1,"children":[]},{"name":"name","total_count":1,"children":[]},{"name":"nodemailer","total_count":1,"children":[]},{"name":"nodemailer","total_count":1,"children":[]},{"name":"private","total_count":1,"children":[]},{"name":"react","total_count":1,"children":[]},{"name":"react","total_count":1,"children":[]},{"name":"react-dom","total_count":1,"children":[]},{"name":"react-dom","total_count":1,"children":[]},{"name":"scripts","total_count":1,"children":[]},{"name":"sharp","total_count":1,"children":[]},{"name":"sharp","total_count":1,"children":[]},{"name":"start","total_count":1,"children":[]},{"name":"tailwindcss","total_count":1,"children":[]},{"name":"tailwindcss","total_count":1,"children":[]},{"name":"tsx","total_count":1,"children":[]},{"name":"tsx","total_count":1,"children":[]},{"name":"type","total_count":1,"children":[]},{"name":"typescript","total_count":1,"children":[]},{"name":"typescript","total_count":1,"children":[]},{"name":"version","total_count":1,"children":[]},{"name":"vite","total_count":1,"children":[]},{"name":"vite","total_count":1,"children":[]},{"name":"vite","total_count":1,"children":[]},{"name":"ws","total_count":1,"children":[]},{"name":"ws","total_count":1,"children":[]}]},{"name":"README.md","total_count":13,"children":[{"name":"O que \u00e9 isso","total_count":1,"children":[]},{"name":"Pr\u00e9-requisitos","total_count":1,"children":[]},{"name":"README.md","total_count":1,"children":[]},{"name":"Scripts dispon\u00edveis","total_count":1,"children":[]},{"name":"Setup local","total_count":1,"children":[]},{"name":"\u2601\ufe0f Deploy em produ\u00e7\u00e3o","total_count":1,"children":[]},{"name":"\u26bd Fut.Manager","total_count":1,"children":[]},{"name":"\u2728 Funcionalidades","total_count":1,"children":[]},{"name":"\ud83d\udcc4 Licen\u00e7a","total_count":1,"children":[]},{"name":"\ud83d\udcda Documenta\u00e7\u00e3o","total_count":1,"children":[]},{"name":"\ud83d\ude80 Come\u00e7ando","total_count":1,"children":[]},{"name":"\ud83e\udd1d Contribuindo","total_count":1,"children":[]},{"name":"\ud83e\uddf1 Stack t\u00e9cnica","total_count":1,"children":[]}]},{"name":"server","total_count":65,"children":[{"name":"auth.ts","total_count":6,"children":[{"name":"getJwtSecret()","total_count":1,"children":[]},{"name":"hashPassword()","total_count":1,"children":[]},{"name":"SessionTokenPayload","total_count":1,"children":[]},{"name":"signSessionToken()","total_count":1,"children":[]},{"name":"verifyPassword()","total_count":1,"children":[]},{"name":"verifySessionToken()","total_count":1,"children":[]}]},{"name":"avatarProvider.ts","total_count":10,"children":[{"name":".constructor()","total_count":1,"children":[]},{"name":".constructor()","total_count":1,"children":[]},{"name":".generateAvatar()","total_count":1,"children":[]},{"name":".generateAvatar()","total_count":1,"children":[]},{"name":".generateAvatar()","total_count":1,"children":[]},{"name":".getProvider()","total_count":1,"children":[]},{"name":"AvatarProvider","total_count":1,"children":[]},{"name":"AvatarProviderFactory","total_count":1,"children":[]},{"name":"GeminiAvatarProvider","total_count":1,"children":[]},{"name":"OpenRouterAvatarProvider","total_count":1,"children":[]}]},{"name":"db.ts","total_count":34,"children":[{"name":"ALL_DB_KEYS","total_count":1,"children":[]},{"name":"autoArchiveMuralPosts()","total_count":1,"children":[]},{"name":"captureSnapshot()","total_count":1,"children":[]},{"name":"cloneDbForCaller()","total_count":1,"children":[]},{"name":"DatabaseSchema","total_count":1,"children":[]},{"name":"ensureDbExists()","total_count":1,"children":[]},{"name":"fetchAndSyncDb()","total_count":1,"children":[]},{"name":"generateMonthlyBillingsIfNeeded()","total_count":1,"children":[]},{"name":"GENERIC_TABLES","total_count":1,"children":[]},{"name":"getComputedPresencesSimplified()","total_count":1,"children":[]},{"name":"getMatchDeadlineInfoInternal()","total_count":1,"children":[]},{"name":"getMonthlyFeeForDate()","total_count":1,"children":[]},{"name":"getSupabase()","total_count":1,"children":[]},{"name":"getSupabaseClient()","total_count":1,"children":[]},{"name":"objToRow()","total_count":1,"children":[]},{"name":"readBlobTable()","total_count":1,"children":[]},{"name":"readDb()","total_count":1,"children":[]},{"name":"readGenericTable()","total_count":1,"children":[]},{"name":"readPasswordsTable()","total_count":1,"children":[]},{"name":"readReservesOrder()","total_count":1,"children":[]},{"name":"readSingleton()","total_count":1,"children":[]},{"name":"rowToObj()","total_count":1,"children":[]},{"name":"snapshotMap","total_count":1,"children":[]},{"name":"syncMatchStatuses()","total_count":1,"children":[]},{"name":"syncReservesOrderAndPlayerLinks()","total_count":1,"children":[]},{"name":"TableConfig","total_count":1,"children":[]},{"name":"toCamel()","total_count":1,"children":[]},{"name":"toSnake()","total_count":1,"children":[]},{"name":"writeBlobTable()","total_count":1,"children":[]},{"name":"writeDb()","total_count":1,"children":[]},{"name":"writeGenericTable()","total_count":1,"children":[]},{"name":"writePasswordsTable()","total_count":1,"children":[]},{"name":"writeReservesOrder()","total_count":1,"children":[]},{"name":"writeSingleton()","total_count":1,"children":[]}]},{"name":"drawEngine.ts","total_count":6,"children":[{"name":"getDuoAffinity()","total_count":1,"children":[]},{"name":"getTrioAffinity()","total_count":1,"children":[]},{"name":"isAttacker()","total_count":1,"children":[]},{"name":"isDefender()","total_count":1,"children":[]},{"name":"recordAffinities()","total_count":1,"children":[]},{"name":"runSmartDraw()","total_count":1,"children":[]}]},{"name":"email.ts","total_count":3,"children":[{"name":"getTransporter()","total_count":1,"children":[]},{"name":"isEmailConfigured()","total_count":1,"children":[]},{"name":"sendEmail()","total_count":1,"children":[]}]},{"name":"statsEngine.ts","total_count":6,"children":[{"name":"AdvancedDuoStat","total_count":1,"children":[]},{"name":"AdvancedTrioStat","total_count":1,"children":[]},{"name":"computePlayerMetrics()","total_count":1,"children":[]},{"name":"computeStatsForSeason()","total_count":1,"children":[]},{"name":"RenderedStats","total_count":1,"children":[]},{"name":"sortPlayersForRanking()","total_count":1,"children":[]}]}]},{"name":"server.ts","total_count":1,"children":[{"name":"startServer()","total_count":1,"children":[]}]},{"name":"src","total_count":150,"children":[{"name":"App.tsx","total_count":2,"children":[{"name":"App()","total_count":1,"children":[]},{"name":"NavTab","total_count":1,"children":[]}]},{"name":"components","total_count":86,"children":[{"name":"AuthScreens.tsx","total_count":3,"children":[{"name":"AuthMode","total_count":1,"children":[]},{"name":"AuthScreens()","total_count":1,"children":[]},{"name":"AuthScreensProps","total_count":1,"children":[]}]},{"name":"CalendarManager.tsx","total_count":8,"children":[{"name":"CalendarManager()","total_count":1,"children":[]},{"name":"CalendarManagerProps","total_count":1,"children":[]},{"name":"DetailMuseum()","total_count":1,"children":[]},{"name":"DetailPresences()","total_count":1,"children":[]},{"name":"DetailRatings()","total_count":1,"children":[]},{"name":"DetailResult()","total_count":1,"children":[]},{"name":"DetailTeams()","total_count":1,"children":[]},{"name":"STATUS_METADATA","total_count":1,"children":[]}]},{"name":"CommunicationCenter.tsx","total_count":2,"children":[{"name":"CommunicationCenter()","total_count":1,"children":[]},{"name":"CommunicationCenterProps","total_count":1,"children":[]}]},{"name":"DashboardStatus.tsx","total_count":3,"children":[{"name":"computeTacticalAssignments()","total_count":1,"children":[]},{"name":"DashboardStatus()","total_count":1,"children":[]},{"name":"DashboardStatusProps","total_count":1,"children":[]}]},{"name":"DrawManager.tsx","total_count":4,"children":[{"name":"computeTacticalAssignments()","total_count":1,"children":[]},{"name":"DrawManager()","total_count":1,"children":[]},{"name":"DrawManagerProps","total_count":1,"children":[]},{"name":"getAbbreviation()","total_count":1,"children":[]}]},{"name":"EventManager.tsx","total_count":4,"children":[{"name":"EVENT_TYPE_CONFIG","total_count":1,"children":[]},{"name":"EventManager()","total_count":1,"children":[]},{"name":"EventManagerProps","total_count":1,"children":[]},{"name":"STATUS_CONFIG","total_count":1,"children":[]}]},{"name":"FinanceManager.tsx","total_count":2,"children":[{"name":"FinanceManager()","total_count":1,"children":[]},{"name":"FinanceManagerProps","total_count":1,"children":[]}]},{"name":"LaboratorioManager.tsx","total_count":3,"children":[{"name":"AUDIT_PLAYERS","total_count":1,"children":[]},{"name":"LaboratorioManager()","total_count":1,"children":[]},{"name":"LaboratorioManagerProps","total_count":1,"children":[]}]},{"name":"MuralManager.tsx","total_count":5,"children":[{"name":"createResizedDataUrl()","total_count":1,"children":[]},{"name":"MuralManager()","total_count":1,"children":[]},{"name":"MuralManagerProps","total_count":1,"children":[]},{"name":"resizeImage()","total_count":1,"children":[]},{"name":"UploadItem","total_count":1,"children":[]}]},{"name":"NotificationCenter.tsx","total_count":2,"children":[{"name":"NotificationCenter()","total_count":1,"children":[]},{"name":"NotificationCenterProps","total_count":1,"children":[]}]},{"name":"PlayerCard.tsx","total_count":4,"children":[{"name":"ClubShield()","total_count":1,"children":[]},{"name":"getClubMolduraStyle()","total_count":1,"children":[]},{"name":"PlayerCard()","total_count":1,"children":[]},{"name":"PlayerCardProps","total_count":1,"children":[]}]},{"name":"PlayerDomainCards.tsx","total_count":17,"children":[{"name":"PlayerAchievementsCard()","total_count":1,"children":[]},{"name":"PlayerAchievementsCardProps","total_count":1,"children":[]},{"name":"PlayerComparisonCard()","total_count":1,"children":[]},{"name":"PlayerComparisonCardProps","total_count":1,"children":[]},{"name":"PlayerGoalsCard()","total_count":1,"children":[]},{"name":"PlayerGoalsCardProps","total_count":1,"children":[]},{"name":"PlayerHistoryCard()","total_count":1,"children":[]},{"name":"PlayerHistoryCardProps","total_count":1,"children":[]},{"name":"PlayerIdentityCard()","total_count":1,"children":[]},{"name":"PlayerIdentityCardProps","total_count":1,"children":[]},{"name":"PlayerPerformanceCard()","total_count":1,"children":[]},{"name":"PlayerPerformanceCardProps","total_count":1,"children":[]},{"name":"PlayerProgressCard()","total_count":1,"children":[]},{"name":"PlayerProgressCardProps","total_count":1,"children":[]},{"name":"PlayerStatCard()","total_count":1,"children":[]},{"name":"PlayerStatCardProps","total_count":1,"children":[]},{"name":"renderStars()","total_count":1,"children":[]}]},{"name":"PlayerEvaluationModal.tsx","total_count":2,"children":[{"name":"PlayerEvaluationModal()","total_count":1,"children":[]},{"name":"PlayerEvaluationModalProps","total_count":1,"children":[]}]},{"name":"PlayerForm.tsx","total_count":2,"children":[{"name":"PlayerForm()","total_count":1,"children":[]},{"name":"PlayerFormProps","total_count":1,"children":[]}]},{"name":"PlayerHero.tsx","total_count":2,"children":[{"name":"PlayerHero()","total_count":1,"children":[]},{"name":"PlayerHeroProps","total_count":1,"children":[]}]},{"name":"ResponsiveTabsContainer.tsx","total_count":2,"children":[{"name":"ResponsiveTabsContainer()","total_count":1,"children":[]},{"name":"ResponsiveTabsContainerProps","total_count":1,"children":[]}]},{"name":"TechnicalRanking.tsx","total_count":3,"children":[{"name":"PlayerSummary","total_count":1,"children":[]},{"name":"TechnicalRanking()","total_count":1,"children":[]},{"name":"TechnicalRankingProps","total_count":1,"children":[]}]},{"name":"UI.tsx","total_count":16,"children":[{"name":"SportsBadge()","total_count":1,"children":[]},{"name":"SportsBadgeProps","total_count":1,"children":[]},{"name":"SportsButton()","total_count":1,"children":[]},{"name":"SportsButtonProps","total_count":1,"children":[]},{"name":"SportsCard()","total_count":1,"children":[]},{"name":"SportsCardProps","total_count":1,"children":[]},{"name":"SportsContainer()","total_count":1,"children":[]},{"name":"SportsContainerProps","total_count":1,"children":[]},{"name":"SportsHeading()","total_count":1,"children":[]},{"name":"SportsHeadingProps","total_count":1,"children":[]},{"name":"SportsHero()","total_count":1,"children":[]},{"name":"SportsHeroProps","total_count":1,"children":[]},{"name":"SportsIndicator()","total_count":1,"children":[]},{"name":"SportsIndicatorProps","total_count":1,"children":[]},{"name":"SportsSkeleton","total_count":1,"children":[]},{"name":"VISUAL_TOKENS","total_count":1,"children":[]}]},{"name":"UserApprovalList.tsx","total_count":2,"children":[{"name":"UserApprovalList()","total_count":1,"children":[]},{"name":"UserApprovalListProps","total_count":1,"children":[]}]}]},{"name":"contexts","total_count":5,"children":[{"name":"AppConfigContext.tsx","total_count":5,"children":[{"name":"AppConfig","total_count":1,"children":[]},{"name":"AppConfigContext","total_count":1,"children":[]},{"name":"AppConfigProvider()","total_count":1,"children":[]},{"name":"BrandName()","total_count":1,"children":[]},{"name":"useAppConfig()","total_count":1,"children":[]}]}]},{"name":"lib","total_count":1,"children":[{"name":"authFetch.ts","total_count":1,"children":[{"name":"authFetch()","total_count":1,"children":[]}]}]},{"name":"types.ts","total_count":49,"children":[{"name":"Bill","total_count":1,"children":[]},{"name":"CATEGORY_LABELS","total_count":1,"children":[]},{"name":"CategoryTransition","total_count":1,"children":[]},{"name":"CompetenceConfig","total_count":1,"children":[]},{"name":"DrawTeam","total_count":1,"children":[]},{"name":"DuoAffinity","total_count":1,"children":[]},{"name":"EventBill","total_count":1,"children":[]},{"name":"EventParticipant","total_count":1,"children":[]},{"name":"FAVORITE_TEAMS","total_count":1,"children":[]},{"name":"FavoriteTeam","total_count":1,"children":[]},{"name":"FinanceConfig","total_count":1,"children":[]},{"name":"FinanceHistoryEntry","total_count":1,"children":[]},{"name":"GOALKEEPER_ATTRIBUTES","total_count":1,"children":[]},{"name":"GrupalEvent","total_count":1,"children":[]},{"name":"GrupalEventStatus","total_count":1,"children":[]},{"name":"GrupalEventType","total_count":1,"children":[]},{"name":"LINE_ATTRIBUTES","total_count":1,"children":[]},{"name":"Match","total_count":1,"children":[]},{"name":"MatchLifecycleState","total_count":1,"children":[]},{"name":"MatchResult","total_count":1,"children":[]},{"name":"MatchStatus","total_count":1,"children":[]},{"name":"MuralCategory","total_count":1,"children":[]},{"name":"MuralFile","total_count":1,"children":[]},{"name":"MuralHighlight","total_count":1,"children":[]},{"name":"MuralPost","total_count":1,"children":[]},{"name":"Notification","total_count":1,"children":[]},{"name":"NotificationCategory","total_count":1,"children":[]},{"name":"NotificationPreferences","total_count":1,"children":[]},{"name":"PaymentRecord","total_count":1,"children":[]},{"name":"Player","total_count":1,"children":[]},{"name":"PlayerCategory","total_count":1,"children":[]},{"name":"PlayerEvaluation","total_count":1,"children":[]},{"name":"PlayerHistoryEntry","total_count":1,"children":[]},{"name":"PlayerPosition","total_count":1,"children":[]},{"name":"PlayerStats","total_count":1,"children":[]},{"name":"PlayerStatus","total_count":1,"children":[]},{"name":"POSITION_LABELS","total_count":1,"children":[]},{"name":"Presence","total_count":1,"children":[]},{"name":"PresenceStatus","total_count":1,"children":[]},{"name":"RecurrentConfig","total_count":1,"children":[]},{"name":"ReserveQueueAlert","total_count":1,"children":[]},{"name":"Season","total_count":1,"children":[]},{"name":"STATUS_COLORS","total_count":1,"children":[]},{"name":"STATUS_LABELS","total_count":1,"children":[]},{"name":"TeamDraw","total_count":1,"children":[]},{"name":"TrioAffinity","total_count":1,"children":[]},{"name":"User","total_count":1,"children":[]},{"name":"UserRole","total_count":1,"children":[]},{"name":"UserStatus","total_count":1,"children":[]}]},{"name":"utils","total_count":5,"children":[{"name":"achievements.ts","total_count":3,"children":[{"name":"Achievement","total_count":1,"children":[]},{"name":"getAchievementsForPlayer()","total_count":1,"children":[]},{"name":"getMostRecentAchievement()","total_count":1,"children":[]}]},{"name":"roundStatus.ts","total_count":2,"children":[{"name":"getRoundStatus()","total_count":1,"children":[]},{"name":"RoundStatus","total_count":1,"children":[]}]}]},{"name":"main.tsx","total_count":1,"children":[]},{"name":"vite-env.d.ts","total_count":1,"children":[]}]},{"name":"tsconfig.json","total_count":18,"children":[{"name":"allowImportingTsExtensions","total_count":1,"children":[]},{"name":"allowJs","total_count":1,"children":[]},{"name":"compilerOptions","total_count":1,"children":[]},{"name":"DOM","total_count":1,"children":[]},{"name":"DOM.Iterable","total_count":1,"children":[]},{"name":"ES2022","total_count":1,"children":[]},{"name":"experimentalDecorators","total_count":1,"children":[]},{"name":"isolatedModules","total_count":1,"children":[]},{"name":"jsx","total_count":1,"children":[]},{"name":"lib","total_count":1,"children":[]},{"name":"module","total_count":1,"children":[]},{"name":"moduleDetection","total_count":1,"children":[]},{"name":"moduleResolution","total_count":1,"children":[]},{"name":"noEmit","total_count":1,"children":[]},{"name":"paths","total_count":1,"children":[]},{"name":"skipLibCheck","total_count":1,"children":[]},{"name":"target","total_count":1,"children":[]},{"name":"useDefineForClassFields","total_count":1,"children":[]}]},{"name":"vite.config.ts","total_count":1,"children":[]}]};
+
+    function transformData(jsonData) {
+        // Helper function to recursively build the children structure
+        function processNode(node, parentL1StageName) {
+            let displayName = node.name;
+            // Append total_count if it exists and is not already in the name
+            if (node.total_count !== undefined) {
+                if (!/\(Total Count: \d+\)$/.test(displayName)) {
+                    displayName += ` (Total Count: ${node.total_count})`;
+                }
+            }
+
+            const newNode = { name: displayName };
+
+            if (parentL1StageName === "Root") {
+                 newNode.originalStageName = node.name;
+            } else {
+                newNode.originalStageName = parentL1StageName;
+            }
+
+            if (node.children && node.children.length > 0) {
+                const stageNameToPass = (parentL1StageName === "Root") ? node.name : parentL1StageName;
+                newNode.children = node.children.map(child => processNode(child, stageNameToPass));
+            }
+
+            return newNode;
+        }
+
+        let rootDisplayName = jsonData.name;
+        if (jsonData.total_count !== undefined && !/\(Total Count: \d+\)$/.test(rootDisplayName)) {
+            rootDisplayName += ` (Total Count: ${jsonData.total_count})`;
+        }
+
+        return {
+            name: rootDisplayName,
+            originalStageName: "Root",
+            children: (jsonData.children || []).map(child => processNode(child, "Root"))
+        };
+    }
+
+    const treeData = transformData(initialJsonData);
+
+    // Auto-populated phaseColors: every depth-1 child of the root gets
+    // a stable colour from a bigger palette so all top-level dirs are
+    // distinguishable.
+    const PALETTE = [
+      ["#3498DB","#2980B9","#AED6F1"], ["#2ECC71","#27AE60","#A9DFBF"],
+      ["#E74C3C","#C0392B","#F5B7B1"], ["#9B59B6","#8E44AD","#D7BDE2"],
+      ["#F39C12","#D68910","#FAD7A0"], ["#1ABC9C","#117864","#A2D9CE"],
+      ["#34495E","#1B2631","#ABB2B9"], ["#E67E22","#BA4A00","#F5CBA7"],
+      ["#16A085","#0E6655","#A2D9CE"], ["#D35400","#A04000","#EDBB99"],
+      ["#7F8C8D","#566573","#D5DBDB"], ["#C0392B","#7B241C","#F5B7B1"],
+      ["#2E86C1","#1B4F72","#A9CCE3"], ["#28B463","#196F3D","#A9DFBF"],
+      ["#AF7AC5","#6C3483","#D2B4DE"],
+    ];
+    const phaseColors = { "Root": { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+                          "Default": { fill: "#BDC3C7", stroke: "#95A5A6", collapsedFill: "#ECF0F1" } };
+    (initialJsonData.children || []).forEach((c, i) => {
+      const pal = PALETTE[i % PALETTE.length];
+      phaseColors[c.name] = { fill: pal[0], stroke: pal[1], collapsedFill: pal[2] };
+    });
+
+    const levelSpecificPalettes = {
+      0: { fill: "#4A4A4A", stroke: "#333333", collapsedFill: "#6C757D" },
+      2: { fill: "#6ab04c", stroke: "#508a38", collapsedFill: "#a3d391" },
+      3: { fill: "#f0932b", stroke: "#d0730f", collapsedFill: "#f6c07e" },
+      4: { fill: "#be2edd", stroke: "#a01cb3", collapsedFill: "#e08bf2" },
+      5: { fill: "#00a8ff", stroke: "#007ac1", collapsedFill: "#74d2ff" },
+      6: { fill: "#e55039", stroke: "#c23620", collapsedFill: "#f09a8d" },
+      default: { fill: "#747d8c", stroke: "#57606f", collapsedFill: "#a4b0be" }
+    };
+
+    const svgElement = d3.select("#tree-svg");
+    const initialSvgWidth = +svgElement.attr("width");
+    const initialSvgHeight = +svgElement.attr("height");
+    const margin = { top: 40, right: 120, bottom: 80, left: 450 };
+    let width = initialSvgWidth - margin.left - margin.right;
+    let height = initialSvgHeight - margin.top - margin.bottom;
+    const duration = 500;
+    let nodeCounter = 0;
+    const g = svgElement.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    const treemap = d3.tree().nodeSize([40, 0]);
+    let rootNode = d3.hierarchy(treeData, d => d.children);
+    rootNode.x0 = 0;
+    rootNode.y0 = 0;
+
+    if (rootNode.children) {
+      rootNode.children.forEach(d_child => {
+        if (d_child.children) { collapseBranch(d_child); }
+      });
+    }
+    updateTree(rootNode);
+
+    function collapseBranch(d) { if (d.children) { d._children = d.children; d._children.forEach(collapseBranch); d.children = null; } }
+    function expandBranch(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) { d.children.forEach(expandBranch); } }
+    window.expandAll = () => { expandBranch(rootNode); updateTree(rootNode); };
+    window.collapseAll = () => { if (rootNode.children) { rootNode.children.forEach(collapseBranch); } updateTree(rootNode); };
+    window.resetView = () => { if (rootNode.children) { rootNode.children.forEach(d_child => { if (d_child.children || d_child._children) { collapseBranch(d_child); } }); } if (rootNode._children && !rootNode.children) { rootNode.children = rootNode._children; rootNode._children = null; } updateTree(rootNode); };
+
+    function updateTree(source) {
+      const treeLayoutData = treemap(rootNode);
+      let nodes = treeLayoutData.descendants();
+      let links = treeLayoutData.descendants().slice(1);
+
+      let minX = 0;
+      let maxX = 0;
+      if (nodes.length > 0) {
+        minX = d3.min(nodes, d => d.x);
+        maxX = d3.max(nodes, d => d.x);
+      }
+
+      let neededHeight = Math.max(initialSvgHeight, maxX - minX + margin.top + margin.bottom + 100);
+      svgElement.transition().duration(duration / 2).attr("height", neededHeight);
+      g.transition().duration(duration / 2).attr("transform", `translate(${margin.left},${margin.top - minX + 40})`);
+
+      nodes.forEach(d => { d.y = d.depth * 400; }); // Adjust horizontal separation if needed
+
+      const node = g.selectAll('g.node').data(nodes, d => d.id || (d.id = ++nodeCounter));
+      const nodeEnter = node.enter().append('g')
+        .attr('class', d => "node" + (d.children || d._children ? " node--internal" : " node--leaf") + (d._children ? " _children" : ""))
+        .attr('transform', d => `translate(${source.y0},${source.x0})`)
+        .on('click', (event, d) => { if (d.children) { d._children = d.children; d.children = null; } else if (d._children) { d.children = d._children; d._children = null; } updateTree(d); })
+        .style('cursor', d => (d.children || d._children) ? 'pointer' : 'default');
+
+      nodeEnter.append('circle').attr('r', 1e-6);
+
+      nodeEnter.append('text')
+        .attr('dy', '.35em')
+        .attr('x', d => d.children || d._children ? -14 : 14)
+        .attr('text-anchor', d => d.children || d._children ? 'end' : 'start')
+        .style("fill-opacity", 1e-6)
+        .call(wrapText, 380);
+
+      const nodeUpdate = nodeEnter.merge(node);
+      nodeUpdate.transition().duration(duration)
+        .attr('transform', d => `translate(${d.y},${d.x})`)
+        .attr('class', d => "node" + (d.children ? " node--internal" : " node--leaf") + (d._children ? " node--internal _children" : ""));
+
+      nodeUpdate.select('circle').attr('r', 8.5)
+        .style('fill', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            if (d._children) return palette.collapsedFill;
+            if (d.children) return palette.fill;
+            return "#fff";
+        })
+        .style('stroke', d => {
+            let palette;
+            if (d.depth === 0) {
+                palette = levelSpecificPalettes[0];
+            } else if (d.depth === 1) {
+                palette = phaseColors[d.data.originalStageName] || phaseColors.Default;
+            } else {
+                palette = levelSpecificPalettes[d.depth] || levelSpecificPalettes.default;
+            }
+            return palette.stroke;
+        });
+      nodeUpdate.select('text').style("fill-opacity", 1).call(wrapText, 380);
+
+      const nodeExit = node.exit().transition().duration(duration).attr('transform', d => `translate(${source.y},${source.x})`).remove();
+      nodeExit.select('circle').attr('r', 1e-6);
+      nodeExit.select('text').style('fill-opacity', 1e-6);
+
+      const link = g.selectAll('path.link').data(links, d => d.id);
+      const linkEnter = link.enter().insert('path', "g").attr('class', 'link').attr('d', d => { const o = { x: source.x0, y: source.y0 }; return diagonal(o, o); });
+
+      linkEnter.merge(link).transition().duration(duration).attr('d', d => diagonal(d, d.parent))
+        .style('stroke', d => {
+            const sourceNode = d.parent;
+            if (!sourceNode) return phaseColors.Default.stroke;
+            const l1AncestorName = sourceNode.data.originalStageName;
+            const colorPalette = phaseColors[l1AncestorName] || phaseColors.Default;
+            return colorPalette.stroke;
+        });
+      link.exit().transition().duration(duration).attr('d', d => { const o = { x: source.x, y: source.y }; return diagonal(o, o); }).remove();
+      nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+    }
+
+    function diagonal(s, d) { return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`; }
+
+    function wrapText(textElements, maxWidth) {
+        const textPartColors = {
+            name: '#343a40',
+            count: '#0056b3'
+        };
+        const countRegex = /(\s\(Total Count: \d+\))$/;
+
+        textElements.each(function () {
+            const textD3 = d3.select(this);
+            const originalNodeText = textD3.datum().data.name;
+            const x = parseFloat(textD3.attr("x") || 0);
+            const initialDy = textD3.attr("dy");
+            const textAnchor = textD3.attr("text-anchor");
+            const lineHeight = 1.1;
+
+            textD3.text(null);
+
+            let namePart = originalNodeText;
+            let countPartText = "";
+
+            const countMatch = originalNodeText.match(countRegex);
+            if (countMatch && originalNodeText.endsWith(countMatch[0])) {
+                namePart = originalNodeText.substring(0, originalNodeText.length - countMatch[0].length).trim();
+                countPartText = countMatch[0].trim();
+            }
+
+            const tokens = [];
+            namePart.split(/\s+/).filter(Boolean).forEach(word => {
+                tokens.push({ text: word, type: 'name' });
+            });
+            if (countPartText) {
+                tokens.push({ text: countPartText, type: 'count' });
+            }
+
+            if (tokens.length === 0 && originalNodeText) {
+                tokens.push({ text: originalNodeText, type: 'name' });
+            }
+
+            let currentTspan = textD3.append("tspan").attr("x", x).attr("dy", initialDy);
+            if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+
+            let lineTokens = [];
+
+            for (let i = 0; i < tokens.length; i++) {
+                const tokenObj = tokens[i];
+
+                lineTokens.push(tokenObj);
+                currentTspan.text(lineTokens.map(t => t.text).join(" "));
+
+                if (currentTspan.node().getComputedTextLength() > maxWidth && lineTokens.length > 1) {
+                    lineTokens.pop();
+
+                    currentTspan.text(null);
+                    lineTokens.forEach((prevToken, idx) => {
+                        currentTspan.append("tspan")
+                            .text((idx > 0 ? " " : "") + prevToken.text)
+                            .style("fill", textPartColors[prevToken.type] || textPartColors.name)
+                            .style("font-weight", prevToken.type === 'count' ? "bold" : "normal");
+                    });
+
+                    lineTokens = [tokenObj];
+                    currentTspan = textD3.append("tspan").attr("x", x).attr("dy", lineHeight + "em");
+                    if (textAnchor === "end") currentTspan.attr("text-anchor", "end");
+                }
+            }
+
+            currentTspan.text(null);
+            lineTokens.forEach((token, idx) => {
+                currentTspan.append("tspan")
+                    .text((idx > 0 ? " " : "") + token.text)
+                    .style("fill", textPartColors[token.type] || textPartColors.name)
+                    .style("font-weight", token.type === 'count' ? "bold" : "normal");
+            });
+
+            if (textD3.selectAll("tspan > tspan").empty() && textD3.select("tspan").text().length === 0 && originalNodeText) {
+                let t = textD3.select("tspan");
+                let displayText = originalNodeText;
+                t.text(displayText).style("fill", textPartColors.name);
+                if (t.node() && t.node().getComputedTextLength() > maxWidth && displayText.length > 20) {
+                    let estimatedChars = Math.floor(maxWidth / (t.node().getComputedTextLength()/displayText.length) );
+                    displayText = displayText.substring(0, Math.max(0, estimatedChars - 3)) + "...";
+                    t.text(displayText);
+                }
+            }
+        });
+    }
+  </script>
+</body>
+</html>
