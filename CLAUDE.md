@@ -49,3 +49,13 @@ Aplicação full-stack em um único processo Node/Express, servida em `http://lo
 - **Autenticação de rotas `/api/*`**: gate global em `server.ts` (`app.use('/api', ...)`) exige `Authorization: Bearer <token>` válido para qualquer rota não listada em `PUBLIC_API_ROUTES` (login, registro, forgot/reset-password, mural público, próximo jogo público). Os regexes desse allowlist não incluem o prefixo `/api` — o Express já o remove de `req.path` dentro de um middleware montado com `app.use('/api', ...)`.
 
 Para entendimento aprofundado de regras de negócio, edge cases já mapeados e problemas conhecidos, consulte `docs/AUDITORIA.md` (auditoria funcional completa) e `docs/` (arquitetura da home dinâmica, handoff e guias de deploy).
+
+<!-- OPENWIKI:START -->
+
+## OpenWiki
+
+This repository uses OpenWiki for recurring code documentation. Start with `openwiki/quickstart.md`, then follow its links to architecture, workflows, domain concepts, operations, integrations, testing guidance, and source maps.
+
+The scheduled OpenWiki GitHub Actions workflow refreshes the repository wiki. Do not hand-edit generated OpenWiki pages unless explicitly asked; prefer updating source code/docs and letting OpenWiki regenerate.
+
+<!-- OPENWIKI:END -->

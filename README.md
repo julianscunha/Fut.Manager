@@ -91,7 +91,8 @@ Toda a documentação de arquitetura, decisões de produto e auditorias vive em 
 | [handoff.md](docs/handoff.md) | Histórico de entregas e decisões arquiteturais |
 | [home_dynamic_architecture.md](docs/home_dynamic_architecture.md) | Arquitetura da Home dinâmica |
 | [home_composer_architecture.md](docs/home_composer_architecture.md) | Composição de blocos da Home |
-| [home_art_direction.md](docs/home_art_direction.md) | Direção de arte e identidade visual |
+ | [home_art_direction.md](docs/home_art_direction.md) | Direção de arte e identidade visual |
+| [Permissões do Sistema](openwiki/guide/permissions.md) | Roles (admin, auxiliar, jogador), matriz de capacidades e mapeamento role ↔ category |
 
 Para quem for trabalhar no código com o Claude Code, veja também o [`CLAUDE.md`](CLAUDE.md) na raiz — mapeia a arquitetura e as regras de negócio essenciais.
 

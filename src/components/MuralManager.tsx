@@ -280,6 +280,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
 
   const [memoriesPage, setMemoriesPage] = useState(1);
   const [albumPage, setAlbumPage] = useState(1);
+  const [historyPage, setHistoryPage] = useState(1);
 
   // Reset memories pagination when filters or search change
   useEffect(() => {
@@ -2645,6 +2646,7 @@ ${shareUrl}`;
             type="button"
             onClick={() => {
               setMuseuTab('historia');
+              setHistoryPage(1);
             }}
             className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
               museuTab === 'historia'
@@ -2906,12 +2908,23 @@ ${shareUrl}`;
                 <p className="text-[10px] text-zinc-500 font-mono">Nenhuma rodada foi sorteada ou encerrada nesta temporada.</p>
               </div>
             ) : (
-              <div className="space-y-10 max-w-3xl mx-auto">
+              <div className="space-y-6 max-w-3xl mx-auto">
                 {(() => {
-                  const sortedMatches = fullMatches.slice().sort((a,b) => b.date.localeCompare(a.date));
+                  const sortedMatches = [...fullMatches].sort((a, b) => {
+                    const createdDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    if (createdDiff !== 0) return createdDiff;
+                    return b.date.localeCompare(a.date);
+                  });
+
+                  const itemsPerPage = 5;
+                  const totalPages = Math.ceil(sortedMatches.length / itemsPerPage);
+                  const safeHistoryPage = Math.min(Math.max(1, historyPage), totalPages || 1);
+                  const startIndex = (safeHistoryPage - 1) * itemsPerPage;
+                  const endIndex = startIndex + itemsPerPage;
+                  const paginatedMatches = sortedMatches.slice(startIndex, endIndex);
+
                   const matchesByYear: { [year: string]: typeof fullMatches } = {};
-                  
-                  sortedMatches.forEach(match => {
+                  paginatedMatches.forEach(match => {
                     const year = match.date ? match.date.split('-')[0] : '2026';
                     if (!matchesByYear[year]) {
                       matchesByYear[year] = [];
@@ -2921,157 +2934,192 @@ ${shareUrl}`;
 
                   const sortedYears = Object.keys(matchesByYear).sort((a, b) => b.localeCompare(a));
 
-                  return sortedYears.map((year) => (
-                    <div key={year} className="space-y-6 relative">
-                      {/* Year Header Indicator */}
-                      <div className="flex items-center gap-3 pt-4">
-                        <div className="px-4 py-1.5 bg-gradient-to-r from-zinc-950 via-[#0e1612] to-zinc-950 border border-emerald-500/30 text-emerald-300 font-display font-black text-sm tracking-widest uppercase rounded-xl shadow-md flex items-center gap-2.5">
-                          <span>📅 {year}</span>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                          <span className="text-[10px] font-mono text-zinc-500 lowercase bg-zinc-900/80 px-2 py-0.5 rounded border border-zinc-850">
-                            {matchesByYear[year].length} {matchesByYear[year].length === 1 ? 'rodada' : 'rodadas'}
-                          </span>
-                        </div>
-                        <div className="h-[1px] flex-1 bg-gradient-to-r from-emerald-500/20 via-zinc-850 to-transparent" />
-                      </div>
-
-                      {/* Timeline down connection line */}
-                      <div className="absolute top-[48px] left-[18px] md:left-[22px] bottom-0 w-[2px] bg-gradient-to-b from-emerald-500/20 via-zinc-800 to-zinc-950/20 pointer-events-none" />
-
-                      {/* Year Round Cards List */}
-                      <div className="space-y-6 pl-7 md:pl-9">
-                        {matchesByYear[year].map((match, matchIdx, roundArr) => {
-                          const result = fullResults.find(r => r.matchId === match.id);
-                          const matchMedias = posts.filter(p => p.matchId === match.id && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
-                          const photosCount = matchMedias.filter(m => m.mediaType === 'image').length;
-                          const videosCount = matchMedias.filter(m => m.mediaType === 'video').length;
-                          const hasMedias = matchMedias.length > 0;
-
-                          const formattedDate = new Date(match.date + 'T12:00:00').toLocaleDateString('pt-BR');
-                          return (
-                            <div key={match.id} className="relative group">
-                              {/* Connector Arrow Icon indicator */}
-                              <div className={`absolute -left-[30px] md:-left-[36px] top-4.5 w-5 h-5 rounded-full border bg-zinc-950 flex items-center justify-center transition-all duration-300 group-hover:scale-115 ${
-                                hasMedias
-                                  ? 'border-emerald-500/50 bg-emerald-950/85 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                                  : 'border-zinc-800 bg-zinc-900 text-zinc-500'
-                              }`}>
-                                <div className={`w-1.5 h-1.5 rounded-full ${hasMedias ? 'bg-emerald-400' : 'bg-zinc-650'}`} />
+                  return (
+                    <>
+                      <div className="space-y-10">
+                        {sortedYears.map((year) => (
+                          <div key={year} className="space-y-6 relative">
+                            {/* Year Header Indicator */}
+                            <div className="flex items-center gap-3 pt-4">
+                              <div className="px-4 py-1.5 bg-gradient-to-r from-zinc-950 via-[#0e1612] to-zinc-950 border border-emerald-500/30 text-emerald-300 font-display font-black text-sm tracking-widest uppercase rounded-xl shadow-md flex items-center gap-2.5">
+                                <span>📅 {year}</span>
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                <span className="text-[10px] font-mono text-zinc-500 lowercase bg-zinc-900/80 px-2 py-0.5 rounded border border-zinc-850">
+                                  {matchesByYear[year].length} {matchesByYear[year].length === 1 ? 'rodada' : 'rodadas'}
+                                </span>
                               </div>
+                              <div className="h-[1px] flex-1 bg-gradient-to-r from-emerald-500/20 via-zinc-850 to-transparent" />
+                            </div>
 
-                              {/* Timeline card with sports flavor */}
-                              <div className="bg-gradient-to-b from-[#0b100e] to-[#080c0a] border border-zinc-900 hover:border-emerald-500/25 rounded-2xl p-5 shadow-lg hover:shadow-emerald-500/2 transition duration-300 flex flex-col md:flex-row md:items-center justify-between gap-5 relative">
-                                <div className="space-y-3.5 flex-1 min-w-0">
-                                  {/* Badges / Header details */}
-                                  <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
-                                    <span className="bg-[#111915] border border-emerald-500/15 px-3 py-1 rounded-full text-emerald-400 font-extrabold flex items-center gap-1 leading-none shadow-sm uppercase">
-                                      ⚽ Rodada #{sortedMatches.length - sortedMatches.findIndex(m => m.id === match.id)}
-                                    </span>
-                                    <span className="bg-zinc-900 border border-zinc-850 px-2.5 py-1 rounded-full text-zinc-400 font-semibold leading-none">
-                                      📅 {formattedDate}
-                                    </span>
-                                    <span className="text-zinc-500 font-medium truncate">
-                                      ({match.location || 'Arena Society'})
-                                    </span>
-                                  </div>
+                            {/* Timeline down connection line */}
+                            <div className="absolute top-[48px] left-[18px] md:left-[22px] bottom-0 w-[2px] bg-gradient-to-b from-emerald-500/20 via-zinc-800 to-zinc-950/20 pointer-events-none" />
 
-                                  {/* Scoreboard and Champions details */}
-                                  <div className="space-y-3">
-                                    {result ? (
-                                      <div className="space-y-3">
-                                        {/* Score table layout */}
-                                        <div className="flex flex-wrap gap-2.5 max-w-md">
-                                          {/* Verde */}
-                                          <div className="flex-1 min-w-[85px] bg-[#0c1410] border border-emerald-500/10 hover:border-emerald-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
-                                            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-450" /> Verde
-                                            </span>
-                                            <strong className="text-emerald-400 font-display font-black text-sm mt-0.5">{result.winsGreen || 0} vit</strong>
-                                          </div>
+                            {/* Year Round Cards List */}
+                            <div className="space-y-6 pl-7 md:pl-9">
+                              {matchesByYear[year].map((match, matchIdx, roundArr) => {
+                                const result = fullResults.find(r => r.matchId === match.id);
+                                const matchMedias = posts.filter(p => p.matchId === match.id && !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
+                                const photosCount = matchMedias.filter(m => m.mediaType === 'image').length;
+                                const videosCount = matchMedias.filter(m => m.mediaType === 'video').length;
+                                const hasMedias = matchMedias.length > 0;
 
-                                          {/* Vermelho */}
-                                          <div className="flex-1 min-w-[85px] bg-[#140c0d] border border-rose-500/10 hover:border-rose-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
-                                            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Vermelho
-                                            </span>
-                                            <strong className="text-rose-400 font-display font-black text-sm mt-0.5">{result.winsRed || 0} vit</strong>
-                                          </div>
+                                const formattedDate = new Date(match.date + 'T12:00:00').toLocaleDateString('pt-BR');
+                                return (
+                                  <div key={match.id} className="relative group">
+                                    {/* Connector Arrow Icon indicator */}
+                                    <div className={`absolute -left-[30px] md:-left-[36px] top-4.5 w-5 h-5 rounded-full border bg-zinc-950 flex items-center justify-center transition-all duration-300 group-hover:scale-115 ${
+                                      hasMedias
+                                        ? 'border-emerald-500/50 bg-emerald-950/85 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                                        : 'border-zinc-800 bg-zinc-900 text-zinc-500'
+                                    }`}>
+                                      <div className={`w-1.5 h-1.5 rounded-full ${hasMedias ? 'bg-emerald-400' : 'bg-zinc-650'}`} />
+                                    </div>
 
-                                          {/* Azul */}
-                                          <div className="flex-1 min-w-[85px] bg-[#0c1014] border border-blue-500/10 hover:border-blue-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
-                                            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
-                                              <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Azul
-                                            </span>
-                                            <strong className="text-blue-400 font-display font-black text-sm mt-0.5">{result.winsBlue || 0} vit</strong>
-                                          </div>
+                                    {/* Timeline card with sports flavor */}
+                                    <div className="bg-gradient-to-b from-[#0b100e] to-[#080c0a] border border-zinc-900 hover:border-emerald-500/25 rounded-2xl p-5 shadow-lg hover:shadow-emerald-500/2 transition duration-300 flex flex-col md:flex-row md:items-center justify-between gap-5 relative">
+                                      <div className="space-y-3.5 flex-1 min-w-0">
+                                        {/* Badges / Header details */}
+                                        <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
+                                          <span className="bg-[#111915] border border-emerald-500/15 px-3 py-1 rounded-full text-emerald-400 font-extrabold flex items-center gap-1 leading-none shadow-sm uppercase">
+                                            ⚽ Rodada #{sortedMatches.length - sortedMatches.findIndex(m => m.id === match.id)}
+                                          </span>
+                                          <span className="bg-zinc-900 border border-zinc-850 px-2.5 py-1 rounded-full text-zinc-400 font-semibold leading-none">
+                                            📅 {formattedDate}
+                                          </span>
+                                          <span className="text-zinc-500 font-medium truncate">
+                                            ({match.location || 'Arena Society'})
+                                          </span>
                                         </div>
 
-                                        {/* Golden Trophy Ribbon for Champions */}
-                                        {result.champions && result.champions.length > 0 && (
-                                          <div className="inline-flex items-center gap-2 bg-amber-500/5 border border-amber-500/20 text-amber-400 px-3 py-1.5 rounded-xl text-xs font-mono leading-none shadow-sm">
-                                            <div className="p-1 bg-amber-500/10 text-amber-400 rounded-md">
-                                              <Award className="w-3.5 h-3.5 fill-amber-500" />
+                                        {/* Scoreboard and Champions details */}
+                                        <div className="space-y-3">
+                                          {result ? (
+                                            <div className="space-y-3">
+                                              {/* Score table layout */}
+                                              <div className="flex flex-wrap gap-2.5 max-w-md">
+                                                {/* Verde */}
+                                                <div className="flex-1 min-w-[85px] bg-[#0c1410] border border-emerald-500/10 hover:border-emerald-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
+                                                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-450" /> Verde
+                                                  </span>
+                                                  <strong className="text-emerald-400 font-display font-black text-sm mt-0.5">{result.winsGreen || 0} vit</strong>
+                                                </div>
+
+                                                {/* Vermelho */}
+                                                <div className="flex-1 min-w-[85px] bg-[#140c0d] border border-rose-500/10 hover:border-rose-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
+                                                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Vermelho
+                                                  </span>
+                                                  <strong className="text-rose-400 font-display font-black text-sm mt-0.5">{result.winsRed || 0} vit</strong>
+                                                </div>
+
+                                                {/* Azul */}
+                                                <div className="flex-1 min-w-[85px] bg-[#0c1014] border border-blue-500/10 hover:border-blue-500/20 px-3 py-2 rounded-xl text-center flex flex-col items-center">
+                                                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider font-extrabold flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500" /> Azul
+                                                  </span>
+                                                  <strong className="text-blue-400 font-display font-black text-sm mt-0.5">{result.winsBlue || 0} vit</strong>
+                                                </div>
+                                              </div>
+
+                                              {/* Golden Trophy Ribbon for Champions */}
+                                              {result.champions && result.champions.length > 0 && (
+                                                <div className="inline-flex items-center gap-2 bg-amber-500/5 border border-amber-500/20 text-amber-400 px-3 py-1.5 rounded-xl text-xs font-mono leading-none shadow-sm">
+                                                  <div className="p-1 bg-amber-500/10 text-amber-400 rounded-md">
+                                                    <Award className="w-3.5 h-3.5 fill-amber-500" />
+                                                  </div>
+                                                  <span>
+                                                    Campeão da Rodada: <strong className="text-amber-300 font-bold uppercase">{result.champions.join(' & ')}</strong>
+                                                  </span>
+                                                </div>
+                                              )}
                                             </div>
-                                            <span>
-                                              Campeão da Rodada: <strong className="text-amber-300 font-bold uppercase">{result.champions.join(' & ')}</strong>
-                                            </span>
-                                          </div>
+                                          ) : (
+                                            <div className="py-2.5 px-3 bg-zinc-950/60 border border-zinc-900 rounded-xl max-w-sm">
+                                              <p className="text-xs text-zinc-500 font-mono italic flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-ping" />
+                                                {match.status === 'encerrada' ? 'Placar em processamento / auditoria' : 'Partida futura programada'}
+                                              </p>
+                                            </div>
+                                          )}
+                                        </div>
+
+                                        {/* Media counter row */}
+                                        <div className="text-[10px] font-mono text-zinc-500 flex items-center gap-2 pt-0.5">
+                                          <span className="flex items-center gap-1">📸 <strong>{photosCount}</strong> fotos</span>
+                                          <span>•</span>
+                                          <span className="flex items-center gap-1">🎥 <strong>{videosCount}</strong> vídeos</span>
+                                        </div>
+                                      </div>
+
+                                      {/* Responsive CTA Buttons */}
+                                      <div className="flex flex-row md:flex-col items-stretch gap-2 pt-2 md:pt-0 w-full md:w-auto">
+                                        {hasMedias ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setSelectedHistoryMatchId(match.id);
+                                              setMuseuTab('memorias');
+                                            }}
+                                            className="flex-1 md:flex-none px-4 py-2 bg-[#1b2f25] hover:bg-emerald-500 text-emerald-300 hover:text-zinc-950 rounded-xl text-[11px] font-black tracking-wider uppercase transition border border-emerald-500/10 hover:border-emerald-450 cursor-pointer text-center font-mono"
+                                          >
+                                            🏛️ Acervo da Rodada
+                                          </button>
+                                        ) : (
+                                          match.status === 'encerrada' && !isPublic && currentUser && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setFormAssociation(`match-${match.id}`);
+                                                setFormCategory('partida');
+                                                setIsUploadOpen(true);
+                                              }}
+                                              className="flex-1 md:flex-none px-3.5 py-2 bg-zinc-900 hover:bg-zinc-805 text-zinc-400 hover:text-white rounded-xl text-[10.5px] font-mono font-bold transition border border-zinc-850 cursor-pointer text-center"
+                                            >
+                                              📷 Registrar Mídia
+                                            </button>
+                                          )
                                         )}
                                       </div>
-                                    ) : (
-                                      <div className="py-2.5 px-3 bg-zinc-950/60 border border-zinc-900 rounded-xl max-w-sm">
-                                        <p className="text-xs text-zinc-500 font-mono italic flex items-center gap-1.5">
-                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500/60 animate-ping" />
-                                          {match.status === 'encerrada' ? 'Placar em processamento / auditoria' : 'Partida futura programada'}
-                                        </p>
-                                      </div>
-                                    )}
+                                    </div>
                                   </div>
-
-                                  {/* Media counter row */}
-                                  <div className="text-[10px] font-mono text-zinc-500 flex items-center gap-2 pt-0.5">
-                                    <span className="flex items-center gap-1">📸 <strong>{photosCount}</strong> fotos</span>
-                                    <span>•</span>
-                                    <span className="flex items-center gap-1">🎥 <strong>{videosCount}</strong> vídeos</span>
-                                  </div>
-                                </div>
-
-                                {/* Responsive CTA Buttons */}
-                                <div className="flex flex-row md:flex-col items-stretch gap-2 pt-2 md:pt-0 w-full md:w-auto">
-                                  {hasMedias ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedHistoryMatchId(match.id);
-                                        setMuseuTab('memorias');
-                                      }}
-                                      className="flex-1 md:flex-none px-4 py-2 bg-[#1b2f25] hover:bg-emerald-500 text-emerald-300 hover:text-zinc-950 rounded-xl text-[11px] font-black tracking-wider uppercase transition border border-emerald-500/10 hover:border-emerald-450 cursor-pointer text-center font-mono"
-                                    >
-                                      🏛️ Acervo da Rodada
-                                    </button>
-                                  ) : (
-                                    match.status === 'encerrada' && !isPublic && currentUser && (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setFormAssociation(`match-${match.id}`);
-                                          setFormCategory('partida');
-                                          setIsUploadOpen(true);
-                                        }}
-                                        className="flex-1 md:flex-none px-3.5 py-2 bg-zinc-900 hover:bg-zinc-805 text-zinc-400 hover:text-white rounded-xl text-[10.5px] font-mono font-bold transition border border-zinc-850 cursor-pointer text-center"
-                                      >
-                                        📷 Registrar Mídia
-                                      </button>
-                                    )
-                                  )}
-                                </div>
-                              </div>
+                                );
+                              })}
                             </div>
-                          );
-                        })}
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ));
+
+                      {/* Pagination Controls */}
+                      {totalPages > 1 && (
+                        <div className="flex items-center justify-between border-t border-zinc-900 pt-4 mt-2">
+                          <span className="text-xs text-zinc-500 font-mono">
+                            Página <strong className="text-zinc-350">{safeHistoryPage}</strong> de <strong className="text-zinc-350">{totalPages}</strong>
+                          </span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              disabled={safeHistoryPage === 1}
+                              onClick={() => setHistoryPage(prev => Math.max(1, prev - 1))}
+                              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 border border-zinc-850 disabled:hover:bg-zinc-900 text-zinc-350 hover:text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <ChevronLeft className="w-4 h-4 text-emerald-450" />
+                              <span>Anterior</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={safeHistoryPage === totalPages}
+                              onClick={() => setHistoryPage(prev => Math.min(totalPages, prev + 1))}
+                              className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-40 border border-zinc-850 disabled:hover:bg-zinc-900 text-zinc-350 hover:text-white rounded-lg text-xs font-bold font-mono transition flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>Próximo</span>
+                              <ChevronRight className="w-4 h-4 text-emerald-450" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
                 })()}
               </div>
             )}

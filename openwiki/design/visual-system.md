@@ -1,11 +1,17 @@
-# FASE 2 — UX/UI ESPORTIVO
-# ETAPA 3 — DIREÇÃO DE ARTE E COMPOSIÇÃO DA HOME
+---
+type: "Reference"
+title: "Guia de Direção de Arte e Visual System"
+openwiki_generated: true
+---
+
+# Guia de Direção de Arte e Visual System
 
 Este documento define as diretrizes estéticas e a **Direção de Arte** oficial para a Home Dinâmica do **Fut.Manager**. Ele atua como o manual visual obrigatório para a construção das interfaces, garantindo consistência, emoção esportiva e alta legibilidade em todas as circunstâncias de jogo.
 
 ---
 
 ## 🎨 1. CONCEITO CENTRAL: "APLICATIVO DE CLUBE"
+
 A Home do Fut.Manager não deve remeter a um painel corporativo, planilha de escritório ou ferramenta financeira genérica. Ela foi projetada para emular os aplicativos oficiais de grandes ligas esportivas (NFL, FIFA, UEFA Champion League), onde o atleta se sente imerso na atmosfera tática de um vestiário minutos antes de entrar em campo.
 
 ### Princípios Diretores:
@@ -91,7 +97,7 @@ As fontes aplicadas carregam o dinamismo e a precisão do esporte:
 Animações refinadas e discretas reforçam o espírito de gameficação esportiva, limitadas a um teto de **300ms** para evitar sensação de lentidão:
 
 1. **Efeito Desbloqueio de Badge (Unlock):**
-   * Ao conquistar uma badge nova, o ícone correspondente faz uma animação de escala suave (0.8x -> 1.1x -> 1.0x) acompanhada de uma explosão discreta de partículas brilhantes na cor dourada.
+   * Ao conquistar uma badge nova, o ícone correspondente faz uma animação de escala suave (0.8x $\rightarrow$ 1.1x $\rightarrow$ 1.0x) acompanhada de uma explosão discreta de partículas brilhantes na cor dourada.
 2. **Navegação de Times (Swipe):**
    * O carrossel de equipes do sorteio desliza suavemente com efeito de paralaxe 3D leve nas abas laterais.
 3. **Pulsar do CTA:**
@@ -103,14 +109,4 @@ Animações refinadas e discretas reforçam o espírito de gameficação esporti
 
 * **Zona do Polegar (Thumb Zone):** Os botões mais cruciais (Confirmação, Cancelamento e Avaliações) ficam centralizados na metade inferior da tela do smartphone, facilitando o uso rápido com apenas uma mão.
 * **Área de Toque Confortável:** Touch targets de no mínimo **48px x 48px** em todos os seletores e botões interativos para evitar cliques acidentais no asfalto.
-* **Contraste de Rigor (WCAG AAA):** Elementos textuais mantêm alta relação de contraste contra as superfícies pretas e grafites, acompanhados sempre de ícones representativos (`lucide-react`) para que as cores não sejam o único meio de identificação de status.
-
----
-
-## 📋 7. PRÓXIMOS PASSOS: DRAFTS DA HOME DINÂMICA
-Conforme especificado pelo fluxo regulamentar, a próxima etapa consistirá na elaboração detalhada de **3 Rascunhos Conceituais Completos** representando cenários essenciais do app antes do início da reestruturação visual do código:
-1. **Rascunho A:** Visão do Atleta no Estado "Convocação Aberta" (Foco em RSVP e urgência de vagas).
-2. **Rascunho B:** Visão do Atleta no Estado "Times Sorteados" (Foco na experiência "Meu Time" e táticas).
-3. **Rascunho C:** Visão do Administrador no Estado "Convocação Encerrada" (Foco em ferramentas de governança discretas).
-
-Este guia está formalmente consolidado e servirá como a bíblia estética do Fut.Manager.
+* **Contraste de Rigor (WCAG AAA):** Elementos textuais mantêm alta relação de contraste contra as superfícies pretas e grafites, acompanhados sempre por ícones representativos (`lucide-react`) para que as cores não sejam o único meio de identificação de status.

@@ -1,5 +1,10 @@
-# FASE 2 — UX/UI ESPORTIVO
-# ETAPA 2 — HOME COMPOSER (ARQUITETURA FINAL DA HOME DINÂMICA)
+---
+type: "Reference"
+title: "Home Composer Architecture Blueprint"
+openwiki_generated: true
+---
+
+# Home Composer Architecture Blueprint
 
 Este documento estabelece o blueprint definitivo e a especificação de arquitetura de software para o **Home Composer**, a engine de composição tridimensional inteligente que orquestra a experiência da Home Page do **Fut.Manager**.
 
@@ -35,31 +40,39 @@ A Home deixa de possuir lógica visual complexa e condicionais aninhadas (`if-el
 ## 🗂️ 2. DIMENSÕES DE CONTEXTO DO COMPOSER
 
 ### Dimensão A: Estado da Rodada (Round State)
+
 Definido pelo status global do campeonato no backend:
-1. **`STANDBY`**: Sem rodada aberta / Período entre rodadas.
-2. **`CONFIRMING`**: Convocação aberta, mensalistas confirmando.
-3. **`CLOSED`**: Convocação encerrada, preparando sorteio.
-4. **`DRAWN`**: Times sorteados e publicados.
-5. **`MATCH_DAY`**: Dia do jogo (horas antes do início).
-6. **`LIVE`**: Jogo em andamento (Live Scoreboard ativo).
-7. **`AWAITING_EVALUATION`**: Avaliações de desempenho pós-jogo abertas.
-8. **`FINISHED`**: Resultado publicado, estatísticas consolidadas.
+
+| Estado | Descrição | Contexto |
+|--------|------------|----------|
+| **`STANDBY`** | Sem rodada aberta / Período entre rodadas. | A Home exibe painel de carregamento + ranking geral do mês. |
+| **`CONFIRMING`** | Convocação aberta, mensalistas confirmando. | A Home mostra CTA para confirmar presença + painel de vagas. |
+| **`CLOSED`** | Convocação encerrada, preparando sorteio. | A Home exibe contagem regressiva para o sorteio + botões administrativos. |
+| **`DRAWN`** | Times sorteados e publicados. | A Home mostra a composição dos times sortudos e "Meu Time". |
+| **`MATCH_DAY`** | Dia do jogo (horas antes do início). | A Home ativa checklist do dia do jogo + mapa de localização. |
+| **`LIVE`** | Jogo em andamento (Live Scoreboard ativo). | A Home reproduz placar ao vivo + estatísticas do jogo. |
+| **`AWAITING_EVALUATION`** | Avaliações de desempenho pós-jogo abertas. | A Home convida o atleta a avaliar seus companheiros. |
+| **`FINISHED`** | Resultado publicado, estatísticas consolidadas. | A Home exibe resultados consolidados, "Destaques da Rodada" + link do Museu. |
 
 ### Dimensão B: Estado Individual do Atleta (Athlete State)
+
 Definido pelo status do jogador logado em relação à rodada:
-1. **`PENDING`**: Não respondeu à convocação.
-2. **`CONFIRMED`**: Presença confirmada na lista de titulares.
-3. **`RESERVE_WAITING`**: Na fila de espera / Fila de reservas.
-4. **`RESERVE_CALLED`**: Convocado da reserva (aguardando aceite).
-5. **`DECLINED`**: Recusou a convocação para esta rodada.
-6. **`SUSPENDED`**: Suspenso temporariamente pela diretoria por motivos disciplinares/financeiros.
-7. **`INJURED`**: Afastado por lesão (marcado como DM).
-8. **`GUEST`**: Convidado avulso (não mensalista cadastrado).
+
+1. **`PENDING`** – Não respondeu à convocação.
+2. **`CONFIRMED`** – Presença confirmada na lista de titulares.
+3. **`RESERVE_WAITING`** – Na fila de espera / Fila de reservas.
+4. **`RESERVE_CALLED`** – Convocado da reserva (aguardando aceite).
+5. **`DECLINED`** – Recusou a convocação para esta rodada.
+6. **`SUSPENDED`** – Suspenso temporariamente pela diretoria.
+7. **`INJURED`** – Afastado por lesão (marcado como DM).
+8. **`GUEST`** – Convidado avulso (não mensalista cadastrado).
 
 ### Dimensão C: Perfil do Usuário (User Role)
+
 Definido pelas credenciais de controle do usuário:
-1. **`ATHLETE`**: Perfil regular, focado na experiência esportiva pura.
-2. **`ADMIN`**: Diretor/Organizador, com privilégios de controle silencioso.
+
+1. **`ATHLETE`** – Perfil regular, focado na experiência esportiva pura.
+2. **`ADMIN`** – Diretor/Organizador, com privilégios de controle silencioso.
 
 ---
 
@@ -158,7 +171,7 @@ Nas 6 horas antecedentes ao apito inicial, a interface assume um "Modo de Pronti
 
 ---
 
-## ⏱️ 7. FLUXO POST-JOGO INTEGRADO
+## ⏱️ 7. FLUXO POS-JOGO INTEGRADO
 
 A Home guia o atleta em uma jornada natural para fechamento do ciclo esportivo semanal:
 
@@ -200,34 +213,12 @@ Todas as reestruturações de tela orquestradas pelo `HomeComposer` são executa
 
 ---
 
-## 📊 10. DIAGRAMA DE GOVERNANÇA COMPLETO
+## 🔗 Relacionamentos
 
-```
-                   ┌───────────────────────────────┐
-                   │        CONTEXT ENGINE         │
-                   │  - RoundState (1 a 8)         │
-                   │  - AthleteState (1 a 8)       │
-                   │  - UserRole (Admin/Athlete)   │
-                   └───────────────┬───────────────┘
-                                   │
-                                   ▼
-                   ┌───────────────────────────────┐
-                   │      HOMECOMPOSER DECIDER     │
-                   │  Composição ótima de módulos  │
-                   └───────────────┬───────────────┘
-                                   │
-         ┌─────────────────────────┼─────────────────────────┐
-         ▼                         ▼                         ▼
-┌──────────────────┐      ┌──────────────────┐      ┌──────────────────┐
-│ MODULE: HERO     │      │ MODULE: ACTION   │      │ MODULE: CONTENT  │
-│ - Permanente     │      │ - CTA Confirmar  │      │ - Lista Confirm. │
-│ - Contextual     │      │ - CTA Cancelar   │      │ - Times Sorteados│
-│ - Individual     │      │ - Avaliação Notas│      │ - Ranking / OVR  │
-└──────────────────┘      └──────────────────┘      └──────────────────┘
-```
+- **Composer** (composer.md) → **Dynamic Engine** (dynamic-engine.md) ; define o contexto que alimenta o inventário de componentes.
+- **Dynamic Engine** (dynamic-engine.md) → **Home Dynamic** (home-dynamic.md) ; detalha o rendering por estado.
+- **Home Dynamic** (home-dynamic.md) → **Visual System** (visual-system.md) ; herda as diretrizes de cor, tipografia e espaçamento.
 
-Com esta arquitetura rigorosamente definida e documentada, o desenvolvimento visual e de engenharia de componentes da Sprint 1 de interfaces dinâmicas possui o norte ideal para implementação.
-TargetFile: /docs/home_composer_architecture.md
-Overwrite: true
-toolAction: Creating Home Composer architecture file
-toolSummary: Blueprint created successfully
+---
+
+*Documentação consolidada a partir do legado (/docs/home_composer_architecture.md) e /docs/home_dynamic_architecture.md.*

@@ -24,7 +24,7 @@ interface PlayerHeroProps {
   currentUser?: { id: string; role?: string } | null;
   metricsProp?: any;
   rachaStatsProp?: any;
-  isAdmin?: boolean;
+  playerRole?: string;
   onActionClick?: () => void;
   className?: string;
 }
@@ -34,7 +34,7 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
   currentUser,
   metricsProp,
   rachaStatsProp,
-  isAdmin = false,
+  playerRole = 'jogador',
   onActionClick,
   className = '',
 }) => {
@@ -277,9 +277,19 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
             <SportsBadge variant={player.category === 'mensalista' ? 'success' : 'muted'}>
               ⚽ {CATEGORY_LABELS[player.category]}
             </SportsBadge>
-            {isAdmin && (
+            {playerRole === 'admin' && (
               <SportsBadge variant="warning">
                 🛡️ Administrador
+              </SportsBadge>
+            )}
+            {playerRole === 'auxiliar' && (
+              <SportsBadge variant="info">
+                🔧 Auxiliar
+              </SportsBadge>
+            )}
+            {playerRole === 'jogador' && (
+              <SportsBadge variant="muted">
+                ⚽ Jogador
               </SportsBadge>
             )}
           </div>

@@ -126,6 +126,7 @@ export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [simulatedState, setSimulatedState] = useState<number | null>(null);
   const [footerYear, setFooterYear] = useState(new Date().getFullYear());
+  const [users, setUsers] = useState<User[]>([]);
 
   // Player search and filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -310,27 +311,28 @@ export default function App() {
       console.error('Falha ao sincronizar alertas de mensalistas', err);
     }
   };
-  // Fetch pending registrations countdown (Admin/Auxiliar)
-  const fetchPendingCount = async () => {
-    if (!currentUser) return;
-    if (currentUser.role !== 'admin' && currentUser.role !== 'auxiliar') return;
-    try {
-      const res = await authFetch('/api/users');
-      if (res.ok) {
-        const usersList: User[] = await res.json();
-        const pending = usersList.filter((u) => u.status === 'pending');
-        setPendingApprovalsCount(pending.length);
-      }
-    } catch (err) {
-      console.error('Falha ao sincronizar cadastros pendentes', err);
-    }
-  };
+   // Fetch pending registrations countdown (Admin/Auxiliar) and full users list
+   const fetchUsers = async () => {
+     if (!currentUser) return;
+     if (currentUser.role !== 'admin' && currentUser.role !== 'auxiliar') return;
+     try {
+       const res = await authFetch('/api/users');
+       if (res.ok) {
+         const usersList: User[] = await res.json();
+         setUsers(usersList);
+         const pending = usersList.filter((u) => u.status === 'pending');
+         setPendingApprovalsCount(pending.length);
+       }
+     } catch (err) {
+       console.error('Falha ao sincronizar cadastros pendentes', err);
+     }
+   };
 
   // Sync details on mounting or tab modifications
   useEffect(() => {
     if (currentUser) {
       fetchPlayers();
-      fetchPendingCount();
+      fetchUsers();
       fetchMensalistaAlerts();
     }
   }, [currentUser, activeTab]);
@@ -362,6 +364,7 @@ export default function App() {
     const handleMensalistasUpdated = () => {
       fetchPlayers();
       fetchMensalistaAlerts();
+      fetchUsers();
     };
     window.addEventListener('mensalistas-updated', handleMensalistasUpdated);
     return () => {
@@ -511,6 +514,10 @@ export default function App() {
   const matchingSelfPlayer = players.find(p => p.email?.toLowerCase() === currentUser?.email?.toLowerCase());
   const defaultFeaturedPlayer = matchingSelfPlayer || players[0];
   const featuredPlayer = players.find(p => p.id === featuredPlayerId) || defaultFeaturedPlayer;
+
+  // Find the linked user for the featured player to get their role
+  const featuredPlayerUser = users.find(u => u.playerId === featuredPlayer?.id || (u.email && featuredPlayer?.email && u.email.toLowerCase() === featuredPlayer.email.toLowerCase()));
+  const featuredPlayerRole = featuredPlayerUser?.role || 'jogador';
 
   // Sort logic for players
   const positionOrder: Record<string, number> = {
@@ -1094,11 +1101,11 @@ export default function App() {
             <div className="bg-[#111815] border border-zinc-850/80 rounded-3xl p-6 shadow-xl relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/5 via-transparent to-transparent pointer-events-none" />
               
-              <PlayerHero 
-                player={featuredPlayer}
-                currentUser={currentUser}
-                isAdmin={currentUser?.role === 'admin'}
-              />
+               <PlayerHero 
+                 player={featuredPlayer}
+                 currentUser={currentUser}
+                 playerRole={featuredPlayerRole}
+               />
 
               {/* DETAILED ATHLETE DOMAIN COMPONENTS SHOWCASE */}
               <div className="mt-8 pt-8 border-t border-zinc-900 space-y-6">

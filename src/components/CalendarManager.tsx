@@ -1305,7 +1305,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
               )}
             </div>
           ) : (() => {
-            const chronologicalMatches = [...matches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+            const chronologicalMatches = [...matches].sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
             const matchesWithRound = matches.map(m => {
               const chronoIndex = chronologicalMatches.findIndex(x => x.id === m.id);
               return {
@@ -1315,8 +1315,8 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
             });
 
             const sortedMatches = [...matchesWithRound].sort((a, b) => {
-              const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-              if (dateDiff !== 0) return dateDiff;
+              const createdDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              if (createdDiff !== 0) return createdDiff;
               return b.time.localeCompare(a.time);
             });
 
