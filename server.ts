@@ -6621,6 +6621,32 @@ async function startServer() {
       res.setHeader('Cache-Control', 'no-cache');
       res.sendFile(path.join(distPath, 'index.html'));
     });
+
+    // Temporary: revert users who were approved by auxiliares back to pending
+    app.post('/api/admin/revert-aux-approvals', async (req, res) => {
+      const db = await readDb();
+      const requestingUser = await getAuthenticatedUser(req, db);
+      if (!requestingUser || requestingUser.role !== 'admin') {
+        return res.status(401).json({ error: 'Não autorizado.' });
+      }
+
+      const auxNames = db.users.filter((u: any) => u.role === 'auxiliar').map((u: any) => u.name);
+      const auxApprovals = (db.userAudits || []).filter((a: any) =>
+        a.action?.startsWith('Aprovação de Cadastro') && auxNames.includes(a.performedBy)
+      );
+
+      const reverted: any[] = [];
+      for (const audit of auxApprovals) {
+        const user = db.users.find((u: any) => u.id === audit.userId);
+        if (user && user.status === 'approved') {
+          user.status = 'pending';
+          reverted.push({ name: user.name, email: user.email, approvedBy: audit.performedBy });
+        }
+      }
+
+      await writeDb(db);
+      res.json({ reverted: reverted.length, users: reverted });
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
