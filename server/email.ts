@@ -41,7 +41,7 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
           from,
           to,
           subject,
-          html_body: html,
+          html,
         }),
         signal: controller.signal,
       });
