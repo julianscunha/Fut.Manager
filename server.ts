@@ -20,6 +20,8 @@ import compression from 'compression';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
+import dns from 'node:dns/promises';
+import net from 'node:net';
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
 import {
@@ -947,6 +949,42 @@ async function startServer() {
       console.error('[API POST /api/auth/forgot-password]', err);
       return res.status(500).json({ error: 'Erro ao processar solicitação. Tente novamente em instantes.' });
     }
+  });
+
+  // SMTP diagnostic route — temporarily added to check DNS resolution and TCP connectivity to SMTP host
+  app.get('/smtp-diagnose', async (_, res) => {
+    const result: any = {};
+
+    try {
+      result.dns = await dns.lookup('pro.turbo-smtp.com');
+    } catch (e) {
+      result.dns = e;
+    }
+
+    await new Promise(resolve => {
+      const socket = net.connect(587, 'pro.turbo-smtp.com');
+
+      socket.setTimeout(5000);
+
+      socket.on('connect', () => {
+        result.tcp = 'CONNECTED';
+        socket.destroy();
+        resolve(null);
+      });
+
+      socket.on('timeout', () => {
+        result.tcp = 'TIMEOUT';
+        socket.destroy();
+        resolve(null);
+      });
+
+      socket.on('error', err => {
+        result.tcp = err.message;
+        resolve(null);
+      });
+    });
+
+    res.json(result);
   });
 
   // Auth: Resetar Senha
