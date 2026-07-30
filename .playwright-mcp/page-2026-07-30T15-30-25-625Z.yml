@@ -1,0 +1,21 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Meu Racha" [level=1] [ref=e8]
+    - paragraph [ref=e9]: Painel oficial para controle de presença, estatísticas e roster.
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - heading "Entrar no vestiário" [level=2] [ref=e13]
+      - paragraph [ref=e14]: Entre com seu e-mail e senha registrados.
+    - generic [ref=e15]:
+      - generic [ref=e16]:
+        - generic [ref=e17]: E-mail
+        - 'textbox "Ex: seuemail@gmail.com" [ref=e18]'
+      - generic [ref=e19]:
+        - generic [ref=e20]:
+          - generic [ref=e21]: Senha
+          - button "Esqueci minha senha" [ref=e22] [cursor=pointer]
+        - textbox "Digite sua senha secreta" [ref=e23]
+    - button "Autenticar Conta" [ref=e27] [cursor=pointer]
+    - generic [ref=e32]:
+      - text: Ainda não faz parte?
+      - button "Solicitar cadastro" [ref=e33] [cursor=pointer]
