@@ -16,6 +16,12 @@ import {
   Heart,
   CalendarCheck
 } from 'lucide-react';
+
+const footLabel = (foot?: string): string => {
+  if (foot === 'Esquerdo') return 'Canhoto 🦶';
+  if (foot === 'Ambidestro') return 'Ambidestro ⚡🦶';
+  return 'Destro 🦶';
+};
 import { 
   Player, 
   POSITION_LABELS, 
@@ -507,7 +513,7 @@ export const PlayerIdentityCard: React.FC<PlayerIdentityCardProps> = ({
         <div className="grid grid-cols-2 gap-2 text-[10.5px] font-mono">
           <div className="bg-zinc-950/50 p-2 rounded border border-zinc-900/60 flex justify-between items-center">
             <span className="text-zinc-500">PÉ DOMINANTE:</span>
-            <span className="text-zinc-200 uppercase font-bold">{player.foot === 'canhoto' ? 'Canhoto 🦶' : 'Destro 🦶'}</span>
+            <span className="text-zinc-200 uppercase font-bold">{footLabel(player.peDominante)}</span>
           </div>
 
           <div className="bg-zinc-950/50 p-2 rounded border border-zinc-900/60 flex justify-between items-center">
