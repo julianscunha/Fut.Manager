@@ -1,0 +1,132 @@
+- generic [ref=f52e4]:
+  - navigation [ref=f52e5]:
+    - generic [ref=f52e6] [cursor=pointer]: 
+    - generic [ref=f52e7]:
+      - img "TurboSMTP - provedor de serviços SMTP profissional" [ref=f52e9]
+      - menu [ref=f52e12]:
+        - menuitem "Início" [ref=f52e13]:
+          - link " Início" [ref=f52e15] [cursor=pointer]:
+            - /url: /getting-started
+            - generic [ref=f52e16]: 
+            - generic [ref=f52e17]: Início
+        - menuitem "Home" [ref=f52e18]:
+          - link " Home" [ref=f52e20] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=f52e21]: 
+            - generic [ref=f52e22]: Home
+        - menuitem "Análise" [ref=f52e23]:
+          - link " Análise" [ref=f52e25] [cursor=pointer]:
+            - /url: /analytics
+            - generic [ref=f52e26]: 
+            - generic [ref=f52e27]: Análise
+        - menuitem "Supressões" [ref=f52e28]:
+          - link " Supressões" [ref=f52e30] [cursor=pointer]:
+            - /url: /suppressions
+            - generic [ref=f52e31]: 
+            - generic [ref=f52e32]: Supressões
+        - separator [ref=f52e33]
+        - menuitem "Addons" [ref=f52e34]:
+          - link " Addons" [ref=f52e36] [cursor=pointer]:
+            - /url: /addons
+            - generic [ref=f52e37]: 
+            - generic [ref=f52e38]: Addons
+        - menuitem "Definições" [ref=f52e39]:
+          - link " Definições" [ref=f52e41] [cursor=pointer]:
+            - /url: /settings
+            - generic [ref=f52e42]: 
+            - generic [ref=f52e43]: Definições
+        - menuitem "Subcontas" [ref=f52e44]:
+          - link " Subcontas" [ref=f52e46] [cursor=pointer]:
+            - /url: /subaccounts
+            - generic [ref=f52e47]: 
+            - generic [ref=f52e48]: Subcontas
+      - generic [ref=f52e49]:
+        - region [ref=f52e50]:
+          - group "0" [ref=f52e55]:
+            - heading "Plano diário 200 / dia" [level=4] [ref=f52e56]:
+              - strong [ref=f52e57]: Plano diário
+              - text: 200 / dia
+            - paragraph [ref=f52e58]:
+              - text: Válido até Jan 28, 2027
+              - strong [ref=f52e59]: "1"
+              - text: e-mails enviadosde
+              - strong [ref=f52e60]: "200"
+          - button "Solicite um novo plano" [ref=f52e63] [cursor=pointer]
+        - list [ref=f52e64]:
+          - listitem [ref=f52e65]:
+            - generic "Ligação por SMTP" [ref=f52e66] [cursor=pointer]:  Ligação por SMTP
+          - listitem [ref=f52e67]:
+            - generic "Verificação de Domínios de Remetente" [ref=f52e68] [cursor=pointer]:  Verificação de Domínios de Remetente
+          - listitem [ref=f52e69]:
+            - link " Documentação da API " [ref=f52e70] [cursor=pointer]:
+              - /url: https://www.serversmtp.com/turbo-api/
+              - text:  Documentação da API
+              - generic [ref=f52e71]: 
+  - generic [ref=f52e72]:
+    - main [ref=f52e73]:
+      - generic [ref=f52e75]:
+        - button " Solicite um novo plano" [ref=f52e77] [cursor=pointer]:
+          - generic [ref=f52e78]: 
+          - text: Solicite um novo plano
+        - button " Display mode" [ref=f52e80] [cursor=pointer]:
+          - generic [ref=f52e81]: 
+          - text: Display mode
+        - menubar [ref=f52e83]:
+          - menuitem "Live chat" [ref=f52e84]:
+            - generic [ref=f52e86] [cursor=pointer]:
+              - generic [ref=f52e87]: 
+              - generic: Live chat
+          - menuitem "" [ref=f52e88]:      
+          - menuitem "Juliano Juliano" [ref=f52e94]:
+            - generic [ref=f52e96] [cursor=pointer]:
+              - generic [ref=f52e97]: 
+              - generic [ref=f52e98]: Juliano Juliano
+            - text:     
+          - text:            
+      - generic [ref=f52e116]:
+        - heading "Definições" [level=3] [ref=f52e118]
+        - generic [ref=f52e119]:
+          - generic:
+            - alertdialog
+          - menu [ref=f52e122]:
+            - menuitem "Integrações" [ref=f52e123]:
+              - link " Integrações" [ref=f52e125] [cursor=pointer]:
+                - /url: /settings/integrations
+                - generic [ref=f52e126]: 
+                - generic [ref=f52e127]: Integrações
+            - menuitem "Rastreamento" [ref=f52e128]:
+              - link " Rastreamento" [ref=f52e130] [cursor=pointer]:
+                - /url: /settings/tracking
+                - generic [ref=f52e131]: 
+                - generic [ref=f52e132]: Rastreamento
+            - menuitem "Notificações" [ref=f52e133]:
+              - link " Notificações" [ref=f52e135] [cursor=pointer]:
+                - /url: /settings/notifications
+                - generic [ref=f52e136]: 
+                - generic [ref=f52e137]: Notificações
+            - menuitem "Elementos do e-mail" [ref=f52e138]:
+              - link " Elementos do e-mail" [ref=f52e140] [cursor=pointer]:
+                - /url: /settings/emails
+                - generic [ref=f52e141]: 
+                - generic [ref=f52e142]: Elementos do e-mail
+          - generic [ref=f52e143]:
+            - generic [ref=f52e145]:
+              - generic [ref=f52e147]:
+                - generic [ref=f52e148]
+                - generic [ref=f52e152]
+              - generic [ref=f52e162]:
+                - generic [ref=f52e163]
+                - generic [ref=f52e167]
+              - generic [ref=f52e177]:
+                - heading "Chaves API" [level=4] [ref=f52e181]
+                - generic [ref=f52e182]
+            - complementary [ref=f52e194]:
+              - generic [ref=f52e197]:
+                - heading "Chaves API" [level=3] [ref=f52e198]
+                - link "Documentação da API " [ref=f52e200] [cursor=pointer]:
+                  - /url: https://www.serversmtp.com/turbo-api/
+              - generic [ref=f52e206]:
+                - generic [ref=f52e207]
+                - generic [ref=f52e303]
+    - contentinfo [ref=f52e112]:
+      - paragraph [ref=f52e114]: © turboSMTP 2010 - 2026

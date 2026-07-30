@@ -1,0 +1,28 @@
+- generic [ref=f52e4]:
+  - navigation [ref=f52e5]:
+    - generic [ref=f52e6] [cursor=pointer]: 
+    - generic [ref=f52e7]:
+      - img "TurboSMTP - provedor de serviços SMTP profissional" [ref=f52e9]
+      - menu [ref=f52e12]:
+        - menuitem "Início" [ref=f52e13]
+        - menuitem "Home" [ref=f52e18]
+        - menuitem "Análise" [ref=f52e23]
+        - menuitem "Supressões" [ref=f52e28]
+        - separator [ref=f52e33]
+        - menuitem "Addons" [ref=f52e34]
+        - menuitem "Definições" [ref=f52e39]
+        - menuitem "Subcontas" [ref=f52e44]
+      - generic [ref=f52e49]:
+        - region [ref=f52e50]
+        - list [ref=f52e64]
+  - generic [ref=f52e72]:
+    - main [ref=f52e73]:
+      - generic [ref=f52e75]:
+        - button " Solicite um novo plano" [ref=f52e77] [cursor=pointer]
+        - button " Display mode" [ref=f52e80] [cursor=pointer]
+        - menubar [ref=f52e83]
+      - generic [ref=f52e116]:
+        - heading "Definições" [level=3] [ref=f52e118]
+        - generic [ref=f52e119]
+    - contentinfo [ref=f52e112]:
+      - paragraph [ref=f52e114]: © turboSMTP 2010 - 2026

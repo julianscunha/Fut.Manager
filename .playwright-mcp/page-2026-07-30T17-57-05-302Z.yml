@@ -1,0 +1,463 @@
+- generic [active] [ref=f4e1]:
+  - alertdialog "Notice" [ref=f4e2]:
+    - generic [ref=f4e4]:
+      - img "logo" [ref=f4e6]
+      - document [ref=f4e7]:
+        - generic [ref=f4e8]:
+          - paragraph [ref=f4e9]:
+            - text: We (Turbo SMTP) and selected third parties use cookies or similar technologies for technical purposes and, with your consent, for
+            - strong [ref=f4e10]: functionality, experience, measurement and “marketing (personalized ads)”
+            - text: .
+          - paragraph [ref=f4e11]: You can freely give, deny, or withdraw your consent at any time by accessing the preferences panel. Denying consent may make related features unavailable.
+          - paragraph
+          - paragraph [ref=f4e12]: Use the “Accept” button to consent. Use the “Reject” button to continue without accepting.
+      - generic [ref=f4e13]:
+        - button "Learn more and customize" [ref=f4e15] [cursor=pointer]
+        - generic [ref=f4e16]:
+          - button "Reject" [ref=f4e17] [cursor=pointer]
+          - button "Accept" [ref=f4e18] [cursor=pointer]
+  - link "Skip to content" [ref=f4e19] [cursor=pointer]:
+    - /url: "#content"
+  - generic [ref=f4e21]:
+    - complementary [ref=f4e22]:
+      - list [ref=f4e24]:
+        - listitem [ref=f4e25]:
+          - link "English" [ref=f4e26] [cursor=pointer]:
+            - /url: "#"
+    - complementary [ref=f4e28]:
+      - generic [ref=f4e29]: smtp mail server – professional SMTP service provider
+  - banner "Site" [ref=f4e30]:
+    - generic [ref=f4e31]:
+      - link [ref=f4e33] [cursor=pointer]:
+        - /url: https://serversmtp.com/
+        - img "smtp mail server – professional SMTP service provider" [ref=f4e34]
+      - complementary [ref=f4e36]:
+        - generic [ref=f4e37]:
+          - link "Dashboard" [ref=f4e38] [cursor=pointer]:
+            - /url: https://dashboard.serversmtp.com/
+          - link "Register" [ref=f4e41] [cursor=pointer]:
+            - /url: https://serversmtp.com/en/tsmtpregistration1.php
+  - navigation "Primary" [ref=f4e44]:
+    - list [ref=f4e47]:
+      - listitem [ref=f4e48]:
+        - link "Home" [ref=f4e49] [cursor=pointer]:
+          - /url: https://serversmtp.com/
+      - listitem [ref=f4e50]:
+        - link "Why turboSMTP" [ref=f4e51] [cursor=pointer]:
+          - /url: https://serversmtp.com/why-turbosmtp/
+      - listitem [ref=f4e52]:
+        - link "Features" [ref=f4e53] [cursor=pointer]:
+          - /url: https://serversmtp.com/features/
+      - listitem [ref=f4e54]:
+        - link "Pricing" [ref=f4e55] [cursor=pointer]:
+          - /url: /en/cart.php?carttpl=2clic
+      - listitem [ref=f4e56]:
+        - link "SMTP server configuration" [ref=f4e57] [cursor=pointer]:
+          - /url: https://serversmtp.com/smtp-server-configuration/
+      - listitem [ref=f4e58]:
+        - link "SMTP web API" [ref=f4e59] [cursor=pointer]:
+          - /url: https://serversmtp.com/turbo-api/
+      - listitem [ref=f4e60]:
+        - link "Event Webhooks" [ref=f4e61] [cursor=pointer]:
+          - /url: https://serversmtp.com/event-webhook-reference/
+  - main [ref=f4e65]:
+    - article [ref=f4e66]:
+      - generic [ref=f4e68]:
+        - generic [ref=f4e70]:
+          - heading "Send newsletter campaigns right to your users’ inboxes" [level=1] [ref=f4e71]:
+            - text: Send
+            - generic [ref=f4e72]: newsletter campaigns
+            - text: right to your users’ inboxes
+          - heading "Trust turboSMTP to deliver your emails. It’s reliable and easy to use." [level=4] [ref=f4e73]
+          - generic [ref=f4e74]:
+            - generic [ref=f4e78]:
+              - paragraph [ref=f4e79]: free SMTP
+              - generic [ref=f4e80]: 70%
+            - generic [ref=f4e84]:
+              - paragraph [ref=f4e85]: other SMTP
+              - generic [ref=f4e86]: 82%
+            - generic [ref=f4e90]:
+              - paragraph [ref=f4e91]: turboSMTP
+              - generic [ref=f4e92]: 99%
+          - paragraph [ref=f4e95]:
+            - link "FREE 6000 emails/month" [ref=f4e96] [cursor=pointer]:
+              - /url: https://serversmtp.com/en/signup
+              - text: FREE
+              - generic [ref=f4e97]: 6000 emails/month
+            - link "BUY the full service" [ref=f4e98] [cursor=pointer]:
+              - /url: https://serversmtp.com/en/cart.php
+              - text: BUY
+              - generic [ref=f4e99]: the full service
+        - generic [ref=f4e102]:
+          - generic [ref=f4e105]:
+            - figure [ref=f4e107]:
+              - link [ref=f4e108] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/multilanguage-customer-support
+                - img "24/7 Professional Support" [ref=f4e109]
+            - heading [level=3] [ref=f4e110]:
+              - link "24/7 Human Support" [ref=f4e111] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/multilanguage-customer-support
+            - paragraph [ref=f4e112]:
+              - text: turboSMTP is the only SMTP server with
+              - strong [ref=f4e113]: real people supporting you 24/7
+              - text: via ticket, AI free chat and phone.
+          - generic [ref=f4e116]:
+            - figure [ref=f4e118]:
+              - link [ref=f4e119] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/reliable-servers-ISP-relationships
+                - img "Secure & Reliable Servers" [ref=f4e120]
+            - heading [level=3] [ref=f4e121]:
+              - link "Secure & Reliable Servers" [ref=f4e122] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/reliable-servers-ISP-relationships
+            - paragraph [ref=f4e123]:
+              - text: Enhance
+              - strong [ref=f4e124]: email deliverability
+              - text: instantly with our trusted and authenticated
+              - strong [ref=f4e125]: SMTP relay service
+              - text: .
+          - generic [ref=f4e128]:
+            - figure [ref=f4e130]:
+              - link [ref=f4e131] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/email-delivery-tracking
+                - img "Email Delivery Tracking" [ref=f4e132]
+            - heading [level=3] [ref=f4e133]:
+              - link "Email Delivery Tracking" [ref=f4e134] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/email-delivery-tracking
+            - paragraph [ref=f4e135]:
+              - text: Get detailed reports in
+              - strong [ref=f4e136]: real-time
+              - text: to track outgoing and opened emails and improve your newsletter campaign.
+          - generic [ref=f4e139]:
+            - figure [ref=f4e141]:
+              - link [ref=f4e142] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/cart.php
+                - img "Flexible smtp Service Plans" [ref=f4e143]
+            - heading [level=3] [ref=f4e144]:
+              - link "Flexible smtp Service Plans" [ref=f4e145] [cursor=pointer]:
+                - /url: https://serversmtp.com/en/cart.php
+            - paragraph [ref=f4e146]:
+              - text: Choose among a wide range of
+              - strong [ref=f4e147]: monthly and pay-as-you-go plans
+              - text: based on the number of sent emails.
+          - generic [ref=f4e150]:
+            - figure [ref=f4e152]:
+              - link [ref=f4e153] [cursor=pointer]:
+                - /url: https://serversmtp.com/what-is-a-transactional-email/
+                - img "Secure delivery of transactional emails" [ref=f4e154]
+            - heading [level=3] [ref=f4e155]:
+              - link "Secure delivery of transactional emails" [ref=f4e156] [cursor=pointer]:
+                - /url: https://serversmtp.com/what-is-a-transactional-email/
+            - paragraph [ref=f4e157]: Send order confirmations and password resets that arrive immediately at their destination.
+          - generic [ref=f4e160]:
+            - figure [ref=f4e162]:
+              - link [ref=f4e163] [cursor=pointer]:
+                - /url: https://serversmtp.com/email-api-for-developers/
+                - img "Email API for developers" [ref=f4e164]
+            - heading [level=3] [ref=f4e165]:
+              - link "Email API for developers" [ref=f4e166] [cursor=pointer]:
+                - /url: https://serversmtp.com/email-api-for-developers/
+            - paragraph [ref=f4e167]: Send transactional emails and newsletters via API directly from your website or app.
+        - generic [ref=f4e170]:
+          - figure [ref=f4e175]:
+            - img "Worldwide server infrastructure" [ref=f4e176]
+          - generic [ref=f4e179]:
+            - heading "Worldwide server infrastructure" [level=3] [ref=f4e180]
+            - paragraph [ref=f4e181]: We have servers and IP addresses in Europe, USA, Middle East and Asia to be fully compliant with different European (GDPR) and non-European regulations.
+            - link "More info…" [ref=f4e182] [cursor=pointer]:
+              - /url: https://serversmtp.com/regulation-eu-2016-679-gdpr/
+        - generic [ref=f4e185]:
+          - generic [ref=f4e188]:
+            - heading "100% GDPR compliant" [level=3] [ref=f4e189]
+            - paragraph [ref=f4e190]: Protect user data is a top priority, that’s why we adopt the best measures and practices for data protection.
+            - link "More info…" [ref=f4e191] [cursor=pointer]:
+              - /url: https://serversmtp.com/regulation-eu-2016-679-gdpr/
+          - figure [ref=f4e196]:
+            - img "100% GDPR compliant" [ref=f4e197]
+        - separator [ref=f4e200]
+        - generic [ref=f4e202]:
+          - iframe [ref=f4e204]:
+            - generic [ref=f11e1]: "|"
+          - heading "Trusted by 100,000 happy customers" [level=3] [ref=f4e205]
+          - generic [ref=f4e210]:
+            - link [ref=f4e211]:
+              - /url: javascript:void(0)
+            - link [ref=f4e213]:
+              - /url: javascript:void(0)
+            - link [ref=f4e215]:
+              - /url: javascript:void(0)
+            - link [ref=f4e217]:
+              - /url: javascript:void(0)
+            - link [ref=f4e219]:
+              - /url: javascript:void(0)
+            - link [ref=f4e221]:
+              - /url: javascript:void(0)
+            - link [ref=f4e223]:
+              - /url: javascript:void(0)
+            - link [ref=f4e225]:
+              - /url: javascript:void(0)
+            - link [ref=f4e227]:
+              - /url: javascript:void(0)
+            - link [ref=f4e229]:
+              - /url: javascript:void(0)
+            - link [ref=f4e231]:
+              - /url: javascript:void(0)
+            - link [ref=f4e233]:
+              - /url: javascript:void(0)
+            - link [ref=f4e235]:
+              - /url: javascript:void(0)
+            - link [ref=f4e237]:
+              - /url: javascript:void(0)
+            - link [ref=f4e239]:
+              - /url: javascript:void(0)
+            - link [ref=f4e241]:
+              - /url: javascript:void(0)
+            - link [ref=f4e243]:
+              - /url: javascript:void(0)
+            - link [ref=f4e245]:
+              - /url: javascript:void(0)
+            - link [ref=f4e247]:
+              - /url: javascript:void(0)
+            - link [ref=f4e249]:
+              - /url: javascript:void(0)
+            - link [ref=f4e251]:
+              - /url: javascript:void(0)
+            - link [ref=f4e253]:
+              - /url: javascript:void(0)
+            - link [ref=f4e255]:
+              - /url: javascript:void(0)
+            - link [ref=f4e257]:
+              - /url: javascript:void(0)
+            - link [ref=f4e259]:
+              - /url: javascript:void(0)
+            - link [ref=f4e261]:
+              - /url: javascript:void(0)
+            - link [ref=f4e263]:
+              - /url: javascript:void(0)
+            - link [ref=f4e265]:
+              - /url: javascript:void(0)
+            - link [ref=f4e267]:
+              - /url: javascript:void(0)
+            - link [ref=f4e269]:
+              - /url: javascript:void(0)
+            - link [ref=f4e271]:
+              - /url: javascript:void(0)
+            - link [ref=f4e273]:
+              - /url: javascript:void(0)
+            - link [ref=f4e275]:
+              - /url: javascript:void(0)
+            - link [ref=f4e277]:
+              - /url: javascript:void(0)
+            - link [ref=f4e279]:
+              - /url: javascript:void(0)
+            - link [ref=f4e281]:
+              - /url: javascript:void(0)
+            - link [ref=f4e283]:
+              - /url: javascript:void(0)
+            - link [ref=f4e285]:
+              - /url: javascript:void(0)
+            - link [ref=f4e287]:
+              - /url: javascript:void(0)
+            - link [ref=f4e289]:
+              - /url: javascript:void(0)
+            - link [ref=f4e291]:
+              - /url: javascript:void(0)
+            - link [ref=f4e293]:
+              - /url: javascript:void(0)
+            - link [ref=f4e295]:
+              - /url: javascript:void(0)
+            - link [ref=f4e297]:
+              - /url: javascript:void(0)
+            - link [ref=f4e299]:
+              - /url: javascript:void(0)
+            - link [ref=f4e301]:
+              - /url: javascript:void(0)
+            - link [ref=f4e303]:
+              - /url: javascript:void(0)
+            - link [ref=f4e305]:
+              - /url: javascript:void(0)
+            - link [ref=f4e307]:
+              - /url: javascript:void(0)
+            - link [ref=f4e309]:
+              - /url: javascript:void(0)
+            - link [ref=f4e311]:
+              - /url: javascript:void(0)
+            - link [ref=f4e313]:
+              - /url: javascript:void(0)
+            - link [ref=f4e315]:
+              - /url: javascript:void(0)
+            - link [ref=f4e317]:
+              - /url: javascript:void(0)
+            - link [ref=f4e319]:
+              - /url: javascript:void(0)
+            - link [ref=f4e321]:
+              - /url: javascript:void(0)
+            - link [ref=f4e323]:
+              - /url: javascript:void(0)
+            - link [ref=f4e325]:
+              - /url: javascript:void(0)
+            - link [ref=f4e327]:
+              - /url: javascript:void(0)
+            - link [ref=f4e329]:
+              - /url: javascript:void(0)
+            - link [ref=f4e331]:
+              - /url: javascript:void(0)
+            - link [ref=f4e333]:
+              - /url: javascript:void(0)
+            - link [ref=f4e335]:
+              - /url: javascript:void(0)
+            - link [ref=f4e337]:
+              - /url: javascript:void(0)
+            - link [ref=f4e339]:
+              - /url: javascript:void(0)
+            - link [ref=f4e341]:
+              - /url: javascript:void(0)
+            - link [ref=f4e343]:
+              - /url: javascript:void(0)
+            - link [ref=f4e345]:
+              - /url: javascript:void(0)
+            - link [ref=f4e347]:
+              - /url: javascript:void(0)
+            - link [ref=f4e349]:
+              - /url: javascript:void(0)
+            - link [ref=f4e351]:
+              - /url: javascript:void(0)
+            - link [ref=f4e353]:
+              - /url: javascript:void(0)
+        - separator [ref=f4e357]
+        - generic [ref=f4e360]:
+          - generic [ref=f4e363]:
+            - heading "turboSMTP is a world-leading SMTP provider" [level=3] [ref=f4e364]
+            - paragraph [ref=f4e365]:
+              - text: Our
+              - strong [ref=f4e366]:
+                - link "outgoing mail server" [ref=f4e367] [cursor=pointer]:
+                  - /url: /en/outgoing-mail-server
+              - text: guarantees secure
+              - link "SMTP relays" [ref=f4e368] [cursor=pointer]:
+                - /url: /en/smtp-relays
+              - text: and it’s ideal to send
+              - link "transactional emails" [ref=f4e369] [cursor=pointer]:
+                - /url: /en/transactional-email
+              - text: . It also provides an amazing
+              - link "SMTP API" [ref=f4e370] [cursor=pointer]:
+                - /url: /en/smtp-api
+              - text: for developers of cloud applications and a
+              - strong [ref=f4e371]:
+                - link "free SMTP server service" [ref=f4e372] [cursor=pointer]:
+                  - /url: en/free-smtp-server
+              - text: .
+          - generic [ref=f4e375]:
+            - paragraph [ref=f4e376]: integration available with
+            - figure [ref=f4e377]
+        - separator [ref=f4e380]
+        - generic [ref=f4e383]:
+          - figure [ref=f4e387]:
+            - link [ref=f4e388] [cursor=pointer]:
+              - /url: https://serversmtp.com/case-study-email-marketing-and-deliverability-according-to-valerio-fioretti/
+              - 'img "Case Study: Email marketing and deliverability according to Valerio Fioretti" [ref=f4e389]'
+          - generic [ref=f4e392]:
+            - 'heading "Case Study: Email marketing and deliverability according to Valerio Fioretti" [level=3] [ref=f4e393]'
+            - paragraph [ref=f4e394]: How I managed to double the delivery and open rate of my email campaigns using TurboSMTP
+            - link "Read the case study" [ref=f4e395] [cursor=pointer]:
+              - /url: https://serversmtp.com/case-study-email-marketing-and-deliverability-according-to-valerio-fioretti/
+  - generic [ref=f4e396]:
+    - generic [ref=f4e399]:
+      - complementary [ref=f4e401]:
+        - heading "Company" [level=2] [ref=f4e402]
+        - list [ref=f4e404]:
+          - listitem [ref=f4e405]:
+            - link "About us" [ref=f4e406] [cursor=pointer]:
+              - /url: /en/about-us
+          - listitem [ref=f4e407]:
+            - link "Contact Us" [ref=f4e408] [cursor=pointer]:
+              - /url: https://serversmtp.com/contact-us/
+          - listitem [ref=f4e409]:
+            - link "Career" [ref=f4e410] [cursor=pointer]:
+              - /url: https://serversmtp.com/your-career-at-turbosmtp/
+          - listitem [ref=f4e411]:
+            - link "Terms and Conditions" [ref=f4e412] [cursor=pointer]:
+              - /url: /en/terms-and-conditions
+          - listitem [ref=f4e413]:
+            - link "Developer Terms" [ref=f4e414] [cursor=pointer]:
+              - /url: /en/developer-account-terms-conditions
+          - listitem [ref=f4e415]:
+            - link "Privacy Policy" [ref=f4e416] [cursor=pointer]:
+              - /url: /en/privacy-policy
+          - listitem [ref=f4e417]:
+            - link "Anti-spam Policy" [ref=f4e418] [cursor=pointer]:
+              - /url: /en/anti-spam-policy
+          - listitem [ref=f4e419]:
+            - link "Legal Notice" [ref=f4e420] [cursor=pointer]:
+              - /url: https://serversmtp.com/legal-notice/
+          - listitem [ref=f4e421]:
+            - link "US – Canada Sales Contact" [ref=f4e422] [cursor=pointer]:
+              - /url: https://serversmtp.com/discover-the-benefits-of-turbosmtp/
+      - complementary [ref=f4e424]:
+        - heading "Support" [level=2] [ref=f4e425]
+        - list [ref=f4e427]:
+          - listitem [ref=f4e428]:
+            - link "Knowledge Base" [ref=f4e429] [cursor=pointer]:
+              - /url: https://serversmtp.com/en/knowledgebase.php
+          - listitem [ref=f4e430]:
+            - link "FAQ" [ref=f4e431] [cursor=pointer]:
+              - /url: /en/knowledgebase/2/FAQ
+          - listitem [ref=f4e432]:
+            - link "Pre/sales Contact" [ref=f4e433] [cursor=pointer]:
+              - /url: /en/submitticket.php?step=2&deptid=7
+          - listitem [ref=f4e434]:
+            - link "Articles" [ref=f4e435] [cursor=pointer]:
+              - /url: /en/articles
+          - listitem [ref=f4e436]:
+            - link "Affiliates" [ref=f4e437] [cursor=pointer]:
+              - /url: /en/affiliates
+          - listitem [ref=f4e438]:
+            - link "How to improve Email deliverability" [ref=f4e439] [cursor=pointer]:
+              - /url: https://serversmtp.com/how-to-improve-email-deliverability-tips-and-tricks/
+          - listitem [ref=f4e440]:
+            - link "SendGrid Alternative" [ref=f4e441] [cursor=pointer]:
+              - /url: https://serversmtp.com/what-is-sendgrid/
+          - listitem [ref=f4e442]:
+            - link "The Cheapest SMTP Service" [ref=f4e443] [cursor=pointer]:
+              - /url: https://serversmtp.com/the-cheapest-smtp-service/
+          - listitem [ref=f4e444]:
+            - link "Deliverability Guide by email deliverability experts" [ref=f4e445] [cursor=pointer]:
+              - /url: https://serversmtp.com/2021-deliverability-guide-by-email-deliverability-experts/
+          - listitem [ref=f4e446]:
+            - link "An impeccable email template enhances deliverability" [ref=f4e447] [cursor=pointer]:
+              - /url: https://serversmtp.com/email-template-deliverability/
+      - generic [ref=f4e448]:
+        - complementary [ref=f4e449]:
+          - heading "Developers" [level=2] [ref=f4e450]
+          - list [ref=f4e452]:
+            - listitem [ref=f4e453]:
+              - link "turboSMTP API" [ref=f4e454] [cursor=pointer]:
+                - /url: https://serversmtp.com/turbo-api/
+            - listitem [ref=f4e455]:
+              - link "Webhooks Reference" [ref=f4e456] [cursor=pointer]:
+                - /url: https://serversmtp.com/event-webhook-reference/
+            - listitem [ref=f4e457]:
+              - link "Email API for Developers" [ref=f4e458] [cursor=pointer]:
+                - /url: https://serversmtp.com/email-api-for-developers/
+            - listitem [ref=f4e459]:
+              - link "Email SDKs for Developers" [ref=f4e460] [cursor=pointer]:
+                - /url: https://serversmtp.com/email-sdks-for-developers/
+            - listitem [ref=f4e461]:
+              - link "WordPress Free SMTP Plugin" [ref=f4e462] [cursor=pointer]:
+                - /url: https://serversmtp.com/smtp-wordpress-configure/
+            - listitem [ref=f4e463]:
+              - link "TurboSMTP Email Validator for WordPress" [ref=f4e464] [cursor=pointer]:
+                - /url: https://serversmtp.com/turbosmtp-email-validator-for-wordpress/
+        - complementary [ref=f4e465]:
+          - heading "Follow Us" [level=2] [ref=f4e466]
+          - list [ref=f4e468]:
+            - listitem [ref=f4e469]:
+              - link [ref=f4e470] [cursor=pointer]:
+                - /url: https://www.facebook.com/turboSMTP
+            - listitem [ref=f4e473]:
+              - link [ref=f4e474] [cursor=pointer]:
+                - /url: https://x.com/turboSMTP
+            - listitem [ref=f4e477]:
+              - link [ref=f4e478] [cursor=pointer]:
+                - /url: https://www.youtube.com/channel/UC-Yn0GAlyRuwemiSQm8U8eg?sub_confirmation=1
+    - contentinfo "Site" [ref=f4e481]:
+      - generic [ref=f4e482]: © 2010 - 2026 turboSMTP by Edisplay srl - All rights reserved - For HTML email building we suggest MailStyler
