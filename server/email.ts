@@ -23,7 +23,6 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
     throw new Error('TurboSMTP não configurado (defina TURBO_API_KEY e TURBO_API_SECRET).');
   }
 
-  const auth = btoa(`${process.env.TURBO_API_KEY}:${process.env.TURBO_API_SECRET}`);
   const from = process.env.EMAIL_FROM || process.env.TURBO_API_KEY;
 
   const attempt = async (): Promise<EmailResult> => {
@@ -35,7 +34,8 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Basic ${auth}`,
+          consumerKey: process.env.TURBO_API_KEY!,
+          consumerSecret: process.env.TURBO_API_SECRET!,
         },
         body: JSON.stringify({
           from,
