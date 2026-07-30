@@ -22,8 +22,17 @@ import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
-import { isEmailConfigured, sendEmail } from './server/email';
-import { passwordResetTemplate } from './server/email-templates';
+import {
+  isEmailConfigured,
+  sendEmail,
+} from './server/email';
+import {
+  passwordResetTemplate,
+  registrationApprovedTemplate,
+  registrationPendingTemplate,
+  registrationRejectedTemplate,
+  notificationTemplate,
+} from './server/email-templates';
 
 // Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
 // Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
@@ -784,6 +793,21 @@ async function startServer() {
 
       await writeDb(db);
 
+      // Send pending registration email to the new user
+      if (isEmailConfigured()) {
+        try {
+          const appUrl = process.env.APP_URL || 'http://localhost:3000';
+          const { subject, html } = registrationPendingTemplate({
+            userName: newUser.name,
+            appName: APP_NAME,
+            estimatedWaitDays: 2,
+          });
+          await sendEmail(newUser.email, subject, html);
+        } catch (emailErr) {
+          console.error('[API POST /api/auth/register] Falha ao enviar e-mail de cadastro pendente:', emailErr);
+        }
+      }
+
       return res.status(201).json({
         message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador para acesso.',
         user: newUser
@@ -1201,9 +1225,40 @@ async function startServer() {
         targetUserId: 'all',
         actionUrl: 'players'
       });
+
+      // Send approval email to the user
+      if (isEmailConfigured()) {
+        try {
+          const loginUrl = `${process.env.APP_URL || 'http://localhost:3000'}`;
+          const { subject, html } = registrationApprovedTemplate({
+            userName: db.users[userIndex].name,
+            userRole: chosenRole,
+            appName: APP_NAME,
+            loginUrl,
+          });
+          await sendEmail(db.users[userIndex].email, subject, html);
+        } catch (emailErr) {
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovação:', emailErr);
+        }
+      }
     } else if (action === 'reject') {
       db.users[userIndex].status = 'rejected';
       auditActionText = 'Cadastro Rejeitado';
+
+      // Send rejection email to the user
+      if (isEmailConfigured()) {
+        try {
+          const reason = 'Sua solicitação de cadastro foi analisada e não foi aprovada desta vez.';
+          const { subject, html } = registrationRejectedTemplate({
+            userName: db.users[userIndex].name,
+            appName: APP_NAME,
+            rejectionReason: reason,
+          });
+          await sendEmail(db.users[userIndex].email, subject, html);
+        } catch (emailErr) {
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeição:', emailErr);
+        }
+      }
     } else if (action === 'update_role' && role) {
       db.users[userIndex].role = role;
       auditActionText = `Alteração de Perfil de ${previousRole} para ${role}`;

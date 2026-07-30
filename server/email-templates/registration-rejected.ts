@@ -31,7 +31,7 @@ export function registrationRejectedTemplate(params: {
     .icon { font-size: 32px; margin-bottom: 8px; }
     .body { padding: 28px 24px; }
     .body p { margin: 0 0 12px; color: #e4e4e7; font-size: 15px; line-height: 1.6; }
-    .body .reason { background-color: #0a0f0d; border: 1px solid #dc262633; border-radius: 12px; padding: 12px 16px; margin: 12px 0; font-size: 13px; color: #fca5a5; }}
+    .body .reason { background-color: #0a0f0d; border: 1px solid #dc262633; border-radius: 12px; padding: 12px 16px; margin: 12px 0; font-size: 13px; color: #fca5a5; }
     .body .info-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #27272a44; }
     .body .info-row:last-child { border-bottom: none; }
     .body .info-label { color: #71717a; font-size: 12px; }
