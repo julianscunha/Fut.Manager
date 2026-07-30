@@ -955,31 +955,59 @@ async function startServer() {
   app.get('/smtp-diagnose', async (_, res) => {
     const result: any = {};
 
-    try {
-      result.dns = await dns.lookup('pro.turbo-smtp.com');
-    } catch (e) {
-      result.dns = e;
+    // DNS lookup for both hosts
+    for (const host of ['pro.turbo-smtp.com', 'smtp.gmail.com']) {
+      try {
+        result[`dns_${host}`] = await dns.lookup(host);
+      } catch (e: any) {
+        result[`dns_${host}`] = e.code || e.message;
+      }
     }
 
-    await new Promise(resolve => {
-      const socket = net.connect(587, 'pro.turbo-smtp.com');
+    // TCP test: pro.turbo-smtp.com nas portas 465 e 587
+    for (const port of [465, 587]) {
+      await new Promise(resolve => {
+        const socket = net.connect(port, 'pro.turbo-smtp.com');
+        socket.setTimeout(5000);
 
+        socket.on('connect', () => {
+          result[`tcp_pro.turbo-smtp.com:${port}`] = 'CONNECTED';
+          socket.destroy();
+          resolve(null);
+        });
+
+        socket.on('timeout', () => {
+          result[`tcp_pro.turbo-smtp.com:${port}`] = 'TIMEOUT';
+          socket.destroy();
+          resolve(null);
+        });
+
+        socket.on('error', err => {
+          result[`tcp_pro.turbo-smtp.com:${port}`] = (err as any).code || (err as any).message;
+          resolve(null);
+        });
+      });
+    }
+
+    // TCP test: smtp.gmail.com:587
+    await new Promise(resolve => {
+      const socket = net.connect(587, 'smtp.gmail.com');
       socket.setTimeout(5000);
 
       socket.on('connect', () => {
-        result.tcp = 'CONNECTED';
+        result['tcp_smtp.gmail.com:587'] = 'CONNECTED';
         socket.destroy();
         resolve(null);
       });
 
       socket.on('timeout', () => {
-        result.tcp = 'TIMEOUT';
+        result['tcp_smtp.gmail.com:587'] = 'TIMEOUT';
         socket.destroy();
         resolve(null);
       });
 
       socket.on('error', err => {
-        result.tcp = err.message;
+        result['tcp_smtp.gmail.com:587'] = (err as any).code || (err as any).message;
         resolve(null);
       });
     });
