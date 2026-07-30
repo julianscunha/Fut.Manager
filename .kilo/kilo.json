@@ -1,4 +1,5 @@
 {
+  "$schema": "https://app.kilo.ai/config.json",
   "plugin": [
     "file:///D:/Github/Fut.Manager/.kilo/plugins/graphify.js"
   ],

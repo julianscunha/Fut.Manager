@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { motion, AnimatePresence } from 'motion/react';
+import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 import {
   Megaphone,
   BookOpen,
@@ -459,10 +460,14 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
       {/* Categories Tabs Selector */}
       {!hideTabs && (
         <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between border-b border-zinc-900 pb-4">
-          <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-zinc-900 overflow-x-auto gap-1">
+          <ResponsiveTabsContainer 
+            activeTabId={`tab-comm-${activeTab}`}
+            className="bg-zinc-950 p-1.5 rounded-2xl border border-zinc-900 gap-1"
+          >
             <button
+              id="tab-comm-regra"
               onClick={() => setActiveTab('regra')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer flex-shrink-0 ${
                 activeTab === 'regra'
                   ? 'bg-zinc-800 text-white shadow-md'
                   : 'text-zinc-500 hover:text-zinc-300'
@@ -476,8 +481,9 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
             </button>
 
             <button
+              id="tab-comm-aviso"
               onClick={() => setActiveTab('aviso')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer flex-shrink-0 ${
                 activeTab === 'aviso'
                   ? 'bg-zinc-800 text-white shadow-md'
                   : 'text-zinc-500 hover:text-zinc-300'
@@ -491,8 +497,9 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
             </button>
 
             <button
+              id="tab-comm-comunicado"
               onClick={() => setActiveTab('comunicado')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer flex-shrink-0 ${
                 activeTab === 'comunicado'
                   ? 'bg-zinc-800 text-white shadow-md'
                   : 'text-zinc-500 hover:text-zinc-300'
@@ -506,8 +513,9 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
             </button>
 
             <button
+              id="tab-comm-history"
               onClick={() => setActiveTab('history')}
-              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+              className={`px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 whitespace-nowrap cursor-pointer flex-shrink-0 ${
                 activeTab === 'history'
                   ? 'bg-zinc-800 text-white shadow-md'
                   : 'text-zinc-500 hover:text-zinc-300'
@@ -523,7 +531,7 @@ export default function CommunicationCenter({ currentUser, forceTab, hideTabs }:
                 }).length}
               </span>
             </button>
-          </div>
+          </ResponsiveTabsContainer>
 
           {/* Create communication trigger for administrator */}
           {isAdmin && activeTab !== 'history' && (

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { AnimatePresence } from 'motion/react';
+import ResponsiveTabsContainer from './ResponsiveTabsContainer';
 import {
   Camera,
   Film,
@@ -2610,14 +2611,19 @@ ${shareUrl}`;
 
       {/* Tabs Navigation Selector - Swipeable/Scrollable on mobile, Clean list on desktop */}
       <div className="sticky top-0 bg-[#090e0c]/95 backdrop-blur-md py-3 z-30 border-b border-zinc-900/60 -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex flex-wrap md:flex-nowrap gap-2 pb-1">
+        <ResponsiveTabsContainer 
+          activeTabId={`tab-museu-${museuTab}`}
+          className="flex md:flex-nowrap gap-2 pb-1"
+          noBorder={true}
+        >
           <button
             type="button"
+            id="tab-museu-memorias"
             onClick={() => {
               setMuseuTab('memorias');
               setMuralSubTab('memorias');
             }}
-            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0 ${
               museuTab === 'memorias'
                 ? 'bg-emerald-600 text-white shadow-lg'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2629,10 +2635,11 @@ ${shareUrl}`;
 
           <button
             type="button"
+            id="tab-museu-momentos"
             onClick={() => {
               setMuseuTab('momentos');
             }}
-            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0 ${
               museuTab === 'momentos'
                 ? 'bg-amber-600 text-white shadow-lg'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2644,11 +2651,12 @@ ${shareUrl}`;
 
           <button
             type="button"
+            id="tab-museu-historia"
             onClick={() => {
               setMuseuTab('historia');
               setHistoryPage(1);
             }}
-            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0 ${
               museuTab === 'historia'
                 ? 'bg-emerald-805/40 text-emerald-400 border border-emerald-500/20 shadow-lg'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2660,11 +2668,12 @@ ${shareUrl}`;
 
           <button
             type="button"
+            id="tab-museu-comunicacao"
             onClick={() => {
               setMuseuTab('comunicacao');
               setMuralSubTab('comunicacao');
             }}
-            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
+            className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0 ${
               museuTab === 'comunicacao'
                 ? 'bg-[#1e3a2f] text-[#4ade80] border border-emerald-500/40'
                 : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2677,10 +2686,11 @@ ${shareUrl}`;
           {!isPublic && currentUser && (currentUser.role === 'admin' || currentUser.role === 'auxiliar') && (
             <button
               type="button"
+              id="tab-museu-arquivo"
               onClick={() => {
                 setMuseuTab('arquivo');
               }}
-              className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-auto sm:flex-initial px-3.5 py-2 text-xs font-bold rounded-lg transition flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap flex-shrink-0 ${
                 museuTab === 'arquivo'
                   ? 'bg-zinc-800 text-white shadow-lg'
                   : 'bg-zinc-950 border border-zinc-900 text-zinc-500 hover:text-zinc-300'
@@ -2690,7 +2700,7 @@ ${shareUrl}`;
               <span>Arquivo ({historyCount})</span>
             </button>
           )}
-        </div>
+        </ResponsiveTabsContainer>
       </div>
 
       {/* Render selected content tab view */}
