@@ -919,7 +919,7 @@ async function startServer() {
       }
 
       // Generate a recovery token with expiration and persist it for validation on reset
-      const token = 'recovery-' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+      const token = 'recovery-' + crypto.randomUUID();
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 minutos
 
       if (!db.passwordResetTokens) db.passwordResetTokens = {};
