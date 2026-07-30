@@ -3887,7 +3887,7 @@ async function startServer() {
       const db = await readDb();
       const draw = (db.draws || []).find((d) => d.matchId === matchId);
       if (!draw) {
-        return res.status(404).json({ error: 'Nenhum sorteio registrado para esta partida.' });
+        return res.json({ message: 'Nenhum sorteio registrado para esta partida.' });
       }
       return res.json(draw);
     } catch (err) {

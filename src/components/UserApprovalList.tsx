@@ -31,6 +31,8 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
   const [roleFilter, setRoleFilter] = useState<'all' | 'jogador' | 'auxiliar' | 'admin'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'approved' | 'pending' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [auditPage, setAuditPage] = useState(1);
+  const auditPerPage = 10;
 
   // Editing state for selected user
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -69,7 +71,9 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
       const aRes = await authFetch('/api/users/audits');
       if (aRes.ok) {
         const aData = await aRes.json();
-        setAudits([...aData].reverse());
+        // Ordenação por data crescente (mais antigos primeiro ou conforme pedido)
+        const sorted = [...aData].sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        setAudits(sorted);
       }
     } catch (err: any) {
       setError(err.message || 'Erro ao carregar dados do painel.');
