@@ -20,8 +20,6 @@ import compression from 'compression';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
 import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
-import dns from 'node:dns/promises';
-import net from 'node:net';
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
 import {
@@ -949,56 +947,6 @@ async function startServer() {
       console.error('[API POST /api/auth/forgot-password]', err);
       return res.status(500).json({ error: 'Erro ao processar solicitação. Tente novamente em instantes.' });
     }
-  });
-
-  // SMTP diagnostic route — temporarily added to check DNS resolution and TCP connectivity to SMTP host
-  app.get('/smtp-diagnose', async (_, res) => {
-    const result: any = {};
-
-    const tests = [
-      { host: 'pro.turbo-smtp.com', port: 465 },
-      { host: 'pro.turbo-smtp.com', port: 587 },
-      { host: 'smtp.gmail.com', port: 587 },
-      { host: 'smtp.office365.com', port: 587 },
-    ];
-
-    for (const { host, port } of tests) {
-      const key = `tcp_${host}:${port}`;
-
-      // DNS lookup once per host
-      if (!result[`dns_${host}`]) {
-        try {
-          result[`dns_${host}`] = await dns.lookup(host);
-        } catch (e: any) {
-          result[`dns_${host}`] = e.code || e.message;
-        }
-      }
-
-      // TCP test
-      await new Promise(resolve => {
-        const socket = net.connect(port, host);
-        socket.setTimeout(5000);
-
-        socket.on('connect', () => {
-          result[key] = 'CONNECTED';
-          socket.destroy();
-          resolve(null);
-        });
-
-        socket.on('timeout', () => {
-          result[key] = 'TIMEOUT';
-          socket.destroy();
-          resolve(null);
-        });
-
-        socket.on('error', err => {
-          result[key] = (err as any).code || (err as any).message;
-          resolve(null);
-        });
-      });
-    }
-
-    res.json(result);
   });
 
   // Auth: Resetar Senha
