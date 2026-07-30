@@ -39,6 +39,10 @@ process.on('unhandledRejection', (reason) => {
 
 async function startServer() {
   const app = express();
+  
+  // Necessário para o Render/Proxies capturarem o IP real do usuário para o rate-limit
+  app.set('trust proxy', 1);
+
   const PORT = 3000;
 
   // --- NOTIFICATION HELPERS & STRUCTURES ---
