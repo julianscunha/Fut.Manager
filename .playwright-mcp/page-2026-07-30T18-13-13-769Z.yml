@@ -1,0 +1,25 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - heading "Racha do Fofim" [level=1] [ref=e32]
+    - paragraph [ref=e9]: Painel oficial para controle de presença, estatísticas e roster.
+  - generic [ref=e47]:
+    - generic [ref=e48]:
+      - heading "Esqueci minha senha" [level=2] [ref=e49]
+      - paragraph [ref=e50]: Informe seu e-mail cadastrado para receber o link de redefinição.
+    - generic [ref=e52]:
+      - generic [ref=e53]: Seu E-mail Cadastrado
+      - 'textbox "Ex: admin@racha.com" [ref=e54]'
+    - button "Disparar Link de Recuperação" [ref=e55] [cursor=pointer]
+    - button "Voltar ao login" [ref=e60] [cursor=pointer]
+  - generic [ref=e33]:
+    - generic [ref=e34]: Próximo Racha Agendado
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - generic [ref=e39]: Data
+        - generic [ref=e40]: 04/08/2026
+      - generic [ref=e41]:
+        - generic [ref=e42]: Horário
+        - generic [ref=e43]: 21:30
+      - generic [ref=e44]:
+        - generic [ref=e45]: Local
+        - generic "Arena Furacão" [ref=e46]
