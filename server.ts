@@ -1054,6 +1054,11 @@ async function startServer() {
     }
 
     const db = await readDb();
+    const requestingUser = await getAuthenticatedUser(req, db);
+    if (!requestingUser || requestingUser.role !== 'admin') {
+      return res.status(401).json({ error: 'Não autorizado. Apenas administradores podem gerenciar permissões.' });
+    }
+
     const userIndex = db.users.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
