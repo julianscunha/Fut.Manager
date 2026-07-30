@@ -23,6 +23,7 @@ import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, Matc
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
 import { isEmailConfigured, sendEmail } from './server/email';
+import { passwordResetTemplate } from './server/email-templates';
 
 // Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
 // Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
@@ -899,14 +900,13 @@ async function startServer() {
 
       const resetUrl = `${process.env.APP_URL || 'http://localhost:3000'}/?resetToken=${encodeURIComponent(token)}&resetUserId=${encodeURIComponent(user.id)}`;
       try {
-        await sendEmail(
-          user.email,
-          `Redefinição de senha — ${APP_NAME}`,
-          `<p>Olá, ${user.name}!</p>
-           <p>Recebemos um pedido de redefinição de senha para sua conta no ${APP_NAME}.</p>
-           <p><a href="${resetUrl}">Clique aqui para definir uma nova senha</a> (link válido por 15 minutos).</p>
-           <p>Se você não pediu essa redefinição, ignore este e-mail.</p>`
-        );
+        const { subject, html } = passwordResetTemplate({
+          userName: user.name,
+          resetUrl,
+          appName: APP_NAME,
+          expiresInMinutes: 15,
+        });
+        await sendEmail(user.email, subject, html);
       } catch (emailErr) {
         console.error('[API POST /api/auth/forgot-password] Falha ao enviar e-mail:', emailErr);
         delete db.passwordResetTokens[user.id];
