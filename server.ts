@@ -955,62 +955,48 @@ async function startServer() {
   app.get('/smtp-diagnose', async (_, res) => {
     const result: any = {};
 
-    // DNS lookup for both hosts
-    for (const host of ['pro.turbo-smtp.com', 'smtp.gmail.com']) {
-      try {
-        result[`dns_${host}`] = await dns.lookup(host);
-      } catch (e: any) {
-        result[`dns_${host}`] = e.code || e.message;
-      }
-    }
+    const tests = [
+      { host: 'pro.turbo-smtp.com', port: 465 },
+      { host: 'pro.turbo-smtp.com', port: 587 },
+      { host: 'smtp.gmail.com', port: 587 },
+      { host: 'smtp.office365.com', port: 587 },
+    ];
 
-    // TCP test: pro.turbo-smtp.com nas portas 465 e 587
-    for (const port of [465, 587]) {
+    for (const { host, port } of tests) {
+      const key = `tcp_${host}:${port}`;
+
+      // DNS lookup once per host
+      if (!result[`dns_${host}`]) {
+        try {
+          result[`dns_${host}`] = await dns.lookup(host);
+        } catch (e: any) {
+          result[`dns_${host}`] = e.code || e.message;
+        }
+      }
+
+      // TCP test
       await new Promise(resolve => {
-        const socket = net.connect(port, 'pro.turbo-smtp.com');
+        const socket = net.connect(port, host);
         socket.setTimeout(5000);
 
         socket.on('connect', () => {
-          result[`tcp_pro.turbo-smtp.com:${port}`] = 'CONNECTED';
+          result[key] = 'CONNECTED';
           socket.destroy();
           resolve(null);
         });
 
         socket.on('timeout', () => {
-          result[`tcp_pro.turbo-smtp.com:${port}`] = 'TIMEOUT';
+          result[key] = 'TIMEOUT';
           socket.destroy();
           resolve(null);
         });
 
         socket.on('error', err => {
-          result[`tcp_pro.turbo-smtp.com:${port}`] = (err as any).code || (err as any).message;
+          result[key] = (err as any).code || (err as any).message;
           resolve(null);
         });
       });
     }
-
-    // TCP test: smtp.gmail.com:587
-    await new Promise(resolve => {
-      const socket = net.connect(587, 'smtp.gmail.com');
-      socket.setTimeout(5000);
-
-      socket.on('connect', () => {
-        result['tcp_smtp.gmail.com:587'] = 'CONNECTED';
-        socket.destroy();
-        resolve(null);
-      });
-
-      socket.on('timeout', () => {
-        result['tcp_smtp.gmail.com:587'] = 'TIMEOUT';
-        socket.destroy();
-        resolve(null);
-      });
-
-      socket.on('error', err => {
-        result['tcp_smtp.gmail.com:587'] = (err as any).code || (err as any).message;
-        resolve(null);
-      });
-    });
 
     res.json(result);
   });
