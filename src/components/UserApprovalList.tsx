@@ -71,8 +71,8 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
       const aRes = await authFetch('/api/users/audits');
       if (aRes.ok) {
         const aData = await aRes.json();
-        // Ordenação por data crescente (mais antigos primeiro ou conforme pedido)
-        const sorted = [...aData].sort((a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        // Ordenação por data decrescente (mais recentes primeiro)
+        const sorted = [...aData].sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
         setAudits(sorted);
       }
     } catch (err: any) {
