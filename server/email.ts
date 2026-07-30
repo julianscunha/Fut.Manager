@@ -41,7 +41,8 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
           from,
           to,
           subject,
-          html,
+          html_content: html,
+          content: html.replace(/<[^>]*>/g, ''),
         }),
         signal: controller.signal,
       });
