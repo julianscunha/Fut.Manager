@@ -1350,6 +1350,23 @@ async function startServer() {
     }
   }
 
+  async function deleteStorageFile(path: string | null | undefined): Promise<void> {
+    if (!path) return;
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.storage.from('Uploads').remove([path]);
+    if (error) {
+      console.error('[Storage] Falha ao remover arquivo:', path, error.message);
+    }
+  }
+
+  function extractStoragePath(url: string | null | undefined): string | null {
+    if (!url) return null;
+    const marker = '/storage/v1/object/public/Uploads/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return decodeURIComponent(url.slice(idx + marker.length));
+  }
+
   // Providers de avatar retornam a imagem gerada como data URL base64 inline. Salvar isso direto
   // na coluna do Postgres (em vez de só a URL) faz o payload de GET /api/players carregar todo
   // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — daí
@@ -6229,6 +6246,21 @@ db.muralPosts.push(newPost);
       post.updatedAt = new Date().toISOString();
 
       await writeDb(db);
+
+      const pathsToDelete = [
+        extractStoragePath(post.mediaUrl),
+        extractStoragePath(post.thumbnailUrl),
+        extractStoragePath(post.mediumUrl)
+      ].filter((p): p is string => p !== null);
+
+      if (pathsToDelete.length > 0) {
+        const supabase = getSupabaseClient();
+        const { error } = await supabase.storage.from('Uploads').remove(pathsToDelete);
+        if (error) {
+          console.error('[Storage] Falha ao remover arquivos do post excluído:', error.message);
+        }
+      }
+
       res.json({ message: 'Publicação excluída com sucesso (Soft Delete).' });
     } catch (err) {
       console.error('[API DELETE Mural Post]', err);
