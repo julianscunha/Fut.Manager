@@ -1942,6 +1942,8 @@ async function startServer() {
         updatedPlayer.avatarEsportivo = null;
         updatedPlayer.avatarCard = null;
         updatedPlayer.avatarOriginal = null;
+      } else if (photoChanged) {
+        updatedPlayer.avatarOriginal = updatedPlayer.photoOriginal;
       }
     }
 
