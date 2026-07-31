@@ -32,6 +32,8 @@ import {
   registrationPendingTemplate,
   registrationRejectedTemplate,
   notificationTemplate,
+  welcomeTemplate,
+  reengageInactiveTemplate,
 } from './server/email-templates';
 
 // Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
@@ -1244,6 +1246,21 @@ async function startServer() {
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
           console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovação:', emailErr);
+        }
+      }
+
+      // Send welcome email to the newly approved user
+      if (isEmailConfigured()) {
+        try {
+          const loginUrl = `${process.env.APP_URL || 'http://localhost:3000'}`;
+          const { subject, html } = welcomeTemplate({
+            userName: db.users[userIndex].name,
+            appName: APP_NAME,
+            loginUrl,
+          });
+          await sendEmail(db.users[userIndex].email, subject, html);
+        } catch (emailErr) {
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de boas-vindas:', emailErr);
         }
       }
     } else if (action === 'reject') {
@@ -4389,6 +4406,62 @@ async function startServer() {
       return res.json(result);
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao buscar resultado.' });
+    }
+  });
+
+  app.post('/api/admin/reengage-inactive', async (req, res) => {
+    try {
+      const db = await readDb();
+      const requestingUser = await getAuthenticatedUser(req, db);
+      if (!requestingUser || requestingUser.role !== 'admin') {
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+      }
+
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      const threshold = sixMonthsAgo.toISOString();
+
+      const inactivePlayers = db.players.filter((p: any) => {
+        if (p.status !== 'indisponivel' || !p.statusStartDate || !p.email) return false;
+        return p.statusStartDate <= threshold;
+      });
+
+      const sent: string[] = [];
+      const failed: string[] = [];
+
+      for (const player of inactivePlayers) {
+        try {
+          const start = new Date(player.statusStartDate as string);
+          const now = new Date();
+          const diffMs = now.getTime() - start.getTime();
+          const monthsInactive = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24 * 30)));
+
+          const { subject, html } = reengageInactiveTemplate({
+            userName: player.name,
+            appName: APP_NAME,
+            loginUrl: `${process.env.APP_URL || 'http://localhost:3000'}`,
+            monthsInactive,
+          });
+
+          await sendEmail(player.email, subject, html);
+          sent.push(player.name);
+        } catch (err) {
+          console.error(`[Reengage] Falha ao enviar para ${player.name}:`, err);
+          failed.push(player.name);
+        }
+      }
+
+      return res.json({
+        message: 'Reengajamento concluído.',
+        totalInactive: inactivePlayers.length,
+        sent: sent.length,
+        failed: failed.length,
+        sentNames: sent,
+        failedNames: failed,
+      });
+    } catch (err) {
+      console.error('[API POST /api/admin/reengage-inactive]', err);
+      return res.status(500).json({ error: 'Erro ao executar reengajamento.' });
     }
   });
 
