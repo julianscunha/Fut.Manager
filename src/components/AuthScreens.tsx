@@ -91,31 +91,49 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
     return () => clearInterval(interval);
   }, [publicPosts]);
 
-  // Render Cloudflare Turnstile widget when in login mode
   useEffect(() => {
-    if (mode === 'login' && turnstileRef.current && (window as any).turnstile) {
-      const widgetId = (window as any).turnstile.render(turnstileRef.current, {
-        sitekey: (import.meta as any).env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAEBKqvUvhULYnrx4',
-        callback: (token: string) => {
-          setTurnstileToken(token);
-        },
-        'expired-callback': () => {
-          setTurnstileToken('');
-        },
-        theme: 'dark',
-        size: 'flexible',
-      });
+    if (mode !== 'login' || !turnstileRef.current) return;
 
-      return () => {
-        try {
-          if ((window as any).turnstile && widgetId) {
-            (window as any).turnstile.remove(widgetId);
+    const waitForTurnstile = () => {
+      if ((window as any).turnstile && turnstileRef.current) {
+        const widgetId = (window as any).turnstile.render(turnstileRef.current, {
+          sitekey: (import.meta as any).env.VITE_TURNSTILE_SITE_KEY || '0x4AAAAAAEBKqvUvhULYnrx4',
+          callback: (token: string) => setTurnstileToken(token),
+          'expired-callback': () => setTurnstileToken(''),
+          theme: 'dark',
+          size: 'flexible',
+        });
+
+        return () => {
+          try {
+            if ((window as any).turnstile && widgetId) {
+              (window as any).turnstile.remove(widgetId);
+            }
+          } catch (e) {
+            // ignore cleanup errors
           }
-        } catch (e) {
-          // ignore cleanup errors
-        }
-      };
+        };
+      }
+      return undefined;
+    };
+
+    const cleanupOrRender = waitForTurnstile();
+    if (cleanupOrRender) {
+      return cleanupOrRender;
     }
+
+    const onReady = () => {
+      const cleanup = waitForTurnstile();
+      if (cleanup) return cleanup;
+    };
+
+    window.addEventListener('turnstile:ready', onReady);
+    const timeoutId = setTimeout(onReady, 500);
+
+    return () => {
+      window.removeEventListener('turnstile:ready', onReady);
+      clearTimeout(timeoutId);
+    };
   }, [mode]);
 
   const highlightPost = useMemo(() => {
@@ -362,7 +380,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
 
               {/* Turnstile Widget Compacto e Centralizado */}
               <div className="flex justify-center pt-1">
-                <div ref={turnstileRef} />
+                <div ref={turnstileRef} className="min-h-[60px] min-w-[300px]" />
               </div>
             </div>
 
