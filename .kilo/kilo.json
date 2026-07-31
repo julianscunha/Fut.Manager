@@ -1,7 +1,29 @@
 {
   "$schema": "https://app.kilo.ai/config.json",
+
   "plugin": [
     "file:///D:/Github/Fut.Manager/.kilo/plugins/graphify.js"
   ],
-  "snapshot": false
+
+  "snapshot": false,
+
+  "mcp": {
+    "supabase": {
+      "type": "remote",
+      "url": "https://mcp.supabase.com/mcp?project_ref=ggrjqfdlgtftkvehsxju&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching%2Cstorage",
+      "enabled": true
+    },
+
+    "playwright": {
+      "type": "local",
+      "enabled": true,
+      "command": [
+        "cmd",
+        "/c",
+        "npx",
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    }
+  }
 }

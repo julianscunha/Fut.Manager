@@ -1159,9 +1159,17 @@ export default function DashboardStatus({
     const selected: any[] = [];
     const usedIds = new Set<string>();
 
+    const slotToPositions: Record<string, string[]> = {
+      'GK': ['goleiro'],
+      'ZAG': ['zagueiro'],
+      'VOL': ['volante'],
+      'MEI': ['meio_campo'],
+      'ATA': ['atacante'],
+    };
+
     const findBestFor = (posGroup: string[], label: string) => {
-      const found = individualStats.find((p: any) => 
-        !usedIds.has(p.playerId) && 
+      const found = individualStats.find((p: any) =>
+        !usedIds.has(p.playerId) &&
         posGroup.includes(p.primaryPosition || '') &&
         p.presences > 0
       );
@@ -1173,16 +1181,32 @@ export default function DashboardStatus({
       return false;
     };
 
+    const findBestForWithFallback = (posGroup: string[], label: string) => {
+      if (findBestFor(posGroup, label)) return true;
+      const secondaryMatch = individualStats.find((p: any) =>
+        !usedIds.has(p.playerId) &&
+        p.secondaryPositions &&
+        p.secondaryPositions.some((sp: string) => posGroup.includes(sp)) &&
+        p.presences > 0
+      );
+      if (secondaryMatch) {
+        usedIds.add(secondaryMatch.playerId);
+        selected.push({ ...secondaryMatch, slotLabel: label });
+        return true;
+      }
+      return false;
+    };
+
     // 1. GK
-    findBestFor(['goleiro'], 'GK');
+    findBestForWithFallback(['goleiro'], 'GK');
     // 2. ZAG
-    findBestFor(['zagueiro'], 'ZAG');
+    findBestForWithFallback(['zagueiro'], 'ZAG');
     // 3. VOL
-    findBestFor(['volante'], 'VOL');
+    findBestForWithFallback(['volante'], 'VOL');
     // 4. MEI
-    findBestFor(['meio_campo'], 'MEI');
+    findBestForWithFallback(['meio_campo'], 'MEI');
     // 5. ATA
-    findBestFor(['atacante'], 'ATA');
+    findBestForWithFallback(['atacante'], 'ATA');
 
     // Fill remaining if needed
     const slots = ['GK', 'ZAG', 'VOL', 'MEI', 'ATA'];
@@ -1190,7 +1214,13 @@ export default function DashboardStatus({
     const missingSlots = slots.filter(s => !filledSlots.includes(s));
 
     for (const slot of missingSlots) {
-      const leftover = individualStats.find((p: any) => !usedIds.has(p.playerId) && p.presences > 0);
+      const posGroup = slotToPositions[slot] || [];
+      const leftover = individualStats.find((p: any) =>
+        !usedIds.has(p.playerId) &&
+        p.presences > 0 &&
+        (posGroup.includes(p.primaryPosition || '') ||
+          (p.secondaryPositions && p.secondaryPositions.some((sp: string) => posGroup.includes(sp))))
+      );
       if (leftover) {
         usedIds.add(leftover.playerId);
         selected.push({ ...leftover, slotLabel: slot });
@@ -1219,7 +1249,11 @@ export default function DashboardStatus({
   const getBestKeeper = () => {
     const individualStats = stats?.individual || [];
     if (individualStats.length === 0) return null;
-    const keepers = individualStats.filter((p: any) => p.primaryPosition === 'goleiro' && p.presences > 0);
+    const keepers = individualStats.filter((p: any) =>
+      (p.primaryPosition === 'goleiro' ||
+        (p.secondaryPositions && p.secondaryPositions.includes('goleiro'))) &&
+      p.presences > 0
+    );
     if (keepers.length === 0) return null;
     return [...keepers].sort((a: any, b: any) => {
       if (b.aproveitamento !== a.aproveitamento) {
