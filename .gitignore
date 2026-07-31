@@ -17,6 +17,9 @@ Thumbs.db
 # regenerados via `npx skills add supabase/agent-skills`, não precisam ser versionados.
 .claude/
 
+# TypeScript incremental build info
+tsconfig.tsbuildinfo
+
 # Legado: persistência migrou para Supabase (Postgres + Storage). Não versionar mais.
 data/database.json
 data/database.json.backup

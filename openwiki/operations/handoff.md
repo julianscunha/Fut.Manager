@@ -24,6 +24,22 @@ Resumo executivo do estado atual do sistema Fut.Manager:
 
 Lista cronológica de entregas técnicas e correções de governança.
 
+### 2026-07-31
+**Limpeza de Storage, Destaque da Semana com Carrossel, Correção de Avatares e Documentação**
+
+- Removidas tabelas mortas do banco: `snapshots`, `mural_highlights`, `mural_files`.
+- Corrigido bug que deixava foto antiga órfã no Supabase Storage ao trocar `photoOriginal` do jogador (`avatarOriginal` não era atualizado).
+- Deletados arquivos órfãos do bucket `Uploads` (`1785262679083-whatsapp-image-2026-07-28-at-15.17.37.webp` e pasta `avatars` vazia).
+- `DELETE /api/mural/posts/:id` agora apaga `mediaUrl`/`thumbnailUrl`/`mediumUrl` do Supabase Storage.
+- Adicionado carrossel automático no bloco "Destaque da Semana" do dashboard (6s por foto, com controles manuais).
+- Corrigido widget Cloudflare Turnstile que não aparecia em mobile (`justify-center` + falta de `overflow-y-auto`).
+- Corrigido bug de precedência de operadores em JSX que exibia URL string ao invés da imagem no destaque do mural.
+- Corrigidas referências quebradas de `imageUrl`/`content`/`text` para `mediaUrl`/`description` em `DashboardStatus.tsx` e `CalendarManager.tsx`.
+- Removido endpoint `/api/admin/cleanup-storage` (não era necessário; limpeza foi feita manualmente e o fluxo de upload/remoção agora limpa automaticamente).
+- Corrigido tipo `NotificationCategory` ausente em `src/types.ts`.
+
+Arquivos alterados: `server.ts`, `src/components/DashboardStatus.tsx`, `src/components/CalendarManager.tsx`, `src/components/TechnicalRanking.tsx`, `src/components/PlayerCard.tsx`, `src/components/PlayerHero.tsx`, `src/components/PlayerEvaluationModal.tsx`, `src/components/PlayerDomainCards.tsx`, `src/components/EventManager.tsx`, `src/components/DrawManager.tsx`, `src/components/FinanceManager.tsx`, `src/types.ts`, `.gitignore`, `README.md`.
+
 ### 2026-07-04
 **Remoção do Placar Consolidado, Ajustes de Ações de Fim de Jogo, Responsividade e Paginação do Museu, Correções de Renderização e Limpeza de Produção**
 

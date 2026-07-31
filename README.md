@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](tsconfig.json)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](package.json)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20Storage-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com)
-[![Deploy](https://img.shields.io/badge/deploy-Render-46E3B7?logo=render&logoColor=white)](docs/DEPLOY.md)
+[![Deploy](https://img.shields.io/badge/deploy-Render-46E3B7?logo=render&logoColor=white)](openwiki/operations/deploy-guide.md)
 
 ---
 
@@ -75,9 +75,9 @@ npm run clean     # remove dist/
 
 ## ☁️ Deploy em produção
 
-Guia completo, passo a passo, para colocar seu próprio racha no ar (setup do Supabase, schema SQL, variáveis de ambiente, deploy no Render): **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+Guia completo, passo a passo, para colocar seu próprio racha no ar (setup do Supabase, schema SQL, variáveis de ambiente, deploy no Render): **[openwiki/operations/deploy-guide.md](openwiki/operations/deploy-guide.md)**.
 
-Antes de ir ao ar, use o **[docs/DEPLOY-CHECKLIST.md](docs/DEPLOY-CHECKLIST.md)** para conferir cada etapa de segurança e funcionamento.
+Antes de ir ao ar, use o **[openwiki/operations/deploy-checklist.md](openwiki/operations/deploy-checklist.md)** para conferir cada etapa de segurança e funcionamento.
 
 ## 📚 Documentação
 
