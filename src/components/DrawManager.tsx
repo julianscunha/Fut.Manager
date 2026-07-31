@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { useAppConfig } from '../contexts/AppConfigContext';
 import { Match, Player, DrawTeam, TeamDraw } from '../types';
+import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 import { 
   Users, 
   Calendar, 
@@ -648,7 +649,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     <div key={p.id} className="flex items-center justify-between p-2 rounded-lg bg-zinc-950/50 border border-zinc-900 text-xs">
                       <div className="flex items-center gap-2">
                         <img 
-                          src={p.avatarEsportivo || p.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50'} 
+                          src={getPlayerAvatarUrl(p)} 
                           referrerPolicy="no-referrer"
                           className="w-6 h-6 rounded-full object-cover" 
                         />
@@ -995,7 +996,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                                 >
                                   <div className="flex items-center gap-2">
                                     <img 
-                                      src={p.avatarEsportivo || p.photoOriginal || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=50'} 
+                                      src={getPlayerAvatarUrl(p)} 
                                       referrerPolicy="no-referrer"
                                       className={`w-6.5 h-6.5 rounded-full object-cover border flex-shrink-0 ${
                                         isCap ? 'border-amber-500/40' : 'border-zinc-800'

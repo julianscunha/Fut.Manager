@@ -18,6 +18,7 @@ import {
 import { Player, POSITION_LABELS, CATEGORY_LABELS, STATUS_LABELS } from '../types';
 import { ClubShield } from './PlayerCard';
 import { SportsBadge, SportsIndicator, VISUAL_TOKENS } from './UI';
+import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 
 interface PlayerHeroProps {
   player: Player;
@@ -305,15 +306,16 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
             <div className="relative group">
               <div
                 onClick={() => {
-                  if (player.avatarEsportivo || player.photoOriginal) setIsPhotoExpanded(true);
+                  const avatar = getPlayerAvatarUrl(player);
+                  if (avatar) setIsPhotoExpanded(true);
                 }}
                 className={`w-28 h-28 rounded-full overflow-hidden border-2 border-emerald-500/30 group-hover:border-emerald-500/60 transition-all duration-300 shadow-xl relative bg-zinc-900 flex items-center justify-center ${
-                  player.avatarEsportivo || player.photoOriginal ? 'cursor-zoom-in' : ''
+                  getPlayerAvatarUrl(player) ? 'cursor-zoom-in' : ''
                 }`}
               >
-                {player.avatarEsportivo || player.photoOriginal ? (
+                {getPlayerAvatarUrl(player) ? (
                   <img
-                    src={player.avatarEsportivo || player.photoOriginal}
+                    src={getPlayerAvatarUrl(player)}
                     alt={player.name}
                     referrerPolicy="no-referrer"
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
@@ -335,7 +337,7 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
             </div>
 
             {/* LIGHTBOX: foto ampliada ao clicar no avatar */}
-            {isPhotoExpanded && (player.avatarEsportivo || player.photoOriginal) && (
+            {isPhotoExpanded && getPlayerAvatarUrl(player) && (
               <div
                 onClick={() => setIsPhotoExpanded(false)}
                 className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6 cursor-zoom-out animate-fadeIn"
@@ -348,7 +350,7 @@ export const PlayerHero: React.FC<PlayerHeroProps> = ({
                   <X className="w-5 h-5" />
                 </button>
                 <img
-                  src={player.avatarEsportivo || player.photoOriginal}
+                  src={getPlayerAvatarUrl(player)}
                   alt={player.name}
                   referrerPolicy="no-referrer"
                   onClick={(e) => e.stopPropagation()}

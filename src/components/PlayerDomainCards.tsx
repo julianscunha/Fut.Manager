@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -480,9 +481,9 @@ export const PlayerIdentityCard: React.FC<PlayerIdentityCardProps> = ({
       <div className="flex justify-between items-start gap-4">
         {/* AVATAR DE IA */}
         <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-emerald-500/20 shadow-xl bg-zinc-900 flex items-center justify-center shrink-0">
-          {player.avatarEsportivo || player.photoOriginal ? (
+          {getPlayerAvatarUrl(player) ? (
             <img
-              src={player.avatarEsportivo || player.photoOriginal}
+              src={getPlayerAvatarUrl(player)}
               alt={player.name}
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover"

@@ -5,6 +5,7 @@ import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABEL
 import PlayerEvaluationModal from './PlayerEvaluationModal';
 import { getAchievementsForPlayer } from '../utils/achievements';
 import { useAppConfig } from '../contexts/AppConfigContext';
+import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 
 // Standard high-quality vector Shields/Escudos for major soccer teams to guarantee accurate displays
 export function ClubShield({ clubId, className = "w-6 h-6" }: { clubId?: string, className?: string }) {
@@ -401,7 +402,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     }
   };
   const isSoftDeleted = !!player.deletedAt;
-  const avatarToDisplay = player.avatarCard || player.avatarEsportivo || player.avatarOriginal || player.photoOriginal || '';
+  const avatarToDisplay = getPlayerAvatarUrl(player);
 
   // Determine card rarity based on matches under demand
   const matchesCount = rachaStats?.presences || 0;
