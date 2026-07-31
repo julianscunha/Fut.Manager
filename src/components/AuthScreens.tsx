@@ -262,7 +262,7 @@ export default function AuthScreens({ onLoginSuccess }: AuthScreensProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 relative turf-glow" id="auth-screen-layout">
+    <div className="min-h-screen flex flex-col justify-start items-center p-4 relative turf-glow overflow-y-auto" id="auth-screen-layout">
       {/* Soccer ball pattern line field lines background decoration */}
       <div className="absolute inset-0 field-decor pointer-events-none opacity-20" />
 
