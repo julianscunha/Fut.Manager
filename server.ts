@@ -6564,6 +6564,70 @@ db.muralPosts.push(newPost);
     }
   });
 
+  // Admin: scan storage bucket and delete orphan files not referenced in DB
+  app.post('/api/admin/cleanup-storage', async (req, res) => {
+    try {
+      const db = await readDb();
+      const requestingUser = await getAuthenticatedUser(req, db);
+      if (!requestingUser || requestingUser.role !== 'admin') {
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+      }
+
+      const supabase = getSupabaseClient();
+
+      let allBucketFiles: any[] = [];
+      const BUCKET = 'Uploads';
+      const PAGE_SIZE = 1000;
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase.storage.from(BUCKET).list(undefined, { limit: PAGE_SIZE, offset });
+        if (error) throw error;
+        const batch = data || [];
+        allBucketFiles = allBucketFiles.concat(batch);
+        if (batch.length < PAGE_SIZE) break;
+        offset += batch.length;
+      }
+
+      const usedPaths = new Set<string>();
+      const addUrl = (url: string | null | undefined) => {
+        if (!url) return;
+        const path = extractStoragePath(url);
+        if (path) usedPaths.add(path);
+      };
+
+      (db.muralPosts || []).forEach((p: any) => {
+        addUrl(p.mediaUrl);
+        addUrl(p.thumbnailUrl);
+        addUrl(p.mediumUrl);
+      });
+      db.players.forEach((p: any) => {
+        addUrl(p.photoOriginal);
+        addUrl(p.avatarOriginal);
+        addUrl(p.avatarEsportivo);
+        addUrl(p.avatarCard);
+      });
+
+      const orphanFiles = allBucketFiles.filter(f => !usedPaths.has(f.name));
+      const orphanPaths = orphanFiles.map(f => f.name);
+
+      if (orphanPaths.length > 0) {
+        const { error } = await supabase.storage.from(BUCKET).remove(orphanPaths);
+        if (error) throw error;
+      }
+
+      return res.json({
+        message: `Limpeza concluída.`,
+        totalBucketFiles: allBucketFiles.length,
+        referencedFiles: usedPaths.size,
+        deletedOrphans: orphanPaths.length,
+        orphanPaths
+      });
+    } catch (err: any) {
+      console.error('[API POST /api/admin/cleanup-storage]', err);
+      return res.status(500).json({ error: err.message || 'Erro ao limpar armazenamento.' });
+    }
+  });
+
   // --- Vite Dev Server Middleware / Static Client serving ---
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
