@@ -14,6 +14,7 @@ export function notificationTemplate(params: {
   actionLabel?: string;
 }): { subject: string; html: string } {
   const { userName, title, message, appName, actionUrl, actionLabel } = params;
+
   const body = `
     <p>Olá, <strong>${userName}</strong>,</p>
     <p>${message}</p>
@@ -27,6 +28,7 @@ export function notificationTemplate(params: {
     </table>
     ` : ''}
   `;
+
   return {
     subject: title,
     html: baseHtml({

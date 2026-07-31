@@ -8,10 +8,10 @@
 
 export const tokens = {
   bg: '#0a0e0c',
-  card: '#141b17',
-  border: '#1f2923',
-  text: '#e4e4e7',
-  muted: '#6b7280',
+  card: '#f8f4ec',
+  border: '#ddd3bf',
+  text: '#1c1710',
+  muted: '#6b6355',
   accent: '#1a8a4a',
   accentLight: '#22c55e',
   accentDim: '#145c32',
@@ -32,27 +32,27 @@ export const sharedCss = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
   .card {
-    max-width: 480px; width: 100%;
+    max-width: 520px; width: 100%;
     margin: 0 auto;
     background-color: ${tokens.card};
-    border: 1px solid ${tokens.border};
-    border-radius: 16px;
+    border-radius: 8px;
     overflow: hidden;
   }
   .header {
-    padding: 32px 24px 28px;
+    padding: 24px 32px;
     text-align: center;
+    border-bottom: 1px solid ${tokens.border};
   }
-  .header h1 {
+  .header-title {
     margin: 0;
-    font-size: 22px; font-weight: 800;
-    color: #ffffff;
-    letter-spacing: -0.02em;
+    font-size: 18px; font-weight: 800;
+    color: ${tokens.text};
+    letter-spacing: -0.01em;
     line-height: 1.2;
   }
-  .header p {
-    margin: 6px 0 0;
-    color: #d4d4d8;
+  .header-subtitle {
+    margin: 4px 0 0;
+    color: ${tokens.muted};
     font-size: 13px;
     line-height: 1.4;
   }
@@ -71,29 +71,27 @@ export const sharedCss = `
     );
   }
   .body {
-    padding: 28px 24px;
+    padding: 32px;
+    font-family: Arial, Helvetica, sans-serif;
   }
   .body p {
-    margin: 0 0 14px;
+    margin: 0 0 16px;
     color: ${tokens.text};
     font-size: 15px;
-    line-height: 1.7;
+    line-height: 1.6;
   }
   .body p:last-child {
     margin-bottom: 0;
   }
   .body .note {
     color: ${tokens.muted};
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.5;
-  }
-  .body .note strong {
-    color: ${tokens.accentLight};
   }
   .info-card {
     background-color: ${tokens.bg};
     border: 1px solid ${tokens.border};
-    border-radius: 12px;
+    border-radius: 8px;
     padding: 16px;
     margin: 16px 0;
   }
@@ -119,10 +117,10 @@ export const sharedCss = `
     color: ${tokens.accentLight};
   }
   .info-card .value.pending {
-    color: #38bdf8;
+    color: #0ea5e9;
   }
   .btn-wrap {
-    padding: 16px 0 8px;
+    padding: 8px 0 16px;
     text-align: center;
   }
   .btn {
@@ -132,30 +130,31 @@ export const sharedCss = `
     font-size: 14px;
     font-weight: 700;
     text-decoration: none;
-    padding: 13px 32px;
-    border-radius: 10px;
+    padding: 12px 24px;
+    border-radius: 6px;
     letter-spacing: -0.01em;
     line-height: 1.4;
   }
   .footer {
-    border-top: 1px solid ${tokens.border};
-    padding: 16px 24px;
+    padding: 20px 32px;
     text-align: center;
+    border-top: 1px solid ${tokens.border};
   }
   .footer p {
     margin: 0;
     color: ${tokens.muted};
-    font-size: 11px;
+    font-size: 12px;
     line-height: 1.5;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .footer a {
+    color: ${tokens.muted};
+    text-decoration: underline;
   }
   @media only screen and (max-width: 480px) {
-    .header { padding: 24px 20px 20px; }
-    .header h1 { font-size: 19px; }
+    .header { padding: 20px; }
     .body { padding: 24px 20px; }
-    .body p { font-size: 14px; }
-    .btn { display: block; padding: 14px 24px; }
-    .info-card { padding: 12px; }
-    .footer { padding: 12px 20px; }
+    .footer { padding: 16px 20px; }
   }
 `;
 
@@ -167,6 +166,9 @@ export function baseHtml(params: {
   subject: string;
   appName: string;
 }): string {
+  const appUrl = process.env.APP_URL || 'https://rachadofofim.com.br';
+  const supportEmail = 'naoresponda@rachadofofim.com.br';
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -178,15 +180,14 @@ export function baseHtml(params: {
   <style>${sharedCss}</style>
 </head>
 <body>
-  <!--[if mso]><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 0;"><![endif]-->
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${tokens.bg};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${tokens.bg};padding:32px 16px;">
     <tr>
-      <td align="center" style="padding:24px 16px;">
-        <table role="presentation" cellpadding="0" cellspacing="0" class="card">
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" class="card">
           <tr>
             <td class="header" style="background:${params.headerGradient};">
-              <h1>${params.headerTitle}</h1>
-              <p>${params.headerSubtitle}</p>
+              <h1 class="header-title">${params.headerTitle}</h1>
+              <p class="header-subtitle">${params.headerSubtitle}</p>
             </td>
           </tr>
           <tr>
@@ -199,6 +200,11 @@ export function baseHtml(params: {
           </tr>
           <tr>
             <td class="footer">
+              <p>
+                <a href="${appUrl}">${appUrl.replace(/^https?:\/\//, '')}</a>
+                &nbsp;·&nbsp;
+                <a href="mailto:${supportEmail}">Suporte</a>
+              </p>
               <p>&copy; ${new Date().getFullYear()} ${params.appName}. Todos os direitos reservados.</p>
             </td>
           </tr>
@@ -206,7 +212,6 @@ export function baseHtml(params: {
       </td>
     </tr>
   </table>
-  <!--[if mso]></td></tr></table><![endif]-->
 </body>
 </html>`;
 }

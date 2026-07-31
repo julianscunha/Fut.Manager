@@ -19,9 +19,10 @@ export function registrationApprovedTemplate(params: {
   };
   const roleLabel = roleLabels[userRole] || userRole;
   const subject = `Conta aprovada no ${appName}`;
+
   const body = `
-    <p>Olá, <strong>${userName}</strong>,</p>
-    <p>Sua solicitação de cadastro no <strong>${appName}</strong> foi <strong style="color:#22c55e;">aprovada</strong> pelo administrador.</p>
+    <p>Olá, <strong>${userName}</strong>!</p>
+    <p>Boa notícia: seu cadastro no <strong>${appName}</strong> foi aprovado. Você já pode acessar o painel com seu login e senha.</p>
     <div class="info-card">
       <div class="row"><span class="label">Grupo</span><span class="value">${appName}</span></div>
       <div class="row"><span class="label">Perfil</span><span class="value">${roleLabel}</span></div>
@@ -34,12 +35,13 @@ export function registrationApprovedTemplate(params: {
         </td>
       </tr>
     </table>
-    <p class="note">Agora você pode fazer login e acessar o painel completo do ${appName}.</p>
+    <p class="note">Se tiver qualquer problema para entrar, é só responder a este e-mail que a gente ajuda.</p>
   `;
+
   return {
     subject,
     html: baseHtml({
-      headerTitle: 'Conta Aprovada',
+      headerTitle: 'Conta aprovada',
       headerSubtitle: appName,
       headerGradient: GRADIENTS.success,
       body,

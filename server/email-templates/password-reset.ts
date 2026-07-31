@@ -13,9 +13,10 @@ export function passwordResetTemplate(params: {
 }): { subject: string; html: string } {
   const { userName, resetUrl, appName, expiresInMinutes = 15 } = params;
   const subject = `Redefinição de senha — ${appName}`;
+
   const body = `
     <p>Olá, <strong>${userName}</strong>!</p>
-    <p>Recebemos um pedido de redefinição de senha para sua conta no <strong>${appName}</strong>.</p>
+    <p>Recebemos um pedido para redefinir a senha da sua conta no <strong>${appName}</strong>. Se foi você mesmo, é só clicar no botão abaixo e escolher uma nova senha.</p>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>
         <td class="btn-wrap">
@@ -23,9 +24,10 @@ export function passwordResetTemplate(params: {
         </td>
       </tr>
     </table>
-    <p class="note">Este link é válido por <strong>${expiresInMinutes} minutos</strong>.</p>
-    <p class="note">Se você não pediu essa redefinição, simplesmente ignore este e-mail. Sua senha não será alterada.</p>
+    <p class="note">Este link vale por <strong>${expiresInMinutes} minutos</strong>.</p>
+    <p class="note">Se você não pediu essa redefinição, pode ignorar este e-mail com tranquilidade — sua senha continua a mesma.</p>
   `;
+
   return {
     subject,
     html: baseHtml({
