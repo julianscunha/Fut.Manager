@@ -3003,7 +3003,7 @@ export default function DashboardStatus({
                   </span>
                 </div>
 
-                {highlightPost.mediumUrl || highlightPost.mediaUrl && (
+                {(highlightPost.mediumUrl || highlightPost.mediaUrl) && (
                   <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-zinc-900 bg-zinc-950 shadow-inner">
                     <img 
                       src={highlightPost.mediumUrl || highlightPost.mediaUrl} 
