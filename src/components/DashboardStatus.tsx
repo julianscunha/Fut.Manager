@@ -169,7 +169,8 @@ export default function DashboardStatus({
   const [tempEventAdults, setTempEventAdults] = useState<Record<string, number>>({});
   const [tempEventChildren, setTempEventChildren] = useState<Record<string, number>>({});
   const [isSavingEventRsvp, setIsSavingEventRsvp] = useState<Record<string, boolean>>({});
-  const [highlightPost, setHighlightPost] = useState<any>(null);
+  const [highlightPosts, setHighlightPosts] = useState<any[]>([]);
+  const [highlightIndex, setHighlightIndex] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
 
   // Custom confirmation modal state
@@ -207,6 +208,14 @@ export default function DashboardStatus({
       setEvaluationsReleased(false);
     }
   }, [nextMatch?.id, nextMatch?.evaluationsReleased]);
+
+  useEffect(() => {
+    if (highlightPosts.length <= 1) return;
+    const timer = setInterval(() => {
+      setHighlightIndex(prev => (prev + 1) % highlightPosts.length);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [highlightPosts.length]);
 
   const handleCloseConfirmations = async () => {
     if (!nextMatch) return;
@@ -576,8 +585,9 @@ export default function DashboardStatus({
         const muralRes = await authFetch('/api/mural/posts');
         if (muralRes.ok) {
           const muralPosts = await muralRes.json();
-          const hl = muralPosts.find((p: any) => p.isHighlighted);
-          setHighlightPost(hl || null);
+          const highlighted = muralPosts.filter((p: any) => p.isHighlighted);
+          setHighlightPosts(highlighted || []);
+          setHighlightIndex(0);
         }
       } catch (err) {
         console.error('Falha ao ler destaque do mural:', err);
@@ -1925,18 +1935,18 @@ export default function DashboardStatus({
                 </span>
               </div>
 
-              {highlightPost ? (
+              {highlightPosts.length > 0 ? (
                 <div className="bg-zinc-900/40 border border-zinc-850 rounded-xl p-4 space-y-3">
                   <div className="flex justify-between items-start">
                     <span className="text-[9px] font-mono text-zinc-500 font-extrabold block uppercase tracking-wider">🌟 Destaque da Rodada</span>
-                    <span className="text-[8.5px] font-mono text-violet-400 font-black uppercase tracking-wider">{highlightPost.authorName || 'Membro do Racha'}</span>
+                    <span className="text-[8.5px] font-mono text-violet-400 font-black uppercase tracking-wider">{highlightPosts[highlightIndex]?.authorName || 'Membro do Racha'}</span>
                   </div>
                   <p className="text-xs text-zinc-350 italic font-sans leading-relaxed">
-                    "{highlightPost.description}"
+                    "{highlightPosts[highlightIndex]?.description}"
                   </p>
-                  {highlightPost.mediaUrl && (
+                  {highlightPosts[highlightIndex]?.mediaUrl && (
                     <img 
-                      src={highlightPost.mediaUrl} 
+                      src={highlightPosts[highlightIndex]?.mediaUrl} 
                       alt="Destaque da Rodada" 
                       referrerPolicy="no-referrer"
                       className="w-full h-32 object-cover rounded-lg border border-zinc-800"
@@ -2986,7 +2996,7 @@ export default function DashboardStatus({
         {/* LINE 2: Highlight Post & Season Stats Bento */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* DESTAQUE DA SEMANA Card */}
-          {highlightPost ? (
+          {highlightPosts.length > 0 ? (
             <div 
               className="sports-card border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col justify-between space-y-5 hover:border-zinc-750 transition-all duration-300 relative overflow-hidden animate-fadeIn"
               onMouseEnter={() => setIsHoveredHighlight(true)}
@@ -3003,30 +3013,74 @@ export default function DashboardStatus({
                   </span>
                 </div>
 
-                {(highlightPost.mediumUrl || highlightPost.mediaUrl) && (
-                  <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-zinc-900 bg-zinc-950 shadow-inner">
-                    <img 
-                      src={highlightPost.mediumUrl || highlightPost.mediaUrl} 
-                      alt={highlightPost.title}
-                      referrerPolicy="no-referrer"
-                      className={`w-full h-full object-cover transition-transform duration-700 ${isHoveredHighlight ? 'scale-105' : 'scale-100'}`}
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent flex items-end p-5">
-                      <h4 className="text-white font-display font-black text-sm sm:text-base leading-tight uppercase tracking-tight line-clamp-2">
-                        {highlightPost.title}
-                      </h4>
+                <div className="relative w-full">
+                  {highlightPosts.map((post, idx) => (
+                    <div
+                      key={post.id}
+                      className={`${idx === highlightIndex ? 'block' : 'hidden'} transition-opacity duration-700`}
+                    >
+                      {(post.mediumUrl || post.mediaUrl) && (
+                        <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-zinc-900 bg-zinc-950 shadow-inner">
+                          <img 
+                            src={post.mediumUrl || post.mediaUrl} 
+                            alt={post.title}
+                            referrerPolicy="no-referrer"
+                            className={`w-full h-full object-cover transition-transform duration-700 ${isHoveredHighlight ? 'scale-105' : 'scale-100'}`}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/45 to-transparent flex items-end p-5">
+                            <h4 className="text-white font-display font-black text-sm sm:text-base leading-tight uppercase tracking-tight line-clamp-2">
+                              {post.title}
+                            </h4>
+                          </div>
+                        </div>
+                      )}
+
+                      <p className="text-zinc-400 font-sans text-xs leading-relaxed line-clamp-3 pt-1">
+                        {post.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {highlightPosts.length > 1 && (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      {highlightPosts.map((post, idx) => (
+                        <button
+                          key={post.id}
+                          onClick={() => setHighlightIndex(idx)}
+                          className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${idx === highlightIndex ? 'bg-emerald-400 w-5' : 'bg-zinc-700 w-2 hover:bg-zinc-600'}`}
+                          aria-label={`Ir para destaque ${idx + 1}`}
+                        />
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setHighlightIndex(prev => (prev - 1 + highlightPosts.length) % highlightPosts.length)}
+                        className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 hover:text-white transition cursor-pointer"
+                        aria-label="Anterior"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                      </button>
+                      <span className="text-[9px] text-zinc-500 font-mono font-black min-w-[32px] text-center">
+                        {highlightIndex + 1}/{highlightPosts.length}
+                      </span>
+                      <button
+                        onClick={() => setHighlightIndex(prev => (prev + 1) % highlightPosts.length)}
+                        className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-400 hover:text-white transition cursor-pointer"
+                        aria-label="Próximo"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                      </button>
                     </div>
                   </div>
                 )}
-
-                <p className="text-zinc-400 font-sans text-xs leading-relaxed line-clamp-3 pt-1">
-                  {highlightPost.description}
-                </p>
               </div>
 
               <div className="flex items-center justify-between pt-3.5 text-[10px] text-zinc-500 font-mono border-t border-zinc-900/60">
-                <span>Por: <strong className="text-emerald-400 font-black">{highlightPost.authorName}</strong></span>
-                <span>{new Date(highlightPost.createdAt).toLocaleDateString('pt-BR')}</span>
+                <span>Por: <strong className="text-emerald-400 font-black">{highlightPosts[highlightIndex]?.authorName}</strong></span>
+                <span>{new Date(highlightPosts[highlightIndex]?.createdAt).toLocaleDateString('pt-BR')}</span>
               </div>
             </div>
           ) : (
