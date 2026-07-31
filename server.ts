@@ -4846,61 +4846,9 @@ async function startServer() {
         
         // --- ATOMIC TRANSITION SEQUENCE ---
         
-        // 1. Generate Historical Snapshot
-        const snapParticipantIds = new Set<string>();
-        draw.teams.forEach(t => t.playerIds.forEach(pid => snapParticipantIds.add(pid)));
         
-        const snapPlayerMap = new Map<string, string>();
-        const playerPosMap = new Map<string, string>();
-        db.players.forEach(p => {
-          snapPlayerMap.set(p.id, p.name);
-          playerPosMap.set(p.id, p.primaryPosition);
-        });
 
-        const currentStatsAfterMatch = computeStatsForSeason({
-          players: db.players,
-          matches: db.matches,
-          presences: db.presences,
-          results: db.results || [],
-          seasonId: match.seasonId,
-          evaluations: db.evaluations,
-          evaluationHistory: db.evaluationHistory
-        });
-
-        const snapshot = {
-          id: 'snapshot-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-          matchId,
-          date: match.date,
-          location: match.location,
-          participants: Array.from(snapParticipantIds),
-          teams: draw.teams,
-          positions: Array.from(snapParticipantIds).map(pid => ({
-            playerId: pid,
-            name: snapPlayerMap.get(pid) || pid,
-            position: playerPosMap.get(pid) || 'não definida'
-          })),
-          captains: draw.teams.reduce((acc, t) => {
-            if (t.captainPlayerId) {
-              acc[t.name] = {
-                playerId: t.captainPlayerId,
-                name: snapPlayerMap.get(t.captainPlayerId) || t.captainPlayerId
-              };
-            }
-            return acc;
-          }, {} as Record<string, { playerId: string; name: string }>),
-          score: {
-            winsBlue: parseInt(winsBlue),
-            winsRed: parseInt(winsRed),
-            winsGreen: parseInt(winsGreen)
-          },
-          winners: champions,
-          losers: (['Azul', 'Vermelho', 'Verde'] as const).filter(c => !champions.includes(c)),
-          derivedStats: currentStatsAfterMatch
-        };
-
-        db.snapshots = db.snapshots || [];
-        db.snapshots = db.snapshots.filter((s: any) => s.matchId !== matchId);
-        db.snapshots.push(snapshot);
+        
 
         // Remove the automatic promotion to ARCHIVED here so the admin has to click the button
       } catch (autoErr) {
@@ -6145,22 +6093,7 @@ async function startServer() {
       };
 
       if (!db.muralPosts) db.muralPosts = [];
-      db.muralPosts.push(newPost);
-
-      // Save file metadata separately in muralFiles if mediaUrl is provided
-      if (mediaUrl) {
-        if (!db.muralFiles) db.muralFiles = [];
-        db.muralFiles.push({
-          id: 'file-' + Date.now(),
-          postId: newPostId,
-          s3Url: mediaUrl,
-          mediaType: mediaType || 'image',
-          size: fileSize || 0,
-          originalName: mediaUrl.split('/').pop() || 'uploaded-file',
-          mimeType: mediaType === 'image' ? 'image/jpeg' : 'video/mp4',
-          uploadedAt: new Date().toISOString()
-        });
-      }
+db.muralPosts.push(newPost);
 
       await writeDb(db);
       res.status(201).json(newPost);

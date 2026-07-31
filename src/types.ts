@@ -396,27 +396,7 @@ export interface MuralCategory {
   name: string;
 }
 
-export interface MuralHighlight {
-  id: string;
-  postId: string;
-  highlightedBy: string;
-  highlightedAt: string;
-}
-
-export interface MuralFile {
-  id: string;
-  postId: string;
-  s3Url: string;
-  mediaType: 'image' | 'video';
-  size: number;
-  originalName: string;
-  mimeType: string;
-  uploadedAt: string;
-}
-
-// --- NOTIFICATION TYPES ---
-
-export type NotificationCategory = 'sistema' | 'partida' | 'sorteio' | 'financeiro' | 'evento' | 'jogador';
+export type NotificationCategory = 'partida' | 'evento' | 'sistema' | 'financeiro' | 'sorteio' | 'jogador';
 
 export interface Notification {
   id: string;

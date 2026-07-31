@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
-import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, MuralHighlight, MuralFile, Notification, NotificationPreferences, FinanceConfig } from '../src/types';
+import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, Notification, NotificationPreferences, FinanceConfig } from '../src/types';
 
 interface DatabaseSchema {
   users: User[];
@@ -29,13 +29,10 @@ interface DatabaseSchema {
   eventBills: EventBill[];
   muralPosts: MuralPost[];
   muralCategories: MuralCategory[];
-  muralHighlights: MuralHighlight[];
-  muralFiles: MuralFile[];
   notifications: Notification[];
   notificationPreferences: NotificationPreferences[];
   userAudits: any[];
   deadlineAudits: any[];
-  snapshots: any[];
 }
 
 // --- Supabase client ---
@@ -133,8 +130,6 @@ const GENERIC_TABLES: TableConfig[] = [
   { table: 'event_bills', dbKey: 'eventBills', pk: ['id'] },
   { table: 'mural_posts', dbKey: 'muralPosts', pk: ['id'], overrides: { order: 'display_order' } },
   { table: 'mural_categories', dbKey: 'muralCategories', pk: ['id'] },
-  { table: 'mural_highlights', dbKey: 'muralHighlights', pk: ['id'] },
-  { table: 'mural_files', dbKey: 'muralFiles', pk: ['id'] },
   { table: 'notifications', dbKey: 'notifications', pk: ['id'] },
   { table: 'notification_preferences', dbKey: 'notificationPreferences', pk: ['user_id'], overrides: { all: 'all_enabled' } },
 ];
@@ -282,8 +277,8 @@ const ALL_DB_KEYS: (keyof DatabaseSchema)[] = [
   'seasons', 'matches', 'presences', 'reservesOrder', 'recurrentConfig', 'financeConfig',
   'reserveAlerts', 'draws', 'duoAffinities', 'trioAffinities', 'results', 'bills', 'payments',
   'competences', 'categoryTransitions', 'events', 'eventParticipants', 'eventBills',
-  'muralPosts', 'muralCategories', 'muralHighlights', 'muralFiles', 'notifications',
-  'notificationPreferences', 'userAudits', 'deadlineAudits', 'snapshots'
+  'muralPosts', 'muralCategories', 'notifications',
+  'notificationPreferences', 'userAudits', 'deadlineAudits'
 ];
 
 const snapshotMap = new WeakMap<object, Record<string, string>>();
@@ -682,7 +677,6 @@ async function fetchAndSyncDb(): Promise<DatabaseSchema> {
     financeConfigRaw,
     userAudits,
     deadlineAudits,
-    snapshots,
     passwordsData
   ] = await Promise.all([
     Promise.all(GENERIC_TABLES.map((cfg) => readGenericTable(cfg))),
@@ -691,7 +685,6 @@ async function fetchAndSyncDb(): Promise<DatabaseSchema> {
     readSingleton('finance_config', 'finance-default'),
     readBlobTable('user_audits'),
     readBlobTable('deadline_audits'),
-    readBlobTable('snapshots'),
     readPasswordsTable()
   ]);
 
@@ -719,7 +712,6 @@ async function fetchAndSyncDb(): Promise<DatabaseSchema> {
   };
   db.userAudits = userAudits;
   db.deadlineAudits = deadlineAudits;
-  db.snapshots = snapshots;
 
   // Snapshot capturado ANTES da lógica de negócio mutar o objeto, para que writeDb()
   // detecte exatamente o que essa lógica mudou (evita reescrever tabelas intocadas).
@@ -811,9 +803,6 @@ export async function writeDb(db: DatabaseSchema, opts?: { skipCacheInvalidation
   }
   if (newSnapshot.deadlineAudits !== prevSnapshot.deadlineAudits) {
     writes.push(writeBlobTable('deadline_audits', db.deadlineAudits || []));
-  }
-  if (newSnapshot.snapshots !== prevSnapshot.snapshots) {
-    writes.push(writeBlobTable('snapshots', db.snapshots || []));
   }
   if (newSnapshot.passwords !== prevSnapshot.passwords || newSnapshot.passwordResetTokens !== prevSnapshot.passwordResetTokens) {
     writes.push(writePasswordsTable(db.passwords || {}, db.passwordResetTokens || {}));
