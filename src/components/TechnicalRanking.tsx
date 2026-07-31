@@ -1564,7 +1564,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                 <div className="bg-[#111815] p-1 border border-zinc-850 rounded-xl flex gap-1">
                   <button
-                    onClick={() => setRachaViewMode('individual')}
+                    onClick={() => { setRachaViewMode('individual'); setTimeout(() => document.getElementById('section-individual')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'individual'
                         ? 'bg-zinc-900 text-white'
@@ -1574,7 +1574,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Jogadores
                   </button>
                   <button
-                    onClick={() => setRachaViewMode('goalkeepers')}
+                    onClick={() => { setRachaViewMode('goalkeepers'); setTimeout(() => document.getElementById('section-goalkeepers')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'goalkeepers'
                         ? 'bg-zinc-900 text-white'
@@ -1584,7 +1584,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Goleiros
                   </button>
                   <button
-                    onClick={() => setRachaViewMode('affinities')}
+                    onClick={() => { setRachaViewMode('affinities'); setTimeout(() => document.getElementById('section-affinities')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'affinities'
                         ? 'bg-zinc-900 text-white'
@@ -1594,7 +1594,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Parcerias
                   </button>
                   <button
-                    onClick={() => setRachaViewMode('streaks')}
+                    onClick={() => { setRachaViewMode('streaks'); setTimeout(() => document.getElementById('section-streaks')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'streaks'
                         ? 'bg-zinc-900 text-white'
@@ -1608,7 +1608,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               {/* INDIVIDUAL WORKERS CARDS (Hiding top 3) */}
               {rachaViewMode === 'individual' && (
-                <div className="space-y-3" id="classification-cards-stack">
+                <div className="space-y-3" id="section-individual">
                   {(() => {
                     // Filter out top 3 if there is no search or specific filter applied,
                     // to respect "Os três primeiros colocados não devem fazer parte da tabela".
@@ -1716,7 +1716,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               {/* GOALKEEPERS ONLY VIEW */}
               {rachaViewMode === 'goalkeepers' && (
-                <div className="space-y-3" id="keeper-cards-stack">
+                <div className="space-y-3" id="section-goalkeepers">
                   {(rachaStats?.goalkeepers || []).length === 0 ? (
                     <div className="text-center py-12 rounded-xl border border-dashed border-zinc-850/80 bg-zinc-900/15 p-6 text-zinc-500 font-mono text-xs">
                       Nenhum atleta atuando como goleiro com dados salvos.
@@ -1791,7 +1791,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               {/* DUOS AND TRIOS STATS AFFINITIES */}
               {rachaViewMode === 'affinities' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeIn">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fadeIn" id="section-affinities">
                   
                   {/* DUOS PANEL */}
                   <div className="rounded-2xl border border-zinc-900 overflow-hidden bg-zinc-950/20 shadow-lg">
@@ -1856,7 +1856,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
               {/* STREAKS VIEW */}
               {rachaViewMode === 'streaks' && (
-                <div className="space-y-3 animate-fadeIn">
+                <div className="space-y-3 animate-fadeIn" id="section-streaks">
                   {[...(rachaStats?.individual || [])]
                     .sort((a, b) => b.maxStreak - a.maxStreak || b.currentStreak - a.currentStreak)
                     .map((player: any, idx: number) => {

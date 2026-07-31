@@ -27,6 +27,23 @@ O sistema utiliza um esquema de autenticação própria (bcrypt + JWT), e **não
 - JWTs são assinados com `JWT_SECRET`.
 - A verificação de usuários autenticados ocorre em `getAuthenticatedUser`, via header `Authorization: Bearer <token>`.
 
+## Notificações e E-mails (`server/email.ts`)
+O Fut.Manager utiliza **TurboSMTP** para envio de e-mails transacionais, incluindo:
+- **E-mails de cadastro**: `registration-pending`, `registration-approved`, `registration-rejected`
+- **E-mails de boas-vindas**: `welcome`
+- **E-mails de redefinição de senha**: `password-reset`
+- **E-mails de reativação**: `reengage-inactive`
+- **E-mails de notificação geral**: `notification`
+
+### Integração com Fluxo de Trabalho de Usuários
+As rotas em `/api/auth/register` e `/api/users/action` acionam automaticamente:
+- Criação de notificação no banco de dados (`notify`)
+- Disparo de e-mails de acordo com o status (`isEmailConfigured` verifica `TURBO_API_KEY` e `TURBO_API_SECRET`)
+- Envio assíncrono através de `sendEmail` com retry para falhas temporárias
+
+### Template de E-mail
+Todos os templates utilizam um sistema baseado em HTML/CSS consistente (`server/email-templates/base.ts`), garantindo brand consistency e capacidade de manutenção.
+
 ## Frontend (`src/`)
 A aplicação React utiliza:
 - **`src/types.ts`**: Fonte única da verdade para tipos, compartilhada entre cliente e servidor.
