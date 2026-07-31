@@ -4465,6 +4465,56 @@ async function startServer() {
     }
   });
 
+  app.post('/api/admin/send-welcome', async (req, res) => {
+    try {
+      const db = await readDb();
+      const requestingUser = await getAuthenticatedUser(req, db);
+      if (!requestingUser || requestingUser.role !== 'admin') {
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+      }
+
+      const { userId } = req.body as { userId?: string };
+      const loginUrl = `${process.env.APP_URL || 'http://localhost:3000'}`;
+
+      const targets = userId
+        ? db.users.filter(u => u.id === userId && u.status === 'approved')
+        : db.users.filter(u => u.status === 'approved');
+
+      const sent: string[] = [];
+      const failed: string[] = [];
+
+      for (const user of targets) {
+        try {
+          const matchedPlayer = (db.players || []).find((p: any) => p.athlete_id === user.id);
+          const name = matchedPlayer?.name || user.name;
+          const { subject, html } = welcomeTemplate({
+            userName: name,
+            appName: APP_NAME,
+            loginUrl,
+          });
+
+          await sendEmail(user.email, subject, html);
+          sent.push(name);
+        } catch (err) {
+          console.error(`[Welcome] Falha ao enviar para ${user.name}:`, err);
+          failed.push(user.name);
+        }
+      }
+
+      return res.json({
+        message: userId ? 'E-mail de boas-vindas enviado para o usuário selecionado.' : 'E-mails de boas-vindas enviados para todos os usuários aprovados.',
+        total: targets.length,
+        sent: sent.length,
+        failed: failed.length,
+        sentNames: sent,
+        failedNames: failed,
+      });
+    } catch (err) {
+      console.error('[API POST /api/admin/send-welcome]', err);
+      return res.status(500).json({ error: 'Erro ao enviar e-mails de boas-vindas.' });
+    }
+  });
+
   // Get computed tournament statistics and rankings
   app.get('/api/stats', async (req, res) => {
     try {
