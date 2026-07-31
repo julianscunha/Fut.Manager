@@ -2635,10 +2635,10 @@ function DetailMuseum({ matchId, muralPosts }: { matchId: string; muralPosts: an
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {matchMedias.map((post: any) => (
           <div key={post.id} className="bg-zinc-950 border border-zinc-900 rounded-xl overflow-hidden flex flex-col justify-between">
-            {post.imageUrl && (
+            {post.mediaUrl && (
               <div className="relative aspect-video w-full bg-zinc-900 overflow-hidden">
                 <img
-                  src={post.imageUrl}
+                  src={post.mediaUrl}
                   alt={post.title}
                   referrerPolicy="no-referrer"
                   className="w-full h-full object-cover"

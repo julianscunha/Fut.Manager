@@ -1932,7 +1932,7 @@ export default function DashboardStatus({
                     <span className="text-[8.5px] font-mono text-violet-400 font-black uppercase tracking-wider">{highlightPost.authorName || 'Membro do Racha'}</span>
                   </div>
                   <p className="text-xs text-zinc-350 italic font-sans leading-relaxed">
-                    "{highlightPost.text}"
+                    "{highlightPost.description}"
                   </p>
                   {highlightPost.mediaUrl && (
                     <img 
@@ -3003,10 +3003,10 @@ export default function DashboardStatus({
                   </span>
                 </div>
 
-                {highlightPost.imageUrl && (
+                {highlightPost.mediumUrl || highlightPost.mediaUrl && (
                   <div className="relative aspect-video w-full rounded-2xl overflow-hidden border border-zinc-900 bg-zinc-950 shadow-inner">
                     <img 
-                      src={highlightPost.imageUrl} 
+                      src={highlightPost.mediumUrl || highlightPost.mediaUrl} 
                       alt={highlightPost.title}
                       referrerPolicy="no-referrer"
                       className={`w-full h-full object-cover transition-transform duration-700 ${isHoveredHighlight ? 'scale-105' : 'scale-100'}`}
@@ -3020,7 +3020,7 @@ export default function DashboardStatus({
                 )}
 
                 <p className="text-zinc-400 font-sans text-xs leading-relaxed line-clamp-3 pt-1">
-                  {highlightPost.content}
+                  {highlightPost.description}
                 </p>
               </div>
 
