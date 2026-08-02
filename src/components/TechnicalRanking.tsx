@@ -1919,7 +1919,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   <span className="text-[8px] text-zinc-500 font-mono ml-auto">Prêmios Individuais</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 justify-items-center">
                   {/* Maior sequência */}
                   {(() => {
                     const topStreak = [...rawList].sort((a,b) => b.maxStreak - a.maxStreak)[0];
