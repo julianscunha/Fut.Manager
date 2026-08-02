@@ -103,9 +103,9 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       }
       
       // Auto redirect to admin tab if they are admin and have no bills of their own
-      if (data.bills.length === 0 && (currentUser.role === 'admin' || currentUser.role === 'auxiliar')) {
-        setActiveTab('admin_overview');
-      }
+      // if (data.bills.length === 0 && (currentUser.role === 'admin' || currentUser.role === 'auxiliar')) {
+      //   setActiveTab('admin_overview');
+      // }
     } catch (err: any) {
       setErrorMsg(err.message || 'Erro ao carregar dados do provedor.');
     } finally {

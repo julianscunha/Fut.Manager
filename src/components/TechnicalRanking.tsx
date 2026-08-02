@@ -1564,7 +1564,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                 <div className="bg-[#111815] p-1 border border-zinc-850 rounded-xl flex gap-1">
                   <button
-                    onClick={() => { setRachaViewMode('individual'); setTimeout(() => document.getElementById('section-individual')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+                    onClick={() => setRachaViewMode('individual')}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'individual'
                         ? 'bg-zinc-900 text-white'
@@ -1574,7 +1574,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Jogadores
                   </button>
                   <button
-                    onClick={() => { setRachaViewMode('goalkeepers'); setTimeout(() => document.getElementById('section-goalkeepers')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+                    onClick={() => setRachaViewMode('goalkeepers')}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'goalkeepers'
                         ? 'bg-zinc-900 text-white'
@@ -1584,7 +1584,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Goleiros
                   </button>
                   <button
-                    onClick={() => { setRachaViewMode('affinities'); setTimeout(() => document.getElementById('section-affinities')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+                    onClick={() => setRachaViewMode('affinities')}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'affinities'
                         ? 'bg-zinc-900 text-white'
@@ -1594,7 +1594,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Parcerias
                   </button>
                   <button
-                    onClick={() => { setRachaViewMode('streaks'); setTimeout(() => document.getElementById('section-streaks')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); }}
+                    onClick={() => setRachaViewMode('streaks')}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'streaks'
                         ? 'bg-zinc-900 text-white'
