@@ -914,14 +914,14 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
               <div className="flex flex-col items-center justify-center -mt-1 mb-1 relative">
                 <div
                   style={getClubMolduraStyle(player.favoriteTeamId || '')}
-                  className="relative w-36 h-36 rounded-2xl overflow-hidden border-2 flex items-center justify-center shadow-2xl group transition-all duration-300"
+                  className="relative w-[172.8px] h-[172.8px] rounded-2xl overflow-hidden border-2 flex items-center justify-center shadow-2xl group transition-all duration-300"
                 >
                   {avatarToDisplay ? (
                     <img
                       src={avatarToDisplay}
                       alt={player.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover select-none transition duration-300 scale-[1.2] group-hover:scale-[1.28]"
+                      className="w-full h-full object-cover select-none transition duration-300 group-hover:scale-105"
                     />
                   ) : (
                     <User className="w-16 h-16 text-zinc-700" />
