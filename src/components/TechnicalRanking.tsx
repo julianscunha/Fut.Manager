@@ -1272,12 +1272,12 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   <span className="text-[8px] text-zinc-500 font-mono ml-auto">Prêmios Individuais</span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="flex flex-wrap justify-center gap-4">
                   {/* Maior sequência */}
                   {(() => {
                     const topStreak = [...rawList].sort((a,b) => b.maxStreak - a.maxStreak)[0];
                     return topStreak ? (
-                      <div className="bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-amber-500/20 transition duration-300">
+                      <div className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(20%-0.8rem)] bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-amber-500/20 transition duration-300">
                         <span className="text-xl block">🔥</span>
                         <span className="block text-[8px] text-zinc-500 uppercase font-mono mt-1">Maior Sequência</span>
                         <span className="block text-xs font-black text-white mt-1.5 truncate px-1">{topStreak.name}</span>
@@ -1290,7 +1290,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   {(() => {
                     const topOvr = [...rawList].sort((a,b) => getPlayerOvr(b.playerId) - getPlayerOvr(a.playerId))[0];
                     return topOvr ? (
-                      <div className="bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-emerald-500/20 transition duration-300">
+                      <div className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(20%-0.8rem)] bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-emerald-500/20 transition duration-300">
                         <span className="text-xl block">⭐️</span>
                         <span className="block text-[8px] text-zinc-500 uppercase font-mono mt-1">Maior OVR</span>
                         <span className="block text-xs font-black text-white mt-1.5 truncate px-1">{topOvr.name}</span>
@@ -1303,7 +1303,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   {(() => {
                     const topAprov = [...rawList].filter((p:any) => p.presences >= 2).sort((a,b) => b.aproveitamento - a.aproveitamento)[0];
                     return topAprov ? (
-                      <div className="bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-sky-500/20 transition duration-300">
+                      <div className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(20%-0.8rem)] bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-sky-500/20 transition duration-300">
                         <span className="text-xl block">📈</span>
                         <span className="block text-[8px] text-zinc-500 uppercase font-mono mt-1">Melhor Rendimento</span>
                         <span className="block text-xs font-black text-white mt-1.5 truncate px-1">{topAprov.name}</span>
@@ -1316,7 +1316,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   {(() => {
                     const topPres = [...rawList].sort((a,b) => b.presences - a.presences)[0];
                     return topPres ? (
-                      <div className="bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-teal-500/20 transition duration-300">
+                      <div className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(20%-0.8rem)] bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-teal-500/20 transition duration-300">
                         <span className="text-xl block">📅</span>
                         <span className="block text-[8px] text-zinc-500 uppercase font-mono mt-1">Mais Presenças</span>
                         <span className="block text-xs font-black text-white mt-1.5 truncate px-1">{topPres.name}</span>
@@ -1329,7 +1329,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   {(() => {
                     const badgeKing = [...rawList].sort((a,b) => (b.currentStreak || 0) + (b.maxStreak || 0) - ((a.currentStreak || 0) + (a.maxStreak || 0)))[0];
                     return badgeKing ? (
-                      <div className="bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-purple-500/20 transition duration-300">
+                      <div className="w-full sm:w-[calc(50%-0.5rem)] lg:w-[calc(20%-0.8rem)] bg-[#111815]/40 border border-zinc-900 rounded-2xl p-4 text-center hover:border-purple-500/20 transition duration-300">
                         <span className="text-xl block">🎖️</span>
                         <span className="block text-[8px] text-zinc-500 uppercase font-mono mt-1">Colecionador</span>
                         <span className="block text-xs font-black text-white mt-1.5 truncate px-1">{badgeKing.name}</span>
