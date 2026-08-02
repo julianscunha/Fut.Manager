@@ -2416,27 +2416,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
       {/* ==================================================== */}
       {/* ---------- SUBTAB 5: AUDITORIA DO SORTEIO --------- */}
       {/* ==================================================== */}
-      {rankingSubTab === 'auditoria' && (
-        <div className="space-y-6 animate-fadeIn" id="auditoria-sorteio-panel text-zinc-300">
-          
-          {/* Main Info Header */}
-          <div className="bg-zinc-950/40 p-5 rounded-2xl border border-zinc-900/60 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div className="space-y-1 max-w-2xl">
-              <h3 className="text-white font-bold text-base flex items-center gap-2">
-                <Zap className="w-5 h-5 text-emerald-500 animate-pulse" />
-                <span>Auditoria Forense e Certificação do Sorteio</span>
-              </h3>
-              <p className="text-xs text-zinc-400 leading-relaxed font-sans">
-                Laboratório estatístico para certificação matemática de equidade, nivelamento técnico e dispersão de panelinhas. Ajuste os limites regulamentares e execute simulações em tempo real para homologação do motor de sorteio.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5 bg-zinc-900/50 p-2 rounded-xl border border-zinc-850 self-stretch lg:self-auto justify-between lg:justify-start font-sans">
-              <div className="px-3 font-mono text-xs">
-                <span className="text-zinc-500 block text-[10px] uppercase font-sans font-semibold">Simulações</span>
-                <select
-                  value={auditSimCount}
-                  onChange={(e) => setAuditSimCount(Number(e.target.value))}
+      
                   className="bg-transparent text-white font-bold outline-none cursor-pointer text-xs mt-0.5"
                   disabled={auditLoading}
                 >
