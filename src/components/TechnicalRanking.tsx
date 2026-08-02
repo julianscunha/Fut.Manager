@@ -1485,7 +1485,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                 {/* Segmented controls category filters */}
                 <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto">
                   <button
-                    onClick={() => setFilterCategory('all')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setFilterCategory('all');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'all'
                         ? 'bg-emerald-600 text-white shadow'
