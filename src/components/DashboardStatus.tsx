@@ -930,16 +930,16 @@ export default function DashboardStatus({
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Erro ao ajustar convocaÃ§Ã£o de reservas.');
+        throw new Error(data.error || 'Erro ao ajustar convocação de reservas.');
       }
       setSuccessMsg(
         isReleased
-          ? 'ConvocaÃ§Ã£o de reservas cancelada. Mensalistas retomam prioridade.'
-          : 'Reservas convocadas! Eles jÃ¡ podem confirmar presenÃ§a.'
+          ? 'Convocação de reservas cancelada. Mensalistas retomam prioridade.'
+          : 'Reservas convocadas! Eles já podem confirmar presença.'
       );
       await loadDashboardData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao ajustar convocaÃ§Ã£o de reservas.');
+      setErrorMsg(err.message || 'Erro ao ajustar convocação de reservas.');
     } finally {
       setActionLoading(false);
     }
