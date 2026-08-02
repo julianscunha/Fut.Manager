@@ -1488,7 +1488,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setFilterCategory('all');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'all'
@@ -1502,7 +1502,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setFilterCategory('mensalista');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'mensalista'
@@ -1516,7 +1516,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setFilterCategory('reserva');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'reserva'
@@ -1530,7 +1530,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setFilterCategory('goleiro');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'goleiro'
@@ -1552,7 +1552,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                       onChange={(e) => {
                         const scrollY = window.scrollY;
                         setSearchQuery(e.target.value);
-                        setTimeout(() => window.scrollTo(0, scrollY), 0);
+                        setTimeout(() => window.scrollTo(0, scrollY), 150);
                       }}
                       placeholder="Buscar atleta pelo nome..."
                       className="bg-zinc-950 border border-zinc-850 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50 w-full transition"
@@ -1564,7 +1564,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onChange={(e) => {
                       const scrollY = window.scrollY;
                       setSelectedSeason(e.target.value);
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className="bg-zinc-950 border border-zinc-850 rounded-xl px-2.5 py-1.5 text-zinc-300 focus:outline-none cursor-pointer text-xs shrink-0 max-w-[140px]"
                   >
@@ -1591,7 +1591,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setRachaViewMode('individual');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'individual'
@@ -1605,7 +1605,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setRachaViewMode('goalkeepers');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'goalkeepers'
@@ -1619,7 +1619,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setRachaViewMode('affinities');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'affinities'
@@ -1633,7 +1633,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     onClick={() => {
                       const scrollY = window.scrollY;
                       setRachaViewMode('streaks');
-                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      setTimeout(() => window.scrollTo(0, scrollY), 150);
                     }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'streaks'
