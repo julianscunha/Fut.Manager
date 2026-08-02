@@ -1499,7 +1499,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Todos
                   </button>
                   <button
-                    onClick={() => setFilterCategory('mensalista')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setFilterCategory('mensalista');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'mensalista'
                         ? 'bg-emerald-600 text-white shadow'
@@ -1509,7 +1513,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Mensalistas
                   </button>
                   <button
-                    onClick={() => setFilterCategory('reserva')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setFilterCategory('reserva');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'reserva'
                         ? 'bg-emerald-600 text-white shadow'
@@ -1519,7 +1527,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Reservas
                   </button>
                   <button
-                    onClick={() => setFilterCategory('goleiro')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setFilterCategory('goleiro');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                       filterCategory === 'goleiro'
                         ? 'bg-emerald-600 text-white shadow'
@@ -1568,7 +1580,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                 <div className="bg-[#111815] p-1 border border-zinc-850 rounded-xl flex gap-1">
                   <button
-                    onClick={() => setRachaViewMode('individual')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setRachaViewMode('individual');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'individual'
                         ? 'bg-zinc-900 text-white'
@@ -1578,7 +1594,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Jogadores
                   </button>
                   <button
-                    onClick={() => setRachaViewMode('goalkeepers')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setRachaViewMode('goalkeepers');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'goalkeepers'
                         ? 'bg-zinc-900 text-white'
@@ -1588,7 +1608,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Goleiros
                   </button>
                   <button
-                    onClick={() => setRachaViewMode('affinities')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setRachaViewMode('affinities');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'affinities'
                         ? 'bg-zinc-900 text-white'
@@ -1598,7 +1622,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     Parcerias
                   </button>
                   <button
-                    onClick={() => setRachaViewMode('streaks')}
+                    onClick={() => {
+                      const scrollY = window.scrollY;
+                      setRachaViewMode('streaks');
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
                       rachaViewMode === 'streaks'
                         ? 'bg-zinc-900 text-white'
