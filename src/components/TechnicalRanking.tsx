@@ -912,12 +912,12 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
               </div>
 
               {/* CLASSIFICATION SUB-MODES SELECTOR (Geral vs Goleiros vs Parcerias vs Sequências) */}
-              <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-zinc-900 pb-3 gap-3">
                 <h4 className="font-display font-extrabold text-xs text-white uppercase tracking-wider flex items-center gap-2">
                   <Target className="w-4 h-4 text-emerald-400" /> Classificação Detalhada
                 </h4>
 
-                <div className="bg-[#111815] p-1 border border-zinc-850 rounded-xl flex gap-1">
+                <div className="bg-[#111815] p-1 border border-zinc-850 rounded-xl flex flex-wrap gap-1 w-full sm:w-auto">
                   <button
                     onClick={() => setRachaViewMode('individual')}
                     className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
@@ -994,14 +994,14 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               : 'border-zinc-900/60 hover:border-zinc-850'
                           } rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.01] cursor-pointer`}
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
                             {/* Position Badge & Avatar */}
                             <div className="flex items-center gap-3">
-                              <div className="w-8 text-center font-mono text-sm font-black text-zinc-500">
+                              <div className="w-8 text-center font-mono text-sm font-black text-zinc-500 shrink-0">
                                 #{player.rank}
                               </div>
                               
-                              <div className="relative">
+                              <div className="relative shrink-0">
                                 <div className="w-11 h-11 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 shrink-0">
                                   <img src={getPlayerAvatarUrl(player)} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 </div>
@@ -1012,9 +1012,9 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                             </div>
 
                             {/* Athlete Metadata */}
-                            <div>
+                            <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <h5 className="font-sans font-extrabold text-sm text-white group-hover:text-emerald-400 transition-colors duration-200">
+                                <h5 className="font-sans font-extrabold text-sm text-white group-hover:text-emerald-400 transition-colors duration-200 truncate">
                                   {player.name}
                                 </h5>
                                 {isSelf && (
@@ -1090,12 +1090,12 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               : 'border-zinc-900/60 hover:border-zinc-850'
                           } rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.01] cursor-pointer`}
                         >
-                          <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-4 min-w-0">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 text-center font-mono text-sm font-black text-zinc-500">
+                              <div className="w-8 text-center font-mono text-sm font-black text-zinc-500 shrink-0">
                                 #{keeper.rank}
                               </div>
-                              <div className="relative">
+                              <div className="relative shrink-0">
                                 <div className="w-11 h-11 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 shrink-0">
                                   <img src={getPlayerAvatarUrl(keeper)} alt={keeper.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                                 </div>
@@ -1105,8 +1105,8 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               </div>
                             </div>
 
-                            <div>
-                              <h5 className="font-sans font-extrabold text-sm text-white group-hover:text-emerald-400 transition-colors duration-200">
+                            <div className="min-w-0">
+                              <h5 className="font-sans font-extrabold text-sm text-white group-hover:text-emerald-400 transition-colors duration-200 truncate">
                                 {keeper.name}
                               </h5>
                               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mt-1">
@@ -1160,14 +1160,14 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                         <p className="p-4 text-center text-zinc-650 italic">Insira resultados para ver dados de afinidades de duplas.</p>
                       ) : (
                         (rachaStats.duos || []).slice(0, 10).map((duo: any, idx: number) => (
-                          <div key={`${duo.playerAId}_${duo.playerBId}`} className="p-3.5 flex justify-between items-center gap-4 hover:bg-zinc-900/20 transition duration-200">
-                            <div>
-                              <div className="text-white font-sans font-bold text-xs">
+                          <div key={`${duo.playerAId}_${duo.playerBId}`} className="p-3.5 flex justify-between items-center gap-3 hover:bg-zinc-900/20 transition duration-200">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-white font-sans font-bold text-xs leading-snug line-clamp-2">
                                 {idx + 1}. {duo.playerAName} <span className="text-blue-500 font-mono">&amp;</span> {duo.playerBName}
                               </div>
-                              <span className="text-[10px] text-zinc-500 block mt-0.5">Jogaram juntos: {duo.playedTogether} partidas</span>
+                              <span className="text-[10px] text-zinc-500 block mt-0.5 truncate">Jogaram juntos: {duo.playedTogether} partidas</span>
                             </div>
-                            <div className="text-right whitespace-nowrap">
+                            <div className="text-right whitespace-nowrap shrink-0">
                               <span className="text-emerald-400 font-extrabold text-xs block">{duo.wonTogether} vitórias</span>
                               <span className="text-[10px] text-zinc-400">{duo.aproveitamento}% aprov.</span>
                             </div>
@@ -1189,14 +1189,14 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                         <p className="p-4 text-center text-zinc-655 italic">Insira resultados para ver dados de afinidades de trios.</p>
                       ) : (
                         (rachaStats.trios || []).slice(0, 10).map((trio: any, idx: number) => (
-                          <div key={`${trio.playerAId}_${trio.playerBId}_${trio.playerCId}`} className="p-3.5 flex justify-between items-center gap-4 hover:bg-zinc-900/20 transition duration-200">
-                            <div>
-                              <div className="text-white font-sans font-bold text-xs leading-snug">
+                          <div key={`${trio.playerAId}_${trio.playerBId}_${trio.playerCId}`} className="p-3.5 flex justify-between items-center gap-3 hover:bg-zinc-900/20 transition duration-200">
+                            <div className="min-w-0 flex-1">
+                              <div className="text-white font-sans font-bold text-xs leading-snug line-clamp-3">
                                 {idx + 1}. {trio.playerAName}, {trio.playerBName} <span className="text-purple-400 font-mono">&amp;</span> {trio.playerCName}
                               </div>
-                              <span className="text-[10px] text-zinc-500 block mt-0.5">Jogaram juntos: {trio.playedTogether} partidas</span>
+                              <span className="text-[10px] text-zinc-500 block mt-0.5 truncate">Jogaram juntos: {trio.playedTogether} partidas</span>
                             </div>
-                            <div className="text-right whitespace-nowrap">
+                            <div className="text-right whitespace-nowrap shrink-0">
                               <span className="text-emerald-400 font-extrabold text-xs block">{trio.wonTogether} vitórias</span>
                               <span className="text-[10px] text-zinc-400">{trio.aproveitamento}% aprov.</span>
                             </div>
@@ -1221,8 +1221,8 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                           key={player.playerId}
                           className="bg-zinc-950/30 border border-zinc-900/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.01] hover:border-zinc-800"
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="w-8 text-center font-mono text-sm font-black text-zinc-500">
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-8 text-center font-mono text-sm font-black text-zinc-500 shrink-0">
                               #{idx + 1}
                             </div>
                             
@@ -1230,8 +1230,8 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               <img src={getPlayerAvatarUrl(player)} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                             </div>
 
-                            <div>
-                              <h5 className="font-sans font-extrabold text-sm text-white">{player.name}</h5>
+                            <div className="min-w-0">
+                              <h5 className="font-sans font-extrabold text-sm text-white truncate">{player.name}</h5>
                               <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mt-1 flex items-center gap-1.5">
                                 <span className="text-emerald-500 font-bold">{POSITION_LABELS[player.primaryPosition]}</span>
                                 <span>•</span>
