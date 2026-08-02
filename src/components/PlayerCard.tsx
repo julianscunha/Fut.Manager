@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { authFetch } from '../lib/authFetch';
 import { Shield, User, Calendar, AlertTriangle, CheckCircle, Trash2, Edit2, RotateCcw, Star, Award, Zap, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Player, PlayerPosition, FAVORITE_TEAMS, POSITION_LABELS, CATEGORY_LABELS, STATUS_COLORS, STATUS_LABELS, User as UserType, CategoryTransition, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES } from '../types';
@@ -1507,7 +1508,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       </div>
 
       {/* Render evaluation modal when open */}
-      {evalModalOpen && (
+      {evalModalOpen && createPortal(
         <div onClick={(e) => e.stopPropagation()}>
           <PlayerEvaluationModal
             player={player}
@@ -1522,7 +1523,8 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
               setTimeout(() => setSaveSuccessMsg(''), 4000);
             }}
           />
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

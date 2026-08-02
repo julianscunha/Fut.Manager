@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { authFetch } from '../lib/authFetch';
 import { Player, User, POSITION_LABELS, FAVORITE_TEAMS } from '../types';
 import { 
@@ -3386,7 +3387,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
       )}
 
       {/* Render evaluation modal if opened */}
-      {evaluationPlayer && (
+      {evaluationPlayer && createPortal(
         <PlayerEvaluationModal
           player={evaluationPlayer}
           currentUser={currentUser}
@@ -3396,7 +3397,8 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
             fetchSummaries();
             setTimeout(() => setSuccessToast(''), 4000);
           }}
-        />
+        />,
+        document.body
       )}
     </div>
   );

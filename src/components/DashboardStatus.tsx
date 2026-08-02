@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Player, POSITION_LABELS } from '../types';
 import { authFetch } from '../lib/authFetch';
@@ -1910,7 +1911,7 @@ export default function DashboardStatus({
           )}
 
           {/* Render real player evaluation modal */}
-          {evaluatingPlayer && (
+          {evaluatingPlayer && createPortal(
             <PlayerEvaluationModal
               player={evaluatingPlayer}
               currentUser={currentUser}
@@ -1920,7 +1921,8 @@ export default function DashboardStatus({
                 setEvaluatingPlayer(null);
                 loadDashboardData();
               }}
-            />
+            />,
+            document.body
           )}
 
           {/* STATE 9: Resultado Consolidado (Evolução Técnica) */}
