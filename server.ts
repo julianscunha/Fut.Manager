@@ -2946,6 +2946,57 @@ async function startServer() {
     }
   });
 
+  app.post('/api/matches/:id/cancel-reserves', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const db = await readDb();
+      const index = db.matches.findIndex((m) => m.id === id);
+
+      if (index === -1) {
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
+      }
+
+      const match = db.matches[index];
+      if (match.status === 'sorteada' || match.status === 'encerrada') {
+        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, as reservas nÃ£o podem ser ajustadas.' });
+      }
+
+      match.reservesReleased = false;
+      match.reservesReleasedAt = undefined;
+
+      if (match.status === 'aguardando_reservas') {
+        match.status = 'confirmando';
+      }
+
+      if (db.reserveAlerts) {
+        db.reserveAlerts = db.reserveAlerts.map((a: any) =>
+          a.matchId === id && a.status === 'aguardando_resposta'
+            ? { ...a, cleared: true }
+            : a
+        );
+      }
+
+      if (!db.deadlineAudits) db.deadlineAudits = [];
+      db.deadlineAudits.push({
+        id: 'da-' + match.id + '-cancel-' + Date.now(),
+        matchId: match.id,
+        matchDate: match.date,
+        matchTime: match.time,
+        releasedAt: new Date().toISOString(),
+        auditType: 'manual_reserves_cancel',
+        createdAt: new Date().toISOString(),
+        details: `ConvocaÃ§Ã£o de reservas cancelada manualmente pelo administrador.`
+      });
+
+      await syncMatchStatuses(db);
+      await writeDb(db);
+
+      return res.json({ success: true, match });
+    } catch (err: any) {
+      return res.status(500).json({ error: err.message || 'Erro ao cancelar convocaÃ§Ã£o de reservas.' });
+    }
+  });
+
   app.post('/api/matches/bulk-delete', async (req, res) => {
     try {
       const { matchIds } = req.body;

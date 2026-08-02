@@ -9,7 +9,7 @@ import {
   Users, Shield, Sparkles, X,
   CheckCircle2, AlertTriangle, Gift,
   Share2, Crown, PlusCircle, Lock, Play, Archive, Camera, XCircle,
-  Eye, EyeOff, Star
+  Eye, EyeOff, Star, UserPlus
 } from 'lucide-react';
 import { SportsButton } from './UI';
 import PlayerEvaluationModal from './PlayerEvaluationModal';
@@ -914,6 +914,36 @@ export default function DashboardStatus({
       setActionLoading(false);
     }
   };
+
+  const handleToggleReservesRelease = async () => {
+    if (!nextMatch) return;
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const isReleased = nextMatch.reservesReleased === true;
+      const endpoint = isReleased ? '/cancel-reserves' : '/release-reserves';
+      const res = await authFetch(`/api/matches/${nextMatch.id}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Erro ao ajustar convocaÃ§Ã£o de reservas.');
+      }
+      setSuccessMsg(
+        isReleased
+          ? 'ConvocaÃ§Ã£o de reservas cancelada. Mensalistas retomam prioridade.'
+          : 'Reservas convocadas! Eles jÃ¡ podem confirmar presenÃ§a.'
+      );
+      await loadDashboardData();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro ao ajustar convocaÃ§Ã£o de reservas.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleShareMatchOnWhatsApp = () => {
     if (!nextMatch) return;
     const formattedDate = nextMatch.date.split('-').reverse().join('/');
@@ -1605,33 +1635,47 @@ export default function DashboardStatus({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleRsvpHolder('confirmado')}
-                  className={`flex items-center justify-center gap-2.5 h-13 rounded-xl border font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer ${
-                    isConfirmed
-                      ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 border-emerald-500/40 text-white shadow-[0_4px_20px_-2px_rgba(16,185,129,0.3)]'
-                      : 'bg-zinc-950 hover:bg-emerald-950/30 border-zinc-850 hover:border-emerald-500/40 text-emerald-400 hover:text-emerald-350'
-                  }`}
-                >
-                  <Check className="w-5 h-5" />
-                  {actionLoading ? 'Gravando...' : isConfirmed ? 'Confirmado! (Alterar)' : 'Confirmar Presença (Vou Jogar)'}
-                </button>
+                {currentUserCategory === 'reserva' && !areReservesReleased ? (
+                  <div className="col-span-full flex flex-col items-center justify-center gap-2 py-4 bg-zinc-950/40 border border-zinc-900 rounded-xl">
+                    <UserPlus className="w-5 h-5 text-zinc-600" />
+                    <p className="text-[11px] text-zinc-500 font-mono font-black uppercase tracking-wider text-center">
+                      Aguardando convocaÃ§Ã£o do administrador
+                    </p>
+                    <p className="text-[10px] text-zinc-600 text-center max-w-xs">
+                      Os mensalistas ainda estÃ£o no prazo de confirmaÃ§Ã£o. As vagas remanescentes serÃ£o liberadas para os reservas em breve.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleRsvpHolder('confirmado')}
+                      className={`flex items-center justify-center gap-2.5 h-13 rounded-xl border font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer ${
+                        isConfirmed
+                          ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 border-emerald-500/40 text-white shadow-[0_4px_20px_-2px_rgba(16,185,129,0.3)]'
+                          : 'bg-zinc-950 hover:bg-emerald-950/30 border-zinc-850 hover:border-emerald-500/40 text-emerald-400 hover:text-emerald-350'
+                      }`}
+                    >
+                      <Check className="w-5 h-5" />
+                      {actionLoading ? 'Gravando...' : isConfirmed ? 'Confirmado! (Alterar)' : 'Confirmar Presença (Vou Jogar)'}
+                    </button>
 
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleRsvpHolder('cancelado')}
-                  className={`flex items-center justify-center gap-2.5 h-13 rounded-xl border font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer ${
-                    isCancelled
-                      ? 'bg-gradient-to-r from-rose-950 to-rose-900/85 border-rose-500/40 text-rose-400 shadow-[0_4px_20px_-2px_rgba(244,63,94,0.15)]'
-                      : 'bg-zinc-950 hover:bg-rose-950/10 border-zinc-850 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400'
-                  }`}
-                >
-                  <X className="w-5 h-5" />
-                  {actionLoading ? 'Gravando...' : isCancelled ? 'Ausente! (Alterar)' : 'Declarar Ausência (Não Vou)'}
-                </button>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleRsvpHolder('cancelado')}
+                      className={`flex items-center justify-center gap-2.5 h-13 rounded-xl border font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer ${
+                        isCancelled
+                          ? 'bg-gradient-to-r from-rose-950 to-rose-900/85 border-rose-500/40 text-rose-400 shadow-[0_4px_20px_-2px_rgba(244,63,94,0.15)]'
+                          : 'bg-zinc-950 hover:bg-rose-950/10 border-zinc-850 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400'
+                      }`}
+                    >
+                      <X className="w-5 h-5" />
+                      {actionLoading ? 'Gravando...' : isCancelled ? 'Ausente! (Alterar)' : 'Declarar Ausência (Não Vou)'}
+                    </button>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -1657,25 +1701,39 @@ export default function DashboardStatus({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleRsvpHolder('confirmado')}
-                  className="flex items-center justify-center gap-2.5 h-13 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 border border-amber-400/40 text-black font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse"
-                >
-                  <Check className="w-5 h-5" />
-                  {actionLoading ? 'Gravando...' : 'Confirmar Presença Agora! ⚡'}
-                </button>
+                {currentUserCategory === 'reserva' && !areReservesReleased ? (
+                  <div className="col-span-full flex flex-col items-center justify-center gap-2 py-4 bg-zinc-950/40 border border-zinc-900 rounded-xl">
+                    <UserPlus className="w-5 h-5 text-zinc-600" />
+                    <p className="text-[11px] text-zinc-500 font-mono font-black uppercase tracking-wider text-center">
+                      Aguardando convocaÃ§Ã£o do administrador
+                    </p>
+                    <p className="text-[10px] text-zinc-600 text-center max-w-xs">
+                      Os mensalistas ainda estÃ£o no prazo de confirmaÃ§Ã£o. As vagas remanescentes serÃ£o liberadas para os reservas em breve.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleRsvpHolder('confirmado')}
+                      className="flex items-center justify-center gap-2.5 h-13 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 border border-amber-400/40 text-black font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer shadow-[0_0_20px_rgba(245,158,11,0.3)] animate-pulse"
+                    >
+                      <Check className="w-5 h-5" />
+                      {actionLoading ? 'Gravando...' : 'Confirmar Presença Agora! ⚡'}
+                    </button>
 
-                <button
-                  type="button"
-                  disabled={actionLoading}
-                  onClick={() => handleRsvpHolder('cancelado')}
-                  className="flex items-center justify-center gap-2.5 h-13 rounded-xl bg-zinc-950 hover:bg-rose-950/10 border-zinc-850 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                  Dispensar Convocação
-                </button>
+                    <button
+                      type="button"
+                      disabled={actionLoading}
+                      onClick={() => handleRsvpHolder('cancelado')}
+                      className="flex items-center justify-center gap-2.5 h-13 rounded-xl bg-zinc-950 hover:bg-rose-950/10 border-zinc-850 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400 font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                      Dispensar Convocação
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}
@@ -2129,6 +2187,18 @@ export default function DashboardStatus({
             >
               Cancelar Racha
             </SportsButton>
+
+            {!isDeadlineExpired && (
+              <SportsButton
+                variant="primary"
+                className="flex-1 bg-gradient-to-r from-blue-700 to-blue-600 border-blue-500/40 text-blue-100 shadow-[0_4px_20px_-2px_rgba(59,130,246,0.3)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.4)]"
+                loading={actionLoading}
+                onClick={handleToggleReservesRelease}
+                icon={<UserPlus className="w-4 h-4" />}
+              >
+                {nextMatch?.reservesReleased === true ? 'Cancelar Reservas' : 'Convocar Reservas'}
+              </SportsButton>
+            )}
 
             {isDeadlineExpired && (
               <SportsButton 
