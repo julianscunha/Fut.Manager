@@ -10,3 +10,4 @@ export { registrationPendingTemplate } from './registration-pending';
 export { notificationTemplate } from './notification';
 export { welcomeTemplate } from './welcome';
 export { reengageInactiveTemplate } from './reengage-inactive';
+export { reserveConvocationTemplate } from './reserve-convocation';
