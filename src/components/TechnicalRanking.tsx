@@ -1549,7 +1549,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     <input 
                       type="text"
                       value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onChange={(e) => {
+                        const scrollY = window.scrollY;
+                        setSearchQuery(e.target.value);
+                        setTimeout(() => window.scrollTo(0, scrollY), 0);
+                      }}
                       placeholder="Buscar atleta pelo nome..."
                       className="bg-zinc-950 border border-zinc-850 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50 w-full transition"
                     />
@@ -1557,7 +1561,11 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   
                   <select
                     value={selectedSeason}
-                    onChange={(e) => setSelectedSeason(e.target.value)}
+                    onChange={(e) => {
+                      const scrollY = window.scrollY;
+                      setSelectedSeason(e.target.value);
+                      setTimeout(() => window.scrollTo(0, scrollY), 0);
+                    }}
                     className="bg-zinc-950 border border-zinc-850 rounded-xl px-2.5 py-1.5 text-zinc-300 focus:outline-none cursor-pointer text-xs shrink-0 max-w-[140px]"
                   >
                     <option value="active">Temporada Ativa</option>
