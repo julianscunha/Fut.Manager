@@ -43,24 +43,27 @@ export default function ResponsiveTabsContainer({
 
   useEffect(() => {
     if (activeTabId && containerRef.current) {
-      // Find the active tab button element inside the container
-      const activeEl = containerRef.current.querySelector(`#${activeTabId}`)
-        || containerRef.current.querySelector(`[data-tab-id="${activeTabId}"]`);
+      const container = containerRef.current;
+      // Find the active tab button element inside the container.
+      const activeEl = (container.querySelector(`#${activeTabId}`) || container.querySelector(`[data-tab-id="${activeTabId}"]`)) as HTMLElement | null;
 
       if (activeEl) {
-        activeEl.scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center'
+        // Keep the horizontal tab strip centered without letting the page itself scroll.
+        const targetLeft = activeEl.offsetLeft - (container.clientWidth - activeEl.clientWidth) / 2;
+        container.scrollTo({
+          left: Math.max(0, targetLeft),
+          behavior: 'smooth'
         });
       }
-      // Scroll position changed programmatically — re-check fade state shortly after.
-      setTimeout(updateScrollFades, 350);
-    }
-  }, [activeTabId, children, updateScrollFades]);
 
-  // Fade the actual content at the edges (via mask) instead of overlaying a solid-color div —
-  // this works correctly regardless of what background sits behind the tab bar (cards vary).
+      // Scroll position changed programmatically, so re-check fade state shortly after.
+      const timer = window.setTimeout(updateScrollFades, 350);
+      return () => window.clearTimeout(timer);
+    }
+  }, [activeTabId, updateScrollFades]);
+
+  // Fade the actual content at the edges (via mask) instead of overlaying a solid-color div.
+  // This works correctly regardless of what background sits behind the tab bar (cards vary).
   const fadeMask = (() => {
     const edge = '20px';
     if (canScrollLeft && canScrollRight) {
