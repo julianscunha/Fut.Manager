@@ -43,20 +43,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
   const [evaluationPlayer, setEvaluationPlayer] = useState<Player | null>(null);
   const [successToast, setSuccessToast] = useState('');
 
-  const [auditSimCount, setAuditSimCount] = useState<number>(100);
-  const [auditLoading, setAuditLoading] = useState<boolean>(false);
-  const [maxOvrDiffTarget, setMaxOvrDiffTarget] = useState<number>(0.5);
-  const [maxDistDevTarget, setMaxDistDevTarget] = useState<number>(15);
-  const [maxCompanionRep, setMaxCompanionRep] = useState<number>(40);
-  const [maxOpponentRep, setMaxOpponentRep] = useState<number>(80);
-  const [minCertScore, setMinCertScore] = useState<number>(80);
-  const [auditResult, setAuditResult] = useState<any>(null);
-  const [selectedTemporalAthlete, setSelectedTemporalAthlete] = useState<string>('');
-  const [temporalDepth, setTemporalDepth] = useState<number>(20);
-  const [compareAuditA, setCompareAuditA] = useState<string>('');
-  const [compareAuditB, setCompareAuditB] = useState<string>('');
-  const [auditHistory, setAuditHistory] = useState<any[]>([]);
-  const AUDIT_PLAYERS: any[] = [];
+
 
   // Racha statistics states
   const [seasonsList, setSeasonsList] = useState<any[]>([]);
