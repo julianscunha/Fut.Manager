@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 // Carrega .env.local primeiro (prioridade em dev), depois .env como fallback.
-// Em produção (Render), as variáveis já vêm injetadas pela plataforma; dotenv.config()
-// é inofensivo quando o arquivo não existe.
+// Em produÃ§Ã£o (Render), as variÃ¡veis jÃ¡ vÃªm injetadas pela plataforma; dotenv.config()
+// Ã© inofensivo quando o arquivo nÃ£o existe.
 dotenv.config({ path: '.env.local' });
 dotenv.config();
 
@@ -36,14 +36,14 @@ import {
   reengageInactiveTemplate,
 } from './server/email-templates';
 
-// Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
-// Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
+// Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificaÃ§Ãµes, etc.).
+// Cada instalaÃ§Ã£o define o seu via APP_NAME no .env â€” nunca hardcode o nome de um grupo especÃ­fico.
 const APP_NAME = process.env.APP_NAME || 'Meu Racha';
 
-// Rede de segurança: uma promise rejeitada sem catch (ex.: erro de configuração como
-// JWT_SECRET ausente) derrubaria o processo inteiro em produção sem nenhuma resposta
+// Rede de seguranÃ§a: uma promise rejeitada sem catch (ex.: erro de configuraÃ§Ã£o como
+// JWT_SECRET ausente) derrubaria o processo inteiro em produÃ§Ã£o sem nenhuma resposta
 // chegar ao cliente (o que aparece no browser como "Unexpected end of JSON input").
-// Aqui só logamos, para o processo seguir vivo e o erro aparecer nos logs do Render.
+// Aqui sÃ³ logamos, para o processo seguir vivo e o erro aparecer nos logs do Render.
 process.on('unhandledRejection', (reason) => {
   console.error('[unhandledRejection]', reason);
 });
@@ -51,7 +51,7 @@ process.on('unhandledRejection', (reason) => {
 async function startServer() {
   const app = express();
   
-  // Necessário para o Render/Proxies capturarem o IP real do usuário para o rate-limit
+  // NecessÃ¡rio para o Render/Proxies capturarem o IP real do usuÃ¡rio para o rate-limit
   app.set('trust proxy', 1);
 
   const PORT = 3000;
@@ -173,7 +173,7 @@ async function startServer() {
     const pad = (n: number) => n.toString().padStart(2, '0');
     const formattedDate = `${pad(deadlineDateTime.getDate())}/${pad(deadlineDateTime.getMonth() + 1)}/${deadlineDateTime.getFullYear()}`;
     const formattedTime = `${pad(deadlineDateTime.getHours())}:${pad(deadlineDateTime.getMinutes())}`;
-    const deadlineDateStr = `${formattedDate} às ${formattedTime}`;
+    const deadlineDateStr = `${formattedDate} Ã s ${formattedTime}`;
 
     const diffMs = deadlineDateTime.getTime() - now.getTime();
     const hoursRemaining = diffMs / (1000 * 60 * 60);
@@ -217,7 +217,7 @@ async function startServer() {
         releasedAt: new Date().toISOString(),
         auditType: 'deadline_and_reserves_release',
         createdAt: new Date().toISOString(),
-        details: `Prazo de confirmação encerrado para racha de ${match.date} às ${match.time} (limite calculado: ${deadlineDateStr}). Reservas liberados e promovidos automaticamente às vagas restantes.`
+        details: `Prazo de confirmaÃ§Ã£o encerrado para racha de ${match.date} Ã s ${match.time} (limite calculado: ${deadlineDateStr}). Reservas liberados e promovidos automaticamente Ã s vagas restantes.`
       });
       await writeDb(db);
     }
@@ -480,13 +480,13 @@ async function startServer() {
       // 3. Delete obsolete match notifications of cancelled matches (keeping only the final cancellation/exclusion notice)
       if (n.matchId && canceledMatchIds.has(n.matchId)) {
         const titleLower = (n.title || '').toLowerCase();
-        return titleLower.includes('cancelad') || titleLower.includes('excluíd');
+        return titleLower.includes('cancelad') || titleLower.includes('excluÃ­d');
       }
 
       // 4. Delete obsolete event notifications of cancelled events (keeping only the final cancellation/exclusion notice)
       if (n.eventId && canceledEventIds.has(n.eventId)) {
         const titleLower = (n.title || '').toLowerCase();
-        return titleLower.includes('cancelad') || titleLower.includes('excluíd');
+        return titleLower.includes('cancelad') || titleLower.includes('excluÃ­d');
       }
 
       return true;
@@ -504,8 +504,8 @@ async function startServer() {
         db.notifications.push({
           id: createdKey,
           category: 'financeiro',
-          title: '💰 Nova Cobrança Gerada',
-          message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente à competência ${bill.competence} para o jogador ${pName}.`,
+          title: 'ðŸ’° Nova CobranÃ§a Gerada',
+          message: `Foi gerada uma cobranÃ§a de mensalidade de R$ ${bill.amount.toFixed(2)} referente Ã  competÃªncia ${bill.competence} para o jogador ${pName}.`,
           status: 'nao_lida',
           createdAt: new Date().toISOString(),
           targetUserId: bill.playerId,
@@ -520,7 +520,7 @@ async function startServer() {
           db.notifications.push({
             id: overdueKey,
             category: 'financeiro',
-            title: '🚨 Cobrança Vencida',
+            title: 'ðŸš¨ CobranÃ§a Vencida',
             message: `Sua mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) venceu em ${bill.dueDate.split('-').reverse().join('/')}.`,
             status: 'nao_lida',
             createdAt: new Date().toISOString(),
@@ -556,8 +556,8 @@ async function startServer() {
               db.notifications.push({
                 id: key24h,
                 category: 'partida',
-                title: '⏳ Confirmações Encerram Amanhã',
-                message: `Lembrete: confirmações encerram amanhã às ${deadlineTimeStr}.`,
+                title: 'â³ ConfirmaÃ§Ãµes Encerram AmanhÃ£',
+                message: `Lembrete: confirmaÃ§Ãµes encerram amanhÃ£ Ã s ${deadlineTimeStr}.`,
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
@@ -574,8 +574,8 @@ async function startServer() {
               db.notifications.push({
                 id: key2h,
                 category: 'partida',
-                title: '🚨 Últimas Horas de Confirmação',
-                message: 'Últimas horas para confirmação.',
+                title: 'ðŸš¨ Ãšltimas Horas de ConfirmaÃ§Ã£o',
+                message: 'Ãšltimas horas para confirmaÃ§Ã£o.',
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
@@ -593,8 +593,8 @@ async function startServer() {
               db.notifications.push({
                 id: keyGeneral,
                 category: 'partida',
-                title: '⚠️ Prazo de Confirmação Próximo',
-                message: `O prazo para confirmar sua presença na rodada de ${match.date && typeof match.date === 'string' ? match.date.split('-').reverse().join('/') : ''} se encerra em breve.`,
+                title: 'âš ï¸ Prazo de ConfirmaÃ§Ã£o PrÃ³ximo',
+                message: `O prazo para confirmar sua presenÃ§a na rodada de ${match.date && typeof match.date === 'string' ? match.date.split('-').reverse().join('/') : ''} se encerra em breve.`,
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
                 targetUserId: 'all',
@@ -612,11 +612,11 @@ async function startServer() {
 
   // --- Security Middleware ---
   app.use(helmet({
-    contentSecurityPolicy: false // Vite dev/inline scripts precisam de CSP customizado; revisitar em produção
+    contentSecurityPolicy: false // Vite dev/inline scripts precisam de CSP customizado; revisitar em produÃ§Ã£o
   }));
 
-  // Comprime respostas (JSON de API + bundle JS/CSS estático) com gzip/brotli — sem isso,
-  // o bundle de produção (~2MB) e os payloads JSON trafegam sem nenhuma compactação.
+  // Comprime respostas (JSON de API + bundle JS/CSS estÃ¡tico) com gzip/brotli â€” sem isso,
+  // o bundle de produÃ§Ã£o (~2MB) e os payloads JSON trafegam sem nenhuma compactaÃ§Ã£o.
   app.use(compression());
 
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
@@ -642,14 +642,14 @@ async function startServer() {
   app.use(express.urlencoded({ limit: '250mb', extended: true }));
 
   // --- Global authentication gate for /api/* ---
-  // Auditoria pré-produção encontrou dezenas de rotas de negócio (partidas, financeiro, sorteio,
-  // presenças) sem NENHUMA checagem de autenticação — qualquer visitante anônimo da internet
+  // Auditoria prÃ©-produÃ§Ã£o encontrou dezenas de rotas de negÃ³cio (partidas, financeiro, sorteio,
+  // presenÃ§as) sem NENHUMA checagem de autenticaÃ§Ã£o â€” qualquer visitante anÃ´nimo da internet
   // conseguia criar/editar/excluir dados. Em vez de tocar rota por rota (~80 rotas), um gate
-  // global exige login válido para tudo em /api/*, com uma lista explícita e pequena do que
-  // realmente precisa ser público (login/registro/recuperação de senha e as duas telas públicas
-  // pré-login: mural público e próxima partida — confirmado via teste real de navegação).
-  // Nota: middleware montado via app.use('/api', ...) recebe req.path já SEM o prefixo /api
-  // (relativo ao ponto de montagem) — por isso as regex abaixo não incluem "/api".
+  // global exige login vÃ¡lido para tudo em /api/*, com uma lista explÃ­cita e pequena do que
+  // realmente precisa ser pÃºblico (login/registro/recuperaÃ§Ã£o de senha e as duas telas pÃºblicas
+  // prÃ©-login: mural pÃºblico e prÃ³xima partida â€” confirmado via teste real de navegaÃ§Ã£o).
+  // Nota: middleware montado via app.use('/api', ...) recebe req.path jÃ¡ SEM o prefixo /api
+  // (relativo ao ponto de montagem) â€” por isso as regex abaixo nÃ£o incluem "/api".
   const PUBLIC_API_ROUTES: { method: string; path: RegExp }[] = [
     { method: 'POST', path: /^\/auth\/register$/ },
     { method: 'POST', path: /^\/auth\/login$/ },
@@ -667,7 +667,7 @@ async function startServer() {
 
     const requestingUser = await getAuthenticatedUser(req);
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Não autenticado.' });
+      return res.status(401).json({ error: 'NÃ£o autenticado.' });
     }
     next();
   });
@@ -679,33 +679,33 @@ async function startServer() {
     try {
       const requestingUser = await getAuthenticatedUser(req);
       if (!requestingUser) {
-        return res.status(401).json({ error: 'Não autenticado.' });
+        return res.status(401).json({ error: 'NÃ£o autenticado.' });
       }
 
       const { filename, fileType, fileData } = req.body;
 
       if (!filename || !fileType || !fileData) {
-        return res.status(400).json({ error: 'Os campos filename, fileType e fileData são obrigatórios.' });
+        return res.status(400).json({ error: 'Os campos filename, fileType e fileData sÃ£o obrigatÃ³rios.' });
       }
 
       const base64Data = fileData.replace(/^data:([A-Za-z0-9-+\/]+);base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // Valida o tipo real do arquivo pelos magic bytes, não pelo mimetype/extensão declarado pelo cliente.
+      // Valida o tipo real do arquivo pelos magic bytes, nÃ£o pelo mimetype/extensÃ£o declarado pelo cliente.
       const detectedType = await fileTypeFromBuffer(buffer);
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!detectedType || !allowedMimes.includes(detectedType.mime)) {
-        return res.status(400).json({ error: 'Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP.' });
+        return res.status(400).json({ error: 'Formato de imagem invÃ¡lido. Use JPG, JPEG, PNG ou WEBP.' });
       }
 
       if (buffer.length > 5 * 1024 * 1024) {
         return res.status(400).json({ error: 'A imagem excede o limite permitido de 5 MB.' });
       }
 
-      // Foto de perfil não precisa de resolução maior que isso — recomprime pra WEBP
-      // (bem menor que o JPEG/PNG original) e evita fotos de vários MB pesando no roster.
+      // Foto de perfil nÃ£o precisa de resoluÃ§Ã£o maior que isso â€” recomprime pra WEBP
+      // (bem menor que o JPEG/PNG original) e evita fotos de vÃ¡rios MB pesando no roster.
       const compressedBuffer = await sharp(buffer)
-        .rotate() // aplica a orientação EXIF antes de descartá-la, senão fotos de celular saem giradas
+        .rotate() // aplica a orientaÃ§Ã£o EXIF antes de descartÃ¡-la, senÃ£o fotos de celular saem giradas
         .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 80 })
         .toBuffer();
@@ -726,7 +726,7 @@ async function startServer() {
       const { data: publicUrlData } = supabase.storage.from('Uploads').getPublicUrl(uniqueFilename);
 
       return res.json({
-        message: 'Upload concluído com sucesso!',
+        message: 'Upload concluÃ­do com sucesso!',
         url: publicUrlData.publicUrl
       });
     } catch (err) {
@@ -735,17 +735,17 @@ async function startServer() {
     }
   });
 
-  // Auth: Registrar Usuário
+  // Auth: Registrar UsuÃ¡rio
   app.post('/api/auth/register', authRateLimiter, async (req, res) => {
     try {
       const { name, email, password, confirmPassword } = req.body;
 
       if (!name || !email || !password || !confirmPassword) {
-        return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+        return res.status(400).json({ error: 'Todos os campos sÃ£o obrigatÃ³rios.' });
       }
 
       if (password !== confirmPassword) {
-        return res.status(400).json({ error: 'As senhas não coincidem.' });
+        return res.status(400).json({ error: 'As senhas nÃ£o coincidem.' });
       }
 
       const db = await readDb();
@@ -753,7 +753,7 @@ async function startServer() {
 
       const existingUser = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
       if (existingUser) {
-        return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
+        return res.status(400).json({ error: 'Este e-mail jÃ¡ estÃ¡ cadastrado.' });
       }
 
       // Automatically seek matching athlete folder or create a new one
@@ -811,7 +811,7 @@ async function startServer() {
       }
 
       return res.status(201).json({
-        message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador para acesso.',
+        message: 'Cadastro realizado com sucesso! Aguardando aprovaÃ§Ã£o do administrador para acesso.',
         user: newUser
       });
     } catch (err) {
@@ -826,14 +826,14 @@ async function startServer() {
       const { email, password, turnstileToken } = req.body;
 
       if (!email || !password) {
-        return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+        return res.status(400).json({ error: 'E-mail e senha sÃ£o obrigatÃ³rios.' });
       }
 
-      // Validação do Cloudflare Turnstile se a secret key estiver configurada
+      // ValidaÃ§Ã£o do Cloudflare Turnstile se a secret key estiver configurada
       const turnstileSecret = process.env.TURNSTILE_SECRET_KEY || process.env.SUPABASE_TURNSTILE_SECRET_KEY;
       if (turnstileSecret) {
         if (!turnstileToken) {
-          return res.status(400).json({ error: 'Por favor, complete a verificação de segurança do Turnstile.' });
+          return res.status(400).json({ error: 'Por favor, complete a verificaÃ§Ã£o de seguranÃ§a do Turnstile.' });
         }
 
         try {
@@ -848,7 +848,7 @@ async function startServer() {
           });
           const verifyData: any = await verifyRes.json();
           if (!verifyData.success) {
-            return res.status(400).json({ error: 'Falha na verificação de segurança do Turnstile. Tente novamente.' });
+            return res.status(400).json({ error: 'Falha na verificaÃ§Ã£o de seguranÃ§a do Turnstile. Tente novamente.' });
           }
         } catch (verifyErr) {
           console.error('[Turnstile Verify Error]', verifyErr);
@@ -860,25 +860,25 @@ async function startServer() {
 
       const user = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
       if (!user) {
-        return res.status(401).json({ error: 'Credenciais inválidas.' });
+        return res.status(401).json({ error: 'Credenciais invÃ¡lidas.' });
       }
 
       const storedHash = db.passwords[user.id];
       if (!storedHash || !(await verifyPassword(password, storedHash))) {
-        return res.status(401).json({ error: 'Credenciais inválidas.' });
+        return res.status(401).json({ error: 'Credenciais invÃ¡lidas.' });
       }
 
       // Check Approval Status
       if (user.status === 'pending') {
         return res.status(403).json({
-          error: 'Sua conta está aguardando aprovação administrativa. Entre em contato com o organizador.',
+          error: 'Sua conta estÃ¡ aguardando aprovaÃ§Ã£o administrativa. Entre em contato com o organizador.',
           status: 'pending'
         });
       }
 
       if (user.status === 'rejected') {
         return res.status(403).json({
-          error: 'Sua solicitação de cadastro foi negada pelo administrador.',
+          error: 'Sua solicitaÃ§Ã£o de cadastro foi negada pelo administrador.',
           status: 'rejected'
         });
       }
@@ -896,21 +896,21 @@ async function startServer() {
     }
   });
 
-  // Auth: Redefinição de senha (Esqueci minha senha)
+  // Auth: RedefiniÃ§Ã£o de senha (Esqueci minha senha)
   app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
     try {
       const { email } = req.body;
 
       if (!email) {
-        return res.status(400).json({ error: 'O e-mail é obrigatório.' });
+        return res.status(400).json({ error: 'O e-mail Ã© obrigatÃ³rio.' });
       }
 
       const db = await readDb();
       const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
 
-      // Resposta idêntica exista ou não o usuário/SMTP configurado — não revela se o e-mail está cadastrado.
-      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.' };
-      const unavailableResponse = { message: 'A recuperação automática de senha está temporariamente indisponível. Entre em contato com um administrador do grupo para redefinir sua senha.' };
+      // Resposta idÃªntica exista ou nÃ£o o usuÃ¡rio/SMTP configurado â€” nÃ£o revela se o e-mail estÃ¡ cadastrado.
+      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefiniÃ§Ã£o foi enviado.' };
+      const unavailableResponse = { message: 'A recuperaÃ§Ã£o automÃ¡tica de senha estÃ¡ temporariamente indisponÃ­vel. Entre em contato com um administrador do grupo para redefinir sua senha.' };
 
       if (!isEmailConfigured()) {
         return res.json(unavailableResponse);
@@ -941,13 +941,13 @@ async function startServer() {
         console.error('[API POST /api/auth/forgot-password] Falha ao enviar e-mail:', emailErr);
         delete db.passwordResetTokens[user.id];
         await writeDb(db);
-        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefinição. Tente novamente em instantes.' });
+        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefiniÃ§Ã£o. Tente novamente em instantes.' });
       }
 
       return res.json(sentResponse);
     } catch (err) {
       console.error('[API POST /api/auth/forgot-password]', err);
-      return res.status(500).json({ error: 'Erro ao processar solicitação. Tente novamente em instantes.' });
+      return res.status(500).json({ error: 'Erro ao processar solicitaÃ§Ã£o. Tente novamente em instantes.' });
     }
   });
 
@@ -957,73 +957,73 @@ async function startServer() {
       const { userId, token, newPassword } = req.body;
 
       if (!userId || !token || !newPassword) {
-        return res.status(400).json({ error: 'Informações inválidas para redefinição.' });
+        return res.status(400).json({ error: 'InformaÃ§Ãµes invÃ¡lidas para redefiniÃ§Ã£o.' });
       }
 
       const db = await readDb();
       if (!db.passwords[userId]) {
-        return res.status(404).json({ error: 'Usuário não encontrado.' });
+        return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado.' });
       }
 
       const storedToken = db.passwordResetTokens?.[userId];
       if (!storedToken || storedToken.token !== token) {
-        return res.status(401).json({ error: 'Token de redefinição inválido.' });
+        return res.status(401).json({ error: 'Token de redefiniÃ§Ã£o invÃ¡lido.' });
       }
 
       if (new Date(storedToken.expiresAt).getTime() < Date.now()) {
         delete db.passwordResetTokens![userId];
         await writeDb(db);
-        return res.status(401).json({ error: 'Token de redefinição expirado. Solicite uma nova recuperação.' });
+        return res.status(401).json({ error: 'Token de redefiniÃ§Ã£o expirado. Solicite uma nova recuperaÃ§Ã£o.' });
       }
 
       db.passwords[userId] = await hashPassword(newPassword);
       delete db.passwordResetTokens![userId];
       await writeDb(db);
 
-      return res.json({ message: 'Senha redefinida com sucesso! Você já pode fazer login.' });
+      return res.json({ message: 'Senha redefinida com sucesso! VocÃª jÃ¡ pode fazer login.' });
     } catch (err) {
       console.error('[API POST /api/auth/reset-password]', err);
       return res.status(500).json({ error: 'Erro ao redefinir senha. Tente novamente em instantes.' });
     }
   });
 
-  // Usuários: Listar usuários para aprovação (Apenas Admin/Auxiliar)
+  // UsuÃ¡rios: Listar usuÃ¡rios para aprovaÃ§Ã£o (Apenas Admin/Auxiliar)
   app.get('/api/users', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser || (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar')) {
-      return res.status(401).json({ error: 'Não autorizado.' });
+      return res.status(401).json({ error: 'NÃ£o autorizado.' });
     }
 
     return res.json(db.users);
   });
 
-  // Usuários: Listar auditoria de alterações (Apenas Admin/Auxiliar)
+  // UsuÃ¡rios: Listar auditoria de alteraÃ§Ãµes (Apenas Admin/Auxiliar)
   app.get('/api/users/audits', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser || (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar')) {
-      return res.status(401).json({ error: 'Não autorizado.' });
+      return res.status(401).json({ error: 'NÃ£o autorizado.' });
     }
 
     return res.json(db.userAudits || []);
   });
 
-  // Auditoria de prazos e liberação de reservas (Apenas Admin/Auxiliar)
+  // Auditoria de prazos e liberaÃ§Ã£o de reservas (Apenas Admin/Auxiliar)
   app.get('/api/deadline-audits', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser || (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar')) {
-      return res.status(401).json({ error: 'Não autorizado.' });
+      return res.status(401).json({ error: 'NÃ£o autorizado.' });
     }
 
     return res.json(db.deadlineAudits || []);
   });
 
-  // Usuários: Aprovar / Rejeitar / Mudar Permissão (Admin apenas)
+  // UsuÃ¡rios: Aprovar / Rejeitar / Mudar PermissÃ£o (Admin apenas)
   app.post('/api/users/action', async (req, res) => {
     const { 
       userId, 
@@ -1052,31 +1052,31 @@ async function startServer() {
     };
 
     if (!userId || !action) {
-      return res.status(400).json({ error: 'Campos obrigatórios ausentes.' });
+      return res.status(400).json({ error: 'Campos obrigatÃ³rios ausentes.' });
     }
 
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
     if (!requestingUser || requestingUser.role !== 'admin') {
-      return res.status(401).json({ error: 'Não autorizado. Apenas administradores podem gerenciar permissões.' });
+      return res.status(401).json({ error: 'NÃ£o autorizado. Apenas administradores podem gerenciar permissÃµes.' });
     }
 
     const userIndex = db.users.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
+      return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado.' });
     }
 
     if (userId === 'user-admin') {
       if (action === 'reject') {
-        return res.status(400).json({ error: 'Erro de Segurança: O Administrador raiz não pode ser excluído, rejeitado ou inativado.' });
+        return res.status(400).json({ error: 'Erro de SeguranÃ§a: O Administrador raiz nÃ£o pode ser excluÃ­do, rejeitado ou inativado.' });
       }
       if (action === 'update_role') {
         if (role && role !== 'admin') {
-          return res.status(400).json({ error: 'Erro de Segurança: O papel de ADMIN não pode ser removido do Administrador raiz.' });
+          return res.status(400).json({ error: 'Erro de SeguranÃ§a: O papel de ADMIN nÃ£o pode ser removido do Administrador raiz.' });
         }
         if (selectedPlayerId !== undefined && !selectedPlayerId) {
-          return res.status(400).json({ error: 'Erro de Segurança: O Administrador raiz não pode ser desvinculado de uma ficha de atleta.' });
+          return res.status(400).json({ error: 'Erro de SeguranÃ§a: O Administrador raiz nÃ£o pode ser desvinculado de uma ficha de atleta.' });
         }
       }
     }
@@ -1089,7 +1089,7 @@ async function startServer() {
         (action === 'reject') || 
         (action === 'update_role' && role && role !== 'admin');
       if (isDemotingOrRejecting && approvedAdmins.length <= 1) {
-        return res.status(400).json({ error: 'Erro de Segurança: Não faz sentido e é proibido remover ou rebaixar o único Administrador ativo no sistema.' });
+        return res.status(400).json({ error: 'Erro de SeguranÃ§a: NÃ£o faz sentido e Ã© proibido remover ou rebaixar o Ãºnico Administrador ativo no sistema.' });
       }
     }
 
@@ -1107,7 +1107,7 @@ async function startServer() {
       chosenRole = role || 'jogador';
       db.users[userIndex].status = 'approved';
       db.users[userIndex].role = chosenRole;
-      auditActionText = `Aprovação de Cadastro (Perfil Inicial: ${chosenRole})`;
+      auditActionText = `AprovaÃ§Ã£o de Cadastro (Perfil Inicial: ${chosenRole})`;
       
       // DECOUPLING LINKING OR CREATING OF ATHLETE DURING APPROVAL
       if (linkOption === 'existing' && selectedPlayerId) {
@@ -1122,13 +1122,13 @@ async function startServer() {
             userId,
             userName: db.users[userIndex].name,
             userEmail: db.users[userIndex].email,
-            action: 'Alteração de Vínculo',
+            action: 'AlteraÃ§Ã£o de VÃ­nculo',
             previousRole: '',
             newRole: '',
             previousStatus: '',
             newStatus: '',
             performedBy: adminName || 'Administrador do Sistema',
-            details: `Vínculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
+            details: `VÃ­nculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
           });
         }
       } else {
@@ -1143,7 +1143,7 @@ async function startServer() {
           const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
           if (currentActiveMonthly >= activeMonthlyLimit) {
             return res.status(400).json({
-              error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
+              error: `NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o. O grupo jÃ¡ atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ ParÃ¢metros.`
             });
           }
         }
@@ -1168,20 +1168,20 @@ async function startServer() {
         db.players.push(newPlayer);
         db.users[userIndex].playerId = newPlId;
 
-        // Auditoria: Criação de atleta
+        // Auditoria: CriaÃ§Ã£o de atleta
         db.userAudits.push({
           id: 'audit-pcreate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           timestamp: new Date().toISOString(),
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'Criação de Atleta',
+          action: 'CriaÃ§Ã£o de Atleta',
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: adminName || 'Administrador do Sistema',
-          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovação. Posição principal: ${newPlayer.primaryPosition}.`
+          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovaÃ§Ã£o. PosiÃ§Ã£o principal: ${newPlayer.primaryPosition}.`
         });
 
         // Auditoria: Troca de categoria
@@ -1200,14 +1200,14 @@ async function startServer() {
           details: `Categoria inicial definida como: ${initialCategory}`
         });
 
-        // Auditoria: Alteração de telefone
+        // Auditoria: AlteraÃ§Ã£o de telefone
         db.userAudits.push({
           id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           timestamp: new Date().toISOString(),
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'Alteração de telefone',
+          action: 'AlteraÃ§Ã£o de telefone',
           previousRole: '',
           newRole: '',
           previousStatus: '',
@@ -1219,7 +1219,7 @@ async function startServer() {
 
       notify(db, {
         category: 'jogador',
-        title: '🎉 Cadastro Aprovado!',
+        title: 'ðŸŽ‰ Cadastro Aprovado!',
         message: `Seu cadastro no ${APP_NAME} foi aprovado como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}. Seja bem-vindo ao grupo!`,
         targetUserId: userId,
         actionUrl: 'players'
@@ -1227,8 +1227,8 @@ async function startServer() {
 
       notify(db, {
         category: 'jogador',
-        title: '🏃 Novo Jogador no Grupo',
-        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administração como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}.`,
+        title: 'ðŸƒ Novo Jogador no Grupo',
+        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administraÃ§Ã£o como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}.`,
         targetUserId: 'all',
         actionUrl: 'players'
       });
@@ -1245,7 +1245,7 @@ async function startServer() {
           });
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
-          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovação:', emailErr);
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovaÃ§Ã£o:', emailErr);
         }
       }
 
@@ -1270,7 +1270,7 @@ async function startServer() {
       // Send rejection email to the user
       if (isEmailConfigured()) {
         try {
-          const reason = 'Sua solicitação de cadastro foi analisada e não foi aprovada desta vez.';
+          const reason = 'Sua solicitaÃ§Ã£o de cadastro foi analisada e nÃ£o foi aprovada desta vez.';
           const { subject, html } = registrationRejectedTemplate({
             userName: db.users[userIndex].name,
             appName: APP_NAME,
@@ -1278,12 +1278,12 @@ async function startServer() {
           });
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
-          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeição:', emailErr);
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeiÃ§Ã£o:', emailErr);
         }
       }
     } else if (action === 'update_role' && role) {
       db.users[userIndex].role = role;
-      auditActionText = `Alteração de Perfil de ${previousRole} para ${role}`;
+      auditActionText = `AlteraÃ§Ã£o de Perfil de ${previousRole} para ${role}`;
 
       // Update link action if provided
       if (selectedPlayerId !== undefined) {
@@ -1298,15 +1298,15 @@ async function startServer() {
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'Alteração de Vínculo',
+          action: 'AlteraÃ§Ã£o de VÃ­nculo',
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: adminName || 'Administrador do Sistema',
           details: selectedPlayerId 
-            ? `Vínculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
-            : `Vínculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            ? `VÃ­nculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            : `VÃ­nculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
         });
       }
     }
@@ -1327,14 +1327,14 @@ async function startServer() {
     });
 
     await writeDb(db);
-    return res.json({ message: 'Ação realizada com sucesso!', user: db.users[userIndex] });
+    return res.json({ message: 'AÃ§Ã£o realizada com sucesso!', user: db.users[userIndex] });
   });
 
-  // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pública do Supabase Storage.
-  // photoOriginal/avatarEsportivo/avatarCard chegam direto do body de PUT /api/players — um
+  // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pÃºblica do Supabase Storage.
+  // photoOriginal/avatarEsportivo/avatarCard chegam direto do body de PUT /api/players â€” um
   // cliente mal-intencionado poderia setar esses campos com a URL do arquivo de outro jogador
-  // e, numa edição seguinte, forçar a exclusão dele. Por isso, antes de apagar: (1) só aceita
-  // caminhos no formato exato gerado pelos nossos próprios uploads (sem barras/traversal fora
+  // e, numa ediÃ§Ã£o seguinte, forÃ§ar a exclusÃ£o dele. Por isso, antes de apagar: (1) sÃ³ aceita
+  // caminhos no formato exato gerado pelos nossos prÃ³prios uploads (sem barras/traversal fora
   // do esperado) e (2) confirma que nenhum outro registro de jogador ainda referencia essa
   // mesma URL em qualquer um dos 4 campos de foto/avatar.
   async function deleteStorageFileByUrl(url: string | null | undefined): Promise<void> {
@@ -1347,7 +1347,7 @@ async function startServer() {
 
     const looksLikeOwnUpload = /^\d+-[a-z0-9.-]+\.webp$/.test(path) || /^avatars\/[^/]+-esportivo-\d+\.webp$/.test(path);
     if (!looksLikeOwnUpload) {
-      console.warn('[Storage] Ignorando exclusão de caminho fora do padrão esperado:', path);
+      console.warn('[Storage] Ignorando exclusÃ£o de caminho fora do padrÃ£o esperado:', path);
       return;
     }
 
@@ -1356,14 +1356,14 @@ async function startServer() {
       p.photoOriginal === url || p.avatarOriginal === url || p.avatarEsportivo === url || p.avatarCard === url
     );
     if (stillInUse) {
-      console.warn('[Storage] Arquivo ainda referenciado por um jogador, exclusão cancelada:', path);
+      console.warn('[Storage] Arquivo ainda referenciado por um jogador, exclusÃ£o cancelada:', path);
       return;
     }
 
     const supabase = getSupabaseClient();
     const { error } = await supabase.storage.from('Uploads').remove([path]);
     if (error) {
-      console.error('[Storage] Falha ao remover arquivo órfão:', path, error.message);
+      console.error('[Storage] Falha ao remover arquivo Ã³rfÃ£o:', path, error.message);
     }
   }
 
@@ -1385,17 +1385,17 @@ async function startServer() {
   }
 
   // Providers de avatar retornam a imagem gerada como data URL base64 inline. Salvar isso direto
-  // na coluna do Postgres (em vez de só a URL) faz o payload de GET /api/players carregar todo
-  // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — daí
-  // o upload pro Storage aqui, igual ao que /api/upload-s3 já faz pra foto original.
+  // na coluna do Postgres (em vez de sÃ³ a URL) faz o payload de GET /api/players carregar todo
+  // esse base64 (vÃ¡rias centenas de KB a poucos MB por jogador) a cada leitura da listagem â€” daÃ­
+  // o upload pro Storage aqui, igual ao que /api/upload-s3 jÃ¡ faz pra foto original.
   async function uploadAvatarDataUrlToStorage(dataUrl: string, pathPrefix: string): Promise<string> {
     const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) return dataUrl; // já não é base64 inline (ex.: URL retornada por engano) — nada a fazer
+    if (!match) return dataUrl; // jÃ¡ nÃ£o Ã© base64 inline (ex.: URL retornada por engano) â€” nada a fazer
 
     const rawBuffer = Buffer.from(match[2], 'base64');
 
-    // Providers de IA retornam PNG em alta resolução (2-3MB) — recomprime pra WEBP, já que
-    // o avatar só é exibido em cards/miniaturas, nunca em tela cheia de alta resolução.
+    // Providers de IA retornam PNG em alta resoluÃ§Ã£o (2-3MB) â€” recomprime pra WEBP, jÃ¡ que
+    // o avatar sÃ³ Ã© exibido em cards/miniaturas, nunca em tela cheia de alta resoluÃ§Ã£o.
     const compressedBuffer = await sharp(rawBuffer)
       .resize({ width: 1000, height: 1000, fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 82 })
@@ -1417,7 +1417,7 @@ async function startServer() {
   // Gerar Avatar Esportivo Inteligente usando o AvatarProviderFactory desacoplado
   async function gerarAvatarEsportivo(player: Player, forceRegenerate = false): Promise<Player> {
     const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
-    const timeDoCoracao = team ? team.name : (player.timeDoCoracao || 'São Paulo');
+    const timeDoCoracao = team ? team.name : (player.timeDoCoracao || 'SÃ£o Paulo');
     player.timeDoCoracao = timeDoCoracao;
 
     if (!player.numeroFavorito) {
@@ -1445,11 +1445,11 @@ async function startServer() {
     }
 
     if (process.env.ENABLE_AVATAR_AI !== 'true') {
-      throw new Error('Geração de avatar desativada temporariamente via feature flag.');
+      throw new Error('GeraÃ§Ã£o de avatar desativada temporariamente via feature flag.');
     }
 
     try {
-      console.log(`[Avatar Inteligente] Iniciando geração com AvatarProviderFactory para o atleta: ${player.name} (${timeDoCoracao})`);
+      console.log(`[Avatar Inteligente] Iniciando geraÃ§Ã£o com AvatarProviderFactory para o atleta: ${player.name} (${timeDoCoracao})`);
       const provider = AvatarProviderFactory.getProvider();
       const generatedUrl = await provider.generateAvatar({
         photoOriginal: player.photoOriginal,
@@ -1459,28 +1459,28 @@ async function startServer() {
 
       player.avatarEsportivo = generatedUrl;
       player.avatarVersion = (player.avatarVersion || 0) + 1;
-      console.log(`[Avatar Inteligente] Sucesso na geração do avatar de ${player.name}`);
+      console.log(`[Avatar Inteligente] Sucesso na geraÃ§Ã£o do avatar de ${player.name}`);
       return player;
     } catch (err: any) {
-      console.warn(`[Avatar Inteligente] Erro durante a geração: ${err.message || err}`);
+      console.warn(`[Avatar Inteligente] Erro durante a geraÃ§Ã£o: ${err.message || err}`);
       throw err;
     }
   }
 
-  // Processamento síncrono ou assíncrono em segundo plano para avatares gamer do atleta
+  // Processamento sÃ­ncrono ou assÃ­ncrono em segundo plano para avatares gamer do atleta
   async function processarAvatarGamerBackground(playerId: string) {
     console.log(`[Avatar Inteligente] Fluxo de background iniciado para o jogador ID: ${playerId}`);
     
     let db = await readDb();
     let playerIndex = db.players.findIndex(p => p.id === playerId);
     if (playerIndex === -1) {
-      console.error(`[Avatar Inteligente] Atleta não encontrado para processamento.`);
+      console.error(`[Avatar Inteligente] Atleta nÃ£o encontrado para processamento.`);
       return;
     }
 
     let player = db.players[playerIndex];
     if (!player.photoOriginal) {
-      console.log(`[Avatar Inteligente] Sem foto original válida. Encerrando.`);
+      console.log(`[Avatar Inteligente] Sem foto original vÃ¡lida. Encerrando.`);
       const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
@@ -1491,7 +1491,7 @@ async function startServer() {
     }
 
     if (process.env.ENABLE_AVATAR_AI !== 'true') {
-      console.log(`[Avatar Inteligente] Geração suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
+      console.log(`[Avatar Inteligente] GeraÃ§Ã£o suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
       const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
@@ -1507,7 +1507,7 @@ async function startServer() {
     try {
       const generatedPlayer = await gerarAvatarEsportivo(player, true);
 
-      // Relê banco para evitar conflito de gravação concorrente
+      // RelÃª banco para evitar conflito de gravaÃ§Ã£o concorrente
       db = await readDb();
       playerIndex = db.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
@@ -1524,13 +1524,13 @@ async function startServer() {
           const avatarUrl = await uploadAvatarDataUrlToStorage(generatedPlayer.avatarEsportivo!, `avatars/${playerId}-esportivo`);
           player.avatarCard = avatarUrl;
           player.avatarEsportivo = avatarUrl;
-          player.avatarStatus = 'CONCLUÍDO';
+          player.avatarStatus = 'CONCLUÃDO';
         }
 
         await writeDb(db);
         console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
 
-        // Apaga a versão anterior do avatar no Storage, já substituída ou zerada acima.
+        // Apaga a versÃ£o anterior do avatar no Storage, jÃ¡ substituÃ­da ou zerada acima.
         if (oldCard !== player.avatarCard) await deleteStorageFileByUrl(oldCard);
         if (oldEsportivo !== oldCard && oldEsportivo !== player.avatarEsportivo) await deleteStorageFileByUrl(oldEsportivo);
       }
@@ -1550,7 +1550,7 @@ async function startServer() {
     }
   }
 
-  // Jogadores: Listar (Retorna ativos se sem parâmetro, ou todos se admin para gerenciamento)
+  // Jogadores: Listar (Retorna ativos se sem parÃ¢metro, ou todos se admin para gerenciamento)
   app.get('/api/players', async (req, res) => {
     const db = await readDb();
     const includeDeleted = req.query.includeDeleted === 'true';
@@ -1569,7 +1569,7 @@ async function startServer() {
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Não autenticado.' });
+      return res.status(401).json({ error: 'NÃ£o autenticado.' });
     }
 
     if (requestingUser.role !== 'admin') {
@@ -1579,7 +1579,7 @@ async function startServer() {
     const { responsibleName, ...playerData } = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'> & { responsibleName?: string };
 
     if (!playerData.name || !playerData.category || !playerData.status || !playerData.primaryPosition) {
-      return res.status(400).json({ error: 'Nome, categoria, status e posição principal são obrigatórios.' });
+      return res.status(400).json({ error: 'Nome, categoria, status e posiÃ§Ã£o principal sÃ£o obrigatÃ³rios.' });
     }
 
     if (playerData.category === 'mensalista' && playerData.primaryPosition !== 'goleiro') {
@@ -1587,14 +1587,14 @@ async function startServer() {
       const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
       if (currentActiveMonthly >= activeMonthlyLimit) {
         return res.status(400).json({
-          error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
+          error: `NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o. O grupo jÃ¡ atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ ParÃ¢metros.`
         });
       }
     }
 
     const formattedPhone = playerData.phone || '(85) 99999-9999';
-    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email — normaliza para
-    // undefined quando vazio, senão o 2º jogador sem e-mail colidiria com o 1º na constraint.
+    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email â€” normaliza para
+    // undefined quando vazio, senÃ£o o 2Âº jogador sem e-mail colidiria com o 1Âº na constraint.
     if (!playerData.email || !playerData.email.trim()) {
       delete (playerData as any).email;
     }
@@ -1616,13 +1616,13 @@ async function startServer() {
       avatarOriginal: playerData.photoOriginal || '',
       avatarEsportivo: '',
       avatarCard: '',
-      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO',
+      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUÃDO',
       avatarVersion: 1
     };
 
     db.players.push(newPlayer);
 
-    // Auditoria: Criação de atleta
+    // Auditoria: CriaÃ§Ã£o de atleta
     if (!db.userAudits) db.userAudits = [];
     db.userAudits.push({
       id: 'audit-pcreate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -1630,7 +1630,7 @@ async function startServer() {
       userId: 'system',
       userName: newPlayer.name,
       userEmail: playerData.email || 'atleta@sistema.local',
-      action: 'Criação de Atleta',
+      action: 'CriaÃ§Ã£o de Atleta',
       previousRole: '',
       newRole: '',
       previousStatus: '',
@@ -1655,14 +1655,14 @@ async function startServer() {
       details: `Categoria inicial definida como: ${newPlayer.category}`
     });
 
-    // Auditoria: Alteração de telefone
+    // Auditoria: AlteraÃ§Ã£o de telefone
     db.userAudits.push({
       id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: new Date().toISOString(),
       userId: 'system',
       userName: newPlayer.name,
       userEmail: playerData.email || 'atleta@sistema.local',
-      action: 'Alteração de telefone',
+      action: 'AlteraÃ§Ã£o de telefone',
       previousRole: '',
       newRole: '',
       previousStatus: '',
@@ -1673,7 +1673,7 @@ async function startServer() {
 
     await writeDb(db);
 
-    // Trigger background generation only after the player is guaranteed persisted —
+    // Trigger background generation only after the player is guaranteed persisted â€”
     // processarAvatarGamerBackground does its own readDb() and would otherwise race with writeDb() above.
     if (newPlayer.photoOriginal) {
       setImmediate(() => {
@@ -1686,27 +1686,27 @@ async function startServer() {
     return res.status(201).json({ message: 'Jogador cadastrado com sucesso!', player: newPlayer });
   });
 
-  // Jogadores: Gerar 10 Jogadores Aleatórios
+  // Jogadores: Gerar 10 Jogadores AleatÃ³rios
   app.post('/api/players/generate-random-10', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Não autenticado.' });
+      return res.status(401).json({ error: 'NÃ£o autenticado.' });
     }
 
     if (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar') {
-      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores e auxiliares podem gerar atletas aleatórios.' });
+      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores e auxiliares podem gerar atletas aleatÃ³rios.' });
     }
 
     const firstNames = [
       "Gabriel", "Lucas", "Mateus", "Guilherme", "Felipe", "Thiago", "Arthur", "Matheus", "Gustavo", "Vinicius", 
       "Rodrigo", "Daniel", "Rafael", "Bruno", "Eduardo", "Diego", "Vitor", "Leonardo", "Marcelo", "Alexandre",
-      "Carlos", "Marcos", "João", "André", "Renato", "Enzo", "Pedro", "Caio", "Luiz", "Ricardo"
+      "Carlos", "Marcos", "JoÃ£o", "AndrÃ©", "Renato", "Enzo", "Pedro", "Caio", "Luiz", "Ricardo"
     ];
     const lastNames = [
       "Silva", "Santos", "Souza", "Oliveira", "Pereira", "Lima", "Carvalho", "Ferreira", "Ribeiro", "Almeida", 
-      "Costa", "Gomes", "Martins", "Araújo", "Rodrigues", "Nascimento", "Barbosa", "Cardoso", "Melo", "Teixeira",
+      "Costa", "Gomes", "Martins", "AraÃºjo", "Rodrigues", "Nascimento", "Barbosa", "Cardoso", "Melo", "Teixeira",
       "Cavalcante", "Nunes", "Mendes", "Pinheiro", "Pinto", "Guedes", "Rocha", "Fonseca", "Alves", "Vieira"
     ];
 
@@ -1798,7 +1798,7 @@ async function startServer() {
         updatedAt: new Date().toISOString(),
         currentStreak: 0,
         maxStreak: 0,
-        adminNotes: 'Atleta simulado de demonstração gerado automaticamente.'
+        adminNotes: 'Atleta simulado de demonstraÃ§Ã£o gerado automaticamente.'
       };
 
       db.players.push(randomizedPlayer);
@@ -1812,13 +1812,13 @@ async function startServer() {
         userId: 'system',
         userName: fullName,
         userEmail: cleanEmail,
-        action: 'Criação de Atleta',
+        action: 'CriaÃ§Ã£o de Atleta',
         previousRole: '',
         newRole: '',
         previousStatus: '',
         newStatus: '',
         performedBy: requestingUser.name,
-        details: `Atleta ${fullName} gerado automaticamente por simulação.`
+        details: `Atleta ${fullName} gerado automaticamente por simulaÃ§Ã£o.`
       });
     }
 
@@ -1834,8 +1834,8 @@ async function startServer() {
   app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
     const { responsibleName, ...updateData } = req.body as Partial<Player> & { responsibleName?: string };
-    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email — normaliza para
-    // undefined quando vazio, senão dois jogadores sem e-mail colidiriam na constraint.
+    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email â€” normaliza para
+    // undefined quando vazio, senÃ£o dois jogadores sem e-mail colidiriam na constraint.
     if (updateData.email !== undefined && !updateData.email.trim()) {
       delete updateData.email;
     }
@@ -1844,7 +1844,7 @@ async function startServer() {
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Não autenticado.' });
+      return res.status(401).json({ error: 'NÃ£o autenticado.' });
     }
 
     const isRequestingAdmin = requestingUser.role === 'admin';
@@ -1852,7 +1852,7 @@ async function startServer() {
     const index = db.players.findIndex((p) => p.id === id);
 
     if (index === -1) {
-      return res.status(404).json({ error: 'Jogador não encontrado.' });
+      return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
     }
 
     const existingPlayer = db.players[index];
@@ -1861,16 +1861,9 @@ async function startServer() {
     if (!isRequestingAdmin) {
       const isEditingSelf = requestingUser.playerId === id || requestingUser.athlete_id === id;
       if (!isEditingSelf) {
-        return res.status(403).json({ error: 'Acesso Proibido: Você só tem permissão para editar sua própria ficha de atleta.' });
+        return res.status(403).json({ error: 'Acesso Proibido: VocÃª sÃ³ tem permissÃ£o para editar sua prÃ³pria ficha de atleta.' });
       }
 
-      // 2. Prevent common users from editing restricted admin-only attributes of the player card
-      if (updateData.category && updateData.category !== existingPlayer.category) {
-        return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem alterar a categoria de um atleta.' });
-      }
-      if (updateData.status && updateData.status !== existingPlayer.status) {
-        return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores podem alterar o status de disponibilidade de um atleta.' });
-      }
     }
 
     const categoryChanged = updateData.category && updateData.category !== existingPlayer.category;
@@ -1888,7 +1881,7 @@ async function startServer() {
       const otherActivePayingMensalistas = db.players.filter(p => p.id !== existingPlayer.id && !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
       if (otherActivePayingMensalistas >= activeMonthlyLimit) {
         return res.status(400).json({
-          error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
+          error: `NÃ£o foi possÃ­vel concluir a operaÃ§Ã£o. O grupo jÃ¡ atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ ParÃ¢metros.`
         });
       }
     }
@@ -1937,7 +1930,7 @@ async function startServer() {
         userId: 'system',
         userName: existingPlayer.name,
         userEmail: existingPlayer.email || 'atleta@sistema.local',
-        action: 'Alteração de telefone',
+        action: 'AlteraÃ§Ã£o de telefone',
         previousRole: '',
         newRole: '',
         previousStatus: '',
@@ -1969,9 +1962,9 @@ async function startServer() {
     const forceRegenerate = photoChanged || teamChanged || numChanged || footChanged || !existingPlayer.avatarCard;
 
     if (forceRegenerate) {
-      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO';
-      // Sem foto original não há como gerar/manter o avatar de IA — limpa para não continuar
-      // exibindo um avatar antigo (a foto que o originou já não existe mais).
+      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUÃDO';
+      // Sem foto original nÃ£o hÃ¡ como gerar/manter o avatar de IA â€” limpa para nÃ£o continuar
+      // exibindo um avatar antigo (a foto que o originou jÃ¡ nÃ£o existe mais).
       if (!updatedPlayer.photoOriginal) {
         updatedPlayer.avatarEsportivo = null;
         updatedPlayer.avatarCard = null;
@@ -1984,14 +1977,14 @@ async function startServer() {
     const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
     if (statusChanged) {
       const statusLabels: Record<string, string> = {
-        disponivel: 'Disponível',
-        indisponivel: 'Indisponível',
+        disponivel: 'DisponÃ­vel',
+        indisponivel: 'IndisponÃ­vel',
         lesionado: 'Lesionado',
         afastado: 'Afastado'
       };
       notify(db, {
         category: 'jogador',
-        title: '🏃 Status Alterado',
+        title: 'ðŸƒ Status Alterado',
         message: `O jogador ${existingPlayer.name} teve seu status alterado para "${statusLabels[updateData.status!] || updateData.status}".`,
         targetUserId: 'all',
         actionUrl: 'players'
@@ -2000,8 +1993,8 @@ async function startServer() {
       if (existingPlayer.status === 'lesionado' && updateData.status === 'disponivel') {
         notify(db, {
           category: 'jogador',
-          title: '💪 Lesão Encerrada!',
-          message: `Ótimas notícias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente à disposição do grupo!`,
+          title: 'ðŸ’ª LesÃ£o Encerrada!',
+          message: `Ã“timas notÃ­cias! O jogador ${existingPlayer.name} encerrou sua lesÃ£o e estÃ¡ novamente Ã  disposiÃ§Ã£o do grupo!`,
           targetUserId: 'all',
           actionUrl: 'players'
         });
@@ -2011,15 +2004,15 @@ async function startServer() {
     if (categoryChanged && updateData.category === 'mensalista') {
       notify(db, {
         category: 'jogador',
-        title: '⭐️ Promoção para Mensalista!',
-        message: `O jogador ${existingPlayer.name} foi oficialmente promovido ao grupo de Mensalistas. Parabéns!`,
+        title: 'â­ï¸ PromoÃ§Ã£o para Mensalista!',
+        message: `O jogador ${existingPlayer.name} foi oficialmente promovido ao grupo de Mensalistas. ParabÃ©ns!`,
         targetUserId: existingPlayer.id,
         actionUrl: 'players'
       });
       notify(db, {
         category: 'jogador',
-        title: '⭐️ Novo Mensalista no Racha',
-        message: `O jogador ${existingPlayer.name} agora é um Mensalista oficial do racha!`,
+        title: 'â­ï¸ Novo Mensalista no Racha',
+        message: `O jogador ${existingPlayer.name} agora Ã© um Mensalista oficial do racha!`,
         targetUserId: 'all',
         actionUrl: 'players'
       });
@@ -2028,14 +2021,14 @@ async function startServer() {
     db.players[index] = updatedPlayer;
     await writeDb(db);
 
-    // Foto trocada/removida: a antiga não é mais referenciada por ninguém, apaga do Storage.
-    // (Se a foto só mudou mas o avatar de IA vai ser regenerado, o background cuida do avatar antigo.)
+    // Foto trocada/removida: a antiga nÃ£o Ã© mais referenciada por ninguÃ©m, apaga do Storage.
+    // (Se a foto sÃ³ mudou mas o avatar de IA vai ser regenerado, o background cuida do avatar antigo.)
     if (photoChanged && existingPlayer.photoOriginal && existingPlayer.photoOriginal !== updatedPlayer.photoOriginal) {
       deleteStorageFileByUrl(existingPlayer.photoOriginal).catch(err => {
         console.error('[Storage] Falha ao remover foto antiga:', err);
       });
     }
-    // Foto removida por completo: também apaga o avatar de IA vinculado a ela, já zerado acima.
+    // Foto removida por completo: tambÃ©m apaga o avatar de IA vinculado a ela, jÃ¡ zerado acima.
     if (!updatedPlayer.photoOriginal && existingPlayer.photoOriginal) {
       const oldCard = existingPlayer.avatarCard;
       const oldEsportivo = existingPlayer.avatarEsportivo;
@@ -2062,7 +2055,7 @@ async function startServer() {
     const db = await readDb();
     const index = db.players.findIndex((p) => p.id === id);
     if (index === -1) {
-      return res.status(404).json({ error: 'Jogador não encontrado.' });
+      return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
     }
     const player = db.players[index];
     player.avatarStatus = 'PENDENTE';
@@ -2076,7 +2069,7 @@ async function startServer() {
     });
 
     return res.json({ 
-      message: 'Geração do Avatar Gamer iniciada em background!', 
+      message: 'GeraÃ§Ã£o do Avatar Gamer iniciada em background!', 
       player
     });
   });
@@ -2089,7 +2082,7 @@ async function startServer() {
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Não autenticado.' });
+      return res.status(401).json({ error: 'NÃ£o autenticado.' });
     }
 
     if (requestingUser.role !== 'admin') {
@@ -2099,7 +2092,7 @@ async function startServer() {
     const index = db.players.findIndex((p) => p.id === id);
 
     if (index === -1) {
-      return res.status(404).json({ error: 'Jogador não encontrado.' });
+      return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
     }
 
     db.players[index].deletedAt = new Date().toISOString();
@@ -2109,7 +2102,7 @@ async function startServer() {
     return res.json({ message: 'Jogador inativado com sucesso!', player: db.players[index] });
   });
 
-  // Jogadores: Restaurar (Desfazer inativação)
+  // Jogadores: Restaurar (Desfazer inativaÃ§Ã£o)
   app.post('/api/players/:id/restore', async (req, res) => {
     const { id } = req.params;
 
@@ -2117,7 +2110,7 @@ async function startServer() {
     const requestingUser = await getAuthenticatedUser(req, db);
 
     if (!requestingUser) {
-      return res.status(401).json({ error: 'Não autenticado.' });
+      return res.status(401).json({ error: 'NÃ£o autenticado.' });
     }
 
     if (requestingUser.role !== 'admin') {
@@ -2127,7 +2120,7 @@ async function startServer() {
     const index = db.players.findIndex((p) => p.id === id);
 
     if (index === -1) {
-      return res.status(404).json({ error: 'Jogador não encontrado.' });
+      return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
     }
 
     db.players[index].deletedAt = undefined;
@@ -2137,7 +2130,7 @@ async function startServer() {
     return res.json({ message: 'Jogador reativado com sucesso!', player: db.players[index] });
   });
 
-  // Buscar histórico de transição de categoria de um jogador
+  // Buscar histÃ³rico de transiÃ§Ã£o de categoria de um jogador
   app.get('/api/players/:id/transitions', async (req, res) => {
     try {
       const { id } = req.params;
@@ -2145,11 +2138,11 @@ async function startServer() {
       const transitions = (db.categoryTransitions || []).filter(t => t.playerId === id);
       return res.json(transitions.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao buscar histórico de mudanças.' });
+      return res.status(500).json({ error: 'Erro ao buscar histÃ³rico de mudanÃ§as.' });
     }
   });
 
-  // Alertas e recomendações de promoção para mensalistas
+  // Alertas e recomendaÃ§Ãµes de promoÃ§Ã£o para mensalistas
   app.get('/api/mensalista-alerts', async (req, res) => {
     try {
       const db = await readDb();
@@ -2203,7 +2196,7 @@ async function startServer() {
     }
   });
 
-  // Jogadores: Preparação do fluxograma futuro de Card IA
+  // Jogadores: PreparaÃ§Ã£o do fluxograma futuro de Card IA
   app.post('/api/players/:id/generate-card', async (req, res) => {
     const { id } = req.params;
 
@@ -2211,7 +2204,7 @@ async function startServer() {
     const player = db.players.find((p) => p.id === id);
 
     if (!player) {
-      return res.status(404).json({ error: 'Jogador não encontrado.' });
+      return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
     }
 
     if (!player.photoOriginal) {
@@ -2221,17 +2214,17 @@ async function startServer() {
       });
     }
 
-    // Estrutura planejada para a futura versão com serviço de IA integrado:
+    // Estrutura planejada para a futura versÃ£o com serviÃ§o de IA integrado:
     // Passo 1: Obter "photoOriginal" do S3.
-    // Passo 2: Enviar imagem para o modelo de Visão do Gemini (ou outro gerador generativo).
+    // Passo 2: Enviar imagem para o modelo de VisÃ£o do Gemini (ou outro gerador generativo).
     // Passo 3: O prompt solicita e segmenta o rosto original do atleta e substitui o corpo com uniforme customizado nas cores do clube (FAVORITE_TEAMS).
-    // Passo 4: O card gerado em formato buffer é salvo no S3.
-    // Passo 5: A URL resultante é persistida no banco do respectivo Jogador (player.playerCardUrl = resS3Url).
+    // Passo 4: O card gerado em formato buffer Ã© salvo no S3.
+    // Passo 5: A URL resultante Ã© persistida no banco do respectivo Jogador (player.playerCardUrl = resS3Url).
     
     return res.status(200).json({
       success: false,
       error: 'planned_feature',
-      message: 'Funcionalidade planejada para a próxima versão. Integração com IA em andamento.',
+      message: 'Funcionalidade planejada para a prÃ³xima versÃ£o. IntegraÃ§Ã£o com IA em andamento.',
       details: {
         playerId: player.id,
         photoOriginal: player.photoOriginal,
@@ -2263,7 +2256,7 @@ async function startServer() {
       ? { reflexo: 0.35, posicionamento: 0.25, saida_gol: 0.20, reposicao: 0.20 }
       : { defesa: 0.15, passe: 0.15, finalizacao: 0.15, velocidade: 0.15, posicionamento: 0.15, drible: 0.10, marcacao: 0.10, fisico: 0.05 };
 
-    // Anti-manipulation constants (Média Ponderada/Suavizada com base neutra)
+    // Anti-manipulation constants (MÃ©dia Ponderada/Suavizada com base neutra)
     const BASE_RATING = 3.5; // Start with a realistic competitive baseline of 3.5
     const BASE_WEIGHT = 4.0; // Acts as 4 initial pre-votes
 
@@ -2318,7 +2311,7 @@ async function startServer() {
       return res.json(summaries);
     } catch (err) {
       console.error('[Error Summary Evaluations]', err);
-      return res.status(500).json({ error: 'Erro interno ao processar resumo de avaliações.' });
+      return res.status(500).json({ error: 'Erro interno ao processar resumo de avaliaÃ§Ãµes.' });
     }
   });
 
@@ -2332,7 +2325,7 @@ async function startServer() {
       const player = db.players.find(p => p.id === id);
 
       if (!player) {
-        return res.status(404).json({ error: 'Jogador não encontrado.' });
+        return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
       }
 
       const metrics = computePlayerMetrics(id, player.primaryPosition, db.evaluations, db.evaluationHistory);
@@ -2419,7 +2412,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Get Player Evaluations]', err);
-      return res.status(500).json({ error: 'Erro interno ao buscar faturamento ou avaliações do jogador.' });
+      return res.status(500).json({ error: 'Erro interno ao buscar faturamento ou avaliaÃ§Ãµes do jogador.' });
     }
   });
 
@@ -2430,14 +2423,14 @@ async function startServer() {
       const { evaluatorUserId, ratings } = req.body;
 
       if (!evaluatorUserId || !ratings) {
-        return res.status(400).json({ error: 'Identificação do avaliador e notas são obrigatórios.' });
+        return res.status(400).json({ error: 'IdentificaÃ§Ã£o do avaliador e notas sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
       const player = db.players.find(p => p.id === id);
 
       if (!player) {
-        return res.status(404).json({ error: 'Jogador sendo avaliado não existe.' });
+        return res.status(404).json({ error: 'Jogador sendo avaliado nÃ£o existe.' });
       }
 
       // Validate increments of 0.5 & range 0.0 to 5.0
@@ -2445,7 +2438,7 @@ async function startServer() {
       for (const key of keys) {
         const val = parseFloat(ratings[key]);
         if (isNaN(val) || val < 0.0 || val > 5.0 || (val * 10) % 5 !== 0) {
-          return res.status(400).json({ error: 'Valores técnicos devem ser escalas de 0.0 até 5.0 com incrementos de 0.5.' });
+          return res.status(400).json({ error: 'Valores tÃ©cnicos devem ser escalas de 0.0 atÃ© 5.0 com incrementos de 0.5.' });
         }
       }
 
@@ -2453,14 +2446,14 @@ async function startServer() {
       const currentPeriod = new Date().toISOString().substring(0, 7); // "YYYY-MM"
       const previousEval = db.evaluations.find(e => e.evaluatorUserId === evaluatorUserId && e.targetPlayerId === id);
 
-      let messageStr = 'Avaliação registrada com sucesso de forma anônima!';
+      let messageStr = 'AvaliaÃ§Ã£o registrada com sucesso de forma anÃ´nima!';
 
       if (previousEval) {
         const wasSamePeriod = previousEval.date.startsWith(currentPeriod);
         if (wasSamePeriod) {
-          messageStr = 'Sua avaliação anterior para este período foi atualizada com sucesso!';
+          messageStr = 'Sua avaliaÃ§Ã£o anterior para este perÃ­odo foi atualizada com sucesso!';
         } else {
-          messageStr = 'Sua nova avaliação substituiu a avaliação do período anterior com sucesso!';
+          messageStr = 'Sua nova avaliaÃ§Ã£o substituiu a avaliaÃ§Ã£o do perÃ­odo anterior com sucesso!';
         }
 
         // Overwrite the existing evaluation to prevent duplication
@@ -2499,7 +2492,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Post Player Evaluate]', err);
-      return res.status(500).json({ error: 'Não foi possível salvar a avaliação.' });
+      return res.status(500).json({ error: 'NÃ£o foi possÃ­vel salvar a avaliaÃ§Ã£o.' });
     }
   });
 
@@ -2520,7 +2513,7 @@ async function startServer() {
     try {
       const { name, year, startDate, endDate, active } = req.body;
       if (!name || !year || !startDate || !endDate) {
-        return res.status(400).json({ error: 'Campos Nome, Ano, Data início e Fim são obrigatórios.' });
+        return res.status(400).json({ error: 'Campos Nome, Ano, Data inÃ­cio e Fim sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
@@ -2555,7 +2548,7 @@ async function startServer() {
       const seasonIndex = db.seasons.findIndex((s) => s.id === id);
 
       if (seasonIndex === -1) {
-        return res.status(404).json({ error: 'Temporada não encontrada.' });
+        return res.status(404).json({ error: 'Temporada nÃ£o encontrada.' });
       }
 
       const updatedSeason = {
@@ -2649,7 +2642,7 @@ async function startServer() {
     try {
       const { date, time, location, durationMinutes, status, seasonId, confirmationDeadlineDaysBefore } = req.body;
       if (!date || !time) {
-        return res.status(400).json({ error: 'Data e Horário são obrigatórios.' });
+        return res.status(400).json({ error: 'Data e HorÃ¡rio sÃ£o obrigatÃ³rios.' });
       }
 
       // Check if match date is in the past relative to today (America/Sao_Paulo timezone or fallback)
@@ -2669,7 +2662,7 @@ async function startServer() {
       }
 
       if (date < todayStr) {
-        return res.status(400).json({ error: 'Não é permitido agendar uma rodada com data anterior ao dia atual.' });
+        return res.status(400).json({ error: 'NÃ£o Ã© permitido agendar uma rodada com data anterior ao dia atual.' });
       }
 
       const db = await readDb();
@@ -2677,13 +2670,13 @@ async function startServer() {
       const targetSeasonId = seasonId || (activeSeason ? activeSeason.id : null);
 
       if (!targetSeasonId) {
-        return res.status(400).json({ error: 'Você precisa criar/ativar uma Temporada antes de agendar partidas.' });
+        return res.status(400).json({ error: 'VocÃª precisa criar/ativar uma Temporada antes de agendar partidas.' });
       }
 
       // Check if match already exists on this date
       const exists = db.matches.some((m) => m.date === date && m.seasonId === targetSeasonId);
       if (exists) {
-        return res.status(400).json({ error: `Já existe uma partida agendada para o dia ${date}.` });
+        return res.status(400).json({ error: `JÃ¡ existe uma partida agendada para o dia ${date}.` });
       }
 
       const newMatch: Match = {
@@ -2691,7 +2684,7 @@ async function startServer() {
         seasonId: targetSeasonId,
         date,
         time,
-        location: location || 'Arena Furacão',
+        location: location || 'Arena FuracÃ£o',
         durationMinutes: durationMinutes ? parseInt(durationMinutes) : 60,
         status: status || 'agendada',
         confirmationDeadlineDaysBefore: confirmationDeadlineDaysBefore !== undefined && confirmationDeadlineDaysBefore !== null ? parseInt(confirmationDeadlineDaysBefore) : undefined
@@ -2701,8 +2694,8 @@ async function startServer() {
 
       notify(db, {
         category: 'partida',
-        title: '⚽ Nova Partida Agendada',
-        message: `Uma nova partida foi agendada para o dia ${newMatch.date.split('-').reverse().join('/')} às ${newMatch.time} na localidade ${newMatch.location}.`,
+        title: 'âš½ Nova Partida Agendada',
+        message: `Uma nova partida foi agendada para o dia ${newMatch.date.split('-').reverse().join('/')} Ã s ${newMatch.time} na localidade ${newMatch.location}.`,
         actionUrl: 'calendar',
         matchId: newMatch.id
       });
@@ -2728,12 +2721,12 @@ async function startServer() {
       const index = db.matches.findIndex((m) => m.id === id);
 
       if (index === -1) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       const previousStatus = db.matches[index].status;
       if (previousStatus === 'sorteada' && status && status !== 'sorteada' && status !== 'encerrada' && status !== 'cancelada') {
-        return res.status(400).json({ error: 'Após o sorteio ser realizado, não é permitido reabrir confirmações (exceto para cancelamento).' });
+        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, nÃ£o Ã© permitido reabrir confirmaÃ§Ãµes (exceto para cancelamento).' });
       }
 
       const dateChanged = date && date !== db.matches[index].date;
@@ -2765,20 +2758,20 @@ async function startServer() {
           calculatedDeadline: deadlineDateTime.toISOString(),
           auditType: 'deadline_recalculation_by_admin',
           createdAt: new Date().toISOString(),
-          details: `Partida/Prazos atualizados pelo admin. Novo limite de confirmação calculado: ${deadlineDateStr}.`
+          details: `Partida/Prazos atualizados pelo admin. Novo limite de confirmaÃ§Ã£o calculado: ${deadlineDateStr}.`
         });
       }
 
       db.matches[index] = updatedMatch;
 
-      // INTERRUPTION POLICY: Caso uma partida seja cancelada, a recorrência automática deve ser interrompida.
+      // INTERRUPTION POLICY: Caso uma partida seja cancelada, a recorrÃªncia automÃ¡tica deve ser interrompida.
       if (updatedMatch.status === 'cancelada' && previousStatus !== 'cancelada') {
         if (db.recurrentConfig) {
-          db.recurrentConfig.active = false; // Parar a recorrência
+          db.recurrentConfig.active = false; // Parar a recorrÃªncia
         }
         notify(db, {
           category: 'partida',
-          title: '❌ Partida Cancelada',
+          title: 'âŒ Partida Cancelada',
           message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi cancelada.`,
           actionUrl: 'calendar',
           matchId: updatedMatch.id
@@ -2802,7 +2795,7 @@ async function startServer() {
             previousStatus: '',
             newStatus: '',
             performedBy: responsibleName || 'Administrador',
-            details: `Sorteio invalidado automaticamente em função do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
+            details: `Sorteio invalidado automaticamente em funÃ§Ã£o do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
           });
         }
 
@@ -2822,25 +2815,25 @@ async function startServer() {
             userId: responsibleId || 'system',
             userName: responsibleName || 'Atleta',
             userEmail: responsibleEmail || 'atleta@sistema.local',
-            action: 'Limpeza em Massa de Confirmações',
+            action: 'Limpeza em Massa de ConfirmaÃ§Ãµes',
             previousRole: '',
             newRole: '',
             previousStatus: '',
             newStatus: '',
             performedBy: responsibleName || 'Atleta',
-            details: `Cancelamento de presença em massa efetuado juntamente com o cancelamento da partida do dia ${updatedMatch.date.split('-').reverse().join('/')} (${updatedMatch.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocações de reservas revertidas.`
+            details: `Cancelamento de presenÃ§a em massa efetuado juntamente com o cancelamento da partida do dia ${updatedMatch.date.split('-').reverse().join('/')} (${updatedMatch.location}). ${numPresencesRemoved} confirmaÃ§Ãµes/respostas removidas e ${numAlertsRemoved} convocaÃ§Ãµes de reservas revertidas.`
           });
         }
       }
 
-      // RESUMPTION POLICY: Se o administrador confirma ou agenda a partida manualmente, reativamos a recorrência
+      // RESUMPTION POLICY: Se o administrador confirma ou agenda a partida manualmente, reativamos a recorrÃªncia
       if ((updatedMatch.status === 'agendada' || updatedMatch.status === 'confirmando') && previousStatus === 'cancelada') {
         if (db.recurrentConfig) {
-          db.recurrentConfig.active = true; // Retomar a recorrência normal
+          db.recurrentConfig.active = true; // Retomar a recorrÃªncia normal
         }
         notify(db, {
           category: 'partida',
-          title: '🔄 Partida Reaberta',
+          title: 'ðŸ”„ Partida Reaberta',
           message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi reaberta por um administrador.`,
           actionUrl: 'calendar',
           matchId: updatedMatch.id
@@ -2862,12 +2855,12 @@ async function startServer() {
       const db = await readDb();
       const matchIndex = db.matches.findIndex((m: any) => m.id === id);
       if (matchIndex === -1) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       const match = db.matches[matchIndex];
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'Após o sorteio ser realizado, as presenças não podem ser limpas.' });
+        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, as presenÃ§as nÃ£o podem ser limpas.' });
       }
 
       const presencesToClear = (db.presences || []).filter((p: any) => p.matchId === id && (p.status === 'confirmado' || p.status === 'cancelado'));
@@ -2889,25 +2882,25 @@ async function startServer() {
         userId: responsibleId || 'system',
         userName: responsibleName || 'Administrador',
         userEmail: responsibleEmail || 'admin@sistema.local',
-        action: 'Limpeza em Massa de Confirmações',
+        action: 'Limpeza em Massa de ConfirmaÃ§Ãµes',
         previousRole: '',
         newRole: '',
         previousStatus: '',
         newStatus: '',
         performedBy: responsibleName || 'Atleta',
-        details: `Limpeza em massa de confirmações efetuada para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocações de reservas revertidas.${hadDraw ? ' Sorteio associado invalidado automaticamente.' : ''}`
+        details: `Limpeza em massa de confirmaÃ§Ãµes efetuada para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). ${numPresencesRemoved} confirmaÃ§Ãµes/respostas removidas e ${numAlertsRemoved} convocaÃ§Ãµes de reservas revertidas.${hadDraw ? ' Sorteio associado invalidado automaticamente.' : ''}`
       });
 
       await writeDb(db);
       return res.json({ 
-        message: 'Confirmações e convocações limpas de forma definitiva!', 
+        message: 'ConfirmaÃ§Ãµes e convocaÃ§Ãµes limpas de forma definitiva!', 
         numPresencesRemoved, 
         numAlertsRemoved,
         match: db.matches[matchIndex]
       });
     } catch (err) {
       console.error('[Clear Presences Error]', err);
-      return res.status(500).json({ error: 'Erro ao limpar confirmações.' });
+      return res.status(500).json({ error: 'Erro ao limpar confirmaÃ§Ãµes.' });
     }
   });
 
@@ -2918,12 +2911,12 @@ async function startServer() {
       const index = db.matches.findIndex((m) => m.id === id);
 
       if (index === -1) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       const match = db.matches[index];
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'Após o sorteio ser realizado, as reservas não podem ser liberadas.' });
+        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, as reservas nÃ£o podem ser liberadas.' });
       }
       match.reservesReleased = true;
       match.reservesReleasedAt = new Date().toISOString();
@@ -2941,7 +2934,7 @@ async function startServer() {
         releasedAt: new Date().toISOString(),
         auditType: 'manual_reserves_release',
         createdAt: new Date().toISOString(),
-        details: `Convocação de reservas iniciada manualmente pelo administrador.`
+        details: `ConvocaÃ§Ã£o de reservas iniciada manualmente pelo administrador.`
       });
 
       await syncMatchStatuses(db);
@@ -2976,7 +2969,7 @@ async function startServer() {
       }
 
       if (toDelete.length === 0) {
-        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluída, pois possuem sorteio realizado ou resultados registrados.' });
+        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluÃ­da, pois possuem sorteio realizado ou resultados registrados.' });
       }
 
       db.matches = (db.matches || []).filter((m) => !toDelete.includes(m.id));
@@ -3002,7 +2995,7 @@ async function startServer() {
         deletedIds: toDelete
       });
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao realizar exclusão em massa.' });
+      return res.status(500).json({ error: 'Erro ao realizar exclusÃ£o em massa.' });
     }
   });
 
@@ -3019,7 +3012,7 @@ async function startServer() {
         if (hasDraws) reasons.push('times sorteados/parciais');
         if (hasResults) reasons.push('placar/resultados registrados');
         return res.status(400).json({ 
-          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e não pode ser excluída.` 
+          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e nÃ£o pode ser excluÃ­da.` 
         });
       }
 
@@ -3038,7 +3031,7 @@ async function startServer() {
       }
 
       await writeDb(db);
-      return res.json({ message: 'Partida excluída com sucesso!' });
+      return res.json({ message: 'Partida excluÃ­da com sucesso!' });
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao remover partida.' });
     }
@@ -3053,7 +3046,7 @@ async function startServer() {
       const db = await readDb();
       return res.json(db.recurrentConfig);
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao ler config de recorrência.' });
+      return res.status(500).json({ error: 'Erro ao ler config de recorrÃªncia.' });
     }
   });
 
@@ -3065,7 +3058,7 @@ async function startServer() {
       db.recurrentConfig = {
         dayOfWeek: parseInt(dayOfWeek),
         time,
-        location: location || 'Arena Furacão',
+        location: location || 'Arena FuracÃ£o',
         durationMinutes: parseInt(durationMinutes),
         confirmationDeadlineDaysBefore: parseInt(confirmationDeadlineDaysBefore),
         active: active !== undefined ? !!active : true,
@@ -3075,7 +3068,7 @@ async function startServer() {
       await writeDb(db);
       return res.json(db.recurrentConfig);
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao salvar config de recorrência.' });
+      return res.status(500).json({ error: 'Erro ao salvar config de recorrÃªncia.' });
     }
   });
 
@@ -3085,12 +3078,12 @@ async function startServer() {
       const activeSeason = db.seasons.find((s) => s.active);
 
       if (!activeSeason) {
-        return res.status(400).json({ error: 'Não há nenhuma temporada ativa para calcular recorrências.' });
+        return res.status(400).json({ error: 'NÃ£o hÃ¡ nenhuma temporada ativa para calcular recorrÃªncias.' });
       }
 
       const config = db.recurrentConfig;
       if (!config) {
-        return res.status(400).json({ error: 'Configuração de recorrência inválida ou não configurada.' });
+        return res.status(400).json({ error: 'ConfiguraÃ§Ã£o de recorrÃªncia invÃ¡lida ou nÃ£o configurada.' });
       }
 
       // Check current dates inside activeSeason dates
@@ -3098,9 +3091,9 @@ async function startServer() {
       const end = new Date(activeSeason.endDate);
       let createdCount = 0;
 
-      // Iteramos dia por dia até o final da temporada
+      // Iteramos dia por dia atÃ© o final da temporada
       let current = new Date(start);
-      current.setHours(12, 0, 0, 0); // Evitar shifts de fuso horário
+      current.setHours(12, 0, 0, 0); // Evitar shifts de fuso horÃ¡rio
 
       while (current <= end) {
         if (current.getDay() === config.dayOfWeek) {
@@ -3123,17 +3116,17 @@ async function startServer() {
         current.setDate(current.getDate() + 1);
       }
 
-      // Quando o administrador gera / confirma a recorrência de forma expressa, garantimos que ela esteja ativa
+      // Quando o administrador gera / confirma a recorrÃªncia de forma expressa, garantimos que ela esteja ativa
       db.recurrentConfig.active = true;
 
       await writeDb(db);
       return res.json({
-        message: `Partidas recorrentes geradas com sucesso. Foram inseridos ${createdCount} rachas no calendário até ${activeSeason.endDate}.`,
+        message: `Partidas recorrentes geradas com sucesso. Foram inseridos ${createdCount} rachas no calendÃ¡rio atÃ© ${activeSeason.endDate}.`,
         createdCount
       });
     } catch (err) {
       console.error('[Generate Recurrent]', err);
-      return res.status(500).json({ error: 'Falha ao processar recorrência.' });
+      return res.status(500).json({ error: 'Falha ao processar recorrÃªncia.' });
     }
   });
 
@@ -3197,7 +3190,7 @@ async function startServer() {
     try {
       const { name, description, type, date, time, location, adultPrice, childPrice } = req.body;
       if (!name || !type || !date) {
-        return res.status(400).json({ error: 'Nome, tipo e data são campos obrigatórios.' });
+        return res.status(400).json({ error: 'Nome, tipo e data sÃ£o campos obrigatÃ³rios.' });
       }
 
       const db = await readDb();
@@ -3220,8 +3213,8 @@ async function startServer() {
 
       notify(db, {
         category: 'evento',
-        title: '🎉 Novo Evento Criado',
-        message: `O evento "${newEvent.name}" foi agendado para o dia ${newEvent.date.split('-').reverse().join('/')} às ${newEvent.time} na localidade ${newEvent.location}.`,
+        title: 'ðŸŽ‰ Novo Evento Criado',
+        message: `O evento "${newEvent.name}" foi agendado para o dia ${newEvent.date.split('-').reverse().join('/')} Ã s ${newEvent.time} na localidade ${newEvent.location}.`,
         actionUrl: 'mural',
         eventId: newEvent.id
       });
@@ -3281,7 +3274,7 @@ async function startServer() {
       const db = await readDb();
       const eventIndex = (db.events || []).findIndex(e => e.id === id);
       if (eventIndex === -1) {
-        return res.status(404).json({ error: 'Evento não encontrado.' });
+        return res.status(404).json({ error: 'Evento nÃ£o encontrado.' });
       }
 
       const previousStatus = db.events[eventIndex].status;
@@ -3303,7 +3296,7 @@ async function startServer() {
         db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
         notify(db, {
           category: 'evento',
-          title: '❌ Evento Cancelado',
+          title: 'âŒ Evento Cancelado',
           message: `O evento "${db.events[eventIndex].name}" marcado para o dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
           actionUrl: 'mural',
           eventId: id
@@ -3312,7 +3305,7 @@ async function startServer() {
         recalculateEventBills(db, id);
         notify(db, {
           category: 'evento',
-          title: '✏️ Detalhes do Evento Alterados',
+          title: 'âœï¸ Detalhes do Evento Alterados',
           message: `O evento "${db.events[eventIndex].name}" foi editado. Confira o cronograma ou local na aba de eventos.`,
           actionUrl: 'mural',
           eventId: id
@@ -3323,7 +3316,7 @@ async function startServer() {
       return res.json(db.events[eventIndex]);
     } catch (err) {
       console.error('[Update Event]', err);
-      return res.status(500).json({ error: 'Erro ao salvar alterações do evento.' });
+      return res.status(500).json({ error: 'Erro ao salvar alteraÃ§Ãµes do evento.' });
     }
   });
 
@@ -3333,23 +3326,23 @@ async function startServer() {
       const db = await readDb();
       const eventIndex = (db.events || []).findIndex(e => e.id === id);
       if (eventIndex === -1) {
-        return res.status(404).json({ error: 'Evento não encontrado.' });
+        return res.status(404).json({ error: 'Evento nÃ£o encontrado.' });
       }
 
       db.events[eventIndex].status = 'cancelado';
-      // Mantenha cobranças que já foram pagas (histórico/movimentação), remova apenas as pendentes
+      // Mantenha cobranÃ§as que jÃ¡ foram pagas (histÃ³rico/movimentaÃ§Ã£o), remova apenas as pendentes
       db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id || b.status === 'pago');
 
       notify(db, {
         category: 'evento',
-        title: '❌ Evento Cancelado',
+        title: 'âŒ Evento Cancelado',
         message: `O evento "${db.events[eventIndex].name}" do dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
         actionUrl: 'mural',
         eventId: id
       });
 
       await writeDb(db);
-      return res.json({ message: 'Evento cancelado e cobranças pendentes suspensas.', event: db.events[eventIndex] });
+      return res.json({ message: 'Evento cancelado e cobranÃ§as pendentes suspensas.', event: db.events[eventIndex] });
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao cancelar o evento.' });
     }
@@ -3361,28 +3354,28 @@ async function startServer() {
       const db = await readDb();
       const eventIndex = (db.events || []).findIndex(e => e.id === id);
       if (eventIndex === -1) {
-        return res.status(404).json({ error: 'Evento não encontrado.' });
+        return res.status(404).json({ error: 'Evento nÃ£o encontrado.' });
       }
 
       const event = db.events[eventIndex];
       if (event.status !== 'cancelado') {
-        return res.status(400).json({ error: 'Apenas eventos cancelados podem ser excluídos.' });
+        return res.status(400).json({ error: 'Apenas eventos cancelados podem ser excluÃ­dos.' });
       }
 
-      // Verifica se houve movimentação financeira (algum débito pago deste evento)
+      // Verifica se houve movimentaÃ§Ã£o financeira (algum dÃ©bito pago deste evento)
       const hasPaidBills = (db.eventBills || []).some((b: any) => b.eventId === id && b.status === 'pago');
       if (hasPaidBills) {
-        return res.status(400).json({ error: 'Este evento possui movimentação financeira (débitos pagos) e não pode ser excluído.' });
+        return res.status(400).json({ error: 'Este evento possui movimentaÃ§Ã£o financeira (dÃ©bitos pagos) e nÃ£o pode ser excluÃ­do.' });
       }
 
       // Remover evento do array principal
       db.events = db.events.filter((e: any) => e.id !== id);
       // Remover os registros de participantes
       db.eventParticipants = (db.eventParticipants || []).filter((p: any) => p.eventId !== id);
-      // Remover as cobranças não pagas que sobraram
+      // Remover as cobranÃ§as nÃ£o pagas que sobraram
       db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
 
-      // Remover notificações associadas ao evento
+      // Remover notificaÃ§Ãµes associadas ao evento
       if (db.notifications) {
         db.notifications = db.notifications.filter(
           (n: any) => 
@@ -3393,7 +3386,7 @@ async function startServer() {
       }
 
       await writeDb(db);
-      return res.json({ message: 'Evento excluído com sucesso.' });
+      return res.json({ message: 'Evento excluÃ­do com sucesso.' });
     } catch (err) {
       console.error('[Delete Event]', err);
       return res.status(500).json({ error: 'Erro ao excluir o evento.' });
@@ -3406,7 +3399,7 @@ async function startServer() {
       const db = await readDb();
       const eventIndex = (db.events || []).findIndex(e => e.id === id);
       if (eventIndex === -1) {
-        return res.status(404).json({ error: 'Evento não encontrado.' });
+        return res.status(404).json({ error: 'Evento nÃ£o encontrado.' });
       }
 
       db.events[eventIndex].status = 'encerrado';
@@ -3426,7 +3419,7 @@ async function startServer() {
 
       const event = (db.events || []).find((e) => e.id === id);
       if (!event) {
-        return res.status(404).json({ error: 'Evento não encontrado.' });
+        return res.status(404).json({ error: 'Evento nÃ£o encontrado.' });
       }
 
       const participants = (db.eventParticipants || []).filter((p) => p.eventId === id);
@@ -3475,17 +3468,17 @@ async function startServer() {
       let { playerId, adultsCount, childrenCount } = req.body;
 
       if (!playerId || adultsCount === undefined || childrenCount === undefined) {
-        return res.status(400).json({ error: 'playerId, adultsCount e childrenCount são obrigatórios.' });
+        return res.status(400).json({ error: 'playerId, adultsCount e childrenCount sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
       const event = (db.events || []).find((e) => e.id === id);
       if (!event) {
-        return res.status(404).json({ error: 'Evento não encontrado.' });
+        return res.status(404).json({ error: 'Evento nÃ£o encontrado.' });
       }
 
       if (event.status === 'encerrado' || event.status === 'cancelado') {
-        return res.status(400).json({ error: 'Este evento já está encerrado ou cancelado.' });
+        return res.status(400).json({ error: 'Este evento jÃ¡ estÃ¡ encerrado ou cancelado.' });
       }
 
       let player = db.players.find(p => p.id === playerId);
@@ -3525,7 +3518,7 @@ async function startServer() {
           playerId = newPlId;
           player = newPlayer;
         } else {
-          return res.status(404).json({ error: 'Atleta não encontrado.' });
+          return res.status(404).json({ error: 'Atleta nÃ£o encontrado.' });
         }
       }
 
@@ -3541,7 +3534,7 @@ async function startServer() {
         }
         db.eventBills = (db.eventBills || []).filter(b => !(b.eventId === id && b.playerId === playerId));
         await writeDb(db);
-        return res.json({ message: 'Confirmação removida.', participant: null, bill: null });
+        return res.json({ message: 'ConfirmaÃ§Ã£o removida.', participant: null, bill: null });
       }
 
       const participantRecord = {
@@ -3597,13 +3590,13 @@ async function startServer() {
 
       await writeDb(db);
       return res.json({
-        message: 'Presença confirmada com sucesso!',
+        message: 'PresenÃ§a confirmada com sucesso!',
         participant: participantRecord,
         bill: billRecord
       });
     } catch (err) {
       console.error('[Confirm Event RSVP]', err);
-      return res.status(500).json({ error: 'Erro ao confirmar presença no evento.' });
+      return res.status(500).json({ error: 'Erro ao confirmar presenÃ§a no evento.' });
     }
   });
 
@@ -3613,7 +3606,7 @@ async function startServer() {
       const { playerId } = req.body;
 
       if (!playerId) {
-        return res.status(400).json({ error: 'playerId é obrigatório.' });
+        return res.status(400).json({ error: 'playerId Ã© obrigatÃ³rio.' });
       }
 
       const db = await readDb();
@@ -3621,7 +3614,7 @@ async function startServer() {
 
       const billIndex = db.eventBills.findIndex(b => b.eventId === id && b.playerId === playerId);
       if (billIndex === -1) {
-        return res.status(404).json({ error: 'Nenhuma cobrança registrada para este evento.' });
+        return res.status(404).json({ error: 'Nenhuma cobranÃ§a registrada para este evento.' });
       }
 
       db.eventBills[billIndex].status = 'pago';
@@ -3635,7 +3628,7 @@ async function startServer() {
   });
 
   // ==========================================
-  // --- PRESENCES (CONFIRMAÇÕES DE RACHA) ---
+  // --- PRESENCES (CONFIRMAÃ‡Ã•ES DE RACHA) ---
   // ==========================================
 
   app.get('/api/matches/:matchId/presences', async (req, res) => {
@@ -3645,7 +3638,7 @@ async function startServer() {
 
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       const mergedList = await getComputedPresences(db, matchId);
@@ -3666,7 +3659,7 @@ async function startServer() {
         presences: mergedList
       });
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao buscar presenças.' });
+      return res.status(500).json({ error: 'Erro ao buscar presenÃ§as.' });
     }
   });
 
@@ -3676,17 +3669,17 @@ async function startServer() {
       const { playerId, status, manuallyApproved } = req.body; // status: 'confirmado' | 'nao_confirmado' | 'cancelado'
 
       if (!playerId || !status) {
-        return res.status(400).json({ error: 'playerId e status são obrigatórios.' });
+        return res.status(400).json({ error: 'playerId e status sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não existe.' });
+        return res.status(404).json({ error: 'Partida nÃ£o existe.' });
       }
 
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'Após o sorteio estar completo, a lista de atletas confirmados está travada.' });
+        return res.status(400).json({ error: 'ApÃ³s o sorteio estar completo, a lista de atletas confirmados estÃ¡ travada.' });
       }
 
       let resolvedPlayerId = playerId;
@@ -3729,7 +3722,7 @@ async function startServer() {
           resolvedPlayerId = newPlId;
           player = newPlayer;
         } else {
-          return res.status(404).json({ error: 'Jogador não encontrado.' });
+          return res.status(404).json({ error: 'Jogador nÃ£o encontrado.' });
         }
       }
 
@@ -3742,7 +3735,7 @@ async function startServer() {
       const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
 
       if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(match.status)) {
-        return res.status(400).json({ error: 'Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.' });
+        return res.status(400).json({ error: 'Prazo limite para confirmaÃ§Ã£o expirado. Mensalistas nÃ£o podem mais confirmar.' });
       }
 
       if (status === 'confirmado') {
@@ -3794,12 +3787,12 @@ async function startServer() {
         });
       }
 
-      // LOGIC: Se o jogador que cancelou a presença já estava CONFIRMADO
+      // LOGIC: Se o jogador que cancelou a presenÃ§a jÃ¡ estava CONFIRMADO
       if (previousStatus === 'confirmado' && status === 'cancelado') {
         notify(db, {
           category: 'partida',
-          title: '👥 Vaga Aberta no Racha',
-          message: `O cancelamento da presença de ${player.name} liberou uma vaga. Acompanhe a lista de reservas!`,
+          title: 'ðŸ‘¥ Vaga Aberta no Racha',
+          message: `O cancelamento da presenÃ§a de ${player.name} liberou uma vaga. Acompanhe a lista de reservas!`,
           targetUserId: 'all',
           actionUrl: 'calendar',
           matchId
@@ -3809,12 +3802,12 @@ async function startServer() {
       await syncMatchStatuses(db);
       await writeDb(db);
       return res.json({
-        message: 'Presença updated with success!',
+        message: 'PresenÃ§a updated with success!',
         alertCreated: null
       });
     } catch (err) {
       console.error('[Toggle Presence Error]', err);
-      return res.status(500).json({ error: 'Erro ao atualizar confirmação de presença.' });
+      return res.status(500).json({ error: 'Erro ao atualizar confirmaÃ§Ã£o de presenÃ§a.' });
     }
   });
 
@@ -3824,17 +3817,17 @@ async function startServer() {
       const { playerIds, status } = req.body; // status: 'confirmado' | 'nao_confirmado' | 'cancelado'
 
       if (!playerIds || !Array.isArray(playerIds) || playerIds.length === 0 || !status) {
-        return res.status(400).json({ error: 'playerIds (array) e status são obrigatórios.' });
+        return res.status(400).json({ error: 'playerIds (array) e status sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não existe.' });
+        return res.status(404).json({ error: 'Partida nÃ£o existe.' });
       }
 
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'Após o sorteio estar completo, a lista de atletas confirmados está travada.' });
+        return res.status(400).json({ error: 'ApÃ³s o sorteio estar completo, a lista de atletas confirmados estÃ¡ travada.' });
       }
 
       const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
@@ -3944,8 +3937,8 @@ async function startServer() {
         if (previousStatus === 'confirmado' && status === 'cancelado') {
           notify(db, {
             category: 'partida',
-            title: '👥 Vaga Aberta no Racha',
-            message: `O cancelamento da presença de ${player.name} liberou uma vaga. Acompanhe a lista de reservas!`,
+            title: 'ðŸ‘¥ Vaga Aberta no Racha',
+            message: `O cancelamento da presenÃ§a de ${player.name} liberou uma vaga. Acompanhe a lista de reservas!`,
             targetUserId: 'all',
             actionUrl: 'calendar',
             matchId
@@ -3956,12 +3949,12 @@ async function startServer() {
       await syncMatchStatuses(db);
       await writeDb(db);
       return res.json({
-        message: `${count} presenças atualizadas com sucesso.`,
+        message: `${count} presenÃ§as atualizadas com sucesso.`,
         alertsCreatedCount
       });
     } catch (err) {
       console.error('[Bulk Toggle Presence Error]', err);
-      return res.status(500).json({ error: 'Erro ao atualizar presenças em massa.' });
+      return res.status(500).json({ error: 'Erro ao atualizar presenÃ§as em massa.' });
     }
   });
 
@@ -3976,7 +3969,7 @@ async function startServer() {
       return res.json(db.draws || []);
     } catch (err) {
       console.error('[Error getting draws history]:', err);
-      return res.status(500).json({ error: 'Erro ao buscar histórico de sorteios.' });
+      return res.status(500).json({ error: 'Erro ao buscar histÃ³rico de sorteios.' });
     }
   });
 
@@ -4004,14 +3997,14 @@ async function startServer() {
       const db = await readDb();
       const match = db.matches.find(m => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       if (match.status === 'encerrada') {
-        return res.status(400).json({ error: 'A partida está encerrada e não é permitido gerar novo sorteio ou executar novo re-sorteio.' });
+        return res.status(400).json({ error: 'A partida estÃ¡ encerrada e nÃ£o Ã© permitido gerar novo sorteio ou executar novo re-sorteio.' });
       }
       if (match.status === 'cancelada') {
-        return res.status(400).json({ error: 'A partida foi cancelada e não é permitido gerar novo sorteio ou executar novo re-sorteio.' });
+        return res.status(400).json({ error: 'A partida foi cancelada e nÃ£o Ã© permitido gerar novo sorteio ou executar novo re-sorteio.' });
       }
 
       // Check current redraw count limit
@@ -4019,7 +4012,7 @@ async function startServer() {
       const redrawCount = previousDraw ? (previousDraw.redrawCount || 0) + 1 : 0;
 
       if (previousDraw && (previousDraw.redrawCount || 0) >= 2) {
-        return res.status(400).json({ error: 'Limite de re-sorteios atingido (máximo de 2 re-sorteios por partida).' });
+        return res.status(400).json({ error: 'Limite de re-sorteios atingido (mÃ¡ximo de 2 re-sorteios por partida).' });
       }
 
       // Validate captain uniqueness if configured
@@ -4031,7 +4024,7 @@ async function startServer() {
         ].filter(Boolean);
 
         if (new Set(capitaes).size !== capitaes.length) {
-          return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitão de mais de um time." });
+          return res.status(400).json({ error: "Um mesmo atleta nÃ£o pode ser definido como capitÃ£o de mais de um time." });
         }
       }
 
@@ -4043,7 +4036,7 @@ async function startServer() {
       const confirmedPlayers = db.players.filter(p => confirmedPlayerIds.includes(p.id) && !p.deletedAt);
 
       if (confirmedPlayers.length === 0) {
-        return res.status(400).json({ error: 'Não há jogadores confirmados nesta partida para realizar o sorteio.' });
+        return res.status(400).json({ error: 'NÃ£o hÃ¡ jogadores confirmados nesta partida para realizar o sorteio.' });
       }
 
       // Precalculate overall rating for each player using the existing helper
@@ -4087,13 +4080,13 @@ async function startServer() {
           userId: 'system',
           userName: 'Sistema de Sorteio',
           userEmail: 'sistema@sistema.local',
-          action: `Re-sorteio de Times (Sequência: #${redrawCount} / 2)`,
+          action: `Re-sorteio de Times (SequÃªncia: #${redrawCount} / 2)`,
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: responsibleName || 'Administrador',
-          details: `Re-sorteio de times efetuado para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). Sequência do re-sorteio: ${redrawCount}/2.`
+          details: `Re-sorteio de times efetuado para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). SequÃªncia do re-sorteio: ${redrawCount}/2.`
         });
       }
 
@@ -4106,7 +4099,7 @@ async function startServer() {
 
       notify(db, {
         category: 'sorteio',
-        title: '🎲 Times Sorteados!',
+        title: 'ðŸŽ² Times Sorteados!',
         message: `O sorteio dos times da rodada do dia ${match.date.split('-').reverse().join('/')} foi realizado. Venha ver se ficou equilibrado!`,
         actionUrl: 'calendar',
         matchId
@@ -4115,8 +4108,8 @@ async function startServer() {
       if (captainsConfigured) {
         notify(db, {
           category: 'sorteio',
-          title: '👑 Capitães Definidos',
-          message: `Os capitães da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
+          title: 'ðŸ‘‘ CapitÃ£es Definidos',
+          message: `Os capitÃ£es da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
           actionUrl: 'calendar',
           matchId
         });
@@ -4126,7 +4119,7 @@ async function startServer() {
       return res.json(newDraw);
     } catch (err) {
       console.error('[Draw Generation Error]', err);
-      return res.status(500).json({ error: 'Erro ao processar sorteio automático.' });
+      return res.status(500).json({ error: 'Erro ao processar sorteio automÃ¡tico.' });
     }
   });
 
@@ -4137,13 +4130,13 @@ async function startServer() {
       const { teams } = req.body; // updated groups configurations: DrawTeam[]
 
       if (!teams || !Array.isArray(teams)) {
-        return res.status(400).json({ error: 'Lista de times formatada é obrigatória.' });
+        return res.status(400).json({ error: 'Lista de times formatada Ã© obrigatÃ³ria.' });
       }
 
       const db = await readDb();
       const drawIndex = (db.draws || []).findIndex(d => d.id === drawId);
       if (drawIndex === -1) {
-        return res.status(404).json({ error: 'Sorteio referenciado não foi encontrado.' });
+        return res.status(404).json({ error: 'Sorteio referenciado nÃ£o foi encontrado.' });
       }
 
       const drawObj = db.draws[drawIndex];
@@ -4151,7 +4144,7 @@ async function startServer() {
       // Validate captains
       const capitaes = teams.map(t => t.captainPlayerId).filter(Boolean);
       if (new Set(capitaes).size !== capitaes.length) {
-        return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitão de mais de um time." });
+        return res.status(400).json({ error: "Um mesmo atleta nÃ£o pode ser definido como capitÃ£o de mais de um time." });
       }
 
       if (drawObj.captainsConfigured) {
@@ -4161,7 +4154,7 @@ async function startServer() {
           return t.playerIds.includes(t.captainPlayerId);
         });
         if (!captainsMatch) {
-          return res.status(400).json({ error: "Um atleta marcado como capitão não pode ser movido para outro time enquanto mantiver a função de capitão." });
+          return res.status(400).json({ error: "Um atleta marcado como capitÃ£o nÃ£o pode ser movido para outro time enquanto mantiver a funÃ§Ã£o de capitÃ£o." });
         }
       }
 
@@ -4220,8 +4213,8 @@ async function startServer() {
 
       notify(db, {
         category: 'sorteio',
-        title: '✏️ Sorteio Alterado Manualmente',
-        message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equilíbrio.`,
+        title: 'âœï¸ Sorteio Alterado Manualmente',
+        message: `A divisÃ£o de times do racha foi modificada manualmente por um organizador para melhor equilÃ­brio.`,
         actionUrl: 'calendar',
         matchId: drawObj.matchId
       });
@@ -4243,13 +4236,13 @@ async function startServer() {
 
       const drawObj = (db.draws || []).find(d => d.id === drawId);
       if (!drawObj) {
-        return res.status(404).json({ error: 'Sorteio não encontrado.' });
+        return res.status(404).json({ error: 'Sorteio nÃ£o encontrado.' });
       }
 
       // Validate that captains configured in the draw do not have duplicates
       const drawCaptains = drawObj.teams.map(t => t.captainPlayerId).filter(Boolean);
       if (new Set(drawCaptains).size !== drawCaptains.length) {
-        return res.status(400).json({ error: "Não foi possível consolidar o sorteio. Um mesmo atleta não pode ser definido como capitão de mais de um time. Ajuste a seleção de capitães e tente novamente." });
+        return res.status(400).json({ error: "NÃ£o foi possÃ­vel consolidar o sorteio. Um mesmo atleta nÃ£o pode ser definido como capitÃ£o de mais de um time. Ajuste a seleÃ§Ã£o de capitÃ£es e tente novamente." });
       }
 
       // Check that each captain belongs to their respective team
@@ -4257,7 +4250,7 @@ async function startServer() {
         return t.captainPlayerId && !t.playerIds.includes(t.captainPlayerId);
       });
       if (captainBelongsProblems) {
-        return res.status(400).json({ error: "Não foi possível consolidar o sorteio. Cada capitão deve pertencer ao respectivo time no sorteio. Ajuste a seleção de capitães e tente novamente." });
+        return res.status(400).json({ error: "NÃ£o foi possÃ­vel consolidar o sorteio. Cada capitÃ£o deve pertencer ao respectivo time no sorteio. Ajuste a seleÃ§Ã£o de capitÃ£es e tente novamente." });
       }
 
       // Mathematical consistency check for overalls (Rule 4)
@@ -4307,7 +4300,7 @@ async function startServer() {
           calculated: { blue: bOverallCalc, red: rOverallCalc, green: gOverallCalc }
         });
         return res.status(400).json({
-          error: `Divergência técnica detectada! As médias calculadas para os times não condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os índices técnicos antes da consolidação.`
+          error: `DivergÃªncia tÃ©cnica detectada! As mÃ©dias calculadas para os times nÃ£o condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os Ã­ndices tÃ©cnicos antes da consolidaÃ§Ã£o.`
         });
       }
 
@@ -4318,7 +4311,7 @@ async function startServer() {
       // Check for duplicate recording protection
       if (drawObj.affinitiesRecorded === true) {
         return res.json({ 
-          message: 'Relações de afinidades já haviam sido consolidadas anteriormente para esta partida.', 
+          message: 'RelaÃ§Ãµes de afinidades jÃ¡ haviam sido consolidadas anteriormente para esta partida.', 
           alreadyRecorded: true 
         });
       }
@@ -4363,7 +4356,7 @@ async function startServer() {
           matchName: matchName,
           duosCount: totalDuosCount,
           triosCount: totalTriosCount,
-          loggedMessage: `Consolidação de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
+          loggedMessage: `ConsolidaÃ§Ã£o de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
         }
       });
 
@@ -4376,7 +4369,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Locking Draw]', err);
-      return res.status(500).json({ error: 'Falha ao consolidar relações de afinidades.' });
+      return res.status(500).json({ error: 'Falha ao consolidar relaÃ§Ãµes de afinidades.' });
     }
   });
 
@@ -4414,7 +4407,7 @@ async function startServer() {
       const db = await readDb();
       const requestingUser = await getAuthenticatedUser(req, db);
       if (!requestingUser || requestingUser.role !== 'admin') {
-        return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta aÃ§Ã£o.' });
       }
 
       const sixMonthsAgo = new Date();
@@ -4452,7 +4445,7 @@ async function startServer() {
       }
 
       return res.json({
-        message: 'Reengajamento concluído.',
+        message: 'Reengajamento concluÃ­do.',
         totalInactive: inactivePlayers.length,
         sent: sent.length,
         failed: failed.length,
@@ -4470,7 +4463,7 @@ async function startServer() {
       const db = await readDb();
       const requestingUser = await getAuthenticatedUser(req, db);
       if (!requestingUser || requestingUser.role !== 'admin') {
-        return res.status(403).json({ error: 'Apenas administradores podem executar esta ação.' });
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta aÃ§Ã£o.' });
       }
 
       const { userId } = req.body as { userId?: string };
@@ -4502,7 +4495,7 @@ async function startServer() {
       }
 
       return res.json({
-        message: userId ? 'E-mail de boas-vindas enviado para o usuário selecionado.' : 'E-mails de boas-vindas enviados para todos os usuários aprovados.',
+        message: userId ? 'E-mail de boas-vindas enviado para o usuÃ¡rio selecionado.' : 'E-mails de boas-vindas enviados para todos os usuÃ¡rios aprovados.',
         total: targets.length,
         sent: sent.length,
         failed: failed.length,
@@ -4558,7 +4551,7 @@ async function startServer() {
       return res.json(stats);
     } catch (err) {
       console.error('[Error generating stats]:', err);
-      return res.status(500).json({ error: 'Erro ao processar estatísticas de jogo.' });
+      return res.status(500).json({ error: 'Erro ao processar estatÃ­sticas de jogo.' });
     }
   });
 
@@ -4568,15 +4561,15 @@ async function startServer() {
       const { matchId } = req.params;
       const db = await readDb();
       const match = db.matches.find((m: any) => m.id === matchId);
-      if (!match) return res.status(404).json({ error: 'Partida não encontrada.' });
+      if (!match) return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       
       match.evaluationsReleased = true;
       await writeDb(db);
       
-      return res.json({ message: 'Avaliações liberadas com sucesso!', match });
+      return res.json({ message: 'AvaliaÃ§Ãµes liberadas com sucesso!', match });
     } catch (err) {
       console.error('[Error releasing evaluations]', err);
-      return res.status(500).json({ error: 'Erro ao liberar avaliações.' });
+      return res.status(500).json({ error: 'Erro ao liberar avaliaÃ§Ãµes.' });
     }
   });
 
@@ -4586,19 +4579,19 @@ async function startServer() {
       const { winsBlue, winsRed, winsGreen } = req.body;
 
       if (winsBlue === undefined || winsRed === undefined || winsGreen === undefined) {
-        return res.status(400).json({ error: 'É necessário preencher as vitórias de todas as equipes.' });
+        return res.status(400).json({ error: 'Ã‰ necessÃ¡rio preencher as vitÃ³rias de todas as equipes.' });
       }
 
       const db = await readDb();
       const match = db.matches.find(m => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       // Check for matching team draw configurations
       const draw = (db.draws || []).find(d => d.matchId === matchId);
       if (!draw) {
-        return res.status(400).json({ error: 'É necessário realizar o sorteio de times antes de registrar o resultado da partida.' });
+        return res.status(400).json({ error: 'Ã‰ necessÃ¡rio realizar o sorteio de times antes de registrar o resultado da partida.' });
       }
 
       // Determine who won this match
@@ -4715,7 +4708,7 @@ async function startServer() {
             matchName: matchName,
             duosCount: totalDuosCount,
             triosCount: totalTriosCount,
-            loggedMessage: `Consolidação de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
+            loggedMessage: `ConsolidaÃ§Ã£o de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
           }
         });
       }
@@ -4788,21 +4781,21 @@ async function startServer() {
         let melhorDupla = 'Nenhuma registrada';
         if (currentStats.duos && currentStats.duos.length > 0) {
           const topDuo = currentStats.duos[0];
-          melhorDupla = `${topDuo.playerAName} e ${topDuo.playerBName} (${topDuo.wonTogether} vitórias, ${topDuo.aproveitamento}% de aproveitamento)`;
+          melhorDupla = `${topDuo.playerAName} e ${topDuo.playerBName} (${topDuo.wonTogether} vitÃ³rias, ${topDuo.aproveitamento}% de aproveitamento)`;
         }
 
         // Format Best Trio
         let melhorTrio = 'Nenhum registrado';
         if (currentStats.trios && currentStats.trios.length > 0) {
           const topTrio = currentStats.trios[0];
-          melhorTrio = `${topTrio.playerAName}, ${topTrio.playerBName} e ${topTrio.playerCName} (${topTrio.wonTogether} vitórias, ${topTrio.aproveitamento}% de aproveitamento)`;
+          melhorTrio = `${topTrio.playerAName}, ${topTrio.playerBName} e ${topTrio.playerCName} (${topTrio.wonTogether} vitÃ³rias, ${topTrio.aproveitamento}% de aproveitamento)`;
         }
 
         // Format Leader/Wins
         let liderVitorias = 'Nenhum';
         if (currentStats.individual && currentStats.individual.length > 0) {
           const leader = currentStats.individual[0];
-          liderVitorias = `${leader.name} (${leader.vitorias} vitórias)`;
+          liderVitorias = `${leader.name} (${leader.vitorias} vitÃ³rias)`;
         }
 
         // Format Best Current Streak
@@ -4852,36 +4845,36 @@ async function startServer() {
         const redTeamPlayers = draw.teams.find(t => t.name === 'Vermelho')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
         const greenTeamPlayers = draw.teams.find(t => t.name === 'Verde')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
 
-        const automaticPostText = `### 📅 Informações Gerais
+        const automaticPostText = `### ðŸ“… InformaÃ§Ãµes Gerais
 - **Data:** ${formattedDate}
-- **Horário:** ${match.time}
+- **HorÃ¡rio:** ${match.time}
 - **Temporada:** ${seasonName}
 - **Participantes:** ${participantsCount} jogadores
 
-### ⚽ Placar Geral
-- **🔵 Time Azul:** ${winsBlue} vitórias
-- **🔴 Time Vermelho:** ${winsRed} vitórias
-- **🟢 Time Verde:** ${winsGreen} vitórias
+### âš½ Placar Geral
+- **ðŸ”µ Time Azul:** ${winsBlue} vitÃ³rias
+- **ðŸ”´ Time Vermelho:** ${winsRed} vitÃ³rias
+- **ðŸŸ¢ Time Verde:** ${winsGreen} vitÃ³rias
 
-### 🏆 Campeões da Rodada
+### ðŸ† CampeÃµes da Rodada
 - ${champions.length > 0 ? champions.map(c => `Time ${c}`).join(' & ') : 'Empate'}
 
-### 👥 Escalação das Equipes
-- **🔵 Time Azul:** ${blueTeamPlayers}
-- **🔴 Time Vermelho:** ${redTeamPlayers}
-- **🟢 Time Verde:** ${greenTeamPlayers}
+### ðŸ‘¥ EscalaÃ§Ã£o das Equipes
+- **ðŸ”µ Time Azul:** ${blueTeamPlayers}
+- **ðŸ”´ Time Vermelho:** ${redTeamPlayers}
+- **ðŸŸ¢ Time Verde:** ${greenTeamPlayers}
 
-### 📊 Estatísticas do Momento
+### ðŸ“Š EstatÃ­sticas do Momento
 - **Melhor Dupla Atual:** ${melhorDupla}
 - **Melhor Trio Atual:** ${melhorTrio}
-- **Líder de Vitórias:** ${liderVitorias}
-- **Maior Sequência Atual:** ${seqAtual}
-- **Maior Sequência Histórica:** ${seqHistorica}`;
+- **LÃ­der de VitÃ³rias:** ${liderVitorias}
+- **Maior SequÃªncia Atual:** ${seqAtual}
+- **Maior SequÃªncia HistÃ³rica:** ${seqHistorica}`;
 
         const generateMatchSvg = (dateStr: string, champs: string[], wB: number, wR: number, wG: number) => {
           const width = 800;
           const height = 450;
-          const champText = champs.length > 0 ? `Campeão: ${champs.join(' & ')}` : 'Empate!';
+          const champText = champs.length > 0 ? `CampeÃ£o: ${champs.join(' & ')}` : 'Empate!';
           const svgText = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <defs>
@@ -4918,7 +4911,7 @@ async function startServer() {
   </g>
 
   <text x="400" y="55" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="14" fill="#22c55e" letter-spacing="3" text-anchor="middle" opacity="0.8">
-    ${APP_NAME.toUpperCase()} • REGISTRO AUTOMÁTICO
+    ${APP_NAME.toUpperCase()} â€¢ REGISTRO AUTOMÃTICO
   </text>
   
   <text x="400" y="90" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle" filter="url(#shadow)">
@@ -4950,7 +4943,7 @@ async function startServer() {
   <g transform="translate(150, 340)" filter="url(#shadow)">
     <rect width="500" height="55" rx="27.5" fill="#142c22" stroke="#22c55e" stroke-width="2" opacity="0.95"/>
     <text x="250" y="34" font-family="'Inter', sans-serif" font-weight="bold" font-size="18" fill="#ffffff" text-anchor="middle">
-      🏆 ${champText.toUpperCase()}
+      ðŸ† ${champText.toUpperCase()}
     </text>
   </g>
 </svg>
@@ -4963,7 +4956,7 @@ async function startServer() {
 
         const automaticPost = {
           id: 'post-auto-' + Date.now(),
-          title: `🏆 Resultado do Racha - ${formattedDate}`,
+          title: `ðŸ† Resultado do Racha - ${formattedDate}`,
           description: automaticPostText,
           mediaUrl: autoPostMediaUrl,
           mediaType: 'image' as const,
@@ -5016,7 +5009,7 @@ async function startServer() {
       const match = db.matches.find((m) => m.id === matchId);
       
       if (!match) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
       
       match.lifecycleState = 'ARCHIVED';
@@ -5062,7 +5055,7 @@ async function startServer() {
     try {
       const { reorderedIds } = req.body;
       if (!reorderedIds || !Array.isArray(reorderedIds)) {
-        return res.status(400).json({ error: 'Lista de IDs reordenada é obrigatória.' });
+        return res.status(400).json({ error: 'Lista de IDs reordenada Ã© obrigatÃ³ria.' });
       }
 
       const db = await readDb();
@@ -5092,7 +5085,7 @@ async function startServer() {
           matchDate: matchObj ? matchObj.date : '',
           matchTime: matchObj ? matchObj.time : '',
           cancelledPlayerName: cancelledPlayer ? cancelledPlayer.name : 'Jogador Desconhecido',
-          suggestedReservePlayerName: suggestedReserve ? suggestedReserve.name : 'Nenhum reserva disponível'
+          suggestedReservePlayerName: suggestedReserve ? suggestedReserve.name : 'Nenhum reserva disponÃ­vel'
         };
       });
 
@@ -5108,7 +5101,7 @@ async function startServer() {
       const db = await readDb();
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       // 1. Get all active players of category 'reserva'
@@ -5223,7 +5216,7 @@ async function startServer() {
       const { matchId } = req.params;
       const { playerId } = req.body;
       if (!playerId) {
-        return res.status(400).json({ error: 'ID do jogador é obrigatório.' });
+        return res.status(400).json({ error: 'ID do jogador Ã© obrigatÃ³rio.' });
       }
 
       const db = await readDb();
@@ -5253,13 +5246,13 @@ async function startServer() {
       const db = await readDb();
       const match = db.matches.find((m) => m.id === matchId);
       if (!match) {
-        return res.status(404).json({ error: 'Partida não encontrada.' });
+        return res.status(404).json({ error: 'Partida nÃ£o encontrada.' });
       }
 
       // Check if there is already an active convocation
       const existingActive = (db.reserveAlerts || []).find((a: any) => a.matchId === matchId && a.status === 'aguardando_resposta' && !a.cleared);
       if (existingActive) {
-        return res.status(400).json({ error: 'Já existe uma convocação pendente de resposta para esta partida.' });
+        return res.status(400).json({ error: 'JÃ¡ existe uma convocaÃ§Ã£o pendente de resposta para esta partida.' });
       }
 
       // Find the next eligible reserve to summon
@@ -5305,7 +5298,7 @@ async function startServer() {
       }
 
       if (finalQueue.length === 0) {
-        return res.status(400).json({ error: 'Não há reservas disponíveis na fila.' });
+        return res.status(400).json({ error: 'NÃ£o hÃ¡ reservas disponÃ­veis na fila.' });
       }
 
       const nextPlayer = finalQueue[0];
@@ -5327,8 +5320,8 @@ async function startServer() {
       // Notify the player
       notify(db, {
         category: 'partida',
-        title: '🏃 Vaga de Reserva Convocada!',
-        message: `Você foi convocado da lista de prioridades para preencher uma vaga no racha de ${match.date.split('-').reverse().join('/')}. Responda na plataforma!`,
+        title: 'ðŸƒ Vaga de Reserva Convocada!',
+        message: `VocÃª foi convocado da lista de prioridades para preencher uma vaga no racha de ${match.date.split('-').reverse().join('/')}. Responda na plataforma!`,
         targetUserId: nextPlayer.id,
         actionUrl: 'calendar',
         matchId
@@ -5337,8 +5330,8 @@ async function startServer() {
       // Public group feed notification
       notify(db, {
         category: 'partida',
-        title: '👥 Convocação de Reserva',
-        message: `Uma vaga livre foi acionada para o reserva ${nextPlayer.name}. Aguardando confirmação...`,
+        title: 'ðŸ‘¥ ConvocaÃ§Ã£o de Reserva',
+        message: `Uma vaga livre foi acionada para o reserva ${nextPlayer.name}. Aguardando confirmaÃ§Ã£o...`,
         targetUserId: 'all',
         actionUrl: 'calendar',
         matchId
@@ -5360,7 +5353,7 @@ async function startServer() {
       await syncMatchStatuses(db);
       await writeDb(db);
 
-      return res.json({ message: `Convocação enviada com sucesso para ${nextPlayer.name}!`, alert: alertObj });
+      return res.json({ message: `ConvocaÃ§Ã£o enviada com sucesso para ${nextPlayer.name}!`, alert: alertObj });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Erro ao realizar summons.' });
@@ -5372,13 +5365,13 @@ async function startServer() {
       const { id } = req.params;
       const { status } = req.body; // 'confirmado' | 'recusado' | 'dispensado'
       if (!status || !['confirmado', 'recusado', 'dispensado'].includes(status)) {
-        return res.status(400).json({ error: 'Status de resposta inválido.' });
+        return res.status(400).json({ error: 'Status de resposta invÃ¡lido.' });
       }
 
       const db = await readDb();
       const alertIndex = db.reserveAlerts.findIndex((a: any) => a.id === id);
       if (alertIndex === -1) {
-        return res.status(404).json({ error: 'Alerta não encontrado.' });
+        return res.status(404).json({ error: 'Alerta nÃ£o encontrado.' });
       }
 
       const alert = db.reserveAlerts[alertIndex];
@@ -5411,8 +5404,8 @@ async function startServer() {
         // Notify
         notify(db, {
           category: 'partida',
-          title: '✅ Convocação Aceita',
-          message: `O reserva ${player ? player.name : 'Jogador'} aceitou a convocação e confirmou presença!`,
+          title: 'âœ… ConvocaÃ§Ã£o Aceita',
+          message: `O reserva ${player ? player.name : 'Jogador'} aceitou a convocaÃ§Ã£o e confirmou presenÃ§a!`,
           targetUserId: 'all',
           actionUrl: 'calendar',
           matchId
@@ -5436,8 +5429,8 @@ async function startServer() {
         // Notify
         notify(db, {
           category: 'partida',
-          title: '❌ Convocação Recusada',
-          message: `O reserva ${player ? player.name : 'Jogador'} recusou ou cancelou sua convocação para a partida.`,
+          title: 'âŒ ConvocaÃ§Ã£o Recusada',
+          message: `O reserva ${player ? player.name : 'Jogador'} recusou ou cancelou sua convocaÃ§Ã£o para a partida.`,
           targetUserId: 'all',
           actionUrl: 'calendar',
           matchId
@@ -5446,8 +5439,8 @@ async function startServer() {
         // Just audit/dispense
         notify(db, {
           category: 'partida',
-          title: 'ℹ️ Convocação Dispensada',
-          message: `A convocação pendente para o reserva ${player ? player.name : 'Jogador'} foi dispensada pela administração.`,
+          title: 'â„¹ï¸ ConvocaÃ§Ã£o Dispensada',
+          message: `A convocaÃ§Ã£o pendente para o reserva ${player ? player.name : 'Jogador'} foi dispensada pela administraÃ§Ã£o.`,
           targetUserId: 'all',
           actionUrl: 'calendar',
           matchId
@@ -5489,15 +5482,15 @@ async function startServer() {
 
       const alertIndex = db.reserveAlerts.findIndex((a) => a.id === id);
       if (alertIndex === -1) {
-        return res.status(404).json({ error: 'Alerta não encontrado.' });
+        return res.status(404).json({ error: 'Alerta nÃ£o encontrado.' });
       }
 
       const alert = db.reserveAlerts[alertIndex];
       if (!alert.suggestedReservePlayerId) {
-        return res.status(400).json({ error: 'Não há reserva indicado para efetivar a convocação.' });
+        return res.status(400).json({ error: 'NÃ£o hÃ¡ reserva indicado para efetivar a convocaÃ§Ã£o.' });
       }
 
-      // Encontrar ou atualizar presença do reserva indicado para "confirmado"!
+      // Encontrar ou atualizar presenÃ§a do reserva indicado para "confirmado"!
       const matchId = alert.matchId;
       const reserveId = alert.suggestedReservePlayerId;
 
@@ -5513,7 +5506,7 @@ async function startServer() {
         if (!isCurrentConfirmed) {
           const confirmedCount = computedListBefore.filter((p) => p.presenceStatus === 'confirmado').length;
           if (confirmedCount >= limit) {
-             return res.status(400).json({ error: `Limite de ${limit} atletas já foi atingido.` });
+             return res.status(400).json({ error: `Limite de ${limit} atletas jÃ¡ foi atingido.` });
           }
         }
       }
@@ -5542,7 +5535,7 @@ async function startServer() {
       await writeDb(db);
       return res.json({ message: 'Reserva convocado com sucesso!' });
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao processar convocação.' });
+      return res.status(500).json({ error: 'Erro ao processar convocaÃ§Ã£o.' });
     }
   });
 
@@ -5556,7 +5549,7 @@ async function startServer() {
       const user = await getAuthenticatedUser(req, db);
 
       const email = user ? user.email.toLowerCase().trim() : (req.query.email as string || '').toLowerCase().trim();
-      // Sem usuário autenticado, o role nunca é elevado a partir de query params do cliente.
+      // Sem usuÃ¡rio autenticado, o role nunca Ã© elevado a partir de query params do cliente.
       const role = user ? user.role : 'jogador';
 
       // Compute general financial health stats (Totals - anonymous)
@@ -5630,7 +5623,7 @@ async function startServer() {
         history: [{ date: '2026-01-01', amount: 100 }]
       });
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao obter configuração financeira.' });
+      return res.status(500).json({ error: 'Erro ao obter configuraÃ§Ã£o financeira.' });
     }
   });
 
@@ -5652,23 +5645,23 @@ async function startServer() {
       const newFee = parseFloat(monthlyFee);
 
       if (isNaN(newFee) || newFee <= 0) {
-        return res.status(400).json({ error: 'Valor da mensalidade inválido.' });
+        return res.status(400).json({ error: 'Valor da mensalidade invÃ¡lido.' });
       }
 
       if (chargeDateRule !== 'primeiro_jogo' && chargeDateRule !== 'ultimo_jogo') {
-        return res.status(400).json({ error: 'Forma de geração inválida. Escolha entre Primeiro Jogo ou Último Jogo.' });
+        return res.status(400).json({ error: 'Forma de geraÃ§Ã£o invÃ¡lida. Escolha entre Primeiro Jogo ou Ãšltimo Jogo.' });
       }
 
       const parsedMax = parseInt(maxMensalistas);
       if (isNaN(parsedMax) || parsedMax <= 0) {
-        return res.status(400).json({ error: 'A quantidade máxima de mensalistas deve ser um número inteiro maior que zero.' });
+        return res.status(400).json({ error: 'A quantidade mÃ¡xima de mensalistas deve ser um nÃºmero inteiro maior que zero.' });
       }
 
       db.financeConfig.maxMensalistas = parsedMax;
       db.financeConfig.monthlyFee = newFee;
       db.financeConfig.chargeDateRule = chargeDateRule;
 
-      // Sempre garante que o histórico reflita a data de vigência correta com o valor atual
+      // Sempre garante que o histÃ³rico reflita a data de vigÃªncia correta com o valor atual
       const existingIdx = db.financeConfig.history.findIndex(h => h.date === effectiveDate);
       if (existingIdx >= 0) {
         db.financeConfig.history[existingIdx].amount = newFee;
@@ -5680,7 +5673,7 @@ async function startServer() {
         db.recurrentConfig = {
           dayOfWeek: 6,
           time: '21:30',
-          location: 'Arena Furacão',
+          location: 'Arena FuracÃ£o',
           durationMinutes: 60,
           confirmationDeadlineDaysBefore: 2,
           active: true,
@@ -5699,20 +5692,20 @@ async function startServer() {
         userId: 'admin',
         userName: 'Administrador',
         userEmail: '[EMAIL]',
-        action: 'Alteração de Parâmetros Financeiros',
+        action: 'AlteraÃ§Ã£o de ParÃ¢metros Financeiros',
         previousRole: '',
         newRole: '',
         previousStatus: '',
         newStatus: '',
         performedBy: 'Administrador',
-        details: `Parâmetros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (Vigência: ${targetEffectiveDate}). Nova regra de geração: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do Mês' : 'Último Jogo do Mês'}. Limite de mensalistas: ${parsedMax}.`
+        details: `ParÃ¢metros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (VigÃªncia: ${targetEffectiveDate}). Nova regra de geraÃ§Ã£o: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do MÃªs' : 'Ãšltimo Jogo do MÃªs'}. Limite de mensalistas: ${parsedMax}.`
       });
 
       await writeDb(db);
       return res.json(db.financeConfig);
     } catch (err) {
       console.error('[API POST /api/finances/config]', err);
-      return res.status(500).json({ error: 'Erro ao salvar configuração financeira.' });
+      return res.status(500).json({ error: 'Erro ao salvar configuraÃ§Ã£o financeira.' });
     }
   });
 
@@ -5720,13 +5713,13 @@ async function startServer() {
     try {
       const { billId, email, role } = req.body;
       if (!billId) {
-        return res.status(400).json({ error: 'Código da cobrança é obrigatório.' });
+        return res.status(400).json({ error: 'CÃ³digo da cobranÃ§a Ã© obrigatÃ³rio.' });
       }
 
       const db = await readDb();
       const billIndex = db.bills.findIndex(b => b.id === billId);
       if (billIndex === -1) {
-        return res.status(404).json({ error: 'Cobrança não encontrada.' });
+        return res.status(404).json({ error: 'CobranÃ§a nÃ£o encontrada.' });
       }
 
       const bill = db.bills[billIndex];
@@ -5737,12 +5730,12 @@ async function startServer() {
 
       if (role !== 'admin' && role !== 'auxiliar') {
         if (!isMyBill) {
-          return res.status(403).json({ error: 'Você só pode confirmar pagamentos das suas próprias cobranças.' });
+          return res.status(403).json({ error: 'VocÃª sÃ³ pode confirmar pagamentos das suas prÃ³prias cobranÃ§as.' });
         }
       }
 
       if (bill.status === 'pago') {
-        return res.status(400).json({ error: 'Esta cobrança já está paga.' });
+        return res.status(400).json({ error: 'Esta cobranÃ§a jÃ¡ estÃ¡ paga.' });
       }
 
       const nowStr = new Date().toISOString();
@@ -5764,7 +5757,7 @@ async function startServer() {
       const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
       notify(db, {
         category: 'financeiro',
-        title: '✅ Pagamento Confirmado',
+        title: 'âœ… Pagamento Confirmado',
         message: `O pagamento da mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) para o jogador ${targetPlayerName} foi confirmado.`,
         targetUserId: bill.playerId,
         actionUrl: 'finance'
@@ -5774,7 +5767,7 @@ async function startServer() {
       return res.json({ message: 'Pagamento confirmado com sucesso!', bill: db.bills[billIndex] });
     } catch (err) {
       console.error('[API POST pay]', err);
-      return res.status(500).json({ error: 'Erro ao processar confirmação de pagamento.' });
+      return res.status(500).json({ error: 'Erro ao processar confirmaÃ§Ã£o de pagamento.' });
     }
   });
 
@@ -5782,13 +5775,13 @@ async function startServer() {
     try {
       const { billId, email, role } = req.body;
       if (!billId) {
-        return res.status(400).json({ error: 'Código da cobrança é obrigatório.' });
+        return res.status(400).json({ error: 'CÃ³digo da cobranÃ§a Ã© obrigatÃ³rio.' });
       }
 
       const db = await readDb();
       const billIndex = db.bills.findIndex(b => b.id === billId);
       if (billIndex === -1) {
-        return res.status(404).json({ error: 'Cobrança não encontrada.' });
+        return res.status(404).json({ error: 'CobranÃ§a nÃ£o encontrada.' });
       }
 
       const bill = db.bills[billIndex];
@@ -5797,7 +5790,7 @@ async function startServer() {
       const isAdmin = role === 'admin' || role === 'auxiliar';
 
       if (!isAdmin && !isMyBill) {
-        return res.status(403).json({ error: 'Você só pode gerenciar os seus próprios débitos.' });
+        return res.status(403).json({ error: 'VocÃª sÃ³ pode gerenciar os seus prÃ³prios dÃ©bitos.' });
       }
 
       const newStatus = bill.status === 'pago' ? 'pendente' : 'pago';
@@ -5826,7 +5819,7 @@ async function startServer() {
         const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
         notify(db, {
           category: 'financeiro',
-          title: '✅ Pagamento Confirmado',
+          title: 'âœ… Pagamento Confirmado',
           message: `O pagamento da mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) para o jogador ${targetPlayerName} foi confirmado.`,
           targetUserId: bill.playerId,
           actionUrl: 'finance'
@@ -5834,10 +5827,10 @@ async function startServer() {
       }
 
       await writeDb(db);
-      return res.json({ message: 'Status de cobrança alterado com sucesso!', bill: db.bills[billIndex] });
+      return res.json({ message: 'Status de cobranÃ§a alterado com sucesso!', bill: db.bills[billIndex] });
     } catch (err) {
       console.error('[API POST Toggle Bill]', err);
-      return res.status(500).json({ error: 'Erro ao alterar status da cobrança.' });
+      return res.status(500).json({ error: 'Erro ao alterar status da cobranÃ§a.' });
     }
   });
 
@@ -5845,7 +5838,7 @@ async function startServer() {
     try {
       const { playerId, competence, amount, dueDate, status } = req.body;
       if (!playerId || !competence || !amount || !dueDate) {
-        return res.status(400).json({ error: 'Todos os campos (Jogador, Competência, Valor e Vencimento) são obrigatórios.' });
+        return res.status(400).json({ error: 'Todos os campos (Jogador, CompetÃªncia, Valor e Vencimento) sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
@@ -5864,17 +5857,17 @@ async function startServer() {
       const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
       notify(db, {
         category: 'financeiro',
-        title: '💰 Nova Cobrança Gerada',
-        message: `Foi gerada uma cobrança manual no valor de R$ ${newBill.amount.toFixed(2)} (${newBill.competence}) para o jogador ${targetPlayerName}.`,
+        title: 'ðŸ’° Nova CobranÃ§a Gerada',
+        message: `Foi gerada uma cobranÃ§a manual no valor de R$ ${newBill.amount.toFixed(2)} (${newBill.competence}) para o jogador ${targetPlayerName}.`,
         targetUserId: newBill.playerId,
         actionUrl: 'finance'
       });
 
       await writeDb(db);
-      return res.status(201).json({ message: 'Cobrança manual criada com sucesso!', bill: newBill });
+      return res.status(201).json({ message: 'CobranÃ§a manual criada com sucesso!', bill: newBill });
     } catch (err) {
       console.error('[API POST bill manual]', err);
-      return res.status(500).json({ error: 'Erro ao criar cobrança manual.' });
+      return res.status(500).json({ error: 'Erro ao criar cobranÃ§a manual.' });
     }
   });
 
@@ -5884,7 +5877,7 @@ async function startServer() {
       const db = await readDb();
       const exists = db.bills.some(b => b.id === billId);
       if (!exists) {
-        return res.status(404).json({ error: 'Cobrança não encontrada.' });
+        return res.status(404).json({ error: 'CobranÃ§a nÃ£o encontrada.' });
       }
 
       db.bills = db.bills.filter(b => b.id !== billId);
@@ -5892,10 +5885,10 @@ async function startServer() {
       db.payments = db.payments.filter(p => p.billId !== billId);
 
       await writeDb(db);
-      return res.json({ message: 'Cobrança removida com sucesso.' });
+      return res.json({ message: 'CobranÃ§a removida com sucesso.' });
     } catch (err) {
       console.error('[API DELETE bill]', err);
-      return res.status(500).json({ error: 'Erro ao remover cobrança.' });
+      return res.status(500).json({ error: 'Erro ao remover cobranÃ§a.' });
     }
   });
 
@@ -5912,7 +5905,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[API POST trigger-sync]', err);
-      return res.status(500).json({ error: 'Erro ao sincronizar cobranças.' });
+      return res.status(500).json({ error: 'Erro ao sincronizar cobranÃ§as.' });
     }
   });
 
@@ -5950,7 +5943,7 @@ async function startServer() {
       res.json({ matches, events });
     } catch (err) {
       console.error('[API GET Associations]', err);
-      res.status(500).json({ error: 'Erro ao carregar associações.' });
+      res.status(500).json({ error: 'Erro ao carregar associaÃ§Ãµes.' });
     }
   });
 
@@ -5968,7 +5961,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[API GET Mural Stats]', err);
-      res.status(500).json({ error: 'Erro ao carregar estatísticas.' });
+      res.status(500).json({ error: 'Erro ao carregar estatÃ­sticas.' });
     }
   });
 
@@ -5980,11 +5973,11 @@ async function startServer() {
       res.json(posts);
     } catch (err) {
       console.error('[API GET Mural Posts]', err);
-      res.status(500).json({ error: 'Erro ao carregar publicações.' });
+      res.status(500).json({ error: 'Erro ao carregar publicaÃ§Ãµes.' });
     }
   });
 
-  // Get public mural posts (Página Pública Simplificada)
+  // Get public mural posts (PÃ¡gina PÃºblica Simplificada)
   app.get('/api/mural/public-posts', async (req, res) => {
     try {
       const db = await readDb();
@@ -5994,17 +5987,17 @@ async function startServer() {
       res.json(posts);
     } catch (err) {
       console.error('[API GET Public Mural Posts]', err);
-      res.status(500).json({ error: 'Erro ao carregar mural público.' });
+      res.status(500).json({ error: 'Erro ao carregar mural pÃºblico.' });
     }
   });
 
-  // Get public app config (nome do sistema, configurável por instalação via APP_NAME)
+  // Get public app config (nome do sistema, configurÃ¡vel por instalaÃ§Ã£o via APP_NAME)
   app.get('/api/public/app-config', (req, res) => {
     res.json({ appName: APP_NAME });
   });
 
-  // Health check: usado pelo Render (Health Check Path) para reiniciar o serviço
-  // automaticamente se a conexão com o Supabase cair, não só se o processo Node está de pé.
+  // Health check: usado pelo Render (Health Check Path) para reiniciar o serviÃ§o
+  // automaticamente se a conexÃ£o com o Supabase cair, nÃ£o sÃ³ se o processo Node estÃ¡ de pÃ©.
   app.get('/api/public/health', async (req, res) => {
     try {
       const { error } = await getSupabaseClient().from('users').select('id').limit(1);
@@ -6070,7 +6063,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[API GET Public Next Match]', err);
-      res.status(500).json({ error: 'Erro ao obter informações do próximo racha.' });
+      res.status(500).json({ error: 'Erro ao obter informaÃ§Ãµes do prÃ³ximo racha.' });
     }
   });
 
@@ -6079,19 +6072,19 @@ async function startServer() {
     try {
       const requestingUser = await getAuthenticatedUser(req);
       if (!requestingUser) {
-        return res.status(401).json({ error: 'Não autenticado.' });
+        return res.status(401).json({ error: 'NÃ£o autenticado.' });
       }
 
       const { filename, fileData, size } = req.body;
 
       if (!filename || !fileData) {
-        return res.status(400).json({ error: 'Os campos filename e fileData são obrigatórios.' });
+        return res.status(400).json({ error: 'Os campos filename e fileData sÃ£o obrigatÃ³rios.' });
       }
 
       const base64Data = fileData.replace(/^data:([A-Za-z0-9-+\/]+);base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // Valida o tipo real do arquivo pelos magic bytes, não pela extensão/mimetype declarado pelo cliente.
+      // Valida o tipo real do arquivo pelos magic bytes, nÃ£o pela extensÃ£o/mimetype declarado pelo cliente.
       const detectedType = await fileTypeFromBuffer(buffer);
       const allowedImageMimes = ['image/jpeg', 'image/png', 'image/webp'];
       const allowedVideoMimes = ['video/mp4', 'video/quicktime'];
@@ -6100,16 +6093,16 @@ async function startServer() {
       const isVideo = !!detectedType && allowedVideoMimes.includes(detectedType.mime);
 
       if (!isImage && !isVideo) {
-        return res.status(400).json({ error: 'Formato de arquivo inválido. Use JPG, JPEG, PNG, WEBP para fotos ou MP4, MOV para vídeos.' });
+        return res.status(400).json({ error: 'Formato de arquivo invÃ¡lido. Use JPG, JPEG, PNG, WEBP para fotos ou MP4, MOV para vÃ­deos.' });
       }
 
-      // Tamanho real do buffer decodificado, não o valor que o próprio cliente informou.
+      // Tamanho real do buffer decodificado, nÃ£o o valor que o prÃ³prio cliente informou.
       const fileSize = buffer.length;
       if (isImage && fileSize > 10 * 1024 * 1024) {
         return res.status(400).json({ error: 'A foto excede o limite permitido de 10 MB.' });
       }
       if (isVideo && fileSize > 200 * 1024 * 1024) {
-        return res.status(400).json({ error: 'O vídeo excede o limite permitido de 200 MB.' });
+        return res.status(400).json({ error: 'O vÃ­deo excede o limite permitido de 200 MB.' });
       }
 
       const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.]/g, '-');
@@ -6168,7 +6161,7 @@ async function startServer() {
 
       const isComm = ['regra', 'aviso', 'comunicado'].includes(category);
       if (!title || (!isComm && !mediaUrl) || !category || !authorId) {
-        return res.status(400).json({ error: 'Título, categoria e autor são obrigatórios.' });
+        return res.status(400).json({ error: 'TÃ­tulo, categoria e autor sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
@@ -6238,7 +6231,7 @@ db.muralPosts.push(newPost);
       res.status(201).json(newPost);
     } catch (err) {
       console.error('[API POST Mural Post]', err);
-      res.status(500).json({ error: 'Erro ao criar publicação.' });
+      res.status(500).json({ error: 'Erro ao criar publicaÃ§Ã£o.' });
     }
   });
 
@@ -6263,7 +6256,7 @@ db.muralPosts.push(newPost);
       } = req.body;
 
       if (!title) {
-        return res.status(400).json({ error: 'O título é obrigatório.' });
+        return res.status(400).json({ error: 'O tÃ­tulo Ã© obrigatÃ³rio.' });
       }
 
       const db = await readDb();
@@ -6272,7 +6265,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'Publicação não encontrada.' });
+        return res.status(404).json({ error: 'PublicaÃ§Ã£o nÃ£o encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6281,7 +6274,7 @@ db.muralPosts.push(newPost);
       const isAuthor = requestingUser != null && post.authorId === requestingUser.id;
 
       if (!isAdmin && !isAuthor) {
-        return res.status(403).json({ error: 'Apenas o autor ou o administrador pode editar esta publicação.' });
+        return res.status(403).json({ error: 'Apenas o autor ou o administrador pode editar esta publicaÃ§Ã£o.' });
       }
 
       const isPostHighlighted = isHighlighted === true;
@@ -6335,7 +6328,7 @@ db.muralPosts.push(newPost);
       res.json(db.muralPosts[postIndex]);
     } catch (err) {
       console.error('[API PUT Mural Post]', err);
-      res.status(500).json({ error: 'Erro ao editar publicação.' });
+      res.status(500).json({ error: 'Erro ao editar publicaÃ§Ã£o.' });
     }
   });
 
@@ -6350,15 +6343,15 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'Publicação não encontrada.' });
+        return res.status(404).json({ error: 'PublicaÃ§Ã£o nÃ£o encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
 
-      // Exclusão is strictly administrative as outlined in specifications
+      // ExclusÃ£o is strictly administrative as outlined in specifications
       const isAdmin = requestingUser?.role === 'admin';
       if (!isAdmin) {
-        return res.status(403).json({ error: 'Apenas Administradores podem excluir publicações do Mural.' });
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir publicaÃ§Ãµes do Mural.' });
       }
 
       // Perform soft delete
@@ -6377,14 +6370,14 @@ db.muralPosts.push(newPost);
         const supabase = getSupabaseClient();
         const { error } = await supabase.storage.from('Uploads').remove(pathsToDelete);
         if (error) {
-          console.error('[Storage] Falha ao remover arquivos do post excluído:', error.message);
+          console.error('[Storage] Falha ao remover arquivos do post excluÃ­do:', error.message);
         }
       }
 
-      res.json({ message: 'Publicação excluída com sucesso (Soft Delete).' });
+      res.json({ message: 'PublicaÃ§Ã£o excluÃ­da com sucesso (Soft Delete).' });
     } catch (err) {
       console.error('[API DELETE Mural Post]', err);
-      res.status(500).json({ error: 'Erro ao excluir publicação.' });
+      res.status(500).json({ error: 'Erro ao excluir publicaÃ§Ã£o.' });
     }
   });
 
@@ -6405,7 +6398,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'Publicação não encontrada.' });
+        return res.status(404).json({ error: 'PublicaÃ§Ã£o nÃ£o encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6468,7 +6461,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'Publicação não encontrada.' });
+        return res.status(404).json({ error: 'PublicaÃ§Ã£o nÃ£o encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6559,7 +6552,7 @@ db.muralPosts.push(newPost);
       });
     } catch (err) {
       console.error('[API GET notifications]', err);
-      return res.status(500).json({ error: 'Erro ao listar as notificações.' });
+      return res.status(500).json({ error: 'Erro ao listar as notificaÃ§Ãµes.' });
     }
   });
 
@@ -6585,14 +6578,14 @@ db.muralPosts.push(newPost);
           }
         });
       } else {
-        return res.status(400).json({ error: 'Id ou lista de Ids de notificações são obrigatórios.' });
+        return res.status(400).json({ error: 'Id ou lista de Ids de notificaÃ§Ãµes sÃ£o obrigatÃ³rios.' });
       }
 
       await writeDb(db);
-      return res.json({ message: `${updatedCount} notificações marcadas como lidas com sucesso.` });
+      return res.json({ message: `${updatedCount} notificaÃ§Ãµes marcadas como lidas com sucesso.` });
     } catch (err) {
       console.error('[API POST mark-read]', err);
-      return res.status(500).json({ error: 'Erro ao marcar notificações como lidas.' });
+      return res.status(500).json({ error: 'Erro ao marcar notificaÃ§Ãµes como lidas.' });
     }
   });
 
@@ -6621,10 +6614,10 @@ db.muralPosts.push(newPost);
       });
 
       await writeDb(db);
-      return res.json({ message: `Todas as ${count} notificações pendentes foram marcadas como lidas.` });
+      return res.json({ message: `Todas as ${count} notificaÃ§Ãµes pendentes foram marcadas como lidas.` });
     } catch (err) {
       console.error('[API POST mark-all-read]', err);
-      return res.status(500).json({ error: 'Erro ao marcar todas as notificações como lidas.' });
+      return res.status(500).json({ error: 'Erro ao marcar todas as notificaÃ§Ãµes como lidas.' });
     }
   });
 
@@ -6646,7 +6639,7 @@ db.muralPosts.push(newPost);
       return res.json(pref);
     } catch (err) {
       console.error('[API GET preferences]', err);
-      return res.status(500).json({ error: 'Erro ao obter configurações de notificação.' });
+      return res.status(500).json({ error: 'Erro ao obter configuraÃ§Ãµes de notificaÃ§Ã£o.' });
     }
   });
 
@@ -6654,7 +6647,7 @@ db.muralPosts.push(newPost);
     try {
       const { userId, preferences } = req.body as { userId: string; preferences: any };
       if (!userId || !preferences) {
-        return res.status(400).json({ error: 'Id do usuário e configurações são obrigatórios.' });
+        return res.status(400).json({ error: 'Id do usuÃ¡rio e configuraÃ§Ãµes sÃ£o obrigatÃ³rios.' });
       }
 
       const db = await readDb();
@@ -6677,10 +6670,10 @@ db.muralPosts.push(newPost);
       }
 
       await writeDb(db);
-      return res.json({ message: 'Configurações de notificação atualizadas com sucesso.', preferences: updatedPref });
+      return res.json({ message: 'ConfiguraÃ§Ãµes de notificaÃ§Ã£o atualizadas com sucesso.', preferences: updatedPref });
     } catch (err) {
       console.error('[API POST preferences]', err);
-      return res.status(500).json({ error: 'Erro ao salvar preferências de notificação.' });
+      return res.status(500).json({ error: 'Erro ao salvar preferÃªncias de notificaÃ§Ã£o.' });
     }
   });
 
@@ -6694,8 +6687,8 @@ db.muralPosts.push(newPost);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, {
-      // Os arquivos em assets/ têm hash de conteúdo no nome (Vite) — seguro cachear por 1 ano.
-      // O index.html não tem hash e referencia esses arquivos, então precisa ficar sempre fresco.
+      // Os arquivos em assets/ tÃªm hash de conteÃºdo no nome (Vite) â€” seguro cachear por 1 ano.
+      // O index.html nÃ£o tem hash e referencia esses arquivos, entÃ£o precisa ficar sempre fresco.
       maxAge: '1y',
       immutable: true,
       setHeaders: (res, filePath) => {

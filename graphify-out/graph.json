@@ -8595,8 +8595,8 @@
       "contributor": null,
       "community": 65,
       "norm_label": "hardening de seguranca operacional",
-      "id": "openwiki_architecture_security_arch_security_md",
-      "community_name": "Hardening de Seguran\u00e7a Operacional"
+      "community_name": "Hardening de Seguran\u00e7a Operacional",
+      "id": "openwiki_architecture_security_arch_security_md"
     },
     {
       "label": "CLAUDE.md",
@@ -8608,8 +8608,8 @@
       "contributor": null,
       "community": 0,
       "norm_label": "claude.md",
-      "id": "claudemd",
-      "community_name": "types.ts"
+      "community_name": "types.ts",
+      "id": "claudemd"
     }
   ],
   "links": [
@@ -10404,7 +10404,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server.ts",
-      "source_location": "L5906",
+      "source_location": "L5899",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -10441,7 +10441,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server.ts",
-      "source_location": "L2590",
+      "source_location": "L2583",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -10464,7 +10464,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server.ts",
-      "source_location": "L4329",
+      "source_location": "L4322",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -10476,7 +10476,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server.ts",
-      "source_location": "L4057",
+      "source_location": "L4050",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -10524,7 +10524,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server.ts",
-      "source_location": "L4439",
+      "source_location": "L4432",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -10585,7 +10585,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "server.ts",
-      "source_location": "L2316",
+      "source_location": "L2309",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -10596,7 +10596,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "server.ts",
-      "source_location": "L4524",
+      "source_location": "L4517",
       "weight": 1.0,
       "_origin": "ast",
       "source": "server_startserver",
@@ -20231,9 +20231,9 @@
       "source_location": "L80",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "readme",
-      "target": "openwiki_operations_deploy_checklist"
+      "target": "openwiki_operations_deploy_checklist",
+      "confidence_score": 1.0
     },
     {
       "relation": "references",
@@ -20242,9 +20242,9 @@
       "source_location": "L78",
       "weight": 1.0,
       "_origin": "ast",
-      "confidence_score": 1.0,
       "source": "readme",
-      "target": "openwiki_operations_deploy_guide"
+      "target": "openwiki_operations_deploy_guide",
+      "confidence_score": 1.0
     },
     {
       "relation": "references",
@@ -22762,5 +22762,5 @@
       "confidence_score": 0.9
     }
   ],
-  "built_at_commit": "c63770aaed36d23fe3a02485c0faed0ba5461ba7"
+  "built_at_commit": "ae6eadabe6d965cbade367bbd60c3ada949dc54a"
 }

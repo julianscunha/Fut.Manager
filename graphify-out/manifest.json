@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "server.ts": {
-    "mtime": 1785637868.7886279,
-    "ast_hash": "499268bbbb781d8ba918208395b9c38c",
+    "mtime": 1785640040.0216577,
+    "ast_hash": "1a037303c1b88029c344933eea21f655",
     "semantic_hash": ""
   },
   "server/auth.ts": {
