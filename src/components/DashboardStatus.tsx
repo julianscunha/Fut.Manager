@@ -2921,7 +2921,19 @@ export default function DashboardStatus({
         {/* LINE 1: Club Treasury & Upcoming Social Events */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* TREASURY & USER BILLS Card */}
-          <div className="sports-card border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col justify-between space-y-5" id="club-finance-bento">
+          <div
+            className="sports-card border border-zinc-800 rounded-2xl p-6 md:p-8 shadow-2xl flex flex-col justify-between space-y-5 cursor-pointer transition hover:border-emerald-500/40 focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+            id="club-finance-bento"
+            role="button"
+            tabIndex={0}
+            onClick={onNavigateToFinances}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onNavigateToFinances?.();
+              }
+            }}
+          >
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3.5 border-b border-zinc-900/85">
                 <div className="flex items-center gap-2.5">
