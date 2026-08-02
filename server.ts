@@ -5665,6 +5665,17 @@ async function startServer() {
       }
 
       db.financeConfig.maxMensalistas = parsedMax;
+      db.financeConfig.monthlyFee = newFee;
+      db.financeConfig.chargeDateRule = chargeDateRule;
+
+      // Sempre garante que o histórico reflita a data de vigência correta com o valor atual
+      const existingIdx = db.financeConfig.history.findIndex(h => h.date === effectiveDate);
+      if (existingIdx >= 0) {
+        db.financeConfig.history[existingIdx].amount = newFee;
+      } else {
+        db.financeConfig.history.push({ date: effectiveDate, amount: newFee });
+      }
+
       if (!db.recurrentConfig) {
         db.recurrentConfig = {
           dayOfWeek: 6,
@@ -5680,20 +5691,6 @@ async function startServer() {
       }
 
       const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
-      if (prevFee !== newFee) {
-        const existingIdx = db.financeConfig.history.findIndex(h => h.date === targetEffectiveDate);
-        if (existingIdx >= 0) {
-          db.financeConfig.history[existingIdx].amount = newFee;
-        } else {
-          db.financeConfig.history.push({
-            date: targetEffectiveDate,
-            amount: newFee
-          });
-        }
-        db.financeConfig.monthlyFee = newFee;
-      }
-
-      db.financeConfig.chargeDateRule = chargeDateRule;
 
       db.userAudits = db.userAudits || [];
       db.userAudits.push({
@@ -5701,7 +5698,7 @@ async function startServer() {
         timestamp: new Date().toISOString(),
         userId: 'admin',
         userName: 'Administrador',
-        userEmail: 'admin@racha.com',
+        userEmail: '[EMAIL]',
         action: 'Alteração de Parâmetros Financeiros',
         previousRole: '',
         newRole: '',
