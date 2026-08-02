@@ -364,7 +364,7 @@ export default function MuralManager({ currentUser, isPublicMode = false }: Mura
 
   const highlightedPosts = posts.filter(p => !['regra', 'aviso', 'comunicado'].includes(p.category) && !p.isDeleted);
   const latestHighlightedPost = highlightedPosts.find(p => p.isHighlighted === true && p.mediaUrl && p.mediaType === 'image') || highlightedPosts.find(p => p.mediaUrl && p.mediaType === 'image');
-  const capaImageUrl = latestHighlightedPost?.mediaUrl || 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?auto=format&fit=crop&w=1200&q=80';
+  const capaImageUrl = latestHighlightedPost?.mediaUrl || 'https://picsum.photos/seed/football1/1200/800?grayscale&blur=2'; // Placeholder de futebol genérico
 
   // Destaques do Mural (No máximo 3)
   const muralHighlights = useMemo(() => {
