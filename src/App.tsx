@@ -1069,23 +1069,28 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {sortedPlayers.map((player) => (
-                      <PlayerCard
-                        key={player.id}
-                        player={player}
-                        currentUser={currentUser}
-                        canEdit={isEditor}
-                        onEdit={handleEditClick}
-                        onInactivate={handleInactivatePlayer}
-                        onRestore={handleRestorePlayer}
-                        onEvaluationSavedGlobal={() => fetchPlayers()}
-                        onSelect={(p) => {
-                          setFeaturedPlayerId(p.id);
-                          setActiveTab('profile');
-                          window.location.hash = `#/players/${p.id}`;
-                        }}
-                      />
-                    ))}
+                    {sortedPlayers.map((player) => {
+                      const isSelf = currentUser?.playerId === player.id || 
+                                     currentUser?.athlete_id === player.id || 
+                                     currentUser?.email?.toLowerCase() === player.email?.toLowerCase();
+                      return (
+                        <PlayerCard
+                          key={player.id}
+                          player={player}
+                          currentUser={currentUser}
+                          canEdit={isEditor || isSelf}
+                          onEdit={handleEditClick}
+                          onInactivate={handleInactivatePlayer}
+                          onRestore={handleRestorePlayer}
+                          onEvaluationSavedGlobal={() => fetchPlayers()}
+                          onSelect={(p) => {
+                            setFeaturedPlayerId(p.id);
+                            setActiveTab('profile');
+                            window.location.hash = `#/players/${p.id}`;
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>

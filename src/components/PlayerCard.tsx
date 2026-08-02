@@ -1478,17 +1478,19 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                   <Edit2 className="w-2.5 h-2.5 text-zinc-450" />
                   <span>Editar</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onInactivate(player.id);
-                  }}
-                  className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-9 w-9"
-                  title="Inativar Jogador"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {(currentUser?.role === 'admin' || currentUser?.role === 'auxiliar') && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onInactivate(player.id);
+                    }}
+                    className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-9 w-9"
+                    title="Inativar Jogador"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ) : (
               <button
