@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "server.ts": {
-    "mtime": 1785640040.0216577,
-    "ast_hash": "1a037303c1b88029c344933eea21f655",
+    "mtime": 1785642536.1641605,
+    "ast_hash": "2c45e7622d9af5168473d262d8c84d99",
     "semantic_hash": ""
   },
   "server/auth.ts": {
@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "src/components/FinanceManager.tsx": {
-    "mtime": 1785633425.6849937,
-    "ast_hash": "ed21bda150994ee6a27ca62005fa94ea",
+    "mtime": 1785642509.2655563,
+    "ast_hash": "cdf10b747837549809ade20966c99786",
     "semantic_hash": ""
   },
   "src/components/LaboratorioManager.tsx": {
@@ -170,8 +170,8 @@
     "semantic_hash": ""
   },
   "src/types.ts": {
-    "mtime": 1785458254.53289,
-    "ast_hash": "683196a449571c1d76439a540fa503d0",
+    "mtime": 1785642616.339162,
+    "ast_hash": "b08d34c07bb1baf5f88c3a7aece7a2cc",
     "semantic_hash": ""
   },
   "src/utils/achievements.ts": {

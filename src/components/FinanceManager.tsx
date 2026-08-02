@@ -22,6 +22,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [recurrentConfig, setRecurrentConfig] = useState<Partial<RecurrentConfig>>({});
   const [financeConfig, setFinanceConfig] = useState<any>(null);
+  const [financeEffectiveDate, setFinanceEffectiveDate] = useState('');
   const [health, setHealth] = useState({ totalExpected: 0, totalReceived: 0, totalPending: 0 });
   const [players, setPlayers] = useState<Player[]>([]);
   
@@ -79,6 +80,13 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     }
   }, []);
 
+  const resolveEffectiveDate = (config: any) => {
+    if (config?.effectiveDate) return config.effectiveDate;
+    const history = Array.isArray(config?.history) ? [...config.history] : [];
+    history.sort((a, b) => a.date.localeCompare(b.date));
+    return history[history.length - 1]?.date || new Date().toISOString().split('T')[0];
+  };
+
   // Fetch complete dataset
   const fetchFinanceData = async () => {
     setLoading(true);
@@ -94,6 +102,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       setHealth(data.health || { totalExpected: 0, totalReceived: 0, totalPending: 0 });
       setRecurrentConfig(data.recurrentConfig || {});
       setFinanceConfig(data.financeConfig || null);
+      setFinanceEffectiveDate(resolveEffectiveDate(data.financeConfig));
       setPlayers(data.players || []);
 
       if (data.financeConfig?.monthlyFee) {
@@ -240,7 +249,6 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     e.preventDefault();
     const fee = (e.currentTarget.elements.namedItem('monthlyFee') as HTMLInputElement).value;
     const rule = (e.currentTarget.elements.namedItem('chargeDateRule') as HTMLSelectElement).value;
-    const effectiveDate = (e.currentTarget.elements.namedItem('effectiveDate') as HTMLInputElement).value;
     const maxMensalistas = (e.currentTarget.elements.namedItem('maxMensalistas') as HTMLInputElement).value;
 
     setActionLoading(true);
@@ -253,7 +261,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
         body: JSON.stringify({
           monthlyFee: parseFloat(fee),
           chargeDateRule: rule,
-          effectiveDate,
+          effectiveDate: financeEffectiveDate,
           maxMensalistas: parseInt(maxMensalistas)
         })
       });
@@ -1148,7 +1156,8 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                     type="date"
                     name="effectiveDate"
                     required
-                    defaultValue={new Date().toISOString().split('T')[0]}
+                    value={financeEffectiveDate}
+                    onChange={(e) => setFinanceEffectiveDate(e.target.value)}
                     className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
                   />
                 </div>

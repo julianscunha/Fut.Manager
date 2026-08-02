@@ -5617,11 +5617,20 @@ async function startServer() {
   app.get('/api/finances/config', async (req, res) => {
     try {
       const db = await readDb();
-      return res.json(db.financeConfig || {
+      const financeConfig = db.financeConfig || {
         monthlyFee: 100,
         chargeDateRule: 'primeiro_jogo',
-        history: [{ date: '2026-01-01', amount: 100 }]
-      });
+        history: [{ date: '2026-01-01', amount: 100 }],
+        effectiveDate: '2026-01-01'
+      };
+
+      if (!financeConfig.effectiveDate) {
+        const history = Array.isArray(financeConfig.history) ? [...financeConfig.history] : [];
+        history.sort((a, b) => a.date.localeCompare(b.date));
+        financeConfig.effectiveDate = history[history.length - 1]?.date || new Date().toISOString().split('T')[0];
+      }
+
+      return res.json(financeConfig);
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao obter configuraÃ§Ã£o financeira.' });
     }
@@ -5657,16 +5666,19 @@ async function startServer() {
         return res.status(400).json({ error: 'A quantidade mÃ¡xima de mensalistas deve ser um nÃºmero inteiro maior que zero.' });
       }
 
+      const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
+
       db.financeConfig.maxMensalistas = parsedMax;
       db.financeConfig.monthlyFee = newFee;
       db.financeConfig.chargeDateRule = chargeDateRule;
+      db.financeConfig.effectiveDate = targetEffectiveDate;
 
       // Sempre garante que o histÃ³rico reflita a data de vigÃªncia correta com o valor atual
-      const existingIdx = db.financeConfig.history.findIndex(h => h.date === effectiveDate);
+      const existingIdx = db.financeConfig.history.findIndex(h => h.date === targetEffectiveDate);
       if (existingIdx >= 0) {
         db.financeConfig.history[existingIdx].amount = newFee;
       } else {
-        db.financeConfig.history.push({ date: effectiveDate, amount: newFee });
+        db.financeConfig.history.push({ date: targetEffectiveDate, amount: newFee });
       }
 
       if (!db.recurrentConfig) {
@@ -5682,8 +5694,6 @@ async function startServer() {
       } else {
         db.recurrentConfig.maxMensalistas = parsedMax;
       }
-
-      const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
 
       db.userAudits = db.userAudits || [];
       db.userAudits.push({

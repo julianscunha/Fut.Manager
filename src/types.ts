@@ -208,6 +208,7 @@ export interface FinanceConfig {
   monthlyFee: number;
   chargeDateRule: 'primeiro_jogo' | 'ultimo_jogo';
   history: FinanceHistoryEntry[];
+  effectiveDate?: string; // YYYY-MM-DD (vigencia atual)
   maxMensalistas?: number;
 }
 
@@ -419,4 +420,3 @@ export interface NotificationPreferences {
   financeiro: boolean;
   sistema: boolean;
 }
-
