@@ -38,7 +38,7 @@ import {
 } from './server/email-templates';
 
 // Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
-// Cada instalação define o seu via APP_NAME no .env â€” nunca hardcode o nome de um grupo especÃ­fico.
+// Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo espec­fico.
 const APP_NAME = process.env.APP_NAME || 'Meu Racha';
 
 // Rede de segurança: uma promise rejeitada sem catch (ex.: erro de configuração como
@@ -599,13 +599,13 @@ async function startServer() {
       // 3. Delete obsolete match notifications of cancelled matches (keeping only the final cancellation/exclusion notice)
       if (n.matchId && canceledMatchIds.has(n.matchId)) {
         const titleLower = (n.title || '').toLowerCase();
-        return titleLower.includes('cancelad') || titleLower.includes('excluÃ­d');
+        return titleLower.includes('cancelad') || titleLower.includes('exclu­d');
       }
 
       // 4. Delete obsolete event notifications of cancelled events (keeping only the final cancellation/exclusion notice)
       if (n.eventId && canceledEventIds.has(n.eventId)) {
         const titleLower = (n.title || '').toLowerCase();
-        return titleLower.includes('cancelad') || titleLower.includes('excluÃ­d');
+        return titleLower.includes('cancelad') || titleLower.includes('exclu­d');
       }
 
       return true;
@@ -624,7 +624,7 @@ async function startServer() {
           id: createdKey,
           category: 'financeiro',
           title: 'ðŸ’° Nova Cobrança Gerada',
-          message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente Ã  competência ${bill.competence} para o jogador ${pName}.`,
+          message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente   competência ${bill.competence} para o jogador ${pName}.`,
           status: 'nao_lida',
           createdAt: new Date().toISOString(),
           targetUserId: bill.playerId,
@@ -734,7 +734,7 @@ async function startServer() {
     contentSecurityPolicy: false // Vite dev/inline scripts precisam de CSP customizado; revisitar em produção
   }));
 
-  // Comprime respostas (JSON de API + bundle JS/CSS estático) com gzip/brotli â€” sem isso,
+  // Comprime respostas (JSON de API + bundle JS/CSS estático) com gzip/brotli — sem isso,
   // o bundle de produção (~2MB) e os payloads JSON trafegam sem nenhuma compactação.
   app.use(compression());
 
@@ -762,13 +762,13 @@ async function startServer() {
 
   // --- Global authentication gate for /api/* ---
   // Auditoria pré-produção encontrou dezenas de rotas de negócio (partidas, financeiro, sorteio,
-  // presenças) sem NENHUMA checagem de autenticação â€” qualquer visitante anonimo da internet
+  // presenças) sem NENHUMA checagem de autenticação — qualquer visitante anonimo da internet
   // conseguia criar/editar/excluir dados. Em vez de tocar rota por rota (~80 rotas), um gate
-  // global exige login válido para tudo em /api/*, com uma lista explÃ­cita e pequena do que
+  // global exige login válido para tudo em /api/*, com uma lista expl­cita e pequena do que
   // realmente precisa ser público (login/registro/recuperação de senha e as duas telas públicas
-  // pré-login: mural público e próxima partida â€” confirmado via teste real de navegação).
+  // pré-login: mural público e próxima partida — confirmado via teste real de navegação).
   // Nota: middleware montado via app.use('/api', ...) recebe req.path já SEM o prefixo /api
-  // (relativo ao ponto de montagem) â€” por isso as regex abaixo não incluem "/api".
+  // (relativo ao ponto de montagem) — por isso as regex abaixo não incluem "/api".
   const PUBLIC_API_ROUTES: { method: string; path: RegExp }[] = [
     { method: 'POST', path: /^\/auth\/register$/ },
     { method: 'POST', path: /^\/auth\/login$/ },
@@ -821,10 +821,10 @@ async function startServer() {
         return res.status(400).json({ error: 'A imagem excede o limite permitido de 5 MB.' });
       }
 
-      // Foto de perfil não precisa de resolução maior que isso â€” recomprime pra WEBP
-      // (bem menor que o JPEG/PNG original) e evita fotos de vÃ¡rios MB pesando no roster.
+      // Foto de perfil não precisa de resolução maior que isso — recomprime pra WEBP
+      // (bem menor que o JPEG/PNG original) e evita fotos de vários MB pesando no roster.
       const compressedBuffer = await sharp(buffer)
-        .rotate() // aplica a orientaÃ§Ã£o EXIF antes de descartÃ¡-la, senão fotos de celular saem giradas
+        .rotate() // aplica a orientção EXIF antes de descartá-la, senão fotos de celular saem giradas
         .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 80 })
         .toBuffer();
@@ -845,7 +845,7 @@ async function startServer() {
       const { data: publicUrlData } = supabase.storage.from('Uploads').getPublicUrl(uniqueFilename);
 
       return res.json({
-        message: 'Upload concluÃ­do com sucesso!',
+        message: 'Upload conclu­do com sucesso!',
         url: publicUrlData.publicUrl
       });
     } catch (err) {
@@ -854,7 +854,7 @@ async function startServer() {
     }
   });
 
-  // Auth: Registrar UsuÃ¡rio
+  // Auth: Registrar Usuário
   app.post('/api/auth/register', authRateLimiter, async (req, res) => {
     try {
       const { name, email, password, confirmPassword } = req.body;
@@ -930,7 +930,7 @@ async function startServer() {
       }
 
       return res.status(201).json({
-        message: 'Cadastro realizado com sucesso! Aguardando aprovaÃ§Ã£o do administrador para acesso.',
+        message: 'Cadastro realizado com sucesso! Aguardando aprovção do administrador para acesso.',
         user: newUser
       });
     } catch (err) {
@@ -948,11 +948,11 @@ async function startServer() {
         return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
       }
 
-      // ValidaÃ§Ã£o do Cloudflare Turnstile se a secret key estiver configurada
+      // Validção do Cloudflare Turnstile se a secret key estiver configurada
       const turnstileSecret = process.env.TURNSTILE_SECRET_KEY || process.env.SUPABASE_TURNSTILE_SECRET_KEY;
       if (turnstileSecret) {
         if (!turnstileToken) {
-          return res.status(400).json({ error: 'Por favor, complete a verificaÃ§Ã£o de segurança do Turnstile.' });
+          return res.status(400).json({ error: 'Por favor, complete a verificção de segurança do Turnstile.' });
         }
 
         try {
@@ -967,7 +967,7 @@ async function startServer() {
           });
           const verifyData: any = await verifyRes.json();
           if (!verifyData.success) {
-            return res.status(400).json({ error: 'Falha na verificaÃ§Ã£o de segurança do Turnstile. Tente novamente.' });
+            return res.status(400).json({ error: 'Falha na verificção de segurança do Turnstile. Tente novamente.' });
           }
         } catch (verifyErr) {
           console.error('[Turnstile Verify Error]', verifyErr);
@@ -979,18 +979,18 @@ async function startServer() {
 
       const user = db.users.find((u) => u.email.toLowerCase().trim() === normalizedEmail);
       if (!user) {
-        return res.status(401).json({ error: 'Credenciais invÃ¡lidas.' });
+        return res.status(401).json({ error: 'Credenciais inválidas.' });
       }
 
       const storedHash = db.passwords[user.id];
       if (!storedHash || !(await verifyPassword(password, storedHash))) {
-        return res.status(401).json({ error: 'Credenciais invÃ¡lidas.' });
+        return res.status(401).json({ error: 'Credenciais inválidas.' });
       }
 
       // Check Approval Status
       if (user.status === 'pending') {
         return res.status(403).json({
-          error: 'Sua conta está aguardando aprovaÃ§Ã£o administrativa. Entre em contato com o organizador.',
+          error: 'Sua conta está aguardando aprovção administrativa. Entre em contato com o organizador.',
           status: 'pending'
         });
       }
@@ -1015,21 +1015,21 @@ async function startServer() {
     }
   });
 
-  // Auth: RedefiniÃ§Ã£o de senha (Esqueci minha senha)
+  // Auth: Redefinição£o de senha (Esqueci minha senha)
   app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
     try {
       const { email } = req.body;
 
       if (!email) {
-        return res.status(400).json({ error: 'O e-mail é obrigatÃ³rio.' });
+        return res.status(400).json({ error: 'O e-mail é obrigatório.' });
       }
 
       const db = await readDb();
       const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
 
-      // Resposta idÃªntica exista ou não o usuário/SMTP configurado â€” não revela se o e-mail está cadastrado.
-      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefiniÃ§Ã£o foi enviado.' };
-      const unavailableResponse = { message: 'A recuperação automÃ¡tica de senha está temporariamente indisponÃ­vel. Entre em contato com um administrador do grupo para redefinir sua senha.' };
+      // Resposta idêntica exista ou não o usuário/SMTP configurado — não revela se o e-mail está cadastrado.
+      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefinição£o foi enviado.' };
+      const unavailableResponse = { message: 'A recuperação automática de senha está temporariamente indispon­vel. Entre em contato com um administrador do grupo para redefinir sua senha.' };
 
       if (!isEmailConfigured()) {
         return res.json(unavailableResponse);
@@ -1060,7 +1060,7 @@ async function startServer() {
         console.error('[API POST /api/auth/forgot-password] Falha ao enviar e-mail:', emailErr);
         delete db.passwordResetTokens[user.id];
         await writeDb(db);
-        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefiniÃ§Ã£o. Tente novamente em instantes.' });
+        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefinição£o. Tente novamente em instantes.' });
       }
 
       return res.json(sentResponse);
@@ -1076,23 +1076,23 @@ async function startServer() {
       const { userId, token, newPassword } = req.body;
 
       if (!userId || !token || !newPassword) {
-        return res.status(400).json({ error: 'InformaÃ§Ãµes invÃ¡lidas para redefiniÃ§Ã£o.' });
+        return res.status(400).json({ error: 'Informções inválidas para redefinição£o.' });
       }
 
       const db = await readDb();
       if (!db.passwords[userId]) {
-        return res.status(404).json({ error: 'UsuÃ¡rio não encontrado.' });
+        return res.status(404).json({ error: 'Usuário não encontrado.' });
       }
 
       const storedToken = db.passwordResetTokens?.[userId];
       if (!storedToken || storedToken.token !== token) {
-        return res.status(401).json({ error: 'Token de redefiniÃ§Ã£o inválido.' });
+        return res.status(401).json({ error: 'Token de redefinição£o inválido.' });
       }
 
       if (new Date(storedToken.expiresAt).getTime() < Date.now()) {
         delete db.passwordResetTokens![userId];
         await writeDb(db);
-        return res.status(401).json({ error: 'Token de redefiniÃ§Ã£o expirado. Solicite uma nova recuperação.' });
+        return res.status(401).json({ error: 'Token de redefinição£o expirado. Solicite uma nova recuperação.' });
       }
 
       db.passwords[userId] = await hashPassword(newPassword);
@@ -1106,7 +1106,7 @@ async function startServer() {
     }
   });
 
-  // UsuÃ¡rios: Listar usuários para aprovaÃ§Ã£o (Apenas Admin/Auxiliar)
+  // Usuários: Listar usuários para aprovção (Apenas Admin/Auxiliar)
   app.get('/api/users', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
@@ -1118,7 +1118,7 @@ async function startServer() {
     return res.json(db.users);
   });
 
-  // UsuÃ¡rios: Listar auditoria de alteraÃ§Ãµes (Apenas Admin/Auxiliar)
+  // Usuários: Listar auditoria de alterções (Apenas Admin/Auxiliar)
   app.get('/api/users/audits', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
@@ -1130,7 +1130,7 @@ async function startServer() {
     return res.json(db.userAudits || []);
   });
 
-  // Auditoria de prazos e liberaÃ§Ã£o de reservas (Apenas Admin/Auxiliar)
+  // Auditoria de prazos e liberção de reservas (Apenas Admin/Auxiliar)
   app.get('/api/deadline-audits', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
@@ -1142,7 +1142,7 @@ async function startServer() {
     return res.json(db.deadlineAudits || []);
   });
 
-  // UsuÃ¡rios: Aprovar / Rejeitar / Mudar Permissão (Admin apenas)
+  // Usuários: Aprovar / Rejeitar / Mudar Permissão (Admin apenas)
   app.post('/api/users/action', async (req, res) => {
     const { 
       userId, 
@@ -1177,25 +1177,25 @@ async function startServer() {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
     if (!requestingUser || requestingUser.role !== 'admin') {
-      return res.status(401).json({ error: 'Não autorizado. Apenas administradores podem gerenciar permissÃµes.' });
+      return res.status(401).json({ error: 'Não autorizado. Apenas administradores podem gerenciar permissões.' });
     }
 
     const userIndex = db.users.findIndex((u) => u.id === userId);
 
     if (userIndex === -1) {
-      return res.status(404).json({ error: 'UsuÃ¡rio não encontrado.' });
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
     if (userId === 'user-admin') {
       if (action === 'reject') {
-        return res.status(400).json({ error: 'Erro de SeguranÃ§a: O Administrador raiz não pode ser excluído, rejeitado ou inativado.' });
+        return res.status(400).json({ error: 'Erro de Segurança: O Administrador raiz não pode ser excluído, rejeitado ou inativado.' });
       }
       if (action === 'update_role') {
         if (role && role !== 'admin') {
-          return res.status(400).json({ error: 'Erro de SeguranÃ§a: O papel de ADMIN não pode ser removido do Administrador raiz.' });
+          return res.status(400).json({ error: 'Erro de Segurança: O papel de ADMIN não pode ser removido do Administrador raiz.' });
         }
         if (selectedPlayerId !== undefined && !selectedPlayerId) {
-          return res.status(400).json({ error: 'Erro de SeguranÃ§a: O Administrador raiz não pode ser desvinculado de uma ficha de atleta.' });
+          return res.status(400).json({ error: 'Erro de Segurança: O Administrador raiz não pode ser desvinculado de uma ficha de atleta.' });
         }
       }
     }
@@ -1208,7 +1208,7 @@ async function startServer() {
         (action === 'reject') || 
         (action === 'update_role' && role && role !== 'admin');
       if (isDemotingOrRejecting && approvedAdmins.length <= 1) {
-        return res.status(400).json({ error: 'Erro de SeguranÃ§a: Não faz sentido e é proibido remover ou rebaixar o Ãºnico Administrador ativo no sistema.' });
+        return res.status(400).json({ error: 'Erro de Segurança: Não faz sentido e é proibido remover ou rebaixar o único Administrador ativo no sistema.' });
       }
     }
 
@@ -1241,13 +1241,13 @@ async function startServer() {
             userId,
             userName: db.users[userIndex].name,
             userEmail: db.users[userIndex].email,
-            action: 'AlteraÃ§Ã£o de VÃ­nculo',
+            action: 'Alterção de V­nculo',
             previousRole: '',
             newRole: '',
             previousStatus: '',
             newStatus: '',
             performedBy: adminName || 'Administrador do Sistema',
-            details: `VÃ­nculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
+            details: `V­nculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
           });
         }
       } else {
@@ -1262,7 +1262,7 @@ async function startServer() {
           const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
           if (currentActiveMonthly >= activeMonthlyLimit) {
             return res.status(400).json({
-              error: `Não foi possÃ­vel concluir a operaÃ§Ã£o. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ ParÃ¢metros.`
+              error: `Não foi poss­vel concluir a operção. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ Par¢metros.`
             });
           }
         }
@@ -1287,20 +1287,20 @@ async function startServer() {
         db.players.push(newPlayer);
         db.users[userIndex].playerId = newPlId;
 
-        // Auditoria: CriaÃ§Ã£o de atleta
+        // Auditoria: Crição de atleta
         db.userAudits.push({
           id: 'audit-pcreate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           timestamp: new Date().toISOString(),
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'CriaÃ§Ã£o de Atleta',
+          action: 'Crição de Atleta',
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: adminName || 'Administrador do Sistema',
-          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovaÃ§Ã£o. PosiÃ§Ã£o principal: ${newPlayer.primaryPosition}.`
+          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovção. Posição£o principal: ${newPlayer.primaryPosition}.`
         });
 
         // Auditoria: Troca de categoria
@@ -1319,14 +1319,14 @@ async function startServer() {
           details: `Categoria inicial definida como: ${initialCategory}`
         });
 
-        // Auditoria: AlteraÃ§Ã£o de telefone
+        // Auditoria: Alterção de telefone
         db.userAudits.push({
           id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           timestamp: new Date().toISOString(),
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'AlteraÃ§Ã£o de telefone',
+          action: 'Alterção de telefone',
           previousRole: '',
           newRole: '',
           previousStatus: '',
@@ -1347,7 +1347,7 @@ async function startServer() {
       notify(db, {
         category: 'jogador',
         title: 'ðŸƒ Novo Jogador no Grupo',
-        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administraÃ§Ã£o como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}.`,
+        message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administrção como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}.`,
         targetUserId: 'all',
         actionUrl: 'players'
       });
@@ -1364,7 +1364,7 @@ async function startServer() {
           });
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
-          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovaÃ§Ã£o:', emailErr);
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovção:', emailErr);
         }
       }
 
@@ -1397,12 +1397,12 @@ async function startServer() {
           });
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
-          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeiÃ§Ã£o:', emailErr);
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeição£o:', emailErr);
         }
       }
     } else if (action === 'update_role' && role) {
       db.users[userIndex].role = role;
-      auditActionText = `AlteraÃ§Ã£o de Perfil de ${previousRole} para ${role}`;
+      auditActionText = `Alterção de Perfil de ${previousRole} para ${role}`;
 
       // Update link action if provided
       if (selectedPlayerId !== undefined) {
@@ -1417,15 +1417,15 @@ async function startServer() {
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'AlteraÃ§Ã£o de VÃ­nculo',
+          action: 'Alterção de V­nculo',
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: adminName || 'Administrador do Sistema',
           details: selectedPlayerId 
-            ? `VÃ­nculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
-            : `VÃ­nculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            ? `V­nculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            : `V­nculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
         });
       }
     }
@@ -1446,14 +1446,14 @@ async function startServer() {
     });
 
     await writeDb(db);
-    return res.json({ message: 'AÃ§Ã£o realizada com sucesso!', user: db.users[userIndex] });
+    return res.json({ message: 'Ção realizada com sucesso!', user: db.users[userIndex] });
   });
 
-  // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pÃºblica do Supabase Storage.
-  // photoOriginal/avatarEsportivo/avatarCard chegam direto do body de PUT /api/players â€” um
+  // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pública do Supabase Storage.
+  // photoOriginal/avatarEsportivo/avatarCard chegam direto do body de PUT /api/players — um
   // cliente mal-intencionado poderia setar esses campos com a URL do arquivo de outro jogador
-  // e, numa ediÃ§Ã£o seguinte, forÃ§ar a exclusão dele. Por isso, antes de apagar: (1) só aceita
-  // caminhos no formato exato gerado pelos nossos prÃ³prios uploads (sem barras/traversal fora
+  // e, numa edição£o seguinte, forçar a exclusão dele. Por isso, antes de apagar: (1) só aceita
+  // caminhos no formato exato gerado pelos nossos próprios uploads (sem barras/traversal fora
   // do esperado) e (2) confirma que nenhum outro registro de jogador ainda referencia essa
   // mesma URL em qualquer um dos 4 campos de foto/avatar.
   async function deleteStorageFileByUrl(url: string | null | undefined): Promise<void> {
@@ -1466,7 +1466,7 @@ async function startServer() {
 
     const looksLikeOwnUpload = /^\d+-[a-z0-9.-]+\.webp$/.test(path) || /^avatars\/[^/]+-esportivo-\d+\.webp$/.test(path);
     if (!looksLikeOwnUpload) {
-      console.warn('[Storage] Ignorando exclusão de caminho fora do padrÃ£o esperado:', path);
+      console.warn('[Storage] Ignorando exclusão de caminho fora do padrão esperado:', path);
       return;
     }
 
@@ -1482,7 +1482,7 @@ async function startServer() {
     const supabase = getSupabaseClient();
     const { error } = await supabase.storage.from('Uploads').remove([path]);
     if (error) {
-      console.error('[Storage] Falha ao remover arquivo Ã³rfÃ£o:', path, error.message);
+      console.error('[Storage] Falha ao remover arquivo órfão:', path, error.message);
     }
   }
 
@@ -1505,15 +1505,15 @@ async function startServer() {
 
   // Providers de avatar retornam a imagem gerada como data URL base64 inline. Salvar isso direto
   // na coluna do Postgres (em vez de só a URL) faz o payload de GET /api/players carregar todo
-  // esse base64 (vÃ¡rias centenas de KB a poucos MB por jogador) a cada leitura da listagem â€” daÃ­
+  // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — da­
   // o upload pro Storage aqui, igual ao que /api/upload-s3 já faz pra foto original.
   async function uploadAvatarDataUrlToStorage(dataUrl: string, pathPrefix: string): Promise<string> {
     const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-    if (!match) return dataUrl; // já não é base64 inline (ex.: URL retornada por engano) â€” nada a fazer
+    if (!match) return dataUrl; // já não é base64 inline (ex.: URL retornada por engano) — nada a fazer
 
     const rawBuffer = Buffer.from(match[2], 'base64');
 
-    // Providers de IA retornam PNG em alta resolução (2-3MB) â€” recomprime pra WEBP, já que
+    // Providers de IA retornam PNG em alta resolução (2-3MB) — recomprime pra WEBP, já que
     // o avatar só é exibido em cards/miniaturas, nunca em tela cheia de alta resolução.
     const compressedBuffer = await sharp(rawBuffer)
       .resize({ width: 1000, height: 1000, fit: 'inside', withoutEnlargement: true })
@@ -1536,7 +1536,7 @@ async function startServer() {
   // Gerar Avatar Esportivo Inteligente usando o AvatarProviderFactory desacoplado
   async function gerarAvatarEsportivo(player: Player, forceRegenerate = false): Promise<Player> {
     const team = FAVORITE_TEAMS.find(t => t.id === player.favoriteTeamId);
-    const timeDoCoracao = team ? team.name : (player.timeDoCoracao || 'SÃ£o Paulo');
+    const timeDoCoracao = team ? team.name : (player.timeDoCoracao || 'São Paulo');
     player.timeDoCoracao = timeDoCoracao;
 
     if (!player.numeroFavorito) {
@@ -1564,11 +1564,11 @@ async function startServer() {
     }
 
     if (process.env.ENABLE_AVATAR_AI !== 'true') {
-      throw new Error('GeraÃ§Ã£o de avatar desativada temporariamente via feature flag.');
+      throw new Error('Gerção de avatar desativada temporariamente via feature flag.');
     }
 
     try {
-      console.log(`[Avatar Inteligente] Iniciando geraÃ§Ã£o com AvatarProviderFactory para o atleta: ${player.name} (${timeDoCoracao})`);
+      console.log(`[Avatar Inteligente] Iniciando gerção com AvatarProviderFactory para o atleta: ${player.name} (${timeDoCoracao})`);
       const provider = AvatarProviderFactory.getProvider();
       const generatedUrl = await provider.generateAvatar({
         photoOriginal: player.photoOriginal,
@@ -1578,15 +1578,15 @@ async function startServer() {
 
       player.avatarEsportivo = generatedUrl;
       player.avatarVersion = (player.avatarVersion || 0) + 1;
-      console.log(`[Avatar Inteligente] Sucesso na geraÃ§Ã£o do avatar de ${player.name}`);
+      console.log(`[Avatar Inteligente] Sucesso na gerção do avatar de ${player.name}`);
       return player;
     } catch (err: any) {
-      console.warn(`[Avatar Inteligente] Erro durante a geraÃ§Ã£o: ${err.message || err}`);
+      console.warn(`[Avatar Inteligente] Erro durante a gerção: ${err.message || err}`);
       throw err;
     }
   }
 
-  // Processamento sÃ­ncrono ou assÃ­ncrono em segundo plano para avatares gamer do atleta
+  // Processamento s­ncrono ou ass­ncrono em segundo plano para avatares gamer do atleta
   async function processarAvatarGamerBackground(playerId: string) {
     console.log(`[Avatar Inteligente] Fluxo de background iniciado para o jogador ID: ${playerId}`);
     
@@ -1599,7 +1599,7 @@ async function startServer() {
 
     let player = db.players[playerIndex];
     if (!player.photoOriginal) {
-      console.log(`[Avatar Inteligente] Sem foto original vÃ¡lida. Encerrando.`);
+      console.log(`[Avatar Inteligente] Sem foto original válida. Encerrando.`);
       const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
@@ -1610,7 +1610,7 @@ async function startServer() {
     }
 
     if (process.env.ENABLE_AVATAR_AI !== 'true') {
-      console.log(`[Avatar Inteligente] GeraÃ§Ã£o suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
+      console.log(`[Avatar Inteligente] Gerção suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
       const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
@@ -1626,7 +1626,7 @@ async function startServer() {
     try {
       const generatedPlayer = await gerarAvatarEsportivo(player, true);
 
-      // RelÃª banco para evitar conflito de gravaÃ§Ã£o concorrente
+      // Relê banco para evitar conflito de gravção concorrente
       db = await readDb();
       playerIndex = db.players.findIndex(p => p.id === playerId);
       if (playerIndex !== -1) {
@@ -1643,13 +1643,13 @@ async function startServer() {
           const avatarUrl = await uploadAvatarDataUrlToStorage(generatedPlayer.avatarEsportivo!, `avatars/${playerId}-esportivo`);
           player.avatarCard = avatarUrl;
           player.avatarEsportivo = avatarUrl;
-          player.avatarStatus = 'CONCLUÃDO';
+          player.avatarStatus = 'CONCLUDO';
         }
 
         await writeDb(db);
         console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
 
-        // Apaga a versão anterior do avatar no Storage, já substituÃ­da ou zerada acima.
+        // Apaga a versão anterior do avatar no Storage, já substitu­da ou zerada acima.
         if (oldCard !== player.avatarCard) await deleteStorageFileByUrl(oldCard);
         if (oldEsportivo !== oldCard && oldEsportivo !== player.avatarEsportivo) await deleteStorageFileByUrl(oldEsportivo);
       }
@@ -1669,7 +1669,7 @@ async function startServer() {
     }
   }
 
-  // Jogadores: Listar (Retorna ativos se sem parÃ¢metro, ou todos se admin para gerenciamento)
+  // Jogadores: Listar (Retorna ativos se sem par¢metro, ou todos se admin para gerenciamento)
   app.get('/api/players', async (req, res) => {
     const db = await readDb();
     const includeDeleted = req.query.includeDeleted === 'true';
@@ -1698,7 +1698,7 @@ async function startServer() {
     const { responsibleName, ...playerData } = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'> & { responsibleName?: string };
 
     if (!playerData.name || !playerData.category || !playerData.status || !playerData.primaryPosition) {
-      return res.status(400).json({ error: 'Nome, categoria, status e posiÃ§Ã£o principal são obrigatórios.' });
+      return res.status(400).json({ error: 'Nome, categoria, status e posição£o principal são obrigatórios.' });
     }
 
     if (playerData.category === 'mensalista' && playerData.primaryPosition !== 'goleiro') {
@@ -1706,14 +1706,14 @@ async function startServer() {
       const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
       if (currentActiveMonthly >= activeMonthlyLimit) {
         return res.status(400).json({
-          error: `Não foi possÃ­vel concluir a operaÃ§Ã£o. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ ParÃ¢metros.`
+          error: `Não foi poss­vel concluir a operção. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ Par¢metros.`
         });
       }
     }
 
     const formattedPhone = playerData.phone || '(85) 99999-9999';
-    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email â€” normaliza para
-    // undefined quando vazio, senão o 2Âº jogador sem e-mail colidiria com o 1Âº na constraint.
+    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email — normaliza para
+    // undefined quando vazio, senão o 2º jogador sem e-mail colidiria com o 1º na constraint.
     if (!playerData.email || !playerData.email.trim()) {
       delete (playerData as any).email;
     }
@@ -1735,13 +1735,13 @@ async function startServer() {
       avatarOriginal: playerData.photoOriginal || '',
       avatarEsportivo: '',
       avatarCard: '',
-      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUÃDO',
+      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUDO',
       avatarVersion: 1
     };
 
     db.players.push(newPlayer);
 
-    // Auditoria: CriaÃ§Ã£o de atleta
+    // Auditoria: Crição de atleta
     if (!db.userAudits) db.userAudits = [];
     db.userAudits.push({
       id: 'audit-pcreate-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
@@ -1749,7 +1749,7 @@ async function startServer() {
       userId: 'system',
       userName: newPlayer.name,
       userEmail: playerData.email || 'atleta@sistema.local',
-      action: 'CriaÃ§Ã£o de Atleta',
+      action: 'Crição de Atleta',
       previousRole: '',
       newRole: '',
       previousStatus: '',
@@ -1774,14 +1774,14 @@ async function startServer() {
       details: `Categoria inicial definida como: ${newPlayer.category}`
     });
 
-    // Auditoria: AlteraÃ§Ã£o de telefone
+    // Auditoria: Alterção de telefone
     db.userAudits.push({
       id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: new Date().toISOString(),
       userId: 'system',
       userName: newPlayer.name,
       userEmail: playerData.email || 'atleta@sistema.local',
-      action: 'AlteraÃ§Ã£o de telefone',
+      action: 'Alterção de telefone',
       previousRole: '',
       newRole: '',
       previousStatus: '',
@@ -1792,7 +1792,7 @@ async function startServer() {
 
     await writeDb(db);
 
-    // Trigger background generation only after the player is guaranteed persisted â€”
+    // Trigger background generation only after the player is guaranteed persisted —
     // processarAvatarGamerBackground does its own readDb() and would otherwise race with writeDb() above.
     if (newPlayer.photoOriginal) {
       setImmediate(() => {
@@ -1805,7 +1805,7 @@ async function startServer() {
     return res.status(201).json({ message: 'Jogador cadastrado com sucesso!', player: newPlayer });
   });
 
-  // Jogadores: Gerar 10 Jogadores AleatÃ³rios
+  // Jogadores: Gerar 10 Jogadores Aleatórios
   app.post('/api/players/generate-random-10', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
@@ -1815,17 +1815,17 @@ async function startServer() {
     }
 
     if (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar') {
-      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores e auxiliares podem gerar atletas aleatÃ³rios.' });
+      return res.status(403).json({ error: 'Acesso Proibido: Apenas administradores e auxiliares podem gerar atletas aleatórios.' });
     }
 
     const firstNames = [
       "Gabriel", "Lucas", "Mateus", "Guilherme", "Felipe", "Thiago", "Arthur", "Matheus", "Gustavo", "Vinicius", 
       "Rodrigo", "Daniel", "Rafael", "Bruno", "Eduardo", "Diego", "Vitor", "Leonardo", "Marcelo", "Alexandre",
-      "Carlos", "Marcos", "JoÃ£o", "André", "Renato", "Enzo", "Pedro", "Caio", "Luiz", "Ricardo"
+      "Carlos", "Marcos", "João", "André", "Renato", "Enzo", "Pedro", "Caio", "Luiz", "Ricardo"
     ];
     const lastNames = [
       "Silva", "Santos", "Souza", "Oliveira", "Pereira", "Lima", "Carvalho", "Ferreira", "Ribeiro", "Almeida", 
-      "Costa", "Gomes", "Martins", "AraÃºjo", "Rodrigues", "Nascimento", "Barbosa", "Cardoso", "Melo", "Teixeira",
+      "Costa", "Gomes", "Martins", "Araújo", "Rodrigues", "Nascimento", "Barbosa", "Cardoso", "Melo", "Teixeira",
       "Cavalcante", "Nunes", "Mendes", "Pinheiro", "Pinto", "Guedes", "Rocha", "Fonseca", "Alves", "Vieira"
     ];
 
@@ -1917,7 +1917,7 @@ async function startServer() {
         updatedAt: new Date().toISOString(),
         currentStreak: 0,
         maxStreak: 0,
-        adminNotes: 'Atleta simulado de demonstraÃ§Ã£o gerado automaticamente.'
+        adminNotes: 'Atleta simulado de demonstrção gerado automaticamente.'
       };
 
       db.players.push(randomizedPlayer);
@@ -1931,13 +1931,13 @@ async function startServer() {
         userId: 'system',
         userName: fullName,
         userEmail: cleanEmail,
-        action: 'CriaÃ§Ã£o de Atleta',
+        action: 'Crição de Atleta',
         previousRole: '',
         newRole: '',
         previousStatus: '',
         newStatus: '',
         performedBy: requestingUser.name,
-        details: `Atleta ${fullName} gerado automaticamente por simulaÃ§Ã£o.`
+        details: `Atleta ${fullName} gerado automaticamente por simulção.`
       });
     }
 
@@ -1953,7 +1953,7 @@ async function startServer() {
   app.put('/api/players/:id', async (req, res) => {
     const { id } = req.params;
     const { responsibleName, ...updateData } = req.body as Partial<Player> & { responsibleName?: string };
-    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email â€” normaliza para
+    // Postgres trata '' como valor real (diferente de NULL) na coluna UNIQUE email — normaliza para
     // undefined quando vazio, senão dois jogadores sem e-mail colidiriam na constraint.
     if (updateData.email !== undefined && !updateData.email.trim()) {
       delete updateData.email;
@@ -1980,7 +1980,7 @@ async function startServer() {
     if (!isRequestingAdmin) {
       const isEditingSelf = requestingUser.playerId === id || requestingUser.athlete_id === id;
       if (!isEditingSelf) {
-        return res.status(403).json({ error: 'Acesso Proibido: Você só tem permissão para editar sua prÃ³pria ficha de atleta.' });
+        return res.status(403).json({ error: 'Acesso Proibido: Você só tem permissão para editar sua própria ficha de atleta.' });
       }
 
     }
@@ -2000,7 +2000,7 @@ async function startServer() {
       const otherActivePayingMensalistas = db.players.filter(p => p.id !== existingPlayer.id && !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
       if (otherActivePayingMensalistas >= activeMonthlyLimit) {
         return res.status(400).json({
-          error: `Não foi possÃ­vel concluir a operaÃ§Ã£o. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ ParÃ¢metros.`
+          error: `Não foi poss­vel concluir a operção. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ Par¢metros.`
         });
       }
     }
@@ -2049,7 +2049,7 @@ async function startServer() {
         userId: 'system',
         userName: existingPlayer.name,
         userEmail: existingPlayer.email || 'atleta@sistema.local',
-        action: 'AlteraÃ§Ã£o de telefone',
+        action: 'Alterção de telefone',
         previousRole: '',
         newRole: '',
         previousStatus: '',
@@ -2081,8 +2081,8 @@ async function startServer() {
     const forceRegenerate = photoChanged || teamChanged || numChanged || footChanged || !existingPlayer.avatarCard;
 
     if (forceRegenerate) {
-      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUÃDO';
-      // Sem foto original não hÃ¡ como gerar/manter o avatar de IA â€” limpa para não continuar
+      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUDO';
+      // Sem foto original não há como gerar/manter o avatar de IA — limpa para não continuar
       // exibindo um avatar antigo (a foto que o originou já não existe mais).
       if (!updatedPlayer.photoOriginal) {
         updatedPlayer.avatarEsportivo = null;
@@ -2096,8 +2096,8 @@ async function startServer() {
     const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
     if (statusChanged) {
       const statusLabels: Record<string, string> = {
-        disponivel: 'DisponÃ­vel',
-        indisponivel: 'IndisponÃ­vel',
+        disponivel: 'Dispon­vel',
+        indisponivel: 'Indispon­vel',
         lesionado: 'Lesionado',
         afastado: 'Afastado'
       };
@@ -2113,7 +2113,7 @@ async function startServer() {
         notify(db, {
           category: 'jogador',
           title: 'ðŸ’ª Lesão Encerrada!',
-          message: `Ã“timas notÃ­cias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente Ã  disposiÃ§Ã£o do grupo!`,
+          message: `“timas not­cias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente   disposição£o do grupo!`,
           targetUserId: 'all',
           actionUrl: 'players'
         });
@@ -2123,7 +2123,7 @@ async function startServer() {
     if (categoryChanged && updateData.category === 'mensalista') {
       notify(db, {
         category: 'jogador',
-        title: 'â­ï¸ PromoÃ§Ã£o para Mensalista!',
+        title: 'â­ï¸ Promoção£o para Mensalista!',
         message: `O jogador ${existingPlayer.name} foi oficialmente promovido ao grupo de Mensalistas. Parabéns!`,
         targetUserId: existingPlayer.id,
         actionUrl: 'players'
@@ -2188,7 +2188,7 @@ async function startServer() {
     });
 
     return res.json({ 
-      message: 'GeraÃ§Ã£o do Avatar Gamer iniciada em background!', 
+      message: 'Gerção do Avatar Gamer iniciada em background!', 
       player
     });
   });
@@ -2221,7 +2221,7 @@ async function startServer() {
     return res.json({ message: 'Jogador inativado com sucesso!', player: db.players[index] });
   });
 
-  // Jogadores: Restaurar (Desfazer inativaÃ§Ã£o)
+  // Jogadores: Restaurar (Desfazer inativção)
   app.post('/api/players/:id/restore', async (req, res) => {
     const { id } = req.params;
 
@@ -2249,7 +2249,7 @@ async function startServer() {
     return res.json({ message: 'Jogador reativado com sucesso!', player: db.players[index] });
   });
 
-  // Buscar histÃ³rico de transiÃ§Ã£o de categoria de um jogador
+  // Buscar histórico de transição£o de categoria de um jogador
   app.get('/api/players/:id/transitions', async (req, res) => {
     try {
       const { id } = req.params;
@@ -2257,11 +2257,11 @@ async function startServer() {
       const transitions = (db.categoryTransitions || []).filter(t => t.playerId === id);
       return res.json(transitions.sort((a, b) => b.date.localeCompare(a.date)));
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao buscar histÃ³rico de mudanÃ§as.' });
+      return res.status(500).json({ error: 'Erro ao buscar histórico de mudanças.' });
     }
   });
 
-  // Alertas e recomendaÃ§Ãµes de promoÃ§Ã£o para mensalistas
+  // Alertas e recomendções de promoção£o para mensalistas
   app.get('/api/mensalista-alerts', async (req, res) => {
     try {
       const db = await readDb();
@@ -2315,7 +2315,7 @@ async function startServer() {
     }
   });
 
-  // Jogadores: PreparaÃ§Ã£o do fluxograma futuro de Card IA
+  // Jogadores: Preparção do fluxograma futuro de Card IA
   app.post('/api/players/:id/generate-card', async (req, res) => {
     const { id } = req.params;
 
@@ -2333,7 +2333,7 @@ async function startServer() {
       });
     }
 
-    // Estrutura planejada para a futura versão com serviÃ§o de IA integrado:
+    // Estrutura planejada para a futura versão com serviço de IA integrado:
     // Passo 1: Obter "photoOriginal" do S3.
     // Passo 2: Enviar imagem para o modelo de Visão do Gemini (ou outro gerador generativo).
     // Passo 3: O prompt solicita e segmenta o rosto original do atleta e substitui o corpo com uniforme customizado nas cores do clube (FAVORITE_TEAMS).
@@ -2343,7 +2343,7 @@ async function startServer() {
     return res.status(200).json({
       success: false,
       error: 'planned_feature',
-      message: 'Funcionalidade planejada para a próxima versão. IntegraÃ§Ã£o com IA em andamento.',
+      message: 'Funcionalidade planejada para a próxima versão. Integrção com IA em andamento.',
       details: {
         playerId: player.id,
         photoOriginal: player.photoOriginal,
@@ -2430,7 +2430,7 @@ async function startServer() {
       return res.json(summaries);
     } catch (err) {
       console.error('[Error Summary Evaluations]', err);
-      return res.status(500).json({ error: 'Erro interno ao processar resumo de avaliaÃ§Ãµes.' });
+      return res.status(500).json({ error: 'Erro interno ao processar resumo de avalições.' });
     }
   });
 
@@ -2531,7 +2531,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Get Player Evaluations]', err);
-      return res.status(500).json({ error: 'Erro interno ao buscar faturamento ou avaliaÃ§Ãµes do jogador.' });
+      return res.status(500).json({ error: 'Erro interno ao buscar faturamento ou avalições do jogador.' });
     }
   });
 
@@ -2542,7 +2542,7 @@ async function startServer() {
       const { evaluatorUserId, ratings } = req.body;
 
       if (!evaluatorUserId || !ratings) {
-        return res.status(400).json({ error: 'IdentificaÃ§Ã£o do avaliador e notas são obrigatórios.' });
+        return res.status(400).json({ error: 'Identificção do avaliador e notas são obrigatórios.' });
       }
 
       const db = await readDb();
@@ -2565,14 +2565,14 @@ async function startServer() {
       const currentPeriod = new Date().toISOString().substring(0, 7); // "YYYY-MM"
       const previousEval = db.evaluations.find(e => e.evaluatorUserId === evaluatorUserId && e.targetPlayerId === id);
 
-      let messageStr = 'AvaliaÃ§Ã£o registrada com sucesso de forma anÃ´nima!';
+      let messageStr = 'Avalição registrada com sucesso de forma anônima!';
 
       if (previousEval) {
         const wasSamePeriod = previousEval.date.startsWith(currentPeriod);
         if (wasSamePeriod) {
-          messageStr = 'Sua avaliaÃ§Ã£o anterior para este perÃ­odo foi atualizada com sucesso!';
+          messageStr = 'Sua avalição anterior para este per­odo foi atualizada com sucesso!';
         } else {
-          messageStr = 'Sua nova avaliaÃ§Ã£o substituiu a avaliaÃ§Ã£o do perÃ­odo anterior com sucesso!';
+          messageStr = 'Sua nova avalição substituiu a avalição do per­odo anterior com sucesso!';
         }
 
         // Overwrite the existing evaluation to prevent duplication
@@ -2611,7 +2611,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Post Player Evaluate]', err);
-      return res.status(500).json({ error: 'Não foi possÃ­vel salvar a avaliaÃ§Ã£o.' });
+      return res.status(500).json({ error: 'Não foi poss­vel salvar a avalição.' });
     }
   });
 
@@ -2632,7 +2632,7 @@ async function startServer() {
     try {
       const { name, year, startDate, endDate, active } = req.body;
       if (!name || !year || !startDate || !endDate) {
-        return res.status(400).json({ error: 'Campos Nome, Ano, Data inÃ­cio e Fim são obrigatórios.' });
+        return res.status(400).json({ error: 'Campos Nome, Ano, Data in­cio e Fim são obrigatórios.' });
       }
 
       const db = await readDb();
@@ -2761,7 +2761,7 @@ async function startServer() {
     try {
       const { date, time, location, durationMinutes, status, seasonId, confirmationDeadlineDaysBefore } = req.body;
       if (!date || !time) {
-        return res.status(400).json({ error: 'Data e HorÃ¡rio são obrigatórios.' });
+        return res.status(400).json({ error: 'Data e Horário são obrigatórios.' });
       }
 
       // Check if match date is in the past relative to today (America/Sao_Paulo timezone or fallback)
@@ -2795,7 +2795,7 @@ async function startServer() {
       // Check if match already exists on this date
       const exists = db.matches.some((m) => m.date === date && m.seasonId === targetSeasonId);
       if (exists) {
-        return res.status(400).json({ error: `JÃ¡ existe uma partida agendada para o dia ${date}.` });
+        return res.status(400).json({ error: `Já existe uma partida agendada para o dia ${date}.` });
       }
 
       const newMatch: Match = {
@@ -2803,7 +2803,7 @@ async function startServer() {
         seasonId: targetSeasonId,
         date,
         time,
-        location: location || 'Arena FuracÃ£o',
+        location: location || 'Arena Furacão',
         durationMinutes: durationMinutes ? parseInt(durationMinutes) : 60,
         status: status || 'agendada',
         confirmationDeadlineDaysBefore: confirmationDeadlineDaysBefore !== undefined && confirmationDeadlineDaysBefore !== null ? parseInt(confirmationDeadlineDaysBefore) : undefined
@@ -2845,7 +2845,7 @@ async function startServer() {
 
       const previousStatus = db.matches[index].status;
       if (previousStatus === 'sorteada' && status && status !== 'sorteada' && status !== 'encerrada' && status !== 'cancelada') {
-        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, não é permitido reabrir confirmações (exceto para cancelamento).' });
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, não é permitido reabrir confirmações (exceto para cancelamento).' });
       }
 
       const dateChanged = date && date !== db.matches[index].date;
@@ -2883,10 +2883,10 @@ async function startServer() {
 
       db.matches[index] = updatedMatch;
 
-      // INTERRUPTION POLICY: Caso uma partida seja cancelada, a recorrÃªncia automÃ¡tica deve ser interrompida.
+      // INTERRUPTION POLICY: Caso uma partida seja cancelada, a recorrência automática deve ser interrompida.
       if (updatedMatch.status === 'cancelada' && previousStatus !== 'cancelada') {
         if (db.recurrentConfig) {
-          db.recurrentConfig.active = false; // Parar a recorrÃªncia
+          db.recurrentConfig.active = false; // Parar a recorrência
         }
         notify(db, {
           category: 'partida',
@@ -2914,7 +2914,7 @@ async function startServer() {
             previousStatus: '',
             newStatus: '',
             performedBy: responsibleName || 'Administrador',
-            details: `Sorteio invalidado automaticamente em funÃ§Ã£o do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
+            details: `Sorteio invalidado automaticamente em função£o do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
           });
         }
 
@@ -2940,15 +2940,15 @@ async function startServer() {
             previousStatus: '',
             newStatus: '',
             performedBy: responsibleName || 'Atleta',
-            details: `Cancelamento de presença em massa efetuado juntamente com o cancelamento da partida do dia ${updatedMatch.date.split('-').reverse().join('/')} (${updatedMatch.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocaÃ§Ãµes de reservas revertidas.`
+            details: `Cancelamento de presença em massa efetuado juntamente com o cancelamento da partida do dia ${updatedMatch.date.split('-').reverse().join('/')} (${updatedMatch.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocções de reservas revertidas.`
           });
         }
       }
 
-      // RESUMPTION POLICY: Se o administrador confirma ou agenda a partida manualmente, reativamos a recorrÃªncia
+      // RESUMPTION POLICY: Se o administrador confirma ou agenda a partida manualmente, reativamos a recorrência
       if ((updatedMatch.status === 'agendada' || updatedMatch.status === 'confirmando') && previousStatus === 'cancelada') {
         if (db.recurrentConfig) {
-          db.recurrentConfig.active = true; // Retomar a recorrÃªncia normal
+          db.recurrentConfig.active = true; // Retomar a recorrência normal
         }
         notify(db, {
           category: 'partida',
@@ -2979,7 +2979,7 @@ async function startServer() {
 
       const match = db.matches[matchIndex];
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, as presenças não podem ser limpas.' });
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, as presenças não podem ser limpas.' });
       }
 
       const presencesToClear = (db.presences || []).filter((p: any) => p.matchId === id && (p.status === 'confirmado' || p.status === 'cancelado'));
@@ -3007,12 +3007,12 @@ async function startServer() {
         previousStatus: '',
         newStatus: '',
         performedBy: responsibleName || 'Atleta',
-        details: `Limpeza em massa de confirmações efetuada para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocaÃ§Ãµes de reservas revertidas.${hadDraw ? ' Sorteio associado invalidado automaticamente.' : ''}`
+        details: `Limpeza em massa de confirmações efetuada para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). ${numPresencesRemoved} confirmações/respostas removidas e ${numAlertsRemoved} convocções de reservas revertidas.${hadDraw ? ' Sorteio associado invalidado automaticamente.' : ''}`
       });
 
       await writeDb(db);
       return res.json({ 
-        message: 'Confirmações e convocaÃ§Ãµes limpas de forma definitiva!', 
+        message: 'Confirmações e convocções limpas de forma definitiva!', 
         numPresencesRemoved, 
         numAlertsRemoved,
         match: db.matches[matchIndex]
@@ -3035,7 +3035,7 @@ async function startServer() {
 
       const match = db.matches[index];
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, as reservas não podem ser liberadas.' });
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, as reservas não podem ser liberadas.' });
       }
       match.reservesReleased = true;
       match.reservesReleasedAt = new Date().toISOString();
@@ -3053,7 +3053,7 @@ async function startServer() {
         releasedAt: new Date().toISOString(),
         auditType: 'manual_reserves_release',
         createdAt: new Date().toISOString(),
-        details: `ConvocaÃ§Ã£o de reservas iniciada manualmente pelo administrador.`
+        details: `Convocção de reservas iniciada manualmente pelo administrador.`
       });
 
       await summonReservesForMatch(db, id, 99);
@@ -3078,7 +3078,7 @@ async function startServer() {
 
       const match = db.matches[index];
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'ApÃ³s o sorteio ser realizado, as reservas não podem ser ajustadas.' });
+        return res.status(400).json({ error: 'Após o sorteio ser realizado, as reservas não podem ser ajustadas.' });
       }
 
       match.reservesReleased = false;
@@ -3105,7 +3105,7 @@ async function startServer() {
         releasedAt: new Date().toISOString(),
         auditType: 'manual_reserves_cancel',
         createdAt: new Date().toISOString(),
-        details: `ConvocaÃ§Ã£o de reservas cancelada manualmente pelo administrador.`
+        details: `Convocção de reservas cancelada manualmente pelo administrador.`
       });
 
       await syncMatchStatuses(db);
@@ -3140,7 +3140,7 @@ async function startServer() {
       }
 
       if (toDelete.length === 0) {
-        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluÃ­da, pois possuem sorteio realizado ou resultados registrados.' });
+        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser exclu­da, pois possuem sorteio realizado ou resultados registrados.' });
       }
 
       db.matches = (db.matches || []).filter((m) => !toDelete.includes(m.id));
@@ -3183,7 +3183,7 @@ async function startServer() {
         if (hasDraws) reasons.push('times sorteados/parciais');
         if (hasResults) reasons.push('placar/resultados registrados');
         return res.status(400).json({ 
-          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e não pode ser excluÃ­da.` 
+          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e não pode ser exclu­da.` 
         });
       }
 
@@ -3202,7 +3202,7 @@ async function startServer() {
       }
 
       await writeDb(db);
-      return res.json({ message: 'Partida excluÃ­da com sucesso!' });
+      return res.json({ message: 'Partida exclu­da com sucesso!' });
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao remover partida.' });
     }
@@ -3217,7 +3217,7 @@ async function startServer() {
       const db = await readDb();
       return res.json(db.recurrentConfig);
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao ler config de recorrÃªncia.' });
+      return res.status(500).json({ error: 'Erro ao ler config de recorrência.' });
     }
   });
 
@@ -3229,7 +3229,7 @@ async function startServer() {
       db.recurrentConfig = {
         dayOfWeek: parseInt(dayOfWeek),
         time,
-        location: location || 'Arena FuracÃ£o',
+        location: location || 'Arena Furacão',
         durationMinutes: parseInt(durationMinutes),
         confirmationDeadlineDaysBefore: parseInt(confirmationDeadlineDaysBefore),
         active: active !== undefined ? !!active : true,
@@ -3239,7 +3239,7 @@ async function startServer() {
       await writeDb(db);
       return res.json(db.recurrentConfig);
     } catch (err) {
-      return res.status(500).json({ error: 'Erro ao salvar config de recorrÃªncia.' });
+      return res.status(500).json({ error: 'Erro ao salvar config de recorrência.' });
     }
   });
 
@@ -3249,12 +3249,12 @@ async function startServer() {
       const activeSeason = db.seasons.find((s) => s.active);
 
       if (!activeSeason) {
-        return res.status(400).json({ error: 'Não hÃ¡ nenhuma temporada ativa para calcular recorrÃªncias.' });
+        return res.status(400).json({ error: 'Não há nenhuma temporada ativa para calcular recorrências.' });
       }
 
       const config = db.recurrentConfig;
       if (!config) {
-        return res.status(400).json({ error: 'ConfiguraÃ§Ã£o de recorrÃªncia invÃ¡lida ou não configurada.' });
+        return res.status(400).json({ error: 'Configurção de recorrência inválida ou não configurada.' });
       }
 
       // Check current dates inside activeSeason dates
@@ -3264,7 +3264,7 @@ async function startServer() {
 
       // Iteramos dia por dia até o final da temporada
       let current = new Date(start);
-      current.setHours(12, 0, 0, 0); // Evitar shifts de fuso horÃ¡rio
+      current.setHours(12, 0, 0, 0); // Evitar shifts de fuso horário
 
       while (current <= end) {
         if (current.getDay() === config.dayOfWeek) {
@@ -3287,17 +3287,17 @@ async function startServer() {
         current.setDate(current.getDate() + 1);
       }
 
-      // Quando o administrador gera / confirma a recorrÃªncia de forma expressa, garantimos que ela esteja ativa
+      // Quando o administrador gera / confirma a recorrência de forma expressa, garantimos que ela esteja ativa
       db.recurrentConfig.active = true;
 
       await writeDb(db);
       return res.json({
-        message: `Partidas recorrentes geradas com sucesso. Foram inseridos ${createdCount} rachas no calendÃ¡rio até ${activeSeason.endDate}.`,
+        message: `Partidas recorrentes geradas com sucesso. Foram inseridos ${createdCount} rachas no calendário até ${activeSeason.endDate}.`,
         createdCount
       });
     } catch (err) {
       console.error('[Generate Recurrent]', err);
-      return res.status(500).json({ error: 'Falha ao processar recorrÃªncia.' });
+      return res.status(500).json({ error: 'Falha ao processar recorrência.' });
     }
   });
 
@@ -3487,7 +3487,7 @@ async function startServer() {
       return res.json(db.events[eventIndex]);
     } catch (err) {
       console.error('[Update Event]', err);
-      return res.status(500).json({ error: 'Erro ao salvar alteraÃ§Ãµes do evento.' });
+      return res.status(500).json({ error: 'Erro ao salvar alterções do evento.' });
     }
   });
 
@@ -3501,7 +3501,7 @@ async function startServer() {
       }
 
       db.events[eventIndex].status = 'cancelado';
-      // Mantenha cobranças que já foram pagas (histÃ³rico/movimentaÃ§Ã£o), remova apenas as pendentes
+      // Mantenha cobranças que já foram pagas (histórico/movimentção), remova apenas as pendentes
       db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id || b.status === 'pago');
 
       notify(db, {
@@ -3533,10 +3533,10 @@ async function startServer() {
         return res.status(400).json({ error: 'Apenas eventos cancelados podem ser excluídos.' });
       }
 
-      // Verifica se houve movimentaÃ§Ã£o financeira (algum débito pago deste evento)
+      // Verifica se houve movimentção financeira (algum débito pago deste evento)
       const hasPaidBills = (db.eventBills || []).some((b: any) => b.eventId === id && b.status === 'pago');
       if (hasPaidBills) {
-        return res.status(400).json({ error: 'Este evento possui movimentaÃ§Ã£o financeira (débitos pagos) e não pode ser excluído.' });
+        return res.status(400).json({ error: 'Este evento possui movimentção financeira (débitos pagos) e não pode ser excluído.' });
       }
 
       // Remover evento do array principal
@@ -3761,7 +3761,7 @@ async function startServer() {
 
       await writeDb(db);
       return res.json({
-        message: 'PresenÃ§a confirmada com sucesso!',
+        message: 'Presença confirmada com sucesso!',
         participant: participantRecord,
         bill: billRecord
       });
@@ -3777,7 +3777,7 @@ async function startServer() {
       const { playerId } = req.body;
 
       if (!playerId) {
-        return res.status(400).json({ error: 'playerId é obrigatÃ³rio.' });
+        return res.status(400).json({ error: 'playerId é obrigatório.' });
       }
 
       const db = await readDb();
@@ -3799,7 +3799,7 @@ async function startServer() {
   });
 
   // ==========================================
-  // --- PRESENCES (CONFIRMAÃ‡Ã•ES DE RACHA) ---
+  // --- PRESENCES (CONFIRMA‡ÕES DE RACHA) ---
   // ==========================================
 
   app.get('/api/matches/:matchId/presences', async (req, res) => {
@@ -3850,7 +3850,7 @@ async function startServer() {
       }
 
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'ApÃ³s o sorteio estar completo, a lista de atletas confirmados está travada.' });
+        return res.status(400).json({ error: 'Após o sorteio estar completo, a lista de atletas confirmados está travada.' });
       }
 
       let resolvedPlayerId = playerId;
@@ -3973,7 +3973,7 @@ async function startServer() {
       await syncMatchStatuses(db);
       await writeDb(db);
       return res.json({
-        message: 'PresenÃ§a updated with success!',
+        message: 'Presença updated with success!',
         alertCreated: null
       });
     } catch (err) {
@@ -3998,7 +3998,7 @@ async function startServer() {
       }
 
       if (match.status === 'sorteada' || match.status === 'encerrada') {
-        return res.status(400).json({ error: 'ApÃ³s o sorteio estar completo, a lista de atletas confirmados está travada.' });
+        return res.status(400).json({ error: 'Após o sorteio estar completo, a lista de atletas confirmados está travada.' });
       }
 
       const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
@@ -4140,7 +4140,7 @@ async function startServer() {
       return res.json(db.draws || []);
     } catch (err) {
       console.error('[Error getting draws history]:', err);
-      return res.status(500).json({ error: 'Erro ao buscar histÃ³rico de sorteios.' });
+      return res.status(500).json({ error: 'Erro ao buscar histórico de sorteios.' });
     }
   });
 
@@ -4183,7 +4183,7 @@ async function startServer() {
       const redrawCount = previousDraw ? (previousDraw.redrawCount || 0) + 1 : 0;
 
       if (previousDraw && (previousDraw.redrawCount || 0) >= 2) {
-        return res.status(400).json({ error: 'Limite de re-sorteios atingido (mÃ¡ximo de 2 re-sorteios por partida).' });
+        return res.status(400).json({ error: 'Limite de re-sorteios atingido (máximo de 2 re-sorteios por partida).' });
       }
 
       // Validate captain uniqueness if configured
@@ -4195,7 +4195,7 @@ async function startServer() {
         ].filter(Boolean);
 
         if (new Set(capitaes).size !== capitaes.length) {
-          return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitÃ£o de mais de um time." });
+          return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitão de mais de um time." });
         }
       }
 
@@ -4207,7 +4207,7 @@ async function startServer() {
       const confirmedPlayers = db.players.filter(p => confirmedPlayerIds.includes(p.id) && !p.deletedAt);
 
       if (confirmedPlayers.length === 0) {
-        return res.status(400).json({ error: 'Não hÃ¡ jogadores confirmados nesta partida para realizar o sorteio.' });
+        return res.status(400).json({ error: 'Não há jogadores confirmados nesta partida para realizar o sorteio.' });
       }
 
       // Precalculate overall rating for each player using the existing helper
@@ -4251,13 +4251,13 @@ async function startServer() {
           userId: 'system',
           userName: 'Sistema de Sorteio',
           userEmail: 'sistema@sistema.local',
-          action: `Re-sorteio de Times (SequÃªncia: #${redrawCount} / 2)`,
+          action: `Re-sorteio de Times (Sequência: #${redrawCount} / 2)`,
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: responsibleName || 'Administrador',
-          details: `Re-sorteio de times efetuado para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). SequÃªncia do re-sorteio: ${redrawCount}/2.`
+          details: `Re-sorteio de times efetuado para a partida do dia ${match.date.split('-').reverse().join('/')} (${match.location}). Sequência do re-sorteio: ${redrawCount}/2.`
         });
       }
 
@@ -4279,8 +4279,8 @@ async function startServer() {
       if (captainsConfigured) {
         notify(db, {
           category: 'sorteio',
-          title: 'ðŸ‘‘ CapitÃ£es Definidos',
-          message: `Os capitÃ£es da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
+          title: 'ðŸ‘‘ Capitães Definidos',
+          message: `Os capitães da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
           actionUrl: 'calendar',
           matchId
         });
@@ -4290,7 +4290,7 @@ async function startServer() {
       return res.json(newDraw);
     } catch (err) {
       console.error('[Draw Generation Error]', err);
-      return res.status(500).json({ error: 'Erro ao processar sorteio automÃ¡tico.' });
+      return res.status(500).json({ error: 'Erro ao processar sorteio automático.' });
     }
   });
 
@@ -4301,7 +4301,7 @@ async function startServer() {
       const { teams } = req.body; // updated groups configurations: DrawTeam[]
 
       if (!teams || !Array.isArray(teams)) {
-        return res.status(400).json({ error: 'Lista de times formatada é obrigatÃ³ria.' });
+        return res.status(400).json({ error: 'Lista de times formatada é obrigatória.' });
       }
 
       const db = await readDb();
@@ -4315,7 +4315,7 @@ async function startServer() {
       // Validate captains
       const capitaes = teams.map(t => t.captainPlayerId).filter(Boolean);
       if (new Set(capitaes).size !== capitaes.length) {
-        return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitÃ£o de mais de um time." });
+        return res.status(400).json({ error: "Um mesmo atleta não pode ser definido como capitão de mais de um time." });
       }
 
       if (drawObj.captainsConfigured) {
@@ -4325,7 +4325,7 @@ async function startServer() {
           return t.playerIds.includes(t.captainPlayerId);
         });
         if (!captainsMatch) {
-          return res.status(400).json({ error: "Um atleta marcado como capitÃ£o não pode ser movido para outro time enquanto mantiver a funÃ§Ã£o de capitÃ£o." });
+          return res.status(400).json({ error: "Um atleta marcado como capitão não pode ser movido para outro time enquanto mantiver a função£o de capitão." });
         }
       }
 
@@ -4385,7 +4385,7 @@ async function startServer() {
       notify(db, {
         category: 'sorteio',
         title: 'âœï¸ Sorteio Alterado Manualmente',
-        message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equilÃ­brio.`,
+        message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equil­brio.`,
         actionUrl: 'calendar',
         matchId: drawObj.matchId
       });
@@ -4413,7 +4413,7 @@ async function startServer() {
       // Validate that captains configured in the draw do not have duplicates
       const drawCaptains = drawObj.teams.map(t => t.captainPlayerId).filter(Boolean);
       if (new Set(drawCaptains).size !== drawCaptains.length) {
-        return res.status(400).json({ error: "Não foi possÃ­vel consolidar o sorteio. Um mesmo atleta não pode ser definido como capitÃ£o de mais de um time. Ajuste a seleÃ§Ã£o de capitÃ£es e tente novamente." });
+        return res.status(400).json({ error: "Não foi poss­vel consolidar o sorteio. Um mesmo atleta não pode ser definido como capitão de mais de um time. Ajuste a seleção£o de capitães e tente novamente." });
       }
 
       // Check that each captain belongs to their respective team
@@ -4421,7 +4421,7 @@ async function startServer() {
         return t.captainPlayerId && !t.playerIds.includes(t.captainPlayerId);
       });
       if (captainBelongsProblems) {
-        return res.status(400).json({ error: "Não foi possÃ­vel consolidar o sorteio. Cada capitÃ£o deve pertencer ao respectivo time no sorteio. Ajuste a seleÃ§Ã£o de capitÃ£es e tente novamente." });
+        return res.status(400).json({ error: "Não foi poss­vel consolidar o sorteio. Cada capitão deve pertencer ao respectivo time no sorteio. Ajuste a seleção£o de capitães e tente novamente." });
       }
 
       // Mathematical consistency check for overalls (Rule 4)
@@ -4471,7 +4471,7 @@ async function startServer() {
           calculated: { blue: bOverallCalc, red: rOverallCalc, green: gOverallCalc }
         });
         return res.status(400).json({
-          error: `DivergÃªncia técnica detectada! As médias calculadas para os times não condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os Ã­ndices técnicos antes da consolidaÃ§Ã£o.`
+          error: `Divergência técnica detectada! As médias calculadas para os times não condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os ­ndices técnicos antes da consolidção.`
         });
       }
 
@@ -4482,7 +4482,7 @@ async function startServer() {
       // Check for duplicate recording protection
       if (drawObj.affinitiesRecorded === true) {
         return res.json({ 
-          message: 'RelaÃ§Ãµes de afinidades já haviam sido consolidadas anteriormente para esta partida.', 
+          message: 'Relções de afinidades já haviam sido consolidadas anteriormente para esta partida.', 
           alreadyRecorded: true 
         });
       }
@@ -4527,7 +4527,7 @@ async function startServer() {
           matchName: matchName,
           duosCount: totalDuosCount,
           triosCount: totalTriosCount,
-          loggedMessage: `ConsolidaÃ§Ã£o de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
+          loggedMessage: `Consolidção de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
         }
       });
 
@@ -4540,7 +4540,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Locking Draw]', err);
-      return res.status(500).json({ error: 'Falha ao consolidar relaÃ§Ãµes de afinidades.' });
+      return res.status(500).json({ error: 'Falha ao consolidar relções de afinidades.' });
     }
   });
 
@@ -4578,7 +4578,7 @@ async function startServer() {
       const db = await readDb();
       const requestingUser = await getAuthenticatedUser(req, db);
       if (!requestingUser || requestingUser.role !== 'admin') {
-        return res.status(403).json({ error: 'Apenas administradores podem executar esta aÃ§Ã£o.' });
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta ção.' });
       }
 
       const sixMonthsAgo = new Date();
@@ -4616,7 +4616,7 @@ async function startServer() {
       }
 
       return res.json({
-        message: 'Reengajamento concluÃ­do.',
+        message: 'Reengajamento conclu­do.',
         totalInactive: inactivePlayers.length,
         sent: sent.length,
         failed: failed.length,
@@ -4634,7 +4634,7 @@ async function startServer() {
       const db = await readDb();
       const requestingUser = await getAuthenticatedUser(req, db);
       if (!requestingUser || requestingUser.role !== 'admin') {
-        return res.status(403).json({ error: 'Apenas administradores podem executar esta aÃ§Ã£o.' });
+        return res.status(403).json({ error: 'Apenas administradores podem executar esta ção.' });
       }
 
       const { userId } = req.body as { userId?: string };
@@ -4722,7 +4722,7 @@ async function startServer() {
       return res.json(stats);
     } catch (err) {
       console.error('[Error generating stats]:', err);
-      return res.status(500).json({ error: 'Erro ao processar estatÃ­sticas de jogo.' });
+      return res.status(500).json({ error: 'Erro ao processar estat­sticas de jogo.' });
     }
   });
 
@@ -4737,10 +4737,10 @@ async function startServer() {
       match.evaluationsReleased = true;
       await writeDb(db);
       
-      return res.json({ message: 'AvaliaÃ§Ãµes liberadas com sucesso!', match });
+      return res.json({ message: 'Avalições liberadas com sucesso!', match });
     } catch (err) {
       console.error('[Error releasing evaluations]', err);
-      return res.status(500).json({ error: 'Erro ao liberar avaliaÃ§Ãµes.' });
+      return res.status(500).json({ error: 'Erro ao liberar avalições.' });
     }
   });
 
@@ -4750,7 +4750,7 @@ async function startServer() {
       const { winsBlue, winsRed, winsGreen } = req.body;
 
       if (winsBlue === undefined || winsRed === undefined || winsGreen === undefined) {
-        return res.status(400).json({ error: 'Ã‰ necessÃ¡rio preencher as vitÃ³rias de todas as equipes.' });
+        return res.status(400).json({ error: 'É necessário preencher as vitórias de todas as equipes.' });
       }
 
       const db = await readDb();
@@ -4762,7 +4762,7 @@ async function startServer() {
       // Check for matching team draw configurations
       const draw = (db.draws || []).find(d => d.matchId === matchId);
       if (!draw) {
-        return res.status(400).json({ error: 'Ã‰ necessÃ¡rio realizar o sorteio de times antes de registrar o resultado da partida.' });
+        return res.status(400).json({ error: 'É necessário realizar o sorteio de times antes de registrar o resultado da partida.' });
       }
 
       // Determine who won this match
@@ -4879,7 +4879,7 @@ async function startServer() {
             matchName: matchName,
             duosCount: totalDuosCount,
             triosCount: totalTriosCount,
-            loggedMessage: `ConsolidaÃ§Ã£o de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
+            loggedMessage: `Consolidção de Afinidades: ${totalDuosCount} duplas e ${totalTriosCount} trios registrados para a partida.`
           }
         });
       }
@@ -4952,21 +4952,21 @@ async function startServer() {
         let melhorDupla = 'Nenhuma registrada';
         if (currentStats.duos && currentStats.duos.length > 0) {
           const topDuo = currentStats.duos[0];
-          melhorDupla = `${topDuo.playerAName} e ${topDuo.playerBName} (${topDuo.wonTogether} vitÃ³rias, ${topDuo.aproveitamento}% de aproveitamento)`;
+          melhorDupla = `${topDuo.playerAName} e ${topDuo.playerBName} (${topDuo.wonTogether} vitórias, ${topDuo.aproveitamento}% de aproveitamento)`;
         }
 
         // Format Best Trio
         let melhorTrio = 'Nenhum registrado';
         if (currentStats.trios && currentStats.trios.length > 0) {
           const topTrio = currentStats.trios[0];
-          melhorTrio = `${topTrio.playerAName}, ${topTrio.playerBName} e ${topTrio.playerCName} (${topTrio.wonTogether} vitÃ³rias, ${topTrio.aproveitamento}% de aproveitamento)`;
+          melhorTrio = `${topTrio.playerAName}, ${topTrio.playerBName} e ${topTrio.playerCName} (${topTrio.wonTogether} vitórias, ${topTrio.aproveitamento}% de aproveitamento)`;
         }
 
         // Format Leader/Wins
         let liderVitorias = 'Nenhum';
         if (currentStats.individual && currentStats.individual.length > 0) {
           const leader = currentStats.individual[0];
-          liderVitorias = `${leader.name} (${leader.vitorias} vitÃ³rias)`;
+          liderVitorias = `${leader.name} (${leader.vitorias} vitórias)`;
         }
 
         // Format Best Current Streak
@@ -5016,36 +5016,36 @@ async function startServer() {
         const redTeamPlayers = draw.teams.find(t => t.name === 'Vermelho')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
         const greenTeamPlayers = draw.teams.find(t => t.name === 'Verde')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
 
-        const automaticPostText = `### ðŸ“… InformaÃ§Ãµes Gerais
+        const automaticPostText = `### ðŸ“… Informções Gerais
 - **Data:** ${formattedDate}
-- **HorÃ¡rio:** ${match.time}
+- **Horário:** ${match.time}
 - **Temporada:** ${seasonName}
 - **Participantes:** ${participantsCount} jogadores
 
 ### âš½ Placar Geral
-- **ðŸ”µ Time Azul:** ${winsBlue} vitÃ³rias
-- **ðŸ”´ Time Vermelho:** ${winsRed} vitÃ³rias
-- **ðŸŸ¢ Time Verde:** ${winsGreen} vitÃ³rias
+- **ðŸ”µ Time Azul:** ${winsBlue} vitórias
+- **ðŸ”´ Time Vermelho:** ${winsRed} vitórias
+- **ðŸŸ¢ Time Verde:** ${winsGreen} vitórias
 
-### ðŸ† CampeÃµes da Rodada
+### ðŸ† Campeões da Rodada
 - ${champions.length > 0 ? champions.map(c => `Time ${c}`).join(' & ') : 'Empate'}
 
-### ðŸ‘¥ EscalaÃ§Ã£o das Equipes
+### ðŸ‘¥ Escalção das Equipes
 - **ðŸ”µ Time Azul:** ${blueTeamPlayers}
 - **ðŸ”´ Time Vermelho:** ${redTeamPlayers}
 - **ðŸŸ¢ Time Verde:** ${greenTeamPlayers}
 
-### ðŸ“Š EstatÃ­sticas do Momento
+### ðŸ“Š Estat­sticas do Momento
 - **Melhor Dupla Atual:** ${melhorDupla}
 - **Melhor Trio Atual:** ${melhorTrio}
-- **LÃ­der de VitÃ³rias:** ${liderVitorias}
-- **Maior SequÃªncia Atual:** ${seqAtual}
-- **Maior SequÃªncia HistÃ³rica:** ${seqHistorica}`;
+- **L­der de Vitórias:** ${liderVitorias}
+- **Maior Sequência Atual:** ${seqAtual}
+- **Maior Sequência Histórica:** ${seqHistorica}`;
 
         const generateMatchSvg = (dateStr: string, champs: string[], wB: number, wR: number, wG: number) => {
           const width = 800;
           const height = 450;
-          const champText = champs.length > 0 ? `CampeÃ£o: ${champs.join(' & ')}` : 'Empate!';
+          const champText = champs.length > 0 ? `Campeão: ${champs.join(' & ')}` : 'Empate!';
           const svgText = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <defs>
@@ -5082,7 +5082,7 @@ async function startServer() {
   </g>
 
   <text x="400" y="55" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="14" fill="#22c55e" letter-spacing="3" text-anchor="middle" opacity="0.8">
-    ${APP_NAME.toUpperCase()} â€¢ REGISTRO AUTOMÃTICO
+    ${APP_NAME.toUpperCase()} '¢ REGISTRO AUTOMÁTICO
   </text>
   
   <text x="400" y="90" font-family="'Inter', system-ui, sans-serif" font-weight="900" font-size="28" fill="#ffffff" text-anchor="middle" filter="url(#shadow)">
@@ -5226,7 +5226,7 @@ async function startServer() {
     try {
       const { reorderedIds } = req.body;
       if (!reorderedIds || !Array.isArray(reorderedIds)) {
-        return res.status(400).json({ error: 'Lista de IDs reordenada é obrigatÃ³ria.' });
+        return res.status(400).json({ error: 'Lista de IDs reordenada é obrigatória.' });
       }
 
       const db = await readDb();
@@ -5256,7 +5256,7 @@ async function startServer() {
           matchDate: matchObj ? matchObj.date : '',
           matchTime: matchObj ? matchObj.time : '',
           cancelledPlayerName: cancelledPlayer ? cancelledPlayer.name : 'Jogador Desconhecido',
-          suggestedReservePlayerName: suggestedReserve ? suggestedReserve.name : 'Nenhum reserva disponÃ­vel'
+          suggestedReservePlayerName: suggestedReserve ? suggestedReserve.name : 'Nenhum reserva dispon­vel'
         };
       });
 
@@ -5387,7 +5387,7 @@ async function startServer() {
       const { matchId } = req.params;
       const { playerId } = req.body;
       if (!playerId) {
-        return res.status(400).json({ error: 'ID do jogador é obrigatÃ³rio.' });
+        return res.status(400).json({ error: 'ID do jogador é obrigatório.' });
       }
 
       const db = await readDb();
@@ -5424,10 +5424,10 @@ async function startServer() {
       await writeDb(db);
 
       if (summoned.length === 0) {
-        return res.status(400).json({ error: 'Não hÃ¡ reservas disponÃ­veis na fila.' });
+        return res.status(400).json({ error: 'Não há reservas dispon­veis na fila.' });
       }
 
-      return res.json({ message: `ConvocaÃ§Ã£o enviada com sucesso para ${summoned[0].name}!`, alert: summoned[0] });
+      return res.json({ message: `Convocção enviada com sucesso para ${summoned[0].name}!`, alert: summoned[0] });
     } catch (err) {
       console.error(err);
       return res.status(500).json({ error: 'Erro ao realizar summons.' });
@@ -5478,7 +5478,7 @@ async function startServer() {
         // Notify
         notify(db, {
           category: 'partida',
-          title: 'âœ… ConvocaÃ§Ã£o Aceita',
+          title: 'âœ… Convocção Aceita',
           message: `O reserva ${player ? player.name : 'Jogador'} aceitou a convocação e confirmou presença!`,
           targetUserId: 'all',
           actionUrl: 'calendar',
@@ -5503,7 +5503,7 @@ async function startServer() {
         // Notify
         notify(db, {
           category: 'partida',
-          title: 'âŒ ConvocaÃ§Ã£o Recusada',
+          title: 'âŒ Convocção Recusada',
           message: `O reserva ${player ? player.name : 'Jogador'} recusou ou cancelou sua convocação para a partida.`,
           targetUserId: 'all',
           actionUrl: 'calendar',
@@ -5513,8 +5513,8 @@ async function startServer() {
         // Just audit/dispense
         notify(db, {
           category: 'partida',
-          title: 'â„¹ï¸ ConvocaÃ§Ã£o Dispensada',
-          message: `A convocação pendente para o reserva ${player ? player.name : 'Jogador'} foi dispensada pela administraÃ§Ã£o.`,
+          title: 'â„¹ï¸ Convocção Dispensada',
+          message: `A convocação pendente para o reserva ${player ? player.name : 'Jogador'} foi dispensada pela administrção.`,
           targetUserId: 'all',
           actionUrl: 'calendar',
           matchId
@@ -5573,7 +5573,7 @@ async function startServer() {
 
       const alert = db.reserveAlerts[alertIndex];
       if (!alert.suggestedReservePlayerId) {
-        return res.status(400).json({ error: 'Não hÃ¡ reserva indicado para efetivar a convocação.' });
+        return res.status(400).json({ error: 'Não há reserva indicado para efetivar a convocação.' });
       }
 
       // Encontrar ou atualizar presença do reserva indicado para "confirmado"!
@@ -5744,12 +5744,12 @@ async function startServer() {
       }
 
       if (chargeDateRule !== 'primeiro_jogo' && chargeDateRule !== 'ultimo_jogo') {
-        return res.status(400).json({ error: 'Forma de geraÃ§Ã£o invÃ¡lida. Escolha entre Primeiro Jogo ou Ãšltimo Jogo.' });
+        return res.status(400).json({ error: 'Forma de gerção inválida. Escolha entre Primeiro Jogo ou Último Jogo.' });
       }
 
       const parsedMax = parseInt(maxMensalistas);
       if (isNaN(parsedMax) || parsedMax <= 0) {
-        return res.status(400).json({ error: 'A quantidade mÃ¡xima de mensalistas deve ser um nÃºmero inteiro maior que zero.' });
+        return res.status(400).json({ error: 'A quantidade máxima de mensalistas deve ser um número inteiro maior que zero.' });
       }
 
       const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
@@ -5759,7 +5759,7 @@ async function startServer() {
       db.financeConfig.chargeDateRule = chargeDateRule;
       db.financeConfig.effectiveDate = targetEffectiveDate;
 
-      // Sempre garante que o histÃ³rico reflita a data de vigÃªncia correta com o valor atual
+      // Sempre garante que o histórico reflita a data de vigência correta com o valor atual
       const existingIdx = db.financeConfig.history.findIndex(h => h.date === targetEffectiveDate);
       if (existingIdx >= 0) {
         db.financeConfig.history[existingIdx].amount = newFee;
@@ -5771,7 +5771,7 @@ async function startServer() {
         db.recurrentConfig = {
           dayOfWeek: 6,
           time: '21:30',
-          location: 'Arena FuracÃ£o',
+          location: 'Arena Furacão',
           durationMinutes: 60,
           confirmationDeadlineDaysBefore: 2,
           active: true,
@@ -5788,13 +5788,13 @@ async function startServer() {
         userId: 'admin',
         userName: 'Administrador',
         userEmail: '[EMAIL]',
-        action: 'AlteraÃ§Ã£o de ParÃ¢metros Financeiros',
+        action: 'Alterção de Par¢metros Financeiros',
         previousRole: '',
         newRole: '',
         previousStatus: '',
         newStatus: '',
         performedBy: 'Administrador',
-        details: `ParÃ¢metros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (VigÃªncia: ${targetEffectiveDate}). Nova regra de geraÃ§Ã£o: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do MÃªs' : 'Ãšltimo Jogo do MÃªs'}. Limite de mensalistas: ${parsedMax}.`
+        details: `Par¢metros financeiros alterados pelo administrador. Nova mensalidade: R$ ${newFee} (Vigência: ${targetEffectiveDate}). Nova regra de gerção: ${chargeDateRule === 'primeiro_jogo' ? 'Primeiro Jogo do Mês' : 'Último Jogo do Mês'}. Limite de mensalistas: ${parsedMax}.`
       });
 
       await writeDb(db);
@@ -5809,7 +5809,7 @@ async function startServer() {
     try {
       const { billId, email, role } = req.body;
       if (!billId) {
-        return res.status(400).json({ error: 'CÃ³digo da cobrança é obrigatÃ³rio.' });
+        return res.status(400).json({ error: 'Código da cobrança é obrigatório.' });
       }
 
       const db = await readDb();
@@ -5826,7 +5826,7 @@ async function startServer() {
 
       if (role !== 'admin' && role !== 'auxiliar') {
         if (!isMyBill) {
-          return res.status(403).json({ error: 'Você só pode confirmar pagamentos das suas prÃ³prias cobranças.' });
+          return res.status(403).json({ error: 'Você só pode confirmar pagamentos das suas próprias cobranças.' });
         }
       }
 
@@ -5871,7 +5871,7 @@ async function startServer() {
     try {
       const { billId, email, role } = req.body;
       if (!billId) {
-        return res.status(400).json({ error: 'CÃ³digo da cobrança é obrigatÃ³rio.' });
+        return res.status(400).json({ error: 'Código da cobrança é obrigatório.' });
       }
 
       const db = await readDb();
@@ -5886,7 +5886,7 @@ async function startServer() {
       const isAdmin = role === 'admin' || role === 'auxiliar';
 
       if (!isAdmin && !isMyBill) {
-        return res.status(403).json({ error: 'Você só pode gerenciar os seus prÃ³prios débitos.' });
+        return res.status(403).json({ error: 'Você só pode gerenciar os seus próprios débitos.' });
       }
 
       const newStatus = bill.status === 'pago' ? 'pendente' : 'pago';
@@ -5934,7 +5934,7 @@ async function startServer() {
     try {
       const { playerId, competence, amount, dueDate, status } = req.body;
       if (!playerId || !competence || !amount || !dueDate) {
-        return res.status(400).json({ error: 'Todos os campos (Jogador, CompetÃªncia, Valor e Vencimento) são obrigatórios.' });
+        return res.status(400).json({ error: 'Todos os campos (Jogador, Competência, Valor e Vencimento) são obrigatórios.' });
       }
 
       const db = await readDb();
@@ -6039,7 +6039,7 @@ async function startServer() {
       res.json({ matches, events });
     } catch (err) {
       console.error('[API GET Associations]', err);
-      res.status(500).json({ error: 'Erro ao carregar associaÃ§Ãµes.' });
+      res.status(500).json({ error: 'Erro ao carregar associções.' });
     }
   });
 
@@ -6057,7 +6057,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[API GET Mural Stats]', err);
-      res.status(500).json({ error: 'Erro ao carregar estatÃ­sticas.' });
+      res.status(500).json({ error: 'Erro ao carregar estat­sticas.' });
     }
   });
 
@@ -6069,11 +6069,11 @@ async function startServer() {
       res.json(posts);
     } catch (err) {
       console.error('[API GET Mural Posts]', err);
-      res.status(500).json({ error: 'Erro ao carregar publicaÃ§Ãµes.' });
+      res.status(500).json({ error: 'Erro ao carregar publicções.' });
     }
   });
 
-  // Get public mural posts (PÃ¡gina PÃºblica Simplificada)
+  // Get public mural posts (Página Pública Simplificada)
   app.get('/api/mural/public-posts', async (req, res) => {
     try {
       const db = await readDb();
@@ -6087,13 +6087,13 @@ async function startServer() {
     }
   });
 
-  // Get public app config (nome do sistema, configurÃ¡vel por instalação via APP_NAME)
+  // Get public app config (nome do sistema, configurável por instalação via APP_NAME)
   app.get('/api/public/app-config', (req, res) => {
     res.json({ appName: APP_NAME });
   });
 
-  // Health check: usado pelo Render (Health Check Path) para reiniciar o serviÃ§o
-  // automaticamente se a conexÃ£o com o Supabase cair, não só se o processo Node está de pé.
+  // Health check: usado pelo Render (Health Check Path) para reiniciar o serviço
+  // automaticamente se a conexão com o Supabase cair, não só se o processo Node está de pé.
   app.get('/api/public/health', async (req, res) => {
     try {
       const { error } = await getSupabaseClient().from('users').select('id').limit(1);
@@ -6159,7 +6159,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[API GET Public Next Match]', err);
-      res.status(500).json({ error: 'Erro ao obter informaÃ§Ãµes do prÃ³ximo racha.' });
+      res.status(500).json({ error: 'Erro ao obter informções do próximo racha.' });
     }
   });
 
@@ -6189,16 +6189,16 @@ async function startServer() {
       const isVideo = !!detectedType && allowedVideoMimes.includes(detectedType.mime);
 
       if (!isImage && !isVideo) {
-        return res.status(400).json({ error: 'Formato de arquivo inválido. Use JPG, JPEG, PNG, WEBP para fotos ou MP4, MOV para vÃ­deos.' });
+        return res.status(400).json({ error: 'Formato de arquivo inválido. Use JPG, JPEG, PNG, WEBP para fotos ou MP4, MOV para v­deos.' });
       }
 
-      // Tamanho real do buffer decodificado, não o valor que o prÃ³prio cliente informou.
+      // Tamanho real do buffer decodificado, não o valor que o próprio cliente informou.
       const fileSize = buffer.length;
       if (isImage && fileSize > 10 * 1024 * 1024) {
         return res.status(400).json({ error: 'A foto excede o limite permitido de 10 MB.' });
       }
       if (isVideo && fileSize > 200 * 1024 * 1024) {
-        return res.status(400).json({ error: 'O vÃ­deo excede o limite permitido de 200 MB.' });
+        return res.status(400).json({ error: 'O v­deo excede o limite permitido de 200 MB.' });
       }
 
       const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.]/g, '-');
@@ -6257,7 +6257,7 @@ async function startServer() {
 
       const isComm = ['regra', 'aviso', 'comunicado'].includes(category);
       if (!title || (!isComm && !mediaUrl) || !category || !authorId) {
-        return res.status(400).json({ error: 'TÃ­tulo, categoria e autor são obrigatórios.' });
+        return res.status(400).json({ error: 'T­tulo, categoria e autor são obrigatórios.' });
       }
 
       const db = await readDb();
@@ -6327,7 +6327,7 @@ db.muralPosts.push(newPost);
       res.status(201).json(newPost);
     } catch (err) {
       console.error('[API POST Mural Post]', err);
-      res.status(500).json({ error: 'Erro ao criar publicaÃ§Ã£o.' });
+      res.status(500).json({ error: 'Erro ao criar publicção.' });
     }
   });
 
@@ -6352,7 +6352,7 @@ db.muralPosts.push(newPost);
       } = req.body;
 
       if (!title) {
-        return res.status(400).json({ error: 'O tÃ­tulo é obrigatÃ³rio.' });
+        return res.status(400).json({ error: 'O t­tulo é obrigatório.' });
       }
 
       const db = await readDb();
@@ -6361,7 +6361,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'PublicaÃ§Ã£o não encontrada.' });
+        return res.status(404).json({ error: 'Publicção não encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6370,7 +6370,7 @@ db.muralPosts.push(newPost);
       const isAuthor = requestingUser != null && post.authorId === requestingUser.id;
 
       if (!isAdmin && !isAuthor) {
-        return res.status(403).json({ error: 'Apenas o autor ou o administrador pode editar esta publicaÃ§Ã£o.' });
+        return res.status(403).json({ error: 'Apenas o autor ou o administrador pode editar esta publicção.' });
       }
 
       const isPostHighlighted = isHighlighted === true;
@@ -6424,7 +6424,7 @@ db.muralPosts.push(newPost);
       res.json(db.muralPosts[postIndex]);
     } catch (err) {
       console.error('[API PUT Mural Post]', err);
-      res.status(500).json({ error: 'Erro ao editar publicaÃ§Ã£o.' });
+      res.status(500).json({ error: 'Erro ao editar publicção.' });
     }
   });
 
@@ -6439,7 +6439,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'PublicaÃ§Ã£o não encontrada.' });
+        return res.status(404).json({ error: 'Publicção não encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6447,7 +6447,7 @@ db.muralPosts.push(newPost);
       // Exclusão is strictly administrative as outlined in specifications
       const isAdmin = requestingUser?.role === 'admin';
       if (!isAdmin) {
-        return res.status(403).json({ error: 'Apenas Administradores podem excluir publicaÃ§Ãµes do Mural.' });
+        return res.status(403).json({ error: 'Apenas Administradores podem excluir publicções do Mural.' });
       }
 
       // Perform soft delete
@@ -6470,10 +6470,10 @@ db.muralPosts.push(newPost);
         }
       }
 
-      res.json({ message: 'PublicaÃ§Ã£o excluÃ­da com sucesso (Soft Delete).' });
+      res.json({ message: 'Publicção exclu­da com sucesso (Soft Delete).' });
     } catch (err) {
       console.error('[API DELETE Mural Post]', err);
-      res.status(500).json({ error: 'Erro ao excluir publicaÃ§Ã£o.' });
+      res.status(500).json({ error: 'Erro ao excluir publicção.' });
     }
   });
 
@@ -6494,7 +6494,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'PublicaÃ§Ã£o não encontrada.' });
+        return res.status(404).json({ error: 'Publicção não encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6557,7 +6557,7 @@ db.muralPosts.push(newPost);
 
       const postIndex = db.muralPosts.findIndex(p => p.id === id);
       if (postIndex === -1) {
-        return res.status(404).json({ error: 'PublicaÃ§Ã£o não encontrada.' });
+        return res.status(404).json({ error: 'Publicção não encontrada.' });
       }
 
       const post = db.muralPosts[postIndex];
@@ -6735,7 +6735,7 @@ db.muralPosts.push(newPost);
       return res.json(pref);
     } catch (err) {
       console.error('[API GET preferences]', err);
-      return res.status(500).json({ error: 'Erro ao obter configuraÃ§Ãµes de notificaÃ§Ã£o.' });
+      return res.status(500).json({ error: 'Erro ao obter configurções de notificção.' });
     }
   });
 
@@ -6743,7 +6743,7 @@ db.muralPosts.push(newPost);
     try {
       const { userId, preferences } = req.body as { userId: string; preferences: any };
       if (!userId || !preferences) {
-        return res.status(400).json({ error: 'Id do usuário e configuraÃ§Ãµes são obrigatórios.' });
+        return res.status(400).json({ error: 'Id do usuário e configurções são obrigatórios.' });
       }
 
       const db = await readDb();
@@ -6766,10 +6766,10 @@ db.muralPosts.push(newPost);
       }
 
       await writeDb(db);
-      return res.json({ message: 'ConfiguraÃ§Ãµes de notificaÃ§Ã£o atualizadas com sucesso.', preferences: updatedPref });
+      return res.json({ message: 'Configurções de notificção atualizadas com sucesso.', preferences: updatedPref });
     } catch (err) {
       console.error('[API POST preferences]', err);
-      return res.status(500).json({ error: 'Erro ao salvar preferÃªncias de notificaÃ§Ã£o.' });
+      return res.status(500).json({ error: 'Erro ao salvar preferências de notificção.' });
     }
   });
 
@@ -6783,8 +6783,8 @@ db.muralPosts.push(newPost);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
     app.use(express.static(distPath, {
-      // Os arquivos em assets/ tÃªm hash de conteÃºdo no nome (Vite) â€” seguro cachear por 1 ano.
-      // O index.html não tem hash e referencia esses arquivos, entÃ£o precisa ficar sempre fresco.
+      // Os arquivos em assets/ têm hash de conteúdo no nome (Vite) — seguro cachear por 1 ano.
+      // O index.html não tem hash e referencia esses arquivos, então precisa ficar sempre fresco.
       maxAge: '1y',
       immutable: true,
       setHeaders: (res, filePath) => {
