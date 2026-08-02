@@ -1639,10 +1639,10 @@ export default function DashboardStatus({
                   <div className="col-span-full flex flex-col items-center justify-center gap-2 py-4 bg-zinc-950/40 border border-zinc-900 rounded-xl">
                     <UserPlus className="w-5 h-5 text-zinc-600" />
                     <p className="text-[11px] text-zinc-500 font-mono font-black uppercase tracking-wider text-center">
-                      Aguardando convocaÃ§Ã£o do administrador
+                      Aguardando convocação do administrador
                     </p>
                     <p className="text-[10px] text-zinc-600 text-center max-w-xs">
-                      Os mensalistas ainda estÃ£o no prazo de confirmaÃ§Ã£o. As vagas remanescentes serÃ£o liberadas para os reservas em breve.
+                      Os mensalistas ainda estão no prazo de confirmação. As vagas remanescentes serão liberadas para os reservas em breve.
                     </p>
                   </div>
                 ) : (
@@ -1705,10 +1705,10 @@ export default function DashboardStatus({
                   <div className="col-span-full flex flex-col items-center justify-center gap-2 py-4 bg-zinc-950/40 border border-zinc-900 rounded-xl">
                     <UserPlus className="w-5 h-5 text-zinc-600" />
                     <p className="text-[11px] text-zinc-500 font-mono font-black uppercase tracking-wider text-center">
-                      Aguardando convocaÃ§Ã£o do administrador
+                      Aguardando convocação do administrador
                     </p>
                     <p className="text-[10px] text-zinc-600 text-center max-w-xs">
-                      Os mensalistas ainda estÃ£o no prazo de confirmaÃ§Ã£o. As vagas remanescentes serÃ£o liberadas para os reservas em breve.
+                      Os mensalistas ainda estão no prazo de confirmação. As vagas remanescentes serão liberadas para os reservas em breve.
                     </p>
                   </div>
                 ) : (
