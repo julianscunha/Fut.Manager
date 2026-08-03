@@ -118,15 +118,16 @@ export default function PlayerForm({ player, onSave, onCancel }: PlayerFormProps
       reader.onload = async (e) => {
         const base64Data = e.target?.result as string;
         
-        const res = await authFetch('/api/upload-s3', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: file.name,
-            fileType: file.type,
-            fileData: base64Data
-          })
-        });
+         const res = await authFetch('/api/upload-s3', {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({
+             filename: file.name,
+             fileType: file.type,
+             fileData: base64Data,
+             playerId: player?.id || null
+           })
+         });
 
         if (!res.ok) {
           throw new Error('Falha no upload da imagem.');

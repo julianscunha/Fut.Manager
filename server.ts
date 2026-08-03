@@ -801,7 +801,7 @@ async function startServer() {
         return res.status(401).json({ error: 'Não autenticado.' });
       }
 
-      const { filename, fileType, fileData } = req.body;
+      const { filename, fileType, fileData, playerId } = req.body;
 
       if (!filename || !fileType || !fileData) {
         return res.status(400).json({ error: 'Os campos filename, fileType e fileData são obrigatórios.' });
@@ -810,7 +810,6 @@ async function startServer() {
       const base64Data = fileData.replace(/^data:([A-Za-z0-9-+\/]+);base64,/, '');
       const buffer = Buffer.from(base64Data, 'base64');
 
-      // Valida o tipo real do arquivo pelos magic bytes, não pelo mimetype/extensão declarado pelo cliente.
       const detectedType = await fileTypeFromBuffer(buffer);
       const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
       if (!detectedType || !allowedMimes.includes(detectedType.mime)) {
@@ -821,16 +820,15 @@ async function startServer() {
         return res.status(400).json({ error: 'A imagem excede o limite permitido de 5 MB.' });
       }
 
-      // Foto de perfil não precisa de resolução maior que isso — recomprime pra WEBP
-      // (bem menor que o JPEG/PNG original) e evita fotos de vários MB pesando no roster.
       const compressedBuffer = await sharp(buffer)
-        .rotate() // aplica a orientção EXIF antes de descartá-la, senão fotos de celular saem giradas
+        .rotate()
         .resize({ width: 800, height: 800, fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 80 })
         .toBuffer();
 
       const sanitizedFilename = filename.toLowerCase().replace(/[^a-z0-9.]/g, '-').replace(/\.[^.]+$/, '');
-      const uniqueFilename = `${Date.now()}-${sanitizedFilename}.webp`;
+      const ownerPrefix = playerId ? `player-${playerId}` : `user-${requestingUser.id}`;
+      const uniqueFilename = `${ownerPrefix}-${Date.now()}-${sanitizedFilename}.webp`;
 
       const supabase = getSupabaseClient();
       const { error: uploadError } = await supabase.storage
