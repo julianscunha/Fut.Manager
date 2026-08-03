@@ -4,5 +4,5 @@
 - [Home Composer Architecture Blueprint](composer.md)
 - [Home Dynamic Engine Design](dynamic-engine.md)
 - [Home Dynamic Visual Rendering](home-dynamic.md) - Especificação técnica de componentes de interface e matriz de visibilidade da Home Page em função dos estados da rodada e perfil do usuário.
-- [Visão Geral da Arquitetura](overview.md) - Visão geral da arquitetura do Fut.Manager, cobrindo o backend Node/Express, persistência Postgres e frontend React.
+- [Visão Geral da Arquitetura](/openwiki/architecture.md) - Visão geral da arquitetura do Fut.Manager, cobrindo o backend Node/Express, persistência Postgres e frontend React.
 - [Hardening de Segurança Operacional](security.md)

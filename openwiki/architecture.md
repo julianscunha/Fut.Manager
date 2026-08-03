@@ -46,9 +46,19 @@ Todos os templates utilizam um sistema baseado em HTML/CSS consistente (`server/
 
 ## Frontend (`src/`)
 A aplicação React utiliza:
-- **`src/types.ts`**: Fonte única da verdade para tipos, compartilhada entre cliente e servidor.
-- **`src/lib/authFetch.ts`**: Wrapper essencial para todas as chamadas `fetch` ao backend. **Toda chamada autenticada deve passar por aqui**, garantindo a injeção correta do JWT.
-- **Contextos**: O nome do sistema (brand) é gerenciado dinamicamente via `AppConfigContext`, evitando hardcoding de nomes de grupos.
+- **`src/types/domain.ts`** (entidades de negócio) e **`src/types/ui.ts`** (labels, cores, pesos de atributos): fonte da verdade para tipos, compartilhada entre cliente e servidor. `src/types.ts` (raiz) e `src/types/index.ts` são barrels de compatibilidade que reexportam os dois — não adicionar tipos novos ali.
+- **`src/lib/authFetch.ts`**: wrapper padrão para todas as chamadas `fetch` ao backend. **A maioria das chamadas autenticadas passa por aqui**, garantindo a injeção correta do JWT.
+- **`src/api/client.ts`** (`apiClient`) e **`src/contexts/AuthContext.tsx`** (`useAuth`): infraestrutura mais nova (cliente HTTP tipado + estado de auth via contexto), criada como alternativa ao `authFetch` + leitura direta de `localStorage`, mas ainda **opt-in** — poucos componentes migrados até agora. Ao usar, importar via aliases `@api/*`/`@contexts/*` (ver `tsconfig.json`).
+- **`src/components/ErrorBoundary.tsx`**: recuperação de erro em nível de componente, alternativa ao hard-reload que `authFetch` dispara em respostas 401.
+- **Contextos**: o nome do sistema (brand) é gerenciado dinamicamente via `AppConfigContext`, evitando hardcoding de nomes de grupos.
+
+### Migrando um componente de `authFetch` para `apiClient` (opcional)
+1. Trocar `authFetch(...)` por `apiClient.get/post/put/patch/delete<T>(...)` — já retorna o corpo tipado, sem `.json()` manual.
+2. Tratar erros como `ApiError` em vez de depender do reload automático em 401.
+3. Rodar `npm run lint` para conferir os imports.
+4. Testar login/logout e o fluxo do componente manualmente.
+
+`AuthProvider` já está montado na raiz do app (`src/main.tsx`) — não precisa adicionar de novo.
 
 ## Visão Geral técnica
 - **Motor de Sorteio**: Algoritmo Monte Carlo (`server/drawEngine.ts`) para times equilibrados (`runSmartDraw`).
