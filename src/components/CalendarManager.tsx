@@ -817,10 +817,24 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
   const currentSeasonName = activeSeason ? activeSeason.name : 'Nenhuma Temporada Ativa';
   const totalRounds = matches.length;
 
-  const scheduledMatches = matches.filter(m => m.status !== 'cancelada' && m.status !== 'encerrada');
-  const nextMatch = scheduledMatches.length > 0
-    ? [...scheduledMatches].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0]
-    : null;
+  const dToday = new Date();
+  const dOffset = dToday.getTimezoneOffset();
+  const dLocalTodayStr = new Date(dToday.getTime() - (dOffset * 60 * 1000)).toISOString().split('T')[0];
+
+  const activeMatches = matches.filter((m: any) => {
+    if (m.lifecycleState === 'ARCHIVED' || m.lifecycleState === 'MATCH_FINISHED') return false;
+    if (m.status === 'cancelada') {
+      return m.date >= dLocalTodayStr;
+    }
+    return ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status);
+  });
+  let nextMatch = activeMatches.length > 0 ? activeMatches[0] : null;
+  if (!nextMatch) {
+    const endedMatches = matches.filter((m: any) => m.status === 'encerrada');
+    if (endedMatches.length > 0) {
+      nextMatch = endedMatches[endedMatches.length - 1];
+    }
+  }
 
   const getAutoState = (): number => {
     if (!nextMatch) return 1;
