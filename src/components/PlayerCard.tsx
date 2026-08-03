@@ -948,14 +948,36 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                     </div>
                   )}
 
-                  {/* Gamer badge indicator */}
-                  {(player.avatarStatus === 'CONCLUÍDO' &&
-                   player.avatarCard &&
-                   player.avatarCard !== (player.avatarOriginal || player.photoOriginal)) && (
-                    <div className="absolute bottom-1 left-1.5 bg-gradient-to-r from-teal-500 to-emerald-500 text-[8px] font-sans font-extrabold text-black px-1.5 py-0.5 rounded-full shadow border border-white/20 z-10">
-                      ⚡ CARD IA
-                    </div>
-                  )}
+                   {/* Gamer badge / restore original */}
+                   {(player.avatarStatus === 'CONCLUÍDO' &&
+                    player.avatarCard &&
+                    player.avatarCard !== (player.avatarOriginal || player.photoOriginal)) && (
+                     <button
+                       type="button"
+                       onClick={async (e) => {
+                         e.stopPropagation();
+                         try {
+                           const res = await authFetch(`/api/players/${player.id}/restore-original-avatar`, { method: 'POST' });
+                           if (res.ok) {
+                             setSaveSuccessMsg('✅ Foto original restaurada!');
+                             await fetchMetrics();
+                             if (onEvaluationSavedGlobal) onEvaluationSavedGlobal();
+                             setTimeout(() => setSaveSuccessMsg(''), 3000);
+                           } else {
+                             const err = await res.json();
+                             setSaveSuccessMsg(`❌ ${err.error || 'Falha ao restaurar foto original.'}`);
+                             setTimeout(() => setSaveSuccessMsg(''), 3000);
+                           }
+                         } catch {
+                           setSaveSuccessMsg('❌ Erro de conexão com o servidor.');
+                           setTimeout(() => setSaveSuccessMsg(''), 3000);
+                         }
+                       }}
+                       className="absolute bottom-1 left-1.5 bg-black/90 hover:bg-emerald-950 text-[8px] font-sans font-extrabold text-emerald-400 hover:text-emerald-300 px-1.5 py-0.5 rounded-full shadow border border-zinc-800 hover:border-emerald-500/50 transition z-10"
+                     >
+                       Restaurar Foto Original
+                     </button>
+                   )}
 
                   {/* Admin quick regenerator */}
                   {canEdit && (player.avatarOriginal || player.photoOriginal) && 
@@ -970,16 +992,8 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                       <RotateCcw className={`w-3.5 h-3.5 ${isRegenerating ? 'animate-spin text-emerald-400' : ''}`} />
                     </button>
                   )}
-                  
-                  {/* Escudo do Clube */}
-                  <div 
-                    className="absolute top-1.5 right-1.5 bg-black/95 p-0.5 rounded-full border border-white/20 shadow-md transform group-hover:scale-110 transition duration-150"
-                    title={`${team ? team.name : 'Clube'}`}
-                  >
-                    <ClubShield clubId={player.favoriteTeamId} className="w-5 h-5" />
-                  </div>
-
-                  {/* Rarity Shield corner logo overlay */}
+                   
+                   {/* Rarity Shield corner logo overlay */}
                   <div 
                     className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center border border-white/20 select-none shadow animate-pulse"
                     style={{ backgroundColor: rarityTheme.shieldColor }}

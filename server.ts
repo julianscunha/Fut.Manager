@@ -2215,6 +2215,39 @@ async function startServer() {
     });
   });
 
+  app.post('/api/players/:id/restore-original-avatar', async (req, res) => {
+    const requestingUser = await getAuthenticatedUser(req);
+    if (!requestingUser) {
+      return res.status(401).json({ error: 'Não autenticado.' });
+    }
+
+    const { id } = req.params;
+
+    setImmediate(async () => {
+      try {
+        const db = await readDb();
+        const index = db.players.findIndex((p) => p.id === id);
+        if (index !== -1) {
+          const player = db.players[index];
+          const oldCard = player.avatarCard;
+          const oldEsportivo = player.avatarEsportivo;
+
+          player.avatarStatus = 'ERRO';
+          player.avatarCard = null;
+          player.avatarEsportivo = null;
+          player.avatarOriginal = player.photoOriginal || player.avatarOriginal;
+          await writeDb(db);
+
+          await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
+        }
+      } catch (err) {
+        console.error('[Restore Avatar] Falha na restauração em background:', err);
+      }
+    });
+
+    return res.status(202).json({ message: 'Restauração iniciada. A foto original voltará a ser exibida em instantes.' });
+  });
+
   // Jogadores: Soft Delete (Inativar/Excluir Logicamente)
   app.delete('/api/players/:id', async (req, res) => {
     const { id } = req.params;
