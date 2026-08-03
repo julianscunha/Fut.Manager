@@ -241,6 +241,17 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     recentResults: [],
   });
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showOriginalAvatarLabel, setShowOriginalAvatarLabel] = useState(false);
+
+  useEffect(() => {
+    if (player.avatarStatus === 'ERRO') {
+      setShowOriginalAvatarLabel(true);
+      const timer = setTimeout(() => setShowOriginalAvatarLabel(false), 4000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowOriginalAvatarLabel(false);
+    }
+  }, [player.avatarStatus]);
 
   const team = FAVORITE_TEAMS.find((t) => t.id === player.favoriteTeamId);
 
@@ -943,8 +954,9 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                   )}
 
                   {player.avatarStatus === 'ERRO' && (
-                    <div className="absolute bottom-1 left-1.5 bg-zinc-900 border border-zinc-800 text-[8px] font-medium text-zinc-450 px-1.5 py-0.5 rounded-full shadow z-10">
-                      ⚠ Utilizando foto original
+                    <div className="absolute bottom-1 left-1.5 bg-zinc-900 border border-zinc-800 text-[8px] font-medium text-zinc-450 px-1.5 py-0.5 rounded-full shadow z-10 flex items-center gap-1">
+                      <span>⚠</span>
+                      {showOriginalAvatarLabel && <span>Utilizando foto original</span>}
                     </div>
                   )}
 
