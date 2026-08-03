@@ -390,28 +390,15 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
       if (res.ok) {
         const data = await res.json();
         setSaveSuccessMsg(data.message || '✨ Avatar Esportivo recriado com sucesso!');
-        
-        // Refresh local card metrics and stats
-        await fetchMetrics();
-        
-        // Trigger parent state update so all components reflect the updated avatar
-        if (onEvaluationSavedGlobal) {
-          onEvaluationSavedGlobal();
-        }
-        
-        setTimeout(() => {
-          setSaveSuccessMsg('');
-        }, 4000);
       } else {
         const err = await res.json();
         setSaveSuccessMsg(`❌ Erro no processamento: ${err.error || 'Falha'}`);
-        setTimeout(() => setSaveSuccessMsg(''), 4000);
       }
     } catch {
       setSaveSuccessMsg('❌ Erro de conexão com o servidor.');
-      setTimeout(() => setSaveSuccessMsg(''), 4000);
     } finally {
       setIsRegenerating(false);
+      setTimeout(() => setSaveSuccessMsg(''), 4000);
     }
   };
   const isSoftDeleted = !!player.deletedAt;
@@ -973,8 +960,6 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                             const res = await authFetch(`/api/players/${player.id}/restore-original-avatar`, { method: 'POST' });
                             if (res.ok) {
                               setShowRestoreLabel(true);
-                              await fetchMetrics();
-                              if (onEvaluationSavedGlobal) onEvaluationSavedGlobal();
                               setTimeout(() => setShowRestoreLabel(false), 3000);
                             } else {
                               const err = await res.json();
