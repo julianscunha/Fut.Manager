@@ -911,7 +911,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
               </div>
 
               {/* Centered Profile Avatar */}
-              <div className="flex flex-col items-center justify-center -mt-1 mb-1 relative">
+              <div className="flex flex-col items-center justify-center -mt-1 mb-1 relative -translate-y-[10%]">
                 <div
                   style={getClubMolduraStyle(player.favoriteTeamId || '')}
                   className="relative w-36 h-36 scale-[1.2] rounded-2xl overflow-hidden border-2 flex items-center justify-center shadow-2xl group transition-all duration-300"
