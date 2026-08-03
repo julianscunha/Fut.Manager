@@ -2921,9 +2921,9 @@ ${shareUrl}`;
               <div className="space-y-6 max-w-3xl mx-auto">
                 {(() => {
                   const sortedMatches = [...fullMatches].sort((a, b) => {
-                    const createdDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                    const createdDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
                     if (createdDiff !== 0) return createdDiff;
-                    return b.date.localeCompare(a.date);
+                    return a.date.localeCompare(b.date);
                   });
 
                   const itemsPerPage = 5;
@@ -2942,7 +2942,7 @@ ${shareUrl}`;
                     matchesByYear[year].push(match);
                   });
 
-                  const sortedYears = Object.keys(matchesByYear).sort((a, b) => b.localeCompare(a));
+                   const sortedYears = Object.keys(matchesByYear).sort((a, b) => a.localeCompare(b));
 
                   return (
                     <>
@@ -2991,7 +2991,7 @@ ${shareUrl}`;
                                         {/* Badges / Header details */}
                                         <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono">
                                           <span className="bg-[#111915] border border-emerald-500/15 px-3 py-1 rounded-full text-emerald-400 font-extrabold flex items-center gap-1 leading-none shadow-sm uppercase">
-                                            ⚽ Rodada #{sortedMatches.length - sortedMatches.findIndex(m => m.id === match.id)}
+                                             ⚽ Rodada #{sortedMatches.findIndex(m => m.id === match.id) + 1}
                                           </span>
                                           <span className="bg-zinc-900 border border-zinc-850 px-2.5 py-1 rounded-full text-zinc-400 font-semibold leading-none">
                                             📅 {formattedDate}
