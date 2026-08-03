@@ -2916,7 +2916,7 @@ export default function DashboardStatus({
               {/* Waiting list queue */}
               {reserveQueue?.queue && reserveQueue.queue.length > 0 ? (
                 <>
-                  {reserveQueue.queue.slice(0, 2).map((item: any, index: number) => {
+                  {reserveQueue.queue.slice(0, 3).map((item: any, index: number) => {
                     const playerObj = players.find(p => p.id === item.id);
 
                     return (
@@ -2959,10 +2959,10 @@ export default function DashboardStatus({
                     );
                   })}
 
-                  {reserveQueue.queue.length > 2 && (
+                  {reserveQueue.queue.length > 3 && (
                     <div className="text-center py-2 px-3 bg-zinc-950/40 rounded-xl border border-dashed border-zinc-900/50">
                       <p className="text-zinc-500 text-[10px] font-mono">
-                        + {reserveQueue.queue.length - 2} {reserveQueue.queue.length - 2 === 1 ? 'atleta ocultado' : 'atletas ocultados'} na fila...
+                        + {reserveQueue.queue.length - 3} {reserveQueue.queue.length - 3 === 1 ? 'atleta ocultado' : 'atletas ocultados'} na fila...
                       </p>
                     </div>
                   )}

@@ -5417,13 +5417,16 @@ async function startServer() {
 
       return res.json({
         vagasAbertas,
-        queue: finalQueue.map((p: any, index: number) => ({
-          id: p.id,
-          name: p.name,
-          priority: index + 1,
-          primaryPosition: p.primaryPosition,
-          secondaryPositions: p.secondaryPositions || []
-        })),
+        queue: finalQueue.map((p: any) => {
+          const orderIdx = currentReservesOrder.indexOf(p.id);
+          return {
+            id: p.id,
+            name: p.name,
+            priority: orderIdx !== -1 ? orderIdx + 1 : 999999,
+            primaryPosition: p.primaryPosition,
+            secondaryPositions: p.secondaryPositions || []
+          };
+        }).slice(0, 3),
         activeConvocation,
         history,
         isGoleiroMissing,
@@ -5457,6 +5460,7 @@ async function startServer() {
       });
 
       await writeDb(db);
+
       return res.json({ message: 'Jogador ignorado com sucesso.' });
     } catch (err) {
       console.error(err);
@@ -5577,8 +5581,8 @@ async function startServer() {
       await syncMatchStatuses(db);
       await writeDb(db);
 
-      if (status === 'recusado' || status === 'confirmado') {
-        const matchForSummon = db.matches.find((m) => m.id === matchId);
+      if (status === 'recusado' || status === 'confirmado' || status === 'dispensado') {
+        const matchForSummon = db.matches.find((m: any) => m.id === matchId);
         if (matchForSummon && matchForSummon.reservesReleased === true) {
           const computedAfter = await getComputedPresences(db, matchId);
           const limitAfter = matchForSummon.maxPlayers !== undefined && matchForSummon.maxPlayers !== null ? matchForSummon.maxPlayers : 15;
