@@ -19,7 +19,7 @@ import sharp from 'sharp';
 import compression from 'compression';
 import { runSmartDraw, recordAffinities } from './server/drawEngine';
 import { computeStatsForSeason } from './server/statsEngine';
-import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types';
+import { Player, User, UserRole, UserStatus, Season, Match, PresenceStatus, MatchResult, PlayerCategory, PlayerPosition, FAVORITE_TEAMS } from './src/types/domain';
 import { GoogleGenAI } from '@google/genai';
 import { AvatarProviderFactory } from './server/avatarProvider';
 import {
