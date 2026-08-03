@@ -38,7 +38,7 @@ import {
 } from './server/email-templates';
 
 // Nome do sistema exibido na interface e usado em mensagens (WhatsApp, notificações, etc.).
-// Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo espec­fico.
+// Cada instalação define o seu via APP_NAME no .env — nunca hardcode o nome de um grupo específico.
 const APP_NAME = process.env.APP_NAME || 'Meu Racha';
 
 // Rede de segurança: uma promise rejeitada sem catch (ex.: erro de configuração como
@@ -599,13 +599,13 @@ async function startServer() {
       // 3. Delete obsolete match notifications of cancelled matches (keeping only the final cancellation/exclusion notice)
       if (n.matchId && canceledMatchIds.has(n.matchId)) {
         const titleLower = (n.title || '').toLowerCase();
-        return titleLower.includes('cancelad') || titleLower.includes('exclu­d');
+        return titleLower.includes('cancelad') || titleLower.includes('excluído');
       }
 
       // 4. Delete obsolete event notifications of cancelled events (keeping only the final cancellation/exclusion notice)
       if (n.eventId && canceledEventIds.has(n.eventId)) {
         const titleLower = (n.title || '').toLowerCase();
-        return titleLower.includes('cancelad') || titleLower.includes('exclu­d');
+        return titleLower.includes('cancelad') || titleLower.includes('excluído');
       }
 
       return true;
@@ -624,7 +624,7 @@ async function startServer() {
           id: createdKey,
           category: 'financeiro',
           title: 'ðŸ’° Nova Cobrança Gerada',
-          message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente   competência ${bill.competence} para o jogador ${pName}.`,
+          message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente à competência ${bill.competence} para o jogador ${pName}.`,
           status: 'nao_lida',
           createdAt: new Date().toISOString(),
           targetUserId: bill.playerId,
@@ -675,7 +675,7 @@ async function startServer() {
               db.notifications.push({
                 id: key24h,
                 category: 'partida',
-                title: 'â³ Confirmações Encerram Amanhã',
+                title: '⏳ Confirmações Encerram Amanhã',
                 message: `Lembrete: confirmações encerram amanhã às ${deadlineTimeStr}.`,
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
@@ -712,7 +712,7 @@ async function startServer() {
               db.notifications.push({
                 id: keyGeneral,
                 category: 'partida',
-                title: 'âš ï¸ Prazo de Confirmação Próximo',
+                title: '⚠️ Prazo de Confirmação Próximo',
                 message: `O prazo para confirmar sua presença na rodada de ${match.date && typeof match.date === 'string' ? match.date.split('-').reverse().join('/') : ''} se encerra em breve.`,
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
@@ -764,7 +764,7 @@ async function startServer() {
   // Auditoria pré-produção encontrou dezenas de rotas de negócio (partidas, financeiro, sorteio,
   // presenças) sem NENHUMA checagem de autenticação — qualquer visitante anonimo da internet
   // conseguia criar/editar/excluir dados. Em vez de tocar rota por rota (~80 rotas), um gate
-  // global exige login válido para tudo em /api/*, com uma lista expl­cita e pequena do que
+  // global exige login válido para tudo em /api/*, com uma lista explícita e pequena do que
   // realmente precisa ser público (login/registro/recuperação de senha e as duas telas públicas
   // pré-login: mural público e próxima partida — confirmado via teste real de navegação).
   // Nota: middleware montado via app.use('/api', ...) recebe req.path já SEM o prefixo /api
@@ -845,7 +845,7 @@ async function startServer() {
       const { data: publicUrlData } = supabase.storage.from('Uploads').getPublicUrl(uniqueFilename);
 
       return res.json({
-        message: 'Upload conclu­do com sucesso!',
+        message: 'Upload concluído com sucesso!',
         url: publicUrlData.publicUrl
       });
     } catch (err) {
@@ -930,7 +930,7 @@ async function startServer() {
       }
 
       return res.status(201).json({
-        message: 'Cadastro realizado com sucesso! Aguardando aprovção do administrador para acesso.',
+        message: 'Cadastro realizado com sucesso! Aguardando aprovação do administrador para acesso.',
         user: newUser
       });
     } catch (err) {
@@ -990,7 +990,7 @@ async function startServer() {
       // Check Approval Status
       if (user.status === 'pending') {
         return res.status(403).json({
-          error: 'Sua conta está aguardando aprovção administrativa. Entre em contato com o organizador.',
+          error: 'Sua conta está aguardando aprovação administrativa. Entre em contato com o organizador.',
           status: 'pending'
         });
       }
@@ -1015,7 +1015,7 @@ async function startServer() {
     }
   });
 
-  // Auth: Redefinição£o de senha (Esqueci minha senha)
+  // Auth: Redefinição de senha (Esqueci minha senha)
   app.post('/api/auth/forgot-password', authRateLimiter, async (req, res) => {
     try {
       const { email } = req.body;
@@ -1028,8 +1028,8 @@ async function startServer() {
       const user = db.users.find((u) => u.email.toLowerCase().trim() === email.toLowerCase().trim());
 
       // Resposta idêntica exista ou não o usuário/SMTP configurado — não revela se o e-mail está cadastrado.
-      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefinição£o foi enviado.' };
-      const unavailableResponse = { message: 'A recuperação automática de senha está temporariamente indispon­vel. Entre em contato com um administrador do grupo para redefinir sua senha.' };
+      const sentResponse = { message: 'Se o e-mail estiver cadastrado, um link de redefinição foi enviado.' };
+      const unavailableResponse = { message: 'A recuperação automática de senha está temporariamente indisponível. Entre em contato com um administrador do grupo para redefinir sua senha.' };
 
       if (!isEmailConfigured()) {
         return res.json(unavailableResponse);
@@ -1060,7 +1060,7 @@ async function startServer() {
         console.error('[API POST /api/auth/forgot-password] Falha ao enviar e-mail:', emailErr);
         delete db.passwordResetTokens[user.id];
         await writeDb(db);
-        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefinição£o. Tente novamente em instantes.' });
+        return res.status(500).json({ error: 'Falha ao enviar e-mail de redefinição. Tente novamente em instantes.' });
       }
 
       return res.json(sentResponse);
@@ -1076,7 +1076,7 @@ async function startServer() {
       const { userId, token, newPassword } = req.body;
 
       if (!userId || !token || !newPassword) {
-        return res.status(400).json({ error: 'Informções inválidas para redefinição£o.' });
+        return res.status(400).json({ error: 'Informações inválidas para redefinição.' });
       }
 
       const db = await readDb();
@@ -1086,13 +1086,13 @@ async function startServer() {
 
       const storedToken = db.passwordResetTokens?.[userId];
       if (!storedToken || storedToken.token !== token) {
-        return res.status(401).json({ error: 'Token de redefinição£o inválido.' });
+        return res.status(401).json({ error: 'Token de redefinição inválido.' });
       }
 
       if (new Date(storedToken.expiresAt).getTime() < Date.now()) {
         delete db.passwordResetTokens![userId];
         await writeDb(db);
-        return res.status(401).json({ error: 'Token de redefinição£o expirado. Solicite uma nova recuperação.' });
+        return res.status(401).json({ error: 'Token de redefinição expirado. Solicite uma nova recuperação.' });
       }
 
       db.passwords[userId] = await hashPassword(newPassword);
@@ -1106,7 +1106,7 @@ async function startServer() {
     }
   });
 
-  // Usuários: Listar usuários para aprovção (Apenas Admin/Auxiliar)
+  // Usuários: Listar usuários para aprovação (Apenas Admin/Auxiliar)
   app.get('/api/users', async (req, res) => {
     const db = await readDb();
     const requestingUser = await getAuthenticatedUser(req, db);
@@ -1241,13 +1241,13 @@ async function startServer() {
             userId,
             userName: db.users[userIndex].name,
             userEmail: db.users[userIndex].email,
-            action: 'Alterção de V­nculo',
+            action: 'Alteração de Vínculo',
             previousRole: '',
             newRole: '',
             previousStatus: '',
             newStatus: '',
             performedBy: adminName || 'Administrador do Sistema',
-            details: `V­nculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
+            details: `Vínculo com atleta existente estabelecido: ${matchingPlayer.name} (${matchingPlayer.id})`
           });
         }
       } else {
@@ -1262,7 +1262,7 @@ async function startServer() {
           const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
           if (currentActiveMonthly >= activeMonthlyLimit) {
             return res.status(400).json({
-              error: `Não foi poss­vel concluir a operção. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ Par¢metros.`
+              error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
             });
           }
         }
@@ -1300,7 +1300,7 @@ async function startServer() {
           previousStatus: '',
           newStatus: '',
           performedBy: adminName || 'Administrador do Sistema',
-          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovção. Posição£o principal: ${newPlayer.primaryPosition}.`
+          details: `Atleta ${newPlayer.name} criado e vinculado automaticamente durante aprovação. Posição principal: ${newPlayer.primaryPosition}.`
         });
 
         // Auditoria: Troca de categoria
@@ -1319,14 +1319,14 @@ async function startServer() {
           details: `Categoria inicial definida como: ${initialCategory}`
         });
 
-        // Auditoria: Alterção de telefone
+        // Auditoria: Alteração de telefone
         db.userAudits.push({
           id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
           timestamp: new Date().toISOString(),
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'Alterção de telefone',
+          action: 'Alteração de telefone',
           previousRole: '',
           newRole: '',
           previousStatus: '',
@@ -1346,7 +1346,7 @@ async function startServer() {
 
       notify(db, {
         category: 'jogador',
-        title: 'ðŸƒ Novo Jogador no Grupo',
+        title: '🏃 Novo Jogador no Grupo',
         message: `O cadastro de ${db.users[userIndex].name} foi aprovado pela administrção como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}.`,
         targetUserId: 'all',
         actionUrl: 'players'
@@ -1364,7 +1364,7 @@ async function startServer() {
           });
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
-          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovção:', emailErr);
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de aprovação:', emailErr);
         }
       }
 
@@ -1397,12 +1397,12 @@ async function startServer() {
           });
           await sendEmail(db.users[userIndex].email, subject, html);
         } catch (emailErr) {
-          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeição£o:', emailErr);
+          console.error('[API POST /api/users/action] Falha ao enviar e-mail de rejeição:', emailErr);
         }
       }
     } else if (action === 'update_role' && role) {
       db.users[userIndex].role = role;
-      auditActionText = `Alterção de Perfil de ${previousRole} para ${role}`;
+      auditActionText = `Alteração de Perfil de ${previousRole} para ${role}`;
 
       // Update link action if provided
       if (selectedPlayerId !== undefined) {
@@ -1417,15 +1417,15 @@ async function startServer() {
           userId,
           userName: db.users[userIndex].name,
           userEmail: db.users[userIndex].email,
-          action: 'Alterção de V­nculo',
+          action: 'Alteração de Vínculo',
           previousRole: '',
           newRole: '',
           previousStatus: '',
           newStatus: '',
           performedBy: adminName || 'Administrador do Sistema',
           details: selectedPlayerId 
-            ? `V­nculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
-            : `V­nculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            ? `Vínculo de atleta alterado para ${matchingPlayer ? matchingPlayer.name : 'Desconhecido'} (${selectedPlayerId}) (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
+            : `Vínculo de atleta removido (Anterior: ${prevPlayer ? prevPlayer.name : 'Nenhum'})`
         });
       }
     }
@@ -1452,7 +1452,7 @@ async function startServer() {
   // Remove do bucket 'Uploads' o arquivo referenciado por uma URL pública do Supabase Storage.
   // photoOriginal/avatarEsportivo/avatarCard chegam direto do body de PUT /api/players — um
   // cliente mal-intencionado poderia setar esses campos com a URL do arquivo de outro jogador
-  // e, numa edição£o seguinte, forçar a exclusão dele. Por isso, antes de apagar: (1) só aceita
+  // e, numa edição seguinte, forçar a exclusão dele. Por isso, antes de apagar: (1) só aceita
   // caminhos no formato exato gerado pelos nossos próprios uploads (sem barras/traversal fora
   // do esperado) e (2) confirma que nenhum outro registro de jogador ainda referencia essa
   // mesma URL em qualquer um dos 4 campos de foto/avatar.
@@ -1505,7 +1505,7 @@ async function startServer() {
 
   // Providers de avatar retornam a imagem gerada como data URL base64 inline. Salvar isso direto
   // na coluna do Postgres (em vez de só a URL) faz o payload de GET /api/players carregar todo
-  // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — da­
+  // esse base64 (várias centenas de KB a poucos MB por jogador) a cada leitura da listagem — da
   // o upload pro Storage aqui, igual ao que /api/upload-s3 já faz pra foto original.
   async function uploadAvatarDataUrlToStorage(dataUrl: string, pathPrefix: string): Promise<string> {
     const match = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
@@ -1586,7 +1586,7 @@ async function startServer() {
     }
   }
 
-  // Processamento s­ncrono ou ass­ncrono em segundo plano para avatares gamer do atleta
+  // Processamento síncrono ou assíncrono em segundo plano para avatares gamer do atleta
   async function processarAvatarGamerBackground(playerId: string) {
     console.log(`[Avatar Inteligente] Fluxo de background iniciado para o jogador ID: ${playerId}`);
     
@@ -1643,13 +1643,13 @@ async function startServer() {
           const avatarUrl = await uploadAvatarDataUrlToStorage(generatedPlayer.avatarEsportivo!, `avatars/${playerId}-esportivo`);
           player.avatarCard = avatarUrl;
           player.avatarEsportivo = avatarUrl;
-          player.avatarStatus = 'CONCLUDO';
+          player.avatarStatus = 'CONCLUÍDO';
         }
 
         await writeDb(db);
         console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
 
-        // Apaga a versão anterior do avatar no Storage, já substitu­da ou zerada acima.
+        // Apaga a versão anterior do avatar no Storage, já substituída ou zerada acima.
         if (oldCard !== player.avatarCard) await deleteStorageFileByUrl(oldCard);
         if (oldEsportivo !== oldCard && oldEsportivo !== player.avatarEsportivo) await deleteStorageFileByUrl(oldEsportivo);
       }
@@ -1669,7 +1669,7 @@ async function startServer() {
     }
   }
 
-  // Jogadores: Listar (Retorna ativos se sem par¢metro, ou todos se admin para gerenciamento)
+  // Jogadores: Listar (Retorna ativos se sem parâmetro, ou todos se admin para gerenciamento)
   app.get('/api/players', async (req, res) => {
     const db = await readDb();
     const includeDeleted = req.query.includeDeleted === 'true';
@@ -1698,7 +1698,7 @@ async function startServer() {
     const { responsibleName, ...playerData } = req.body as Omit<Player, 'id' | 'createdAt' | 'updatedAt'> & { responsibleName?: string };
 
     if (!playerData.name || !playerData.category || !playerData.status || !playerData.primaryPosition) {
-      return res.status(400).json({ error: 'Nome, categoria, status e posição£o principal são obrigatórios.' });
+      return res.status(400).json({ error: 'Nome, categoria, status e posição principal são obrigatórios.' });
     }
 
     if (playerData.category === 'mensalista' && playerData.primaryPosition !== 'goleiro') {
@@ -1706,7 +1706,7 @@ async function startServer() {
       const currentActiveMonthly = db.players.filter(p => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
       if (currentActiveMonthly >= activeMonthlyLimit) {
         return res.status(400).json({
-          error: `Não foi poss­vel concluir a operção. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ Par¢metros.`
+          error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
         });
       }
     }
@@ -1735,7 +1735,7 @@ async function startServer() {
       avatarOriginal: playerData.photoOriginal || '',
       avatarEsportivo: '',
       avatarCard: '',
-      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUDO',
+      avatarStatus: playerData.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO',
       avatarVersion: 1
     };
 
@@ -1774,14 +1774,14 @@ async function startServer() {
       details: `Categoria inicial definida como: ${newPlayer.category}`
     });
 
-    // Auditoria: Alterção de telefone
+    // Auditoria: Alteração de telefone
     db.userAudits.push({
       id: 'audit-pphone-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       timestamp: new Date().toISOString(),
       userId: 'system',
       userName: newPlayer.name,
       userEmail: playerData.email || 'atleta@sistema.local',
-      action: 'Alterção de telefone',
+      action: 'Alteração de telefone',
       previousRole: '',
       newRole: '',
       previousStatus: '',
@@ -2000,7 +2000,7 @@ async function startServer() {
       const otherActivePayingMensalistas = db.players.filter(p => p.id !== existingPlayer.id && !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro').length;
       if (otherActivePayingMensalistas >= activeMonthlyLimit) {
         return res.status(400).json({
-          error: `Não foi poss­vel concluir a operção. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro â†’ Par¢metros.`
+          error: `Não foi possível concluir a operação. O grupo já atingiu o limite configurado de mensalistas (${activeMonthlyLimit}/${activeMonthlyLimit}). Libere uma vaga ou altere o limite em Financeiro → Parâmetros.`
         });
       }
     }
@@ -2049,7 +2049,7 @@ async function startServer() {
         userId: 'system',
         userName: existingPlayer.name,
         userEmail: existingPlayer.email || 'atleta@sistema.local',
-        action: 'Alterção de telefone',
+        action: 'Alteração de telefone',
         previousRole: '',
         newRole: '',
         previousStatus: '',
@@ -2081,7 +2081,7 @@ async function startServer() {
     const forceRegenerate = photoChanged || teamChanged || numChanged || footChanged || !existingPlayer.avatarCard;
 
     if (forceRegenerate) {
-      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUDO';
+      updatedPlayer.avatarStatus = updatedPlayer.photoOriginal ? 'PENDENTE' : 'CONCLUÍDO';
       // Sem foto original não há como gerar/manter o avatar de IA — limpa para não continuar
       // exibindo um avatar antigo (a foto que o originou já não existe mais).
       if (!updatedPlayer.photoOriginal) {
@@ -2096,14 +2096,14 @@ async function startServer() {
     const statusChanged = updateData.status && updateData.status !== existingPlayer.status;
     if (statusChanged) {
       const statusLabels: Record<string, string> = {
-        disponivel: 'Dispon­vel',
-        indisponivel: 'Indispon­vel',
+        disponivel: 'Disponível',
+        indisponivel: 'Indisponível',
         lesionado: 'Lesionado',
         afastado: 'Afastado'
       };
       notify(db, {
         category: 'jogador',
-        title: 'ðŸƒ Status Alterado',
+        title: '🏃 Status Alterado',
         message: `O jogador ${existingPlayer.name} teve seu status alterado para "${statusLabels[updateData.status!] || updateData.status}".`,
         targetUserId: 'all',
         actionUrl: 'players'
@@ -2113,7 +2113,7 @@ async function startServer() {
         notify(db, {
           category: 'jogador',
           title: 'ðŸ’ª Lesão Encerrada!',
-          message: `“timas not­cias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente   disposição£o do grupo!`,
+          message: `Ótimas notícias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente à disposição do grupo!`,
           targetUserId: 'all',
           actionUrl: 'players'
         });
@@ -2123,14 +2123,14 @@ async function startServer() {
     if (categoryChanged && updateData.category === 'mensalista') {
       notify(db, {
         category: 'jogador',
-        title: 'â­ï¸ Promoção£o para Mensalista!',
+        title: '⭐ Promoção para Mensalista!',
         message: `O jogador ${existingPlayer.name} foi oficialmente promovido ao grupo de Mensalistas. Parabéns!`,
         targetUserId: existingPlayer.id,
         actionUrl: 'players'
       });
       notify(db, {
         category: 'jogador',
-        title: 'â­ï¸ Novo Mensalista no Racha',
+        title: '⭐ Novo Mensalista no Racha',
         message: `O jogador ${existingPlayer.name} agora é um Mensalista oficial do racha!`,
         targetUserId: 'all',
         actionUrl: 'players'
@@ -2249,7 +2249,7 @@ async function startServer() {
     return res.json({ message: 'Jogador reativado com sucesso!', player: db.players[index] });
   });
 
-  // Buscar histórico de transição£o de categoria de um jogador
+  // Buscar histórico de transição de categoria de um jogador
   app.get('/api/players/:id/transitions', async (req, res) => {
     try {
       const { id } = req.params;
@@ -2261,7 +2261,7 @@ async function startServer() {
     }
   });
 
-  // Alertas e recomendções de promoção£o para mensalistas
+  // Alertas e recomendações de promoção para mensalistas
   app.get('/api/mensalista-alerts', async (req, res) => {
     try {
       const db = await readDb();
@@ -2570,9 +2570,9 @@ async function startServer() {
       if (previousEval) {
         const wasSamePeriod = previousEval.date.startsWith(currentPeriod);
         if (wasSamePeriod) {
-          messageStr = 'Sua avalição anterior para este per­odo foi atualizada com sucesso!';
+          messageStr = 'Sua avaliação anterior para este período foi atualizada com sucesso!';
         } else {
-          messageStr = 'Sua nova avalição substituiu a avalição do per­odo anterior com sucesso!';
+          messageStr = 'Sua nova avaliação substituiu a avaliação do período anterior com sucesso!';
         }
 
         // Overwrite the existing evaluation to prevent duplication
@@ -2611,7 +2611,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[Error Post Player Evaluate]', err);
-      return res.status(500).json({ error: 'Não foi poss­vel salvar a avalição.' });
+      return res.status(500).json({ error: 'Não foi possível salvar a avaliação.' });
     }
   });
 
@@ -2632,7 +2632,7 @@ async function startServer() {
     try {
       const { name, year, startDate, endDate, active } = req.body;
       if (!name || !year || !startDate || !endDate) {
-        return res.status(400).json({ error: 'Campos Nome, Ano, Data in­cio e Fim são obrigatórios.' });
+        return res.status(400).json({ error: 'Campos Nome, Ano, Data início e Fim são obrigatórios.' });
       }
 
       const db = await readDb();
@@ -2813,7 +2813,7 @@ async function startServer() {
 
       notify(db, {
         category: 'partida',
-        title: 'âš½ Nova Partida Agendada',
+        title: '⚽ Nova Partida Agendada',
         message: `Uma nova partida foi agendada para o dia ${newMatch.date.split('-').reverse().join('/')} às ${newMatch.time} na localidade ${newMatch.location}.`,
         actionUrl: 'calendar',
         matchId: newMatch.id
@@ -2890,7 +2890,7 @@ async function startServer() {
         }
         notify(db, {
           category: 'partida',
-          title: 'âŒ Partida Cancelada',
+          title: '❌ Partida Cancelada',
           message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi cancelada.`,
           actionUrl: 'calendar',
           matchId: updatedMatch.id
@@ -2914,7 +2914,7 @@ async function startServer() {
             previousStatus: '',
             newStatus: '',
             performedBy: responsibleName || 'Administrador',
-            details: `Sorteio invalidado automaticamente em função£o do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
+            details: `Sorteio invalidado automaticamente em função do cancelamento da rodada do dia ${updatedMatch.date.split('-').reverse().join('/')}.`
           });
         }
 
@@ -3140,7 +3140,7 @@ async function startServer() {
       }
 
       if (toDelete.length === 0) {
-        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser exclu­da, pois possuem sorteio realizado ou resultados registrados.' });
+        return res.status(400).json({ error: 'Nenhuma das partidas selecionadas pode ser excluídoa, pois possuem sorteio realizado ou resultados registrados.' });
       }
 
       db.matches = (db.matches || []).filter((m) => !toDelete.includes(m.id));
@@ -3183,7 +3183,7 @@ async function startServer() {
         if (hasDraws) reasons.push('times sorteados/parciais');
         if (hasResults) reasons.push('placar/resultados registrados');
         return res.status(400).json({ 
-          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e não pode ser exclu­da.` 
+          error: `Esta partida possui sorteio realizado ou resultados registrados (${reasons.join(', ')}) e não pode ser excluídoa.` 
         });
       }
 
@@ -3202,7 +3202,7 @@ async function startServer() {
       }
 
       await writeDb(db);
-      return res.json({ message: 'Partida exclu­da com sucesso!' });
+      return res.json({ message: 'Partida excluídoa com sucesso!' });
     } catch (err) {
       return res.status(500).json({ error: 'Erro ao remover partida.' });
     }
@@ -3467,7 +3467,7 @@ async function startServer() {
         db.eventBills = (db.eventBills || []).filter((b: any) => b.eventId !== id);
         notify(db, {
           category: 'evento',
-          title: 'âŒ Evento Cancelado',
+          title: '❌ Evento Cancelado',
           message: `O evento "${db.events[eventIndex].name}" marcado para o dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
           actionUrl: 'mural',
           eventId: id
@@ -3476,7 +3476,7 @@ async function startServer() {
         recalculateEventBills(db, id);
         notify(db, {
           category: 'evento',
-          title: 'âœï¸ Detalhes do Evento Alterados',
+          title: '✏️ Detalhes do Evento Alterados',
           message: `O evento "${db.events[eventIndex].name}" foi editado. Confira o cronograma ou local na aba de eventos.`,
           actionUrl: 'mural',
           eventId: id
@@ -3506,7 +3506,7 @@ async function startServer() {
 
       notify(db, {
         category: 'evento',
-        title: 'âŒ Evento Cancelado',
+        title: '❌ Evento Cancelado',
         message: `O evento "${db.events[eventIndex].name}" do dia ${db.events[eventIndex].date.split('-').reverse().join('/')} foi cancelado.`,
         actionUrl: 'mural',
         eventId: id
@@ -3962,7 +3962,7 @@ async function startServer() {
       if (previousStatus === 'confirmado' && status === 'cancelado') {
         notify(db, {
           category: 'partida',
-          title: 'ðŸ‘¥ Vaga Aberta no Racha',
+          title: '👥 Vaga Aberta no Racha',
           message: `O cancelamento da presença de ${player.name} liberou uma vaga. Acompanhe a lista de reservas!`,
           targetUserId: 'all',
           actionUrl: 'calendar',
@@ -4108,7 +4108,7 @@ async function startServer() {
         if (previousStatus === 'confirmado' && status === 'cancelado') {
           notify(db, {
             category: 'partida',
-            title: 'ðŸ‘¥ Vaga Aberta no Racha',
+            title: '👥 Vaga Aberta no Racha',
             message: `O cancelamento da presença de ${player.name} liberou uma vaga. Acompanhe a lista de reservas!`,
             targetUserId: 'all',
             actionUrl: 'calendar',
@@ -4325,7 +4325,7 @@ async function startServer() {
           return t.playerIds.includes(t.captainPlayerId);
         });
         if (!captainsMatch) {
-          return res.status(400).json({ error: "Um atleta marcado como capitão não pode ser movido para outro time enquanto mantiver a função£o de capitão." });
+          return res.status(400).json({ error: "Um atleta marcado como capitão não pode ser movido para outro time enquanto mantiver a função de capitão." });
         }
       }
 
@@ -4384,8 +4384,8 @@ async function startServer() {
 
       notify(db, {
         category: 'sorteio',
-        title: 'âœï¸ Sorteio Alterado Manualmente',
-        message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equil­brio.`,
+        title: '✏️ Sorteio Alterado Manualmente',
+        message: `A divisão de times do racha foi modificada manualmente por um organizador para melhor equilíbrio.`,
         actionUrl: 'calendar',
         matchId: drawObj.matchId
       });
@@ -4413,7 +4413,7 @@ async function startServer() {
       // Validate that captains configured in the draw do not have duplicates
       const drawCaptains = drawObj.teams.map(t => t.captainPlayerId).filter(Boolean);
       if (new Set(drawCaptains).size !== drawCaptains.length) {
-        return res.status(400).json({ error: "Não foi poss­vel consolidar o sorteio. Um mesmo atleta não pode ser definido como capitão de mais de um time. Ajuste a seleção£o de capitães e tente novamente." });
+        return res.status(400).json({ error: "Não foi possível consolidar o sorteio. Um mesmo atleta não pode ser definido como capitão de mais de um time. Ajuste a seleção de capitães e tente novamente." });
       }
 
       // Check that each captain belongs to their respective team
@@ -4421,7 +4421,7 @@ async function startServer() {
         return t.captainPlayerId && !t.playerIds.includes(t.captainPlayerId);
       });
       if (captainBelongsProblems) {
-        return res.status(400).json({ error: "Não foi poss­vel consolidar o sorteio. Cada capitão deve pertencer ao respectivo time no sorteio. Ajuste a seleção£o de capitães e tente novamente." });
+        return res.status(400).json({ error: "Não foi possível consolidar o sorteio. Cada capitão deve pertencer ao respectivo time no sorteio. Ajuste a seleção de capitães e tente novamente." });
       }
 
       // Mathematical consistency check for overalls (Rule 4)
@@ -4471,7 +4471,7 @@ async function startServer() {
           calculated: { blue: bOverallCalc, red: rOverallCalc, green: gOverallCalc }
         });
         return res.status(400).json({
-          error: `Divergência técnica detectada! As médias calculadas para os times não condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os ­ndices técnicos antes da consolidção.`
+          error: `Divergência técnica detectada! As médias calculadas para os times não condizem com os dados atuais dos atletas. Por favor realoque ou recalcule o sorteio para atualizar os ­índices técnicos antes da consolidação.`
         });
       }
 
@@ -4616,7 +4616,7 @@ async function startServer() {
       }
 
       return res.json({
-        message: 'Reengajamento conclu­do.',
+        message: 'Reengajamento concluído.',
         totalInactive: inactivePlayers.length,
         sent: sent.length,
         failed: failed.length,
@@ -4722,7 +4722,7 @@ async function startServer() {
       return res.json(stats);
     } catch (err) {
       console.error('[Error generating stats]:', err);
-      return res.status(500).json({ error: 'Erro ao processar estat­sticas de jogo.' });
+      return res.status(500).json({ error: 'Erro ao processar estatísticas de jogo.' });
     }
   });
 
@@ -5016,21 +5016,21 @@ async function startServer() {
         const redTeamPlayers = draw.teams.find(t => t.name === 'Vermelho')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
         const greenTeamPlayers = draw.teams.find(t => t.name === 'Verde')?.playerIds.map(pid => playerMap.get(pid) || pid).join(', ') || 'Nenhum';
 
-        const automaticPostText = `### ðŸ“… Informções Gerais
+        const automaticPostText = `### 📅 Informações Gerais
 - **Data:** ${formattedDate}
 - **Horário:** ${match.time}
 - **Temporada:** ${seasonName}
 - **Participantes:** ${participantsCount} jogadores
 
-### âš½ Placar Geral
+### ⚽ Placar Geral
 - **ðŸ”µ Time Azul:** ${winsBlue} vitórias
 - **ðŸ”´ Time Vermelho:** ${winsRed} vitórias
 - **ðŸŸ¢ Time Verde:** ${winsGreen} vitórias
 
-### ðŸ† Campeões da Rodada
+### 🏆 Campeões da Rodada
 - ${champions.length > 0 ? champions.map(c => `Time ${c}`).join(' & ') : 'Empate'}
 
-### ðŸ‘¥ Escalção das Equipes
+### 👥 Escalação das Equipes
 - **ðŸ”µ Time Azul:** ${blueTeamPlayers}
 - **ðŸ”´ Time Vermelho:** ${redTeamPlayers}
 - **ðŸŸ¢ Time Verde:** ${greenTeamPlayers}
@@ -5114,7 +5114,7 @@ async function startServer() {
   <g transform="translate(150, 340)" filter="url(#shadow)">
     <rect width="500" height="55" rx="27.5" fill="#142c22" stroke="#22c55e" stroke-width="2" opacity="0.95"/>
     <text x="250" y="34" font-family="'Inter', sans-serif" font-weight="bold" font-size="18" fill="#ffffff" text-anchor="middle">
-      ðŸ† ${champText.toUpperCase()}
+      🏆 ${champText.toUpperCase()}
     </text>
   </g>
 </svg>
@@ -5127,7 +5127,7 @@ async function startServer() {
 
         const automaticPost = {
           id: 'post-auto-' + Date.now(),
-          title: `ðŸ† Resultado do Racha - ${formattedDate}`,
+          title: `🏆 Resultado do Racha - ${formattedDate}`,
           description: automaticPostText,
           mediaUrl: autoPostMediaUrl,
           mediaType: 'image' as const,
@@ -5503,7 +5503,7 @@ async function startServer() {
         // Notify
         notify(db, {
           category: 'partida',
-          title: 'âŒ Convocção Recusada',
+          title: '❌ Convocção Recusada',
           message: `O reserva ${player ? player.name : 'Jogador'} recusou ou cancelou sua convocação para a partida.`,
           targetUserId: 'all',
           actionUrl: 'calendar',
@@ -5788,7 +5788,7 @@ async function startServer() {
         userId: 'admin',
         userName: 'Administrador',
         userEmail: '[EMAIL]',
-        action: 'Alterção de Par¢metros Financeiros',
+        action: 'Alteração de Par¢metros Financeiros',
         previousRole: '',
         newRole: '',
         previousStatus: '',
@@ -6057,7 +6057,7 @@ async function startServer() {
       });
     } catch (err) {
       console.error('[API GET Mural Stats]', err);
-      res.status(500).json({ error: 'Erro ao carregar estat­sticas.' });
+      res.status(500).json({ error: 'Erro ao carregar estatísticas.' });
     }
   });
 
@@ -6470,7 +6470,7 @@ db.muralPosts.push(newPost);
         }
       }
 
-      res.json({ message: 'Publicção exclu­da com sucesso (Soft Delete).' });
+      res.json({ message: 'Publicção excluídoa com sucesso (Soft Delete).' });
     } catch (err) {
       console.error('[API DELETE Mural Post]', err);
       res.status(500).json({ error: 'Erro ao excluir publicção.' });
