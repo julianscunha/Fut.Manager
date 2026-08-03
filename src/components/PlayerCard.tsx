@@ -242,6 +242,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
   });
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showOriginalAvatarLabel, setShowOriginalAvatarLabel] = useState(false);
+  const [showRestoreLabel, setShowRestoreLabel] = useState(false);
 
   useEffect(() => {
     if (player.avatarStatus === 'ERRO') {
@@ -960,36 +961,37 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                     </div>
                   )}
 
-                   {/* Gamer badge / restore original */}
-                   {(player.avatarStatus === 'CONCLUÍDO' &&
-                    player.avatarCard &&
-                    player.avatarCard !== (player.avatarOriginal || player.photoOriginal)) && (
-                     <button
-                       type="button"
-                       onClick={async (e) => {
-                         e.stopPropagation();
-                         try {
-                           const res = await authFetch(`/api/players/${player.id}/restore-original-avatar`, { method: 'POST' });
-                           if (res.ok) {
-                             setSaveSuccessMsg('✅ Foto original restaurada!');
-                             await fetchMetrics();
-                             if (onEvaluationSavedGlobal) onEvaluationSavedGlobal();
-                             setTimeout(() => setSaveSuccessMsg(''), 3000);
-                           } else {
-                             const err = await res.json();
-                             setSaveSuccessMsg(`❌ ${err.error || 'Falha ao restaurar foto original.'}`);
-                             setTimeout(() => setSaveSuccessMsg(''), 3000);
-                           }
-                         } catch {
-                           setSaveSuccessMsg('❌ Erro de conexão com o servidor.');
-                           setTimeout(() => setSaveSuccessMsg(''), 3000);
-                         }
-                       }}
-                       className="absolute bottom-1 left-1.5 bg-black/90 hover:bg-emerald-950 text-[8px] font-sans font-extrabold text-emerald-400 hover:text-emerald-300 px-1.5 py-0.5 rounded-full shadow border border-zinc-800 hover:border-emerald-500/50 transition z-10"
-                     >
-                       Restaurar Foto Original
-                     </button>
-                   )}
+                    {/* Gamer badge / restore original */}
+                    {(player.avatarStatus === 'CONCLUÍDO' &&
+                     player.avatarCard &&
+                     player.avatarCard !== (player.avatarOriginal || player.photoOriginal)) && (
+                      <button
+                        type="button"
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const res = await authFetch(`/api/players/${player.id}/restore-original-avatar`, { method: 'POST' });
+                            if (res.ok) {
+                              setShowRestoreLabel(true);
+                              await fetchMetrics();
+                              if (onEvaluationSavedGlobal) onEvaluationSavedGlobal();
+                              setTimeout(() => setShowRestoreLabel(false), 3000);
+                            } else {
+                              const err = await res.json();
+                              setSaveSuccessMsg(`❌ ${err.error || 'Falha ao restaurar foto original.'}`);
+                              setTimeout(() => setSaveSuccessMsg(''), 3000);
+                            }
+                          } catch {
+                            setSaveSuccessMsg('❌ Erro de conexão com o servidor.');
+                            setTimeout(() => setSaveSuccessMsg(''), 3000);
+                          }
+                        }}
+                        className="absolute bottom-1 left-1.5 bg-black/90 hover:bg-emerald-950 text-[8px] font-sans font-extrabold text-emerald-400 hover:text-emerald-300 px-1.5 py-0.5 rounded-full shadow border border-zinc-800 hover:border-emerald-500/50 transition z-10 flex items-center gap-1"
+                      >
+                        <span>↩</span>
+                        {showRestoreLabel && <span>Restaurar Foto Original</span>}
+                      </button>
+                    )}
 
                   {/* Admin quick regenerator */}
                   {canEdit && (player.avatarOriginal || player.photoOriginal) && 
