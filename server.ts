@@ -381,6 +381,8 @@ async function startServer() {
     const remainingSpots = Math.max(0, limit - currentConfirmed);
     const toSummon = Math.min(count, remainingSpots, finalQueue.length);
 
+    console.log('[summonReserves] matchId=', matchId, 'limit=', limit, 'confirmed=', currentConfirmed, 'remainingSpots=', remainingSpots, 'queue=', finalQueue.length, 'toSummon=', toSummon);
+
     for (let i = 0; i < toSummon; i++) {
       const nextPlayer = finalQueue[i];
       if (!db.reserveAlerts) db.reserveAlerts = [];
@@ -5472,7 +5474,7 @@ async function startServer() {
     try {
       const { matchId } = req.params;
       const db = await readDb();
-      const match = db.matches.find((m) => m.id === matchId);
+      const match = db.matches.find((m: any) => m.id === matchId);
       if (!match) {
         return res.status(404).json({ error: 'Partida não encontrada.' });
       }
@@ -5486,7 +5488,7 @@ async function startServer() {
 
       return res.json({ message: `Convocção enviada com sucesso para ${summoned[0].name}!`, alert: summoned[0] });
     } catch (err) {
-      console.error(err);
+      console.error('[summon-next] Falha ao convocar reserva:', err);
       return res.status(500).json({ error: 'Erro ao realizar summons.' });
     }
   });

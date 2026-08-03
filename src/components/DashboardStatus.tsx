@@ -2856,7 +2856,7 @@ export default function DashboardStatus({
                   <h3 className="font-display font-black text-white text-sm uppercase tracking-wide">Fila de Reservas</h3>
                 </div>
                 <span className="text-[10px] font-mono font-black bg-indigo-500/10 text-indigo-300 px-3 py-1 rounded-lg border border-indigo-500/25">
-                  Qtd: {(reserveQueue?.queue?.length || 0) + (reserveQueue?.activeConvocation ? 1 : 0)}
+                  Qtd: {reserveQueue?.queue?.length || 0}
                 </span>
               </div>
 
