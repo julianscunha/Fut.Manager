@@ -920,7 +920,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                       src={avatarToDisplay}
                       alt={player.name}
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover select-none transition duration-300 scale-90 group-hover:scale-105"
+                      className="w-full h-full object-cover select-none transition duration-300 group-hover:scale-105"
                     />
                   ) : (
                     <User className="w-16 h-16 text-zinc-700" />
