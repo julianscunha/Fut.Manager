@@ -1008,13 +1008,13 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                   )}
                    
                    {/* Rarity Shield corner logo overlay */}
-                  <div 
-                    className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center border border-white/20 select-none shadow animate-pulse"
-                    style={{ backgroundColor: rarityTheme.shieldColor }}
-                    title={rarityTheme.badgeText}
-                  >
-                    <Zap className="w-3 h-3 text-black fill-black" />
-                  </div>
+                   <div 
+                     className="absolute bottom-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center border border-white/20 select-none shadow animate-pulse"
+                     style={{ backgroundColor: rarityTheme.shieldColor }}
+                     title={rarityTheme.badgeText}
+                   >
+                     <span className="text-[10px] leading-none">{rarity === 'lendaria' ? '⭐' : rarity === 'ouro' ? '🏅' : rarity === 'prata' ? '🥈' : '🥉'}</span>
+                   </div>
                 </div>
               </div>
 
