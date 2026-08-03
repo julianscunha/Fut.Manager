@@ -1589,82 +1589,104 @@ async function startServer() {
   // Processamento síncrono ou assíncrono em segundo plano para avatares gamer do atleta
   async function processarAvatarGamerBackground(playerId: string) {
     console.log(`[Avatar Inteligente] Fluxo de background iniciado para o jogador ID: ${playerId}`);
-    
-    let db = await readDb();
-    let playerIndex = db.players.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) {
-      console.error(`[Avatar Inteligente] Atleta não encontrado para processamento.`);
-      return;
-    }
 
-    let player = db.players[playerIndex];
-    if (!player.photoOriginal) {
-      console.log(`[Avatar Inteligente] Sem foto original válida. Encerrando.`);
+    const AVATAR_TIMEOUT_MS = 5 * 60 * 1000;
+
+    const finishWithError = async (db: any, playerIndex: number, reason: string) => {
+      if (playerIndex === -1) return;
+      const player = db.players[playerIndex];
       const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
       player.avatarStatus = 'ERRO';
       player.avatarCard = null;
       player.avatarEsportivo = null;
       await writeDb(db);
       await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
-      return;
-    }
+      console.error(`[Avatar Inteligente] Falha para ${player.name}: ${reason}`);
+    };
 
-    if (process.env.ENABLE_AVATAR_AI !== 'true') {
-      console.log(`[Avatar Inteligente] Gerção suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
-      const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
-      player.avatarStatus = 'ERRO';
-      player.avatarCard = null;
-      player.avatarEsportivo = null;
-      await writeDb(db);
-      await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
-      return;
-    }
-
-    player.avatarStatus = 'PROCESSANDO';
-    await writeDb(db);
+    const withTimeout = async <T>(promise: Promise<T>, ms: number): Promise<T> => {
+      let timeoutHandle: any;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error('Avatar generation timed out')), ms);
+      });
+      try {
+        return await Promise.race([promise, timeoutPromise]);
+      } finally {
+        clearTimeout(timeoutHandle);
+      }
+    };
 
     try {
-      const generatedPlayer = await gerarAvatarEsportivo(player, true);
+      await withTimeout(
+        (async () => {
+          let db = await readDb();
+          let playerIndex = db.players.findIndex(p => p.id === playerId);
+          if (playerIndex === -1) {
+            console.error(`[Avatar Inteligente] Atleta não encontrado para processamento.`);
+            return;
+          }
 
-      // Relê banco para evitar conflito de gravção concorrente
-      db = await readDb();
-      playerIndex = db.players.findIndex(p => p.id === playerId);
-      if (playerIndex !== -1) {
-        player = db.players[playerIndex];
-        const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
-        player.avatarOriginal = generatedPlayer.avatarOriginal;
+          let player = db.players[playerIndex];
+          if (!player.photoOriginal) {
+            console.log(`[Avatar Inteligente] Sem foto original válida. Encerrando.`);
+            await finishWithError(db, playerIndex, 'Sem foto original');
+            return;
+          }
 
-        const isFallback = !generatedPlayer.avatarEsportivo || generatedPlayer.avatarEsportivo === generatedPlayer.photoOriginal;
-        if (isFallback) {
-          player.avatarStatus = 'ERRO';
-          player.avatarCard = null;
-          player.avatarEsportivo = null;
-        } else {
-          const avatarUrl = await uploadAvatarDataUrlToStorage(generatedPlayer.avatarEsportivo!, `avatars/${playerId}-esportivo`);
-          player.avatarCard = avatarUrl;
-          player.avatarEsportivo = avatarUrl;
-          player.avatarStatus = 'CONCLUÍDO';
-        }
+          if (process.env.ENABLE_AVATAR_AI !== 'true') {
+            console.log(`[Avatar Inteligente] Geração suspensa via feature flag ENABLE_AVATAR_AI para ${player.name}.`);
+            await finishWithError(db, playerIndex, 'Feature flag desativada');
+            return;
+          }
 
-        await writeDb(db);
-        console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
+          player.avatarStatus = 'PROCESSANDO';
+          await writeDb(db);
 
-        // Apaga a versão anterior do avatar no Storage, já substituída ou zerada acima.
-        if (oldCard !== player.avatarCard) await deleteStorageFileByUrl(oldCard);
-        if (oldEsportivo !== oldCard && oldEsportivo !== player.avatarEsportivo) await deleteStorageFileByUrl(oldEsportivo);
-      }
+          try {
+            const generatedPlayer = await gerarAvatarEsportivo(player, true);
+
+            db = await readDb();
+            playerIndex = db.players.findIndex(p => p.id === playerId);
+            if (playerIndex === -1) return;
+
+            player = db.players[playerIndex];
+            const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
+            player.avatarOriginal = generatedPlayer.avatarOriginal;
+
+            const isFallback = !generatedPlayer.avatarEsportivo || generatedPlayer.avatarEsportivo === generatedPlayer.photoOriginal;
+            if (isFallback) {
+              player.avatarStatus = 'ERRO';
+              player.avatarCard = null;
+              player.avatarEsportivo = null;
+            } else {
+              const avatarUrl = await uploadAvatarDataUrlToStorage(generatedPlayer.avatarEsportivo!, `avatars/${playerId}-esportivo`);
+              player.avatarCard = avatarUrl;
+              player.avatarEsportivo = avatarUrl;
+              player.avatarStatus = 'CONCLUÍDO';
+            }
+
+            await writeDb(db);
+            console.log(`[Avatar Inteligente] Salvo com sucesso para ${player.name} com status: ${player.avatarStatus}`);
+
+            if (oldCard !== player.avatarCard) await deleteStorageFileByUrl(oldCard);
+            if (oldEsportivo !== oldCard && oldEsportivo !== player.avatarEsportivo) await deleteStorageFileByUrl(oldEsportivo);
+          } catch (err) {
+            console.error(`[Avatar Inteligente] Falha no background:`, err);
+            db = await readDb();
+            playerIndex = db.players.findIndex(p => p.id === playerId);
+            await finishWithError(db, playerIndex, (err as any)?.message || 'Erro desconhecido');
+          }
+        })(),
+        AVATAR_TIMEOUT_MS
+      );
     } catch (err) {
-      console.error(`[Avatar Inteligente] Falha no background:`, err);
-      db = await readDb();
-      playerIndex = db.players.findIndex(p => p.id === playerId);
-      if (playerIndex !== -1) {
-        player = db.players[playerIndex];
-        const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
-        player.avatarStatus = 'ERRO';
-        player.avatarCard = null;
-        player.avatarEsportivo = null;
-        await writeDb(db);
-        await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
+      console.error(`[Avatar Inteligente] Timeout ou falha geral no processamento:`, err);
+      try {
+        const db = await readDb();
+        const playerIndex = db.players.findIndex(p => p.id === playerId);
+        await finishWithError(db, playerIndex, 'Timeout ou falha geral');
+      } catch (finalErr) {
+        console.error(`[Avatar Inteligente] Falha ao recuperar estado após erro:`, finalErr);
       }
     }
   }
@@ -6772,6 +6794,34 @@ db.muralPosts.push(newPost);
       return res.status(500).json({ error: 'Erro ao salvar preferências de notificção.' });
     }
   });
+
+  // Watchdog: libera avatares presos em PROCESSANDO há mais de 10 minutos
+  const AVATAR_STUCK_THRESHOLD_MS = 10 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const db = await readDb();
+      const now = Date.now();
+      let changed = false;
+      for (const player of db.players) {
+        if (player.avatarStatus === 'PROCESSANDO' && player.updatedAt) {
+          const updatedAt = new Date(player.updatedAt).getTime();
+          if (!Number.isFinite(updatedAt)) continue;
+          if (now - updatedAt > AVATAR_STUCK_THRESHOLD_MS) {
+            const [oldCard, oldEsportivo] = [player.avatarCard, player.avatarEsportivo];
+            player.avatarStatus = 'ERRO';
+            player.avatarCard = null;
+            player.avatarEsportivo = null;
+            changed = true;
+            console.warn(`[Avatar Watchdog] ${player.name} estava preso em PROCESSANDO. Liberando para ERRO e limpando arquivos.`);
+            await Promise.all([deleteStorageFileByUrl(oldCard), deleteStorageFileByUrl(oldEsportivo)]);
+          }
+        }
+      }
+      if (changed) await writeDb(db);
+    } catch (err) {
+      console.error('[Avatar Watchdog] Falha ao verificar avatares presos:', err);
+    }
+  }, 60 * 1000);
 
   // --- Vite Dev Server Middleware / Static Client serving ---
   if (process.env.NODE_ENV !== 'production') {
