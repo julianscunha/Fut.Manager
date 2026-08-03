@@ -1518,7 +1518,7 @@ async function startServer() {
       .webp({ quality: 82 })
       .toBuffer();
 
-    const filename = `${pathPrefix}-${Date.now()}.webp`;
+    const filename = `avatars/${pathPrefix.replace(/^avatars\//, '')}.webp`;
 
     const supabase = getSupabaseClient();
     const { error } = await supabase.storage.from('Uploads').upload(filename, compressedBuffer, { contentType: 'image/webp' });
