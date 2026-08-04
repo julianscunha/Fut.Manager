@@ -1057,9 +1057,9 @@ export default function DashboardStatus({
   // Reserves currently convoked (awaiting response) - moved from FR (Fila de Reservas)
   // into LC (Lista de Chamada): a player is either FR or LC, never both.
   const awaitingReservePlayers = [...presences.filter(p => p.presenceStatus === 'aguardando_resposta')].sort(sortPlayersByPositionAndName);
-  // Total convoked reserves in LC - awaiting response AND already confirmed (accepted the call-up),
-  // regardless of how many are still pending a response.
-  const totalConvokedReservesCount = presences.filter(p => p.category === 'reserva' && (p.presenceStatus === 'aguardando_resposta' || p.presenceStatus === 'confirmado')).length;
+  // Total convocados = every athlete on the LC roster - mensalistas (auto-convoked by
+  // default) plus reservas (explicitly summoned). Matches Confirmados + Ausentes + pending.
+  const totalConvokedCount = presences.length;
 
   const sortedPresencesForList = [
     ...awaitingReservePlayers,
@@ -2735,9 +2735,9 @@ export default function DashboardStatus({
                   <span className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-lg uppercase tracking-wide">
                     ✗ {cancelPlayers.length} Ausentes
                   </span>
-                  {totalConvokedReservesCount > 0 && (
-                    <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-lg uppercase tracking-wide animate-pulse">
-                      ⚡ {totalConvokedReservesCount} Convocados
+                  {totalConvokedCount > 0 && (
+                    <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-lg uppercase tracking-wide">
+                      ⚡ {totalConvokedCount} Convocados
                     </span>
                   )}
                 </div>
