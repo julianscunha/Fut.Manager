@@ -1,5 +1,5 @@
 ---
-type: "Reference"
+type: "Referência"
 title: "Hardening de Segurança Operacional"
 openwiki_generated: true
 ---

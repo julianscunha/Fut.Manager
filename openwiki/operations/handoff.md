@@ -1,7 +1,7 @@
 ---
-type: Project Handoff Notes
-title: Automation.Lab Handoff
-description: Executive summary of system status, completed features, and resolved bugs for Fut.Manager, serving as a handoff artifact for future maintainers.
+type: Notas de Passagem de Projeto
+title: Passagem de Handoff Automation.Lab
+description: Resumo executivo do status do sistema, funcionalidades concluídas e bugs resolvidos para o Fut.Manager, servindo como artefato de handoff para futuros mantenedores.
 tags: [handoff, operations, maintenance]
 ---
 
@@ -51,7 +51,7 @@ Arquivos alterados: `server.ts`, `server/email-templates/base.ts`, `server/email
 - Menu de abas do Museu do Clube atualizado com `flex-wrap` responsivo para mobile.
 - Paginação dinâmica no feed cronológico de memórias (limite de 10 itens/página).
 - Corrigido erro `Objects are not valid as a React child` no `UserApprovalList.tsx`.
-- Removido botão "Gerar 10 Atletas" e purga do banco fictício (`database.json`), disponibilizando ambiente limpo com `admin@racha.com`.
+- Removido botão "Gerar 10 Atletas" e purga do banco fictício (`database.json`), disponibilizando ambiente limpo com `[EMAIL]`.
 
 Arquivos alterados: `DashboardStatus.tsx`, `MuralManager.tsx`, `UserApprovalList.tsx`, `App.tsx`, `server/db.ts`.
 

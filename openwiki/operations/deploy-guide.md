@@ -1,7 +1,7 @@
 ---
-type: Deployment Guide
+type: Guia de Implantação
 title: Guia de Deploy do Fut.Manager para Render + Supabase
-description: Step-by-step instructions to set up Supabase (schema, storage, admin user), configure .env.local, and deploy the container to Render, including verification steps and git checklist.
+description: Instruções passo a passo para configurar o Supabase (esquema, armazenamento, usuário administrador), configurar .env.local e implantar o contêiner no Render, incluindo etapas de verificação e checklist de git.
 resource: /docs/DEPLOY.md
 tags: [deploy, supabase, render, DevOps, infrastructure]
 ---
@@ -66,7 +66,7 @@ Após executar o schema SQL, insira os registros iniciais:
 - **Admin padrão:**
   - `id`: `user-admin`
   - `name`: `Admin do Sistema`
-  - `email`: `admin@racha.com`
+  - `email`: `[EMAIL]`
   - `role`: `admin`
   - `status`: `approved`
   - `password_hash`: hash gerado por `pgcrypto`; a senha padrão é `admin` (veja abaixo).
@@ -104,7 +104,7 @@ Verifique a porta padrão (3000) e acessibilidade do frontend em `http://localho
 | :--- | :--- |
 | `GET /api/users` sem header | `401` |
 | `GET /api/users` com `x-user-id` forjado | `401` (header não existe mais — ver [Hardening §1](../architecture/security.md)) |
-| `POST /api/auth/login` com `admin@racha.com` / `admin` | Resposta inclui `token` (JWT) |
+| `POST /api/auth/login` com `[EMAIL]` / `admin` | Resposta inclui `token` (JWT) |
 | `GET /api/users` com `Authorization: Bearer <token>` | `200`, lista de usuários |
 
 ---
@@ -143,7 +143,7 @@ O projeto deve ter um `Dockerfile` na raiz que contemple:
 Após o deploy, acesse a URL gerada pelo Render e verifique:
 
 - Frontend carrega sem erros.
-- Login com `admin@racha.com` / `admin` retorna token JWT.
+- Login com `[EMAIL]` / `admin` retorna token JWT.
 - Rotas públicas (`/api/auth/login`, `/api/mural/public-posts`, `/api/public/next-match`) funcionam sem token.
 - Rotas protegidas exigem `Authorization: Bearer <token>`.
 

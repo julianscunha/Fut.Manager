@@ -1,58 +1,58 @@
 ---
-type: Guide
+type: Guia
 title: Permissões do Sistema
-description: Papéis (roles) do Fut.Manager, hierarquia de acesso, capacidades de cada perfil e mapeamento entre role e category de atleta.
-tags: [permissions, roles, access-control, admin, auxiliar, jogador]
+description: Funções (roles) do Fut.Manager, hierarquia de acesso, capacidades de cada perfil e mapeamento entre função e categoria de atleta.
+tags: [permissões, funções, controle-de-acesso, admin, auxiliar, jogador]
 ---
 
 # Permissões do Sistema
 
-O Fut.Manager utiliza um sistema de três papéis (roles) baseado no tipo `UserRole` (`src/types.ts:6`). Cada role determina o que o usuário pode fazer na plataforma, tanto no lado da API (servidor) quanto na interface (cliente).
+O Fut.Manager utiliza um sistema baseado em três funções (roles) definidas pelo tipo `UserRole` (`src/types.ts:6`). Cada função determina as ações que um usuário pode realizar na plataforma, tanto no servidor (API) quanto no cliente (interface).
 
 ---
 
-## Hierarquia de Roles
+## Hierarquia de Funções
 
-| Role | Label na UI | Nível de Acesso |
-|------|-------------|-----------------|
+| Função | Rótulo na Interface | Nível de Acesso |
+|---------|-------------------|-----------------|
 | `admin` | Administrador | Total |
-| `auxiliar` | Auxiliar Técnico | Elevado |
-| `jogador` | Atleta | Limitado (próprio perfil) |
+| `auxiliar` | Assistente Técnico | Elevado |
+| `jogador` | Atleta | Limitado (apenas ao próprio perfil) |
 
-O `admin` é o papel raiz — não pode ser removido do único administrador ativo (proteção no `server.ts:1023-1032`).
+O `admin` é a função principal e não pode ser removido do único administrador ativo (proteção em `server.ts:1023-1032`).
 
 ---
 
-## Capability Matrix
+## Matriz de Permissões
 
 ### Gestão de Atletas (Players)
 
 | Ação | `admin` | `auxiliar` | `jogador` |
-|------|:-------:|:----------:|:---------:|
+|-------|:--------:|:----------:|:---------:|
 | Listar todos os atletas (`GET /api/players`) | ✅ | ✅ | ✅ |
 | Criar atleta manualmente (`POST /api/players`) | ✅ | ❌ | ❌ |
 | Gerar atletas aleatórios (`POST /api/players/generate-random-10`) | ✅ | ✅ | ❌ |
-| Editar próprio perfil (`PUT /api/players/:id`) | ✅ | ✅ | ✅ (apenas o próprio) |
-| Editar atleta de terceiros | ✅ | ❌ | ❌ |
+| Editar próprio perfil (`PUT /api/players/:id`) | ✅ | ✅ | ✅ (apenas ao próprio) |
+| Editar perfil de terceiros | ✅ | ❌ | ❌ |
 | Inativar atleta (`DELETE /api/players/:id`) | ✅ | ❌ | ❌ |
 | Reativar atleta (`POST /api/players/:id/restore`) | ✅ | ❌ | ❌ |
 | Ver logs de transição de categoria (`GET /api/players/:id/transitions`) | ✅ | ✅ | ✅ (próprio) |
-| Gerar card/esportivo (`POST /api/players/:id/generate-card`) | ✅ | ✅ | ❌(?) |
+| Gerar cartão/espécie (`POST /api/players/:id/generate-card`) | ✅ | ✅ | ❌(?) |
 
-### Avaliações e Performance (Ranking)
+### Avaliações e Desempenho
 
 | Ação | `admin` | `auxiliar` | `jogador` |
-|------|:-------:|:----------:|:---------:|
-| Ver stats gerais (`GET /api/stats`) | ✅ | ✅ | ✅ |
+|-------|:--------:|:----------:|:---------:|
+| Ver estatísticas gerais (`GET /api/stats`) | ✅ | ✅ | ✅ |
 | Ver resumo de avaliações (`GET /api/evaluations/summary`) | ✅ | ✅ | ✅ |
 | Ver avaliações de um jogador (`GET /api/players/:id/evaluations`) | ✅ | ✅ | ✅ |
 | Avaliar jogador (`POST /api/players/:id/evaluate`) | ✅ | ✅ | ✅ |
 | Ver resultados (`GET /api/results`) | ✅ | ✅ | ✅ |
 
-### Calendário e Sorteio (Matches & Draws)
+### Calendário e Sorteio
 
 | Ação | `admin` | `auxiliar` | `jogador` |
-|------|:-------:|:----------:|:---------:|
+|-------|:--------:|:----------:|:---------:|
 | Ver partidas (`GET /api/matches`) | ✅ | ✅ | ✅ |
 | Criar partida (`POST /api/matches`) | ✅ | ✅ | ❌ |
 | Confirmar presença (`POST /api/matches/:id/presences/toggle`) | ✅ | ✅ | ✅ |
@@ -64,31 +64,31 @@ O `admin` é o papel raiz — não pode ser removido do único administrador ati
 | Arquivar partida (`POST /api/matches/:id/archive`) | ✅ | ❌ | ❌ |
 | Excluir partida (`DELETE /api/matches/:id`) | ✅ | ❌ | ❌ |
 
-### Usuários e Permissões (User Management)
+### Gestão de Usuários
 
 | Ação | `admin` | `auxiliar` | `jogador` |
-|------|:-------:|:----------:|:---------:|
+|-------|:--------:|:----------:|:---------:|
 | Listar usuários (`GET /api/users`) | ✅ | ✅ | ❌ |
 | Ver auditoria de usuários (`GET /api/users/audits`) | ✅ | ✅ | ❌ |
 | Aprovar/rejeitar cadastros (`POST /api/users/action`) | ✅ | ❌ | ❌ |
-| Alterar role de usuário (`POST /api/users/action` com `update_role`) | ✅ | ❌ | ❌ |
+| Alterar função de usuário (`POST /api/users/action` com `update_role`) | ✅ | ❌ | ❌ |
 | Ver logs de prazos (`GET /api/deadline-audits`) | ✅ | ✅ | ❌ |
 
-### Museu e Mural (Social)
+### Museu e Mural
 
 | Ação | `admin` | `auxiliar` | `jogador` |
-|------|:-------:|:----------:|:---------:|
+|-------|:--------:|:----------:|:---------:|
 | Ver posts do mural (`GET /api/mural/posts`) | ✅ | ✅ | ✅ |
 | Criar post (`POST /api/mural/posts`) | ✅ | ✅ | ✅ |
-| Editar post próprio (`PUT /api/mural/posts/:id`) | ✅ | ✅ | ✅ |
+| Editar próprio post (`PUT /api/mural/posts/:id`) | ✅ | ✅ | ✅ |
 | Editar post de terceiros | ✅ | ❌ | ❌ |
 | Destacar/fixar post | ✅ | ❌ | ❌ |
 | Excluir post | ✅ | ❌ | ❌ |
 
-### Eventos e Financeiro
+### Eventos e Finanças
 
 | Ação | `admin` | `auxiliar` | `jogador` |
-|------|:-------:|:----------:|:---------:|
+|-------|:--------:|:----------:|:---------:|
 | Criar evento (`POST /api/events`) | ✅ | ❌ | ❌ |
 | Visualizar eventos (`GET /api/events`) | ✅ | ✅ | ✅ |
 | Confirmar presença em evento | ✅ | ✅ | ✅ |
@@ -98,41 +98,41 @@ O `admin` é o papel raiz — não pode ser removido do único administrador ati
 
 ---
 
-## Mapeamento Role → Athlete Category
+## Relação entre Função e Categoria de Atleta
 
-Quando um `User` é aprovado e vinculado a um `Player` no banco, a categoria do atleta é definida automaticamente pelo role (`server.ts` via `db.ts:636`):
+Quando um usuário (`User`) é aprovado e vinculado a um atleta (`Player`) no banco de dados, a categoria do atleta é automaticamente definida com base na função (`UserRole`), conforme configurado em `server.ts` (via `db.ts:636`):
 
-| `UserRole` | `Player.category` | Prioridade no racha |
-|------------|-------------------|---------------------|
+| `UserRole` | `Player.category` | Prioridade na escalação |
+|------------|-------------------|----------------------|
 | `admin` | `mensalista` | Garante vaga |
-| `auxiliar` | `reserva` | Cubre vagas após mensalistas |
-| `jogador` | `reserva` | Cubre vagas após mensalistas |
+| `auxiliar` | `reserva` | Cubre vagas após os mensalistas |
+| `jogador` | `reserva` | Cubre vagas após os mensalistas |
 
-> **Nota:** Essa atribuição é feita apenas no momento da vinculação. Alterar o `role` de um `User` posteriormente **não** muda automaticamente o `category` do `Player` vinculado — isso exige ação manual via Admin.
+> **Observação:** Essa atribuição ocorre apenas no momento da vinculação. Alterar a função de um usuário posteriormente não modifica automaticamente a categoria do atleta vinculado — isso requer ação manual por parte do administrador.
 
 ---
 
-## Display no Perfil do Atleta (`PlayerHero.tsx`)
+## Exibição no Perfil do Atleta (`PlayerHero.tsx`)
 
-A tela de perfil do jogador exibe duas badges na barra superior:
+A página de perfil do jogador exibe duas badges na barra superior:
 
 1. **Categoria do atleta** — derivada de `player.category` (`mensalista` → "Mensalista", `reserva` → "Reserva")
-2. **Permissão (role)** — derivada do `User` vinculado ao jogador (`admin` → "Administrador", `auxiliar` → "Auxiliar", `jogador` → "Jogador")
+2. **Função (role)** — derivada do usuário (`User`) vinculado ao jogador (`admin` → "Administrador", `auxiliar` → "Assistente", `jogador` → "Jogador")
 
-Quando um novo jogador recebe uma permissão específica via Administração → Acesso de Contas, essa permissão é refletida automaticamente no perfil dele graças à busca do `User` vinculado por `playerId` ou e-mail.
+Quando um novo jogador recebe uma função específica através do painel de Administração → Acesso de Contas, essa função é automaticamente refletida no perfil dele, graças à busca do usuário vinculado por `playerId` ou e-mail.
 
 ---
 
-## Arquivos-chave
+## Arquivos Principais
 
-| Arquivo | O que contém |
-|---------|-------------|
+| Arquivo | Conteúdo |
+|---------|---------|
 | `src/types.ts:6` | Definição do tipo `UserRole` |
-| `server.ts:939-941` | Proteção de `GET /api/users` (admin/auxiliar) |
-| `server.ts:1451-1452` | Proteção de `POST /api/players` (admin only) |
-| `server.ts:1470-1471` | Proteção de `PUT /api/players/:id` (admin vs auto) |
-| `server.ts:1969-1971` | Proteção de `DELETE /api/players/:id` (admin only) |
-| `server.ts:1023-1032` | Proteção de não remover o último admin |
-| `server.ts:636` | Mapeamento `role → category` na vinculação |
-| `src/App.tsx` | Lógica de lookup do `playerRole` no perfil |
-| `src/components/PlayerHero.tsx` | Exibição das badges de categoria e permissão |
+| `server.ts:939-941` | Proteção da rota `GET /api/users` (admin/auxiliar) |
+| `server.ts:1451-1452` | Proteção da rota `POST /api/players` (apenas admin) |
+| `server.ts:1470-1471` | Proteção da rota `PUT /api/players/:id` (admin vs auto) |
+| `server.ts:1969-1971` | Proteção da rota `DELETE /api/players/:id` (apenas admin) |
+| `server.ts:1023-1032` | Proteção contra remoção do último admin |
+| `server.ts:636` | Mapeamento de função para categoria na vinculação |
+| `src/App.tsx` | Lógica de busca do `playerRole` no perfil |
+| `src/components/PlayerHero.tsx` | Exibição das badges de categoria e função |

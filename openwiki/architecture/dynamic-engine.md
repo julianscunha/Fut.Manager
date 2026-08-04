@@ -1,10 +1,10 @@
 ---
-type: "Reference"
-title: "Home Dynamic Engine Design"
+type: "Referência"
+title: "Design do Motor Dinâmico da Home"
 openwiki_generated: true
 ---
 
-# Home Dynamic Engine Design
+# Design do Motor Dinâmico da Home
 
 Este documento estabelece a especificação completa da nova **Home Dinâmica** do **Fut.Manager**, servindo como o *blueprint* oficial para a implementação visual da Sprint 1. O design é focado na experiência mobile-first (smartphone), centralizando as decisões em torno do ciclo da rodada atual.
 

@@ -1,31 +1,33 @@
 ---
-type: User Management
-title: User Management Workflow
-description: Complete flow from user registration to approval, including email notifications and position assignment.
+type: Gerenciamento de Usuários
+title: Fluxo de Gerenciamento de Usuários
+description: Fluxo completo desde o registro do usuário até a aprovação, incluindo notificações por e-mail e atribuição de posição.
 tags: [workflow, auth, email, admin]
 ---
 
-# User Management Workflow
+# Fluxo de Gerenciamento de Usuários
 
-This page documents the complete user journey from initial registration through approval to active participation in Fut.Manager.
+Esta página documenta a jornada completa do usuário, desde o registro inicial até a aprovação e participação ativa no Fut.Manager.
 
-## 🎯 Overview
+## 🎯 Visão Geral
 
-The user management system follows a **three-step approval workflow**:
+O sistema de gerenciamento de usuários segue um fluxo de aprovação em **três etapas**:
 
-1. **Registration** → Pending status, waiting for admin approval
-2. **Admin Review** → Approve/Reject decision with role assignment
-3. **Activation** → Welcome email + system access granted
+1. **Registro** → Status pendente, aguardando aprovação do administrador
+2. **Revisão do Administrador** → Decisão de Aprovar/Rejeitar com atribuição de papel
+3. **Ativação** → E-mail de boas-vindas + acesso ao sistema concedido
 
-## 📧 Registration Process (`POST /api/auth/register`)
+## 📧 Processo de Registro (`POST /api/auth/register`)
 
-### Initial State
-- New user creates account with email, password, and basic info
-- Account enters **pending** status (`UserStatus.pending`)
-- Welcome notification generated but **no access** to dashboard yet
-- **Registration-pending email** sent automatically to inform user of expected wait time (~2 days)
+### Estado Inicial
 
-### Database Operations
+- Um novo usuário cria conta com e-mail, senha e informações básicas
+- A conta entra em status **pendente** (`UserStatus.pending`)
+- Notificação de boas-vindas gerada, mas **sem acesso** ao painel ainda
+- **E-mail de registro pendente** enviado automaticamente para informar ao usuário o tempo de espera esperado (~2 dias)
+
+### Operações no Banco de Dados
+
 ```typescript
 // Create user record
 {
@@ -38,29 +40,35 @@ The user management system follows a **three-step approval workflow**:
 }
 ```
 
-### Email Communication
-- **Subject**: `Cadastro recebido — [AppName]`
-- **Body**: Explains pending approval process and estimated timeline
-- **Action**: User receives notification but cannot access system
+### Comunicação por E-mail
 
-## 👥 Admin Review (`POST /api/users/action`)
+- **Assunto**: `Cadastro recebido — [AppName]`
+- **Corpo**: Explica o processo de aprovação pendente e o cronograma estimado
+- **Ação**: O usuário recebe a notificação, mas não pode acessar o sistema
 
-### Access Control
-Only users with **admin role** can approve/reject accounts.
+## 👥 Revisão do Administrador (`POST /api/users/action`)
 
-### Approval Actions Available
+### Controle de Acesso
 
-#### 1. Approve User (`action: 'approve'`)
-When admin approves, the system performs **multiple coordinated operations**:
+Somente usuários com papel **admin** podem aprovar/rejeitar contas.
 
-**A. Role Assignment**
-- Assign role: admin, auxiliar, or jogador (based on admin's choice)
-- Set status to: `approved`
+### Ações de Aprovação Disponíveis
 
-**B. Profile Linking**
-Admin chooses between two approaches:
+#### 1. Aprovar Usuário (`action: 'approve'`)
 
-**Option A: Link to Existing Athlete**
+Quando o administrador aprova, o sistema executa **várias operações coordenadas**:
+
+**A. Atribuição de Papel**
+
+- Atribuir papel: admin, auxiliar ou jogador (com base na escolha do administrador)
+- Definir status para: `approved`
+
+**B. Vinculação de Perfil**
+
+O administrador escolhe entre duas abordagens:
+
+**Opção A: Vincular ao Atleta Existente**
+
 ```typescript
 if (linkOption === 'existing' && selectedPlayerId) {
   // Associate user with existing player record
@@ -69,7 +77,8 @@ if (linkOption === 'existing' && selectedPlayerId) {
 }
 ```
 
-**Option B: Create New Athlete Profile**
+**Opção B: Criar Novo Perfil de Atleta**
+
 ```typescript
 // Auto-generate player record with defaults
 {
@@ -84,35 +93,43 @@ if (linkOption === 'existing' && selectedPlayerId) {
 }
 ```
 
-**C. Audit Trail**
-Every action is logged to `userAudits` with:
-- Timestamp
-- User details (name, email)
-- Action type and description
-- Previous and new values
-- Performed by admin name
+**C. Registro de Auditoria**
 
-**D. Notifications Triggered**
-Two notifications sent:
-1. **Direct to user**: `🎉 Cadastro Aprovado!` with welcome message
-2. **System broadcast**: `🏃 Novo Jogador no Grupo` (to all users)
+Cada ação é registrada em `userAudits` com:
 
-**E. Emails Sent**
-If email system is configured:
-1. **Approval email**: `registration-approved` template with login link
-2. **Welcome email**: `welcome` template with app access information
+- Carimbo de data/hora
+- Detalhes do usuário (nome, e-mail)
+- Tipo de ação e descrição
+- Valores anteriores e novos
+- Realizado pelo nome do administrador
 
-#### 2. Reject User (`action: 'reject'`)
-- Set status to: `rejected`
-- **Rejection email** sent with explanation
-- User cannot re-register until admin intervenes
+**D. Notificações disparadas**
 
-#### 3. Update Role (`action: 'update_role'`)
-- Change user's role between admin/auxiliar/jogador
-- Can also update athlete profile linkage
-- Requires careful validation (cannot demote last admin)
+Duas notificações enviadas:
 
-## 📊 State Machine
+1. **Direto ao usuário**: `🎉 Cadastro Aprovado!` com mensagem de boas-vindas
+2. **Transmissão do sistema**: `🏃 Novo Jogador no Grupo` (para todos os usuários)
+
+**E. E-mails Enviados**
+
+Se o sistema de e-mail estiver configurado:
+
+1. **E-mail de aprovação**: modelo `registration-approved` com link de login
+2. **E-mail de boas-vindas**: modelo `welcome` com informações de acesso ao aplicativo
+
+#### 2. Rejeitar Usuário (`action: 'reject'`)
+
+- Definir status para: `rejected`
+- **E-mail de rejeição** enviado com explicação
+- O usuário não pode se registrar novamente até que o administrador intervenha
+
+#### 3. Atualizar Papel (`action: 'update_role'`)
+
+- Alterar papel do usuário entre admin/auxiliar/jogador
+- Também pode atualizar a vinculação do perfil de atleta
+- Requer validação cuidadosa (não pode demitir o último administrador)
+
+## 📊 Máquina de Estado
 
 ```mermaid
 graph TD
@@ -138,79 +155,91 @@ graph TD
     O --> P[User Inactive]
 ```
 
-## 🎮 Position Assignment Logic
+## 🎮 Lógica de Atribuição de Posição
 
-When new athlete profiles are created:
+Quando novos perfis de atleta são criados:
 
-### Primary Position Rules
-- **Mensalistas** (paid members): Cannot be assigned as `goleiro` unless special exception
-- **Reserva** (reserves): Can be any position including goalkeeper
-- **System validation**: Prevents invalid position assignments
+### Regras de Posição Primária
 
-### Secondary Position Management
-- Empty array by default
-- Can be set during admin approval
-- Used by tactical assignment engine (`DashboardStatus.tsx`)
+- **Mensalistas** (membros pagos): Não podem ser atribuídos como `goleiro` a menos que haja exceção especial
+- **Reserva** (reservas): Podem ocupar qualquer posição, incluindo goleiro
+- **Validação do sistema**: Impede atribuições de posição inválidas
 
-### Tactical Assignment
-The `computeTacticalAssignments()` function in `DashboardStatus.tsx` uses:
-- `primaryPosition` (weight 10 points)
-- `secondaryPositions` (weight 6 points)
-- Special penalty (-50) for assigning non-goalie as goalkeeper
+### Gerenciamento de Posição Secundária
 
-## 🔐 Security Controls
+- Array vazio por padrão
+- Pode ser definido durante a aprovação do administrador
+- Usado pelo motor de atribuição tática (`DashboardStatus.tsx`)
 
-### Authorization Matrix
-| Action | Required Role | Additional Checks |
-|--------|---------------|-------------------|
-| Approve User | admin | Cannot reject last admin |
-| Reject User | admin | Cannot reject admin-user |
-| Update Role | admin | Cannot demote last admin |
-| View Pending | admin/auxiliar | See only own permissions |
+### Atribuição Tática
 
-### Data Protection
-- **Root admin protection**: `user-admin` cannot be rejected or demoted
-- **Last admin protection**: System prevents removing the only active administrator
-- **Audit logging**: All changes tracked with full context
+A função `computeTacticalAssignments()` em `DashboardStatus.tsx` utiliza:
 
-## 📈 Metrics and Monitoring
+- `primaryPosition` (peso 10 pontos)
+- `secondaryPositions` (peso 6 pontos)
+- Penalidade especial (-50) por atribuir um não-goleiro como goleiro
 
-### Key Events Tracked
-- Registration volume (daily/weekly)
-- Approval/rejection ratios
-- Average approval time
-- Email delivery success rates
-- Position distribution in active roster
+## 🔐 Controles de Segurança
 
-### Admin Dashboard Features
-- **Bulk actions**: Process multiple pending users efficiently
-- **Search and filter**: Find users by name, email, or status
-- **Batch linking**: Connect existing players to user accounts
-- **Role management**: Change permissions in bulk
+### Matriz de Autorização
 
-## 🔄 Future Enhancements (Backlog)
+| Ação | Papel Requerido | Verificações Adicionais |
+|------|-----------------|------------------------|
+| Aprovar Usuário | admin | Não pode rejeitar o último administrador |
+| Rejeitar Usuário | admin | Não pode rejeitar usuário-admin |
+| Atualizar Papel | admin | Não pode demitir o último administrador |
+| Ver Pendente | admin/auxiliar | Ver apenas as próprias permissões |
 
-- Self-service role updates for non-admin users
-- Automated re-activation workflows for rejected users
-- Advanced position analytics and forecasting
-- Integration with external identity providers (Google, GitHub)
+### Proteção de Dados
 
-## 📋 Quick Reference
+- **Proteção de administrador raiz**: `user-admin` não pode ser rejeitado ou demitido
+- **Proteção do último administrador**: O sistema impede a remoção do único administrador ativo
+- **Registro de auditoria**: Todas as alterações são registradas com contexto completo
 
-### Common Operations
-**Approve User with New Profile:**
+## 📈 Métricas e Monitoramento
+
+### Eventos Chave Monitorados
+
+- Volume de registros (diário/semanal)
+- Taxas de aprovação/rejeição
+- Tempo médio de aprovação
+- Taxas de sucesso de entrega de e-mails
+- Distribuição de posições na equipe ativa
+
+### Recursos do Painel de Administração
+
+- Ações em massa: Processar vários usuários pendentes de forma eficiente
+- Pesquisar e filtrar: Encontrar usuários por nome, e-mail ou status
+- Vinculação em lote: Conectar jogadores existentes a contas de usuário
+- Gerenciamento de papéis: Alterar permissões em massa
+
+## 🔄 Melhorias Futuras (Backlog)
+
+- Atualizações de papel autogerenciadas para usuários não-administradores
+- Fluxos de reativação automatizados para usuários rejeitados
+- Análises avançadas de posição e previsão
+- Integração com provedores de identidade externos (Google, GitHub)
+
+## 📋 Referência Rápida
+
+### Operações Comuns
+
+**Aprovar Usuário com Novo Perfil:**
+
 ```bash
 # Admin action in UserApprovalList component
 await handleAction(userId, 'approve', customRole)
 ```
 
-**Reject User:**
+**Rejeitar Usuário:**
+
 ```bash
 # Admin action in UserApprovalList component
 await handleAction(userId, 'reject')
 ```
 
-**Update User Role:**
+**Atualizar Papel do Usuário:**
+
 ```bash
 # Admin action for linking to existing player
 await handleAction(userId, 'approve', role, {

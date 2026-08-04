@@ -1,5 +1,5 @@
 ---
-type: "Reference"
+type: "Referência"
 title: "Guia de Direção de Arte e Visual System"
 openwiki_generated: true
 ---
