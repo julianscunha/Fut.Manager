@@ -19,8 +19,10 @@ export function reengageInactiveTemplate(params: {
     <p>Faz um tempo que você não aparece no <strong>${appName}</strong>, e por aqui todo mundo já está sentindo sua falta.</p>
     <p>Seja por lesão, trabalho, compromisso da vida ou qualquer outro motivo, a gente entende. Mas se já estiver tudo bem por aí, saiba que as portas estão abertas quando você quiser voltar.</p>
     <div class="info-card">
-      <div class="row"><span class="label">Status atual</span><span class="value">Indisponível</span></div>
-      <div class="row"><span class="label">Tempo afastado</span><span class="value">${monthsInactive} ${monthsInactive === 1 ? 'mês' : 'meses'}</span></div>
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr><td class="label">Status atual</td><td class="value" align="right">Indisponível</td></tr>
+        <tr><td class="label">Tempo afastado</td><td class="value" align="right">${monthsInactive} ${monthsInactive === 1 ? 'mês' : 'meses'}</td></tr>
+      </table>
     </div>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>

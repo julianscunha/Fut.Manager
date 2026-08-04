@@ -12,10 +12,13 @@ export const tokens = {
   border: '#e5e7eb',    // Cinza claro neutro para bordas sutis
   text: '#1f2937',      // Cinza escuro para leitura confortável
   muted: '#6b7280',     // Cinza médio para textos secundários
-  accent: '#059669',    // Esmeralda vibrante
+  accent: '#059669',    // Esmeralda vibrante (mesma família do turf-glow do app)
   accentLight: '#10b981',
   accentDim: '#065f46',
   divider: '#e5e7eb',
+  pending: '#0284c7',   // Azul — aguardando ação externa
+  warning: '#d97706',   // Âmbar — aguardando ação do usuário
+  danger: '#b91c1c',    // Vermelho — rejeição/erro
 };
 
 export const GRADIENTS = {
@@ -88,26 +91,36 @@ export const sharedCss = `
     padding: 20px;
     margin: 24px 0;
   }
-  .info-card .row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
+  .info-card table {
+    width: 100%;
+    border-collapse: collapse;
   }
-  .info-card .row + .row {
+  .info-card tr + tr td {
     border-top: 1px solid ${tokens.border};
+  }
+  .info-card td {
+    padding: 8px 0;
+    vertical-align: middle;
   }
   .info-card .label {
     color: ${tokens.muted};
     font-size: 13px;
+    text-align: left;
   }
   .info-card .value {
     color: ${tokens.text};
     font-size: 13px;
     font-weight: 700;
+    text-align: right;
   }
   .info-card .value.success {
     color: ${tokens.accent};
+  }
+  .info-card .value.pending {
+    color: ${tokens.pending};
+  }
+  .info-card .value.warning {
+    color: ${tokens.warning};
   }
   .btn-wrap {
     padding: 24px 0 8px;

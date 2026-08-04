@@ -24,9 +24,11 @@ export function registrationApprovedTemplate(params: {
     <p>Olá, <strong>${userName}</strong>!</p>
     <p>Boa notícia: seu cadastro no <strong>${appName}</strong> foi aprovado. Você já pode acessar o painel com seu login e senha.</p>
     <div class="info-card">
-      <div class="row"><span class="label">Grupo</span><span class="value">${appName}</span></div>
-      <div class="row"><span class="label">Perfil</span><span class="value">${roleLabel}</span></div>
-      <div class="row"><span class="label">Status</span><span class="value success">Aprovado</span></div>
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr><td class="label">Grupo</td><td class="value" align="right">${appName}</td></tr>
+        <tr><td class="label">Perfil</td><td class="value" align="right">${roleLabel}</td></tr>
+        <tr><td class="label">Status</td><td class="value success" align="right">Aprovado</td></tr>
+      </table>
     </div>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>

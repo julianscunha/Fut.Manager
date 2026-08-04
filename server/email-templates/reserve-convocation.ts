@@ -19,10 +19,12 @@ export function reserveConvocationTemplate(params: {
     <p>Olá, <strong>${playerName}</strong>!</p>
     <p>Você foi convocado da lista de prioridades para preencher uma vaga no próximo racha. Responda o quanto antes para confirmar ou recusar sua presença.</p>
     <div class="info-card">
-      <div class="row"><span class="label">Grupo</span><span class="value">${appName}</span></div>
-      <div class="row"><span class="label">Data</span><span class="value">${matchDate}</span></div>
-      <div class="row"><span class="label">Horário</span><span class="value">${matchTime}</span></div>
-      <div class="row"><span class="label">Status</span><span class="value success">Aguardando sua resposta</span></div>
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr><td class="label">Grupo</td><td class="value" align="right">${appName}</td></tr>
+        <tr><td class="label">Data</td><td class="value" align="right">${matchDate}</td></tr>
+        <tr><td class="label">Horário</td><td class="value" align="right">${matchTime}</td></tr>
+        <tr><td class="label">Status</td><td class="value warning" align="right">Aguardando sua resposta</td></tr>
+      </table>
     </div>
     <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
       <tr>

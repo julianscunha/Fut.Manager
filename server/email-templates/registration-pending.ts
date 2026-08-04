@@ -17,8 +17,10 @@ export function registrationPendingTemplate(params: {
     <p>Olá, <strong>${userName}</strong>!</p>
     <p>Recebemos seu cadastro no <strong>${appName}</strong> e está tudo certo por aqui. Agora é só aguardar a aprovação de um administrador para você entrar no app.</p>
     <div class="info-card">
-      <div class="row"><span class="label">Status</span><span class="value pending">Aguardando aprovação</span></div>
-      <div class="row"><span class="label">Tempo estimado</span><span class="value">~${estimatedWaitDays} dia(s)</span></div>
+      <table role="presentation" cellpadding="0" cellspacing="0">
+        <tr><td class="label">Status</td><td class="value pending" align="right">Aguardando aprovação</td></tr>
+        <tr><td class="label">Tempo estimado</td><td class="value" align="right">~${estimatedWaitDays} dia(s)</td></tr>
+      </table>
     </div>
     <p class="note">Assim que sua conta for aprovada, você recebe outro e-mail por aqui — pode deixar a caixa de entrada à vontade.</p>
   `;
