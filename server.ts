@@ -340,9 +340,18 @@ async function startServer() {
     const matchAlerts = (db.reserveAlerts || []).filter((a: any) => a.matchId === matchId);
     const currentReservesOrder = db.reservesOrder || [];
 
+    const pendingAlertPlayerIds = new Set(
+      matchAlerts
+        .filter((a: any) => a.status === 'aguardando_resposta' && !a.cleared)
+        .map((a: any) => a.suggestedReservePlayerId || a.playerId)
+    );
+
     const queue = reserves.filter((p: any) => {
       const isConfirmed = computedList.some((c: any) => c.playerId === p.id && c.presenceStatus === 'confirmado');
       if (isConfirmed) return false;
+
+      // Already convoked, awaiting their response - do not summon again
+      if (pendingAlertPlayerIds.has(p.id)) return false;
 
       const hasHistoryState = matchAlerts.some((a: any) =>
         (a.suggestedReservePlayerId === p.id || a.playerId === p.id) &&
@@ -379,7 +388,32 @@ async function startServer() {
     const summoned: any[] = [];
     const limit = match.maxPlayers !== undefined && match.maxPlayers !== null ? match.maxPlayers : 15;
     const currentConfirmed = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
-    const remainingSpots = Math.max(0, limit - currentConfirmed);
+    const openSpots = Math.max(0, limit - currentConfirmed - pendingAlertPlayerIds.size);
+
+    const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+    const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
+    const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
+
+    // A manual admin release (marked via a "da-<matchId>-manual-*" deadlineAudits entry, pushed by
+    // /release-reserves) always fills every open spot immediately - it's an explicit admin override.
+    const wasManuallyReleased = (db.deadlineAudits || []).some((a: any) =>
+      typeof a.id === 'string' && a.id.startsWith(`da-${matchId}-manual-`)
+    );
+
+    let remainingSpots = openSpots;
+    if (!isDeadlineExpired && !wasManuallyReleased) {
+      // Automatic pre-deadline trigger (a mensalista declined, no admin action involved):
+      // mensalistas who simply haven't answered yet still hold their spot -
+      // only backfill spots actually vacated by a decline, never the full theoretical vacancy count.
+      const declinedMensalistaCount = db.presences.filter((p: any) =>
+        p.matchId === matchId && p.status === 'cancelado' &&
+        db.players.find((pl: any) => pl.id === p.playerId)?.category !== 'reserva'
+      ).length;
+      const confirmedReservesCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado' && p.category === 'reserva').length;
+      const declineBackfillCap = Math.max(0, declinedMensalistaCount - confirmedReservesCount - pendingAlertPlayerIds.size);
+      remainingSpots = Math.min(openSpots, declineBackfillCap);
+    }
+
     const toSummon = Math.min(count, remainingSpots, finalQueue.length);
 
     console.log('[summonReserves] matchId=', matchId, 'limit=', limit, 'confirmed=', currentConfirmed, 'remainingSpots=', remainingSpots, 'queue=', finalQueue.length, 'toSummon=', toSummon);
@@ -511,15 +545,25 @@ async function startServer() {
         }
       }
 
-      // Check if deadline is expired to trigger automatic reserves release
+      // Check if deadline is expired, or a mensalista declined, to trigger automatic reserves release
       const deadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
       const matchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : deadlineDays;
       const { isDeadlineExpired } = getMatchDeadlineInfo(m, matchDeadlineDays);
 
-      if (isDeadlineExpired && !m.reservesReleased) {
+      const hasDeclinedMensalista = db.presences.some((p: any) =>
+        p.matchId === m.id && p.status === 'cancelado' &&
+        db.players.find((pl: any) => pl.id === p.playerId)?.category !== 'reserva'
+      );
+
+      if (!m.reservesReleased && (isDeadlineExpired || hasDeclinedMensalista) &&
+          !['sorteada', 'encerrada', 'cancelada'].includes(m.status)) {
         m.reservesReleased = true;
         m.reservesReleasedAt = new Date().toISOString();
         mutated = true;
+      }
+
+      // Auto-fill exactly as many open spots as exist right now with reserves (email + confirmation panel per player)
+      if (m.reservesReleased === true && !['sorteada', 'encerrada', 'cancelada'].includes(m.status)) {
         await summonReservesForMatch(db, m.id, 99);
       }
 
@@ -3112,7 +3156,6 @@ async function startServer() {
         details: `Convocção de reservas iniciada manualmente pelo administrador.`
       });
 
-      await summonReservesForMatch(db, id, 99);
       await syncMatchStatuses(db);
       await writeDb(db);
 
@@ -5344,19 +5387,24 @@ async function startServer() {
       const alerts = db.reserveAlerts || [];
       const matchAlerts = alerts.filter((a: any) => a.matchId === matchId);
 
-      // Check if there is an active convocation (aguardando_resposta)
-      const activeConvocationObj = matchAlerts.find((a: any) => a.status === 'aguardando_resposta' && !a.cleared);
-      let activeConvocation = null;
-      if (activeConvocationObj) {
-        const pObj = db.players.find((p: any) => p.id === (activeConvocationObj.suggestedReservePlayerId || activeConvocationObj.playerId));
-        activeConvocation = {
-          id: activeConvocationObj.id,
-          playerId: pObj ? pObj.id : (activeConvocationObj.suggestedReservePlayerId || activeConvocationObj.playerId),
+      // Check for active convocations (aguardando_resposta) - there can be more than one at once
+      // (e.g. deadline expired with several vacancies, each open spot gets its own reserve convoked)
+      const activeConvocationObjs = matchAlerts
+        .filter((a: any) => a.status === 'aguardando_resposta' && !a.cleared)
+        .sort((a: any, b: any) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+      const activeConvocations = activeConvocationObjs.map((a: any) => {
+        const pObj = db.players.find((p: any) => p.id === (a.suggestedReservePlayerId || a.playerId));
+        return {
+          id: a.id,
+          playerId: pObj ? pObj.id : (a.suggestedReservePlayerId || a.playerId),
           playerName: pObj ? pObj.name : 'Jogador Desconhecido',
           status: 'aguardando_resposta',
-          createdAt: activeConvocationObj.createdAt
+          createdAt: a.createdAt
         };
-      }
+      });
+      const activeConvocationPlayerIds = new Set(activeConvocations.map((c: any) => c.playerId));
+      // Kept for backward compatibility with older clients - most recent active convocation
+      const activeConvocation = activeConvocations[0] || null;
 
       // 4. Compute unique, sequential Waitlist (Fila de reservas)
       const currentReservesOrder = db.reservesOrder || [];
@@ -5365,12 +5413,12 @@ async function startServer() {
         const isConfirmed = computedList.some((c: any) => c.playerId === p.id && c.presenceStatus === 'confirmado');
         if (isConfirmed) return false;
 
-        // Must not be currently under active convocacao
-        if (activeConvocation && activeConvocation.playerId === p.id) return false;
+        // Must not be currently under any active convocacao
+        if (activeConvocationPlayerIds.has(p.id)) return false;
 
         // Must not be recusado or dispensado for this match
-        const hasHistoryState = matchAlerts.some((a: any) => 
-          (a.suggestedReservePlayerId === p.id || a.playerId === p.id) && 
+        const hasHistoryState = matchAlerts.some((a: any) =>
+          (a.suggestedReservePlayerId === p.id || a.playerId === p.id) &&
           (a.status === 'recusado' || a.status === 'dispensado') &&
           a.cleared
         );
@@ -5430,7 +5478,9 @@ async function startServer() {
             secondaryPositions: p.secondaryPositions || []
           };
         }).slice(0, 3),
+        totalCount: finalQueue.length,
         activeConvocation,
+        activeConvocations,
         history,
         isGoleiroMissing,
         noGkReservesAvailable

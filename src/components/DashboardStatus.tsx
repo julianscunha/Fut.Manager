@@ -107,6 +107,7 @@ export default function DashboardStatus({
   const [reserveQueue, setReserveQueue] = useState<{
     vagasAbertas: number;
     queue: { id: string; name: string; priority: number; primaryPosition?: string }[];
+    totalCount: number;
     activeConvocation: {
       id: string;
       playerId: string;
@@ -114,6 +115,13 @@ export default function DashboardStatus({
       status: string;
       createdAt: string;
     } | null;
+    activeConvocations: {
+      id: string;
+      playerId: string;
+      playerName: string;
+      status: string;
+      createdAt: string;
+    }[];
     history: { id: string; playerId: string; playerName: string; status: string; updatedAt: string }[];
     isGoleiroMissing?: boolean;
     noGkReservesAvailable?: boolean;
@@ -922,24 +930,18 @@ export default function DashboardStatus({
     setErrorMsg('');
     setSuccessMsg('');
     try {
-      const isReleased = nextMatch.reservesReleased === true;
-      const endpoint = isReleased ? '/cancel-reserves' : '/release-reserves';
-      const res = await authFetch(`/api/matches/${nextMatch.id}${endpoint}`, {
+      const res = await authFetch(`/api/matches/${nextMatch.id}/release-reserves`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Erro ao ajustar convocação de reservas.');
+        throw new Error(data.error || 'Erro ao liberar fila de reservas.');
       }
-      setSuccessMsg(
-        isReleased
-          ? 'Convocação de reservas cancelada. Mensalistas retomam prioridade.'
-          : 'Reservas convocadas! Eles já podem confirmar presença.'
-      );
+      setSuccessMsg('Fila de reservas liberada. Use "Convocar" na fila para chamar cada reserva.');
       await loadDashboardData();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Erro ao ajustar convocação de reservas.');
+      setErrorMsg(err.message || 'Erro ao liberar fila de reservas.');
     } finally {
       setActionLoading(false);
     }
@@ -2171,7 +2173,7 @@ export default function DashboardStatus({
             </div>
             <div>
               <span className="text-[10px] text-zinc-500 font-black block uppercase tracking-wider">Na Fila</span>
-              <span className="text-sm font-extrabold text-amber-400">{reserveQueue?.queue?.length || 0}</span>
+              <span className="text-sm font-extrabold text-amber-400">{reserveQueue?.totalCount ?? reserveQueue?.queue?.length ?? 0}</span>
             </div>
             <div>
               <span className="text-[10px] text-zinc-500 font-black block uppercase tracking-wider">Vagas Restantes</span>
@@ -2190,7 +2192,7 @@ export default function DashboardStatus({
               Cancelar Racha
             </SportsButton>
 
-            {!isDeadlineExpired && (
+            {!isDeadlineExpired && nextMatch?.reservesReleased !== true && (
               <SportsButton
                 variant="primary"
                 className="flex-1 bg-gradient-to-r from-blue-700 to-blue-600 border-blue-500/40 text-blue-100 shadow-[0_4px_20px_-2px_rgba(59,130,246,0.3)] hover:shadow-[0_4px_25px_rgba(59,130,246,0.4)]"
@@ -2198,7 +2200,7 @@ export default function DashboardStatus({
                 onClick={handleToggleReservesRelease}
                 icon={<UserPlus className="w-4 h-4" />}
               >
-                {nextMatch?.reservesReleased === true ? 'Cancelar Reservas' : 'Convocar Reservas'}
+                Liberar Fila de Reservas
               </SportsButton>
             )}
 
@@ -2848,7 +2850,7 @@ export default function DashboardStatus({
         {/* COLUNA DIREITA (Span 4): Fila de Espera, Reservas e Administração */}
         <div className="lg:col-span-4 space-y-6">
           {/* 1. RESERVAS & FILA DE ESPERA (Only if reservations exist or active) */}
-          {isDeadlineExpired && (
+          {roundStatus.needsReserve && (
             <div className="sports-card border border-zinc-800 rounded-2xl p-6 space-y-5 shadow-2xl animate-fadeIn" id="reserves-queue-panel">
               <div className="flex items-center justify-between pb-3.5 border-b border-zinc-900/75">
                 <div className="flex items-center gap-2.5">
@@ -2856,19 +2858,22 @@ export default function DashboardStatus({
                   <h3 className="font-display font-black text-white text-sm uppercase tracking-wide">Fila de Reservas</h3>
                 </div>
                 <span className="text-[10px] font-mono font-black bg-indigo-500/10 text-indigo-300 px-3 py-1 rounded-lg border border-indigo-500/25">
-                  Qtd: {reserveQueue?.queue?.length || 0}
+                  {reserveQueue?.queue?.length || 0} reservas de {reserveQueue?.totalCount ?? reserveQueue?.queue?.length ?? 0} total
                 </span>
               </div>
 
             <div className="space-y-3">
-              {/* Active convocation (highest priority) */}
-              {reserveQueue?.activeConvocation && (() => {
-                const convPlayer = reserveQueue.activeConvocation;
+              {/* Active convocations (highest priority) - one card per reserve currently awaiting response */}
+              {(reserveQueue?.activeConvocations && reserveQueue.activeConvocations.length > 0
+                ? reserveQueue.activeConvocations
+                : (reserveQueue?.activeConvocation ? [reserveQueue.activeConvocation] : [])
+              ).map((convPlayer) => {
                 const playerObj = players.find(p => p.id === convPlayer.playerId);
                 const isMyConvocation = resolvedPlayerId === convPlayer.playerId;
 
                 return (
-                  <div 
+                  <div
+                    key={convPlayer.id}
                     className="p-4 rounded-xl border border-indigo-500/35 bg-gradient-to-br from-indigo-950/15 via-zinc-950/90 to-indigo-950/5 font-mono text-xs space-y-3.5 shadow-[0_0_15px_rgba(99,102,241,0.05)] animate-pulse"
                   >
                     <div className="flex justify-between items-start">
@@ -2911,7 +2916,7 @@ export default function DashboardStatus({
                     </div>
                   </div>
                 );
-              })()}
+              })}
 
               {/* Waiting list queue */}
               {reserveQueue?.queue && reserveQueue.queue.length > 0 ? (
@@ -2927,7 +2932,7 @@ export default function DashboardStatus({
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-2.5">
                             <span className="text-[10px] font-mono font-black bg-zinc-900 text-indigo-400 border border-indigo-500/10 px-2 py-0.5 rounded-md">
-                              #{index + 1}
+                              #{item.priority}
                             </span>
                             <span className="text-white font-sans font-extrabold text-xs">{item.name}</span>
                           </div>
@@ -2959,16 +2964,16 @@ export default function DashboardStatus({
                     );
                   })}
 
-                  {reserveQueue.queue.length > 3 && (
+                  {(reserveQueue.totalCount ?? reserveQueue.queue.length) > 3 && (
                     <div className="text-center py-2 px-3 bg-zinc-950/40 rounded-xl border border-dashed border-zinc-900/50">
                       <p className="text-zinc-500 text-[10px] font-mono">
-                        + {reserveQueue.queue.length - 3} {reserveQueue.queue.length - 3 === 1 ? 'atleta ocultado' : 'atletas ocultados'} na fila...
+                        + {(reserveQueue.totalCount ?? reserveQueue.queue.length) - 3} {(reserveQueue.totalCount ?? reserveQueue.queue.length) - 3 === 1 ? 'atleta ocultado' : 'atletas ocultados'} na fila...
                       </p>
                     </div>
                   )}
                 </>
               ) : (
-                !reserveQueue?.activeConvocation && (
+                !(reserveQueue?.activeConvocations?.length) && !reserveQueue?.activeConvocation && (
                   <div className="text-center py-6 bg-zinc-950/20 rounded-xl border border-dashed border-zinc-900/60">
                     <p className="text-zinc-500 italic text-[11px] font-sans font-bold">
                       Nenhum atleta na fila de reservas.
