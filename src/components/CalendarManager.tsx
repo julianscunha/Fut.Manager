@@ -742,8 +742,6 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
         return <span className="bg-zinc-800 border border-zinc-750 text-zinc-300 font-mono text-[9px] font-bold px-2 py-0.5 rounded uppercase">AGENDADA</span>;
       case 'confirmando':
         return <span className="bg-amber-500/15 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">CONFIRMAÇÕES ABERTAS</span>;
-      case 'aguardando_reservas':
-        return <span className="bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">AGUARDANDO RESERVAS</span>;
       case 'fechada':
         return <span className="bg-purple-500/15 border border-purple-500/30 text-purple-400 font-mono text-[10px] font-bold px-2 py-0.5 rounded uppercase">FECHADA</span>;
       case 'sorteada':
@@ -826,7 +824,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
     if (m.status === 'cancelada') {
       return m.date >= dLocalTodayStr;
     }
-    return ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status);
+    return ['agendada', 'confirmando', 'fechada', 'sorteada'].includes(m.status);
   });
   let nextMatch = activeMatches.length > 0 ? activeMatches[0] : null;
   if (!nextMatch) {
@@ -850,7 +848,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
 
     if (nextMatch.status === 'agendada') return 1;
 
-    if (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') {
+    if (nextMatch.status === 'confirmando') {
       const vacancies = Math.max(0, (nextMatch.maxPlayers || 15) - (nextMatch.confirmedCount || 0));
       if (vacancies > 0 && vacancies <= 3) {
         return 3; // Lista Quase Completa
@@ -895,7 +893,6 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
       return 'sorteada';
     }
     if (item.status === 'fechada') return 'fechada';
-    if (item.status === 'aguardando_reservas') return 'fechada'; // maps to Lista Fechada
     if (item.status === 'confirmando') return 'confirmando';
     return 'agendada';
   };
@@ -1743,7 +1740,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
                                       </div>
                                       
                                       {/* Active operational matches redirect to Cockpit */}
-                                      {(item.status === 'confirmando' || item.status === 'aguardando_reservas' || item.status === 'fechada' || item.status === 'sorteada') && (
+                                      {(item.status === 'confirmando' || item.status === 'fechada' || item.status === 'sorteada') && (
                                         <div className="text-[10px] font-mono text-zinc-400 leading-relaxed py-1 block mt-2 border-t border-zinc-900 pt-2">
                                           Esta rodada está em andamento operacional. As ações de confirmação de presença, sorteio de equipes e lançamento de placar devem ser realizadas diretamente no <button type="button" onClick={() => window.dispatchEvent(new CustomEvent('set-active-tab', { detail: 'dash' }))} className="text-emerald-400 font-bold underline cursor-pointer hover:text-emerald-300 transition">Painel Administrativo da Home</button>.
                                         </div>

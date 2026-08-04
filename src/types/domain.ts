@@ -78,7 +78,7 @@ export interface Season {
   active: boolean;
 }
 
-export type MatchStatus = 'agendada' | 'confirmando' | 'aguardando_reservas' | 'fechada' | 'sorteada' | 'encerrada' | 'cancelada';
+export type MatchStatus = 'agendada' | 'confirmando' | 'fechada' | 'sorteada' | 'encerrada' | 'cancelada';
 export type MatchLifecycleState = 'SCHEDULED' | 'CHECKIN_OPEN' | 'CHECKIN_CLOSED' | 'DRAW_COMPLETED' | 'MATCH_FINISHED' | 'ARCHIVED';
 
 export interface Match {

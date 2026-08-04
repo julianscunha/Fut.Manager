@@ -440,6 +440,19 @@ function getMatchDeadlineInfoInternal(match: any, deadlineDays: number) {
   return { isDeadlineExpired: new Date() >= deadlineDateTime };
 }
 
+function isMatchStartingSoonInternal(match: any, minutesBefore: number): boolean {
+  if (!match.date) return false;
+  const [year, month, day] = match.date.split('-').map(Number);
+  let hours = 21;
+  let minutes = 30;
+  if (match.time && match.time.includes(':')) {
+    const [h, m] = match.time.split(':').map(Number);
+    if (!isNaN(h) && !isNaN(m)) { hours = h; minutes = m; }
+  }
+  const matchDateTime = new Date(year, month - 1, day, hours, minutes, 0, 0);
+  return new Date() >= new Date(matchDateTime.getTime() - minutesBefore * 60 * 1000);
+}
+
 function getComputedPresencesSimplified(db: any, matchId: string) {
   const match = db.matches.find((m: any) => m.id === matchId);
   if (!match) return [];
@@ -536,7 +549,12 @@ function syncMatchStatuses(db: any) {
     const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
     const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
 
-    if (confirmedCount >= limit) {
+    // Closes automatically once the list fills up, or unconditionally 5 minutes before
+    // kickoff (whoever is confirmed by then plays) - either way the draw needs 'fechada'
+    // to unlock, so the list must always reach it before the match starts.
+    const isStartingSoon = isMatchStartingSoonInternal(m, 5);
+
+    if (confirmedCount >= limit || isStartingSoon) {
       m.status = 'fechada';
       continue;
     }
@@ -550,12 +568,7 @@ function syncMatchStatuses(db: any) {
       m.reservesReleasedAt = new Date().toISOString();
     }
 
-    if (m.status !== 'agendada' && m.reservesReleased === true && confirmedCount < limit) {
-      m.status = 'aguardando_reservas';
-      continue;
-    }
-
-    if (m.status === 'confirmando' || m.status === 'aguardando_reservas' || m.status === 'fechada') {
+    if (m.status === 'confirmando' || m.status === 'fechada') {
       m.status = 'confirmando';
       continue;
     }

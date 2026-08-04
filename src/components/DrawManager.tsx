@@ -208,7 +208,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         const sorted = data.sort((a: Match, b: Match) => new Date(a.date).getTime() - new Date(b.date).getTime());
         setMatches(sorted);
         // Default to active match
-        const active = sorted.find((m: Match) => ['confirmando', 'aguardando_reservas', 'fechada', 'sorteada', 'agendada'].includes(m.status));
+        const active = sorted.find((m: Match) => ['confirmando', 'fechada', 'sorteada', 'agendada'].includes(m.status));
         if (active) {
           setSelectedMatch(active);
         } else if (sorted.length > 0) {

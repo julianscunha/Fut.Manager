@@ -374,7 +374,7 @@ export default function DashboardStatus({
           if (m.status === 'cancelada') {
             return m.date >= dLocalTodayStr;
           }
-          return ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status);
+          return ['agendada', 'confirmando', 'fechada', 'sorteada'].includes(m.status);
         });
         // Since matches is sorted by date ascending, the first active match is the closest to today chronologically
         let targetMatch = activeMatches.length > 0 ? activeMatches[0] : null;
@@ -625,10 +625,10 @@ export default function DashboardStatus({
   }, [currentUser.id]);
 
   useEffect(() => {
-    if (nextMatch?.status === 'aguardando_reservas') {
+    if (nextMatch?.reservesReleased === true) {
       fetchReservesOrder();
     }
-  }, [nextMatch?.id, nextMatch?.status]);
+  }, [nextMatch?.id, nextMatch?.reservesReleased]);
 
   useEffect(() => {
     if (successMsg) {
@@ -679,7 +679,7 @@ export default function DashboardStatus({
       return;
     }
 
-    if (status === 'confirmado' && currentUserCategory !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(nextMatch.status)) {
+    if (status === 'confirmado' && currentUserCategory !== 'reserva' && isDeadlineExpired && nextMatch.status !== 'confirmando') {
       setErrorMsg('Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.');
       setActionLoading(false);
       return;
@@ -1025,7 +1025,7 @@ export default function DashboardStatus({
       return 2; // Confirmações Abertas
     }
 
-    if (nextMatch.status === 'fechada' || nextMatch.status === 'aguardando_reservas' || roundStatus.isClosed) {
+    if (nextMatch.status === 'fechada' || roundStatus.isClosed) {
       if (nextMatch.status !== 'sorteada' && nextMatch.status !== 'encerrada') {
         return 4; // Lista Fechada
       }
@@ -1127,9 +1127,6 @@ export default function DashboardStatus({
         return 'racha_fechado';
       case 'CONFIRMING':
       default:
-        if (nextMatch.status === 'aguardando_reservas') {
-          return 'necessidade_reservas';
-        }
         return 'confirmacoes_abertas';
     }
     return null;
@@ -2160,7 +2157,7 @@ export default function DashboardStatus({
       );
     }
     // 3. Confirmando (Chamada aberta)
-    else if (adminState === 'confirmacoes_abertas' || adminState === 'necessidade_reservas') {
+    else if (adminState === 'confirmacoes_abertas') {
       completedMsg = "Confirmações abertas e ativas!";
       nextTitle = "Acompanhar confirmações de presença";
       nextDesc = "O check-in dos atletas está aberto e ativo. Acompanhe a lista de confirmados e a fila de espera em tempo real.";

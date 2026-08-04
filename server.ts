@@ -551,7 +551,7 @@ async function startServer() {
       let computedLifecycle = oldLifecycle || 'SCHEDULED';
       
       // Se o status for alterado para um estado ativo, removemos o ciclo de vida terminal para reavaliar
-      if (['agendada', 'confirmando', 'aguardando_reservas', 'fechada'].includes(oldStatus)) {
+      if (['agendada', 'confirmando', 'fechada'].includes(oldStatus)) {
         if (computedLifecycle === 'ARCHIVED' || computedLifecycle === 'MATCH_FINISHED') {
           computedLifecycle = 'SCHEDULED';
         }
@@ -587,7 +587,16 @@ async function startServer() {
             };
             console.log(`[DEBUG_MATCH_STATUS] Match ID: ${m.id}`, JSON.stringify(debugLog, null, 2));
 
-            if (confirmedCount >= limit) {
+            // Closes automatically once the list fills up, or unconditionally 5 minutes
+            // before kickoff (whoever is confirmed by then plays) - the draw needs
+            // 'fechada'/CHECKIN_CLOSED to unlock, so the list must always reach it
+            // before the match starts, even if it never fills.
+            const closeDeadlineDays = db.recurrentConfig ? db.recurrentConfig.confirmationDeadlineDaysBefore : 2;
+            const closeMatchDeadlineDays = m.confirmationDeadlineDaysBefore !== undefined ? m.confirmationDeadlineDaysBefore : closeDeadlineDays;
+            const { matchDateTime } = getMatchDeadlineInfo(m, closeMatchDeadlineDays);
+            const isStartingSoon = new Date() >= new Date(matchDateTime.getTime() - 5 * 60 * 1000);
+
+            if (confirmedCount >= limit || isStartingSoon) {
               computedLifecycle = 'CHECKIN_CLOSED';
             } else {
               const hasAnyDeclarations = computedList.some((p: any) => p.presenceStatus === 'confirmado' || (p.presenceStatus === 'cancelado' && p.category !== 'reserva'));
@@ -634,14 +643,7 @@ async function startServer() {
       } else if (computedLifecycle === 'CHECKIN_CLOSED') {
         targetStatus = 'fechada';
       } else if (computedLifecycle === 'CHECKIN_OPEN') {
-        const computedList = await getComputedPresences(db, m.id);
-        const confirmedCount = computedList.filter((p: any) => p.presenceStatus === 'confirmado').length;
-        const limit = m.maxPlayers !== undefined && m.maxPlayers !== null ? m.maxPlayers : 15;
-        if (m.reservesReleased === true && confirmedCount < limit) {
-          targetStatus = 'aguardando_reservas';
-        } else {
-          targetStatus = 'confirmando';
-        }
+        targetStatus = 'confirmando';
       } else if (computedLifecycle === 'SCHEDULED') {
         targetStatus = 'agendada';
       }
@@ -674,10 +676,10 @@ async function startServer() {
     const canceledMatchIds = new Set((db.matches || []).filter((m: any) => m.status === 'cancelada').map((m: any) => m.id));
     const canceledEventIds = new Set((db.events || []).filter((e: any) => e.status === 'cancelado').map((e: any) => e.id));
 
-    // For deadline warnings, they should only exist for matches that are 'confirmando' or 'aguardando_reservas'
+    // For deadline warnings, they should only exist for matches that are 'confirmando'
     const activeDeadlineIds = new Set<string>();
     (db.matches || []).forEach((match: any) => {
-      if (match.status === 'confirmando' || match.status === 'aguardando_reservas') {
+      if (match.status === 'confirmando') {
         activeDeadlineIds.add(`notif-match-deadline-24h-${match.id}`);
         activeDeadlineIds.add(`notif-match-deadline-2h-${match.id}`);
         activeDeadlineIds.add(`notif-match-deadline-general-${match.id}`);
@@ -3196,10 +3198,6 @@ async function startServer() {
       match.reservesReleased = true;
       match.reservesReleasedAt = new Date().toISOString();
 
-      if (['agendada', 'confirmando'].includes(match.status)) {
-        match.status = 'aguardando_reservas';
-      }
-
       if (!db.deadlineAudits) db.deadlineAudits = [];
       db.deadlineAudits.push({
         id: 'da-' + match.id + '-manual-' + Date.now(),
@@ -3238,10 +3236,6 @@ async function startServer() {
 
       match.reservesReleased = false;
       match.reservesReleasedAt = undefined;
-
-      if (match.status === 'aguardando_reservas') {
-        match.status = 'confirmando';
-      }
 
       if (db.reserveAlerts) {
         db.reserveAlerts = db.reserveAlerts.map((a: any) =>
@@ -4060,7 +4054,7 @@ async function startServer() {
       const matchDeadlineDays = match.confirmationDeadlineDaysBefore !== undefined ? match.confirmationDeadlineDaysBefore : deadlineDays;
       const { isDeadlineExpired } = getMatchDeadlineInfo(match, matchDeadlineDays);
 
-      if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(match.status)) {
+      if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && match.status !== 'confirmando') {
         return res.status(400).json({ error: 'Prazo limite para confirmação expirado. Mensalistas não podem mais confirmar.' });
       }
 
@@ -4220,7 +4214,7 @@ async function startServer() {
           continue;
         }
 
-        if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && !['confirmando', 'aguardando_reservas'].includes(match.status)) {
+        if (status === 'confirmado' && player.category !== 'reserva' && isDeadlineExpired && match.status !== 'confirmando') {
           continue; // Skip mensalistas after deadline
         }
 
@@ -6285,7 +6279,7 @@ async function startServer() {
       const todayStr = new Date().toISOString().split('T')[0];
       // Filter matches that are scheduled or confirming starting from today
       const upcoming = db.matches
-        .filter(m => ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status) && m.date >= todayStr)
+        .filter(m => ['agendada', 'confirmando', 'fechada', 'sorteada'].includes(m.status) && m.date >= todayStr)
         .sort((a, b) => a.date.localeCompare(b.date));
 
       if (upcoming.length > 0) {
@@ -6300,7 +6294,7 @@ async function startServer() {
 
       // Fallback: If no future matches exist, check any upcoming matches regardless of date
       const anyUpcoming = db.matches
-        .filter(m => ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status))
+        .filter(m => ['agendada', 'confirmando', 'fechada', 'sorteada'].includes(m.status))
         .sort((a, b) => a.date.localeCompare(b.date));
 
       if (anyUpcoming.length > 0) {
