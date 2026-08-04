@@ -2736,6 +2736,11 @@ export default function DashboardStatus({
                   <span className="text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1 rounded-lg uppercase tracking-wide">
                     ✗ {cancelPlayers.length} Ausentes
                   </span>
+                  {awaitingReservePlayers.length > 0 && (
+                    <span className="text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-3 py-1 rounded-lg uppercase tracking-wide animate-pulse">
+                      ⚡ {awaitingReservePlayers.length} Convocados
+                    </span>
+                  )}
                 </div>
               </div>
 
