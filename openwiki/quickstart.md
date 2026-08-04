@@ -1,7 +1,7 @@
 ---
-type: Quickstart
-title: Quickstart
-description: Initial guide for developers who want to understand and work on the Fut.Manager repository.
+type: Guia de Início Rápido
+title: Guia de Início Rápido
+description: Guia inicial para desenvolvedores que desejam entender e trabalhar no repositório Fut.Manager.
 tags: [quickstart, onboarding, development]
 ---
 
@@ -34,11 +34,11 @@ npm run dev
 - `guide/`: Manuais de fluxo de trabalho, como gestão de usuários e onboarding.
 
 ## Progressive Web App (PWA)
-- [Progressive Web App (PWA) Implementation](/openwiki/architecture/pwa.md) – Manifest, service worker, and mobile integration details.
+- [Implementação do Progressive Web App (PWA)](/openwiki/architecture/pwa.md) – Detalhes sobre Manifest, service worker e integração móvel.
 
 ---
 ## Backlog
 - Migrar documentação de auditoria (`docs/AUDITORIA.md`) para um formato de troubleshooting/auditoria no wiki.
 - Documentar fluxo financeiro (`generateMonthlyBillingsIfNeeded`).
-- Add detailed diagram of service‑worker lifecycle.
-- Document how to update cache version when new assets are added.
+- Adicionar diagrama detalhado do ciclo de vida do service-worker.
+- Documentar como atualizar a versão do cache quando novos assets forem adicionados.

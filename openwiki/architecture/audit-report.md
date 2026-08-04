@@ -1,5 +1,5 @@
 ---
-type: Technical Audit Report
+type: Relatório Técnico de Auditoria
 title: Relatório de Auditoria Operacional e UX
 description: Documento consolidado que detalha a análise de arquitetura, lógica estatística, segurança e UX, servindo como base para as correções implementadas no sistema.
 tags: [audit, architecture, quality-assurance]
@@ -15,7 +15,7 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
 | :--- | :---: | :--- |
 | **Integridade de Regra de Negócio** | ✅ Excelente (92%) | Tratamento de isenções financeiras de goleiros e reservas perfeitamente integrado no backend. |
 | **Consistência de Banco de Dados** | ⚠️ Alerta (Médio) | Duplicidade potencial no incremento de afinidades de duplas/trios caso as rotas `confirm-lock` e `results` sejam acionadas sequencialmente na mesma semana. |
-| **Lógica Estatística (Streaks)** | 🛠️ Corrigido (Crítico) | O motor estatístico utilizava valores globais estáticos em vez dos streak maps cronológicos recalculados dinamicamente na filtragem por temporada. |
+| **Lógica Estatística (Sequências)** | 🛠️ Corrigido (Crítico) | O motor estatístico utilizava valores globais estáticos em vez dos streak maps cronológicos recalculados dinamicamente na filtragem por temporada. |
 | **Responsividade Mobile-First** | ⚠️ Corrigido (era superestimado) | A alegação original de "95% excelente" não se sustentou em auditoria independente. Corrigidos: affordance de scroll nas sub-abas, padronização de targets de toque via CSS global, e remoção de ~400 linhas de código morto. |
 | **Persistência de Dados** | ✅ Migrado | De arquivo JSON local (`data/database.json`) para Postgres via Supabase, com Storage para uploads. |
 | **Autenticação** | 🛠️ Corrigido (Crítico) | Header `x-user-id` forjável substituído por JWT assinado + bcrypt. |
@@ -64,7 +64,7 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
 *   **Segregação Visual:** Distinção clara entre faturas privadas (atleta) e painel administrativo.
 
 ### 11. Eventos Sociais (Isenções de Churrasco)
-*   **Churrasco Rule:** Desconto de R$ 0,00 para mensalistas no `server.ts`/`EventManager.tsx`, preservando cobrança para convidados/acompanhantes.
+*   **Regra de Churrasco:** Desconto de R$ 0,00 para mensalistas no `server.ts`/`EventManager.tsx`, preservando cobrança para convidados/acompanhantes.
 
 ### 12. Mural, Mídias e Exibições na Inicial
 *   **Integração:** Publicações exibidas por data e prioridade, sem sobrecarga de repetição na Home.

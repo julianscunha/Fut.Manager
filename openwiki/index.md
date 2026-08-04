@@ -2,13 +2,13 @@
 okf_version: "0.1"
 ---
 
-# Files
+# Arquivos
 
 - [Visão Geral da Arquitetura](architecture.md) - Visão geral da arquitetura do Fut.Manager, cobrindo o backend Node/Express, persistência Postgres e frontend React.
-- [Quickstart](quickstart.md) - Initial guide for developers who want to understand and work on the Fut.Manager repository.
-- [Repository Source Map](source-map.md)
+- [Guia de Início Rápido](quickstart.md) - Guia inicial para desenvolvedores que desejam entender e trabalhar no repositório Fut.Manager.
+- [Mapa de Origem do Repositório](source-map.md)
 
-# Directories
+# Diretórios
 
 - [architecture](architecture/)
 - [design](design/)

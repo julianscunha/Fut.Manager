@@ -1,15 +1,15 @@
 ---
 type: Player Logic
 ---
-title: Player Position Logic and Tactical Assignment
+title: Lógica de Posição de Jogadores e Atribuição Tática
 
-description: Documents how player positions (primaryPosition vs secondaryPositions) are managed and assigned for team composition, including tactical constraints and validation logic.
+description: Documenta como as posições dos jogadores (primaryPosition vs secondaryPositions) são gerenciadas e atribuídas para composição de equipe, incluindo restrições táticas e lógica de validação.
 
 tags: [player-logic, positions, tactics, assignment]
 
 ---
 
-# Player Position Logic and Tactical Assignment
+# Lógica de Posição de Jogadores e Atribuição Tática
 
 Este documento detalha como as posições dos jogadores são gerenciadas no Fut.Manager, focando na distinção entre `primaryPosition` e `secondaryPositions`, a lógica tática de atribuição de posições e as validações que garantem escalações corretas.
 

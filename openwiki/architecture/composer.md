@@ -1,6 +1,6 @@
 ---
 type: "Reference"
-title: "Home Composer Architecture Blueprint"
+title: "Esboço da Arquitetura do Home Composer"
 openwiki_generated: true
 ---
 

@@ -1,39 +1,39 @@
 ---
-type: "Reference"
-title: "Repository Source Map"
+type: Referência
+title: Mapa de Origem do Repositório
 openwiki_generated: true
 ---
 
 <okf_front_matter>
 ---
-type: Reference
-title: Repository Source Map
-description: A guided overview of the primary source code organization within the repository.
+type: Referência
+title: Mapa de Origem do Repositório
+description: Uma visão geral guiada da organização principal do código-fonte dentro do repositório.
 tags: [source-code, organization, navigation]
 ---
 </okf_front_matter>
 
-# Repository Source Map
+# Mapa de Origem do Repositório
 
-This map outlines the core directories and files in the repository.
+Este mapa descreve os principais diretórios e arquivos do repositório.
 
-- `/src/`: Primary React source code.
-    - `/src/components/`: Reusable UI components.
-        - `DashboardStatus.tsx`: Dashboard with tactical assignments and presence management.
-        - `UserApprovalList.tsx`: Admin interface for user approval workflow.
-    - `/src/contexts/`: Global state management using React Context.
-    - `/src/lib/`: Library integrations (e.g., Supabase client).
-    - `/src/utils/`: Shared utilities.
-    - `App.tsx`: Main application entry point and routing config.
-- `/server/`: Modular server-side business logic.
-    - `email.ts`: Email service (TurboSMTP integration).
-    - `email-templates/`: Transactional email templates.
-    - `avatarProvider.ts`: AI-powered avatar generation.
-    - `auth.ts`: Authentication (bcrypt + JWT).
-- `server.ts`: Initial Express entry point and routing orchestration.
-    - `/api/auth/*`: Registration, login, password recovery
-    - `/api/users/*`: Admin user management (approve/reject/link)
-    - `/api/players/*`: Athlete profile management
-    - `/api/matches/*`: Match scheduling and presence management
-- `/data/`: Static data assets.
-- `/openwiki/`: Project documentation organized by category (architecture, operations, design, guides).
+- `/src/`: Código-fonte principal do React.
+    - `/src/components/`: Componentes de UI reutilizáveis.
+        - `DashboardStatus.tsx`: Painel com atribuições táticas e gerenciamento de presença.
+        - `UserApprovalList.tsx`: Interface de administrador para fluxo de aprovação de usuários.
+    - `/src/contexts/`: Gerenciamento de estado global usando React Context.
+    - `/src/lib/`: Integrações de biblioteca (ex.: cliente Supabase).
+    - `/src/utils/`: Utilitários compartilhados.
+    - `App.tsx`: Ponto de entrada principal do aplicativo e configuração de roteamento.
+- `/server/`: Lógica de negócios modular do lado do servidor.
+    - `email.ts`: Serviço de e-mail (integração com TurboSMTP).
+    - `email-templates/`: Modelos de e-mail transacionais.
+    - `avatarProvider.ts`: Geração de avatares com IA.
+    - `auth.ts`: Autenticação (bcrypt + JWT).
+- `server.ts`: Ponto de entrada inicial do Express e orquestração de roteamento.
+    - `/api/auth/*`: Registro, login, recuperação de senha.
+    - `/api/users/*`: Gerenciamento de usuários por administrador (aprovar/rejeitar/vincular).
+    - `/api/players/*`: Gerenciamento de perfil de atletas.
+    - `/api/matches/*`: Agendamento de partidas e gerenciamento de presença.
+- `/data/`: Ativos de dados estáticos.
+- `/openwiki/`: Documentação do projeto organizada por categoria (arquitetura, operações, design, guias).

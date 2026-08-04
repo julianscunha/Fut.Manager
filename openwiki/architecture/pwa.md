@@ -1,46 +1,46 @@
 ---
 type: Architecture
-title: Progressive Web App (PWA) Implementation
-description: Overview of the PWA setup for mobile support, including manifest, service worker, and integration with the React front‑end.
+title: Implementação de Progressive Web App (PWA)
+description: Visão geral da configuração do PWA para suporte móvel, incluindo manifesto, service worker e integração com o front‑end React.
 tags: [pwa, mobile, service-worker, manifest, offline]
 ---
 
-## Overview
-The Fut.Manager application is a **single‑page React app** served by a Node/Express backend.  To provide a native‑app‑like experience on mobile devices, the project implements a standard **Progressive Web App (PWA)**.  The PWA consists of three core artifacts:
+## Visão geral
+O aplicativo Fut.Manager é um **aplicativo React de página única** servido por um backend Node/Express. Para oferecer uma experiência semelhante a um aplicativo nativo em dispositivos móveis, o projeto implementa um **Progressive Web App (PWA)** padrão. O PWA consiste em três artefatos principais:
 
 1. **Web App Manifest** – `/public/manifest.json`.
 2. **Service Worker** – `/public/sw.js`.
-3. **Meta & Link Tags** – added to `index.html`.
+3. **Meta & Link Tags** – adicionadas ao `index.html`.
 
-These artifacts work together to enable installation, offline caching, and a standalone launch mode.
+Esses artefatos trabalham em conjunto para permitir a instalação, cache offline e um modo de lançamento independente.
 
 ## 1. Web App Manifest
-The manifest is a JSON file that tells the browser how the app should behave when installed.  Key properties used in this project:
+O manifesto é um arquivo JSON que informa ao navegador como o aplicativo deve se comportar quando instalado. Propriedades-chave usadas neste projeto:
 
-| Property | Value | Purpose |
-|----------|-------|---------|
-| `name` | *Gestão de Racha – Sistema White‑Label* | Full name shown on the home screen and install prompt. |
-| `short_name` | *RachaApp* | Short name used when space is limited. |
-| `start_url` | `/` | Entry point after launch. |
-| `display` | `standalone` | Launches without browser UI, mimicking a native app. |
-| `theme_color` / `background_color` | `#0a0f0d` | Sets the status‑bar and splash screen colors. |
-| `icons` | 192×192, 512×512 (PNG & SVG) | Icons for home‑screen, app‑launcher, and OS‑specific requirements. |
+| Propriedade | Valor | Propósito |
+|-------------|-------|-----------|
+| `name` | *Gestão de Racha – Sistema White‑Label* | Nome completo exibido na tela inicial e no prompt de instalação. |
+| `short_name` | *RachaApp* | Nome curto usado quando o espaço é limitado. |
+| `start_url` | `/` | Ponto de entrada após o lançamento. |
+| `display` | `standalone` | Lança sem a interface do navegador, imitando um aplicativo nativo. |
+| `theme_color` / `background_color` | `#0a0f0d` | Define as cores da barra de status e da tela de splash. |
+| `icons` | 192×192, 512×512 (PNG & SVG) | Ícones para tela inicial, lançador de aplicativos e requisitos específicos do sistema operacional. |
 
-The manifest file is referenced from `index.html` via `<link rel="manifest" href="/manifest.json">`.
+O arquivo de manifesto é referenciado a partir de `index.html` via `<link rel="manifest" href="/manifest.json">`.
 
 ## 2. Service Worker
-The service worker (`/public/sw.js`) implements a **cache‑first strategy** for static assets and a **network‑first strategy** for navigation requests.  The key logic is:
+O service worker (`/public/sw.js`) implementa uma **estratégia cache‑first** para ativos estáticos e uma **estratégia network‑first** para requisições de navegação. A lógica principal é:
 
-1. **Install** – Cache all assets listed in `STATIC_ASSETS`.
-2. **Activate** – Remove old caches that do not match `CACHE_NAME`.
+1. **Install** – Cache todos os ativos listados em `STATIC_ASSETS`.
+2. **Activate** – Remove caches antigos que não correspondem a `CACHE_NAME`.
 3. **Fetch** –
-   * If the request is a non‑GET or an API call (`/api/*`), forward it to the network.
-   * If the request is for a document (`destination === 'document'`), try the network first and fall back to the cached `index.html`.
-   * For all other requests, serve from cache if available; otherwise fetch from the network, cache the response, and return it.
+   * Se a requisição não for GET ou for uma chamada API (`/api/*`), encaminhe para a rede.
+   * Se a requisição for de um documento (`destination === 'document'`), tente a rede primeiro e, em caso de falha, recupere o `index.html` em cache.
+   * Para todas as outras requisições, sirva do cache se disponível; caso contrário, busque na rede, cacheie a resposta e retorne-a.
 
-This approach gives the app fast load times on repeat visits and graceful degradation when offline.
+Esta abordagem oferece tempos de carregamento rápidos em visitas repetidas e degradação graciosa quando offline.
 
-### Service Worker Flow Diagram
+### Diagrama de Fluxo do Service Worker
 ```mermaid
 flowchart TD
     A[Client Request] --> B{Request Type}
@@ -55,8 +55,8 @@ flowchart TD
     H --> I[Return to Client]
 ```
 
-## 3. Integration with the Front‑End
-`index.html` contains the following meta tags to support mobile‑first UX:
+## 3. Integração com o Front‑End
+`index.html` contém as seguintes tags meta para suportar UX mobile‑first:
 
 ```html
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
@@ -67,18 +67,18 @@ flowchart TD
 <link rel="manifest" href="/manifest.json">
 ```
 
-The React app registers the service worker in `src/main.tsx` (via Vite’s default behaviour) so that the worker is installed automatically when the app is built.
+O aplicativo React registra o service worker em `src/main.tsx` (via o comportamento padrão do Vite) para que o worker seja instalado automaticamente quando o aplicativo for construído.
 
-## 4. Building & Deploying
-During `npm run build`, Vite outputs the static assets to `/dist/`.  The Express server serves these files and the service worker from the same directory.  No additional configuration is required for the PWA to work in production.
+## 4. Construção e Implantação
+Durante `npm run build`, o Vite gera os ativos estáticos em `/dist/`. O servidor Express serve esses arquivos e o service worker a partir do mesmo diretório. Nenhuma configuração adicional é necessária para que o PWA funcione em produção.
 
-## 5. Testing the PWA
-1. **Local** – Run `npm run dev` and open the app in Chrome.  Use the **Application** tab in DevTools to inspect the manifest and service worker.
-2. **Offline** – In DevTools, toggle **Offline** and reload the page.  The app should still load and display the cached UI.
-3. **Installation** – On a mobile device or Chrome’s **Add to Home Screen** prompt, the app should install and launch in standalone mode.
+## 5. Testando o PWA
+1. **Local** – Execute `npm run dev` e abra o aplicativo no Chrome. Use a aba **Application** nas DevTools para inspecionar o manifesto e o service worker.
+2. **Offline** – Nas DevTools, ative **Offline** e recarregue a página. O aplicativo deve continuar carregando e exibir a UI em cache.
+3. **Instalação** – Em um dispositivo móvel ou no prompt **Add to Home Screen** do Chrome, o aplicativo deve instalar e iniciar em modo standalone.
 
 ---
 
 ## Backlog
-- Add a detailed diagram of the service‑worker lifecycle.
-- Document how to update the cache version when new assets are added.
+- Adicionar um diagrama detalhado do ciclo de vida do service‑worker.
+- Documentar como atualizar a versão do cache quando novos ativos forem adicionados.

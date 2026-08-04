@@ -1,5 +1,5 @@
 ---
-type: Deployment Checklist
+type: Checklist de Implantação
 title: Checklist de Deploy — Fut.Manager (Supabase + Render)
 description: Checklist completo que auxilia equipes DevOps na avaliação de práticas de migração de infra e confirmações de infraestrutura antes da exposição pública no Render.
 tags: [deploy, checklist, supabase, render]

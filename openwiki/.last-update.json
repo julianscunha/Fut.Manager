@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-07-29T21:11:15.235Z",
+  "updatedAt": "2026-08-04T11:22:19.370Z",
   "command": "update",
-  "gitHead": "50c57bb68074c4af8d04fd9c37132a3f311a30cc",
+  "gitHead": "58d93785f7ac64d508ad53cdbc00f24f58eae214",
   "model": "openrouter/free",
   "status": "complete",
-  "language": "en"
+  "language": "pt-BR"
 }
