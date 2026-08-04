@@ -331,13 +331,56 @@ async function startServer() {
     return mergedList;
   }
 
+  // Serializes summonReservesForMatch per match: concurrent requests (e.g. two dashboards
+  // polling GET /api/matches at once) each call readDb() independently, so an in-memory
+  // check alone can't see another request's not-yet-written alert - this was creating
+  // duplicate "aguardando_resposta" rows for the same player. The lock forces callers for
+  // the same matchId to run one at a time; each one re-reads reserve_queue_alerts straight
+  // from Postgres (not the caller's possibly-stale db.reserveAlerts) right before deciding.
+  const reserveSummonLocks = new Map<string, Promise<void>>();
+  async function withReserveSummonLock<T>(matchId: string, fn: () => Promise<T>): Promise<T> {
+    const previous = reserveSummonLocks.get(matchId) || Promise.resolve();
+    let release: () => void;
+    const current = new Promise<void>((resolve) => { release = resolve; });
+    reserveSummonLocks.set(matchId, previous.then(() => current));
+    await previous;
+    try {
+      return await fn();
+    } finally {
+      release!();
+      if (reserveSummonLocks.get(matchId) === current) reserveSummonLocks.delete(matchId);
+    }
+  }
+
   async function summonReservesForMatch(db: any, matchId: string, count: number): Promise<any[]> {
+    return withReserveSummonLock(matchId, () => summonReservesForMatchLocked(db, matchId, count));
+  }
+
+  async function summonReservesForMatchLocked(db: any, matchId: string, count: number): Promise<any[]> {
     const match = db.matches.find((m: any) => m.id === matchId);
     if (!match) return [];
 
     const reserves = db.players.filter((p: any) => p.category === 'reserva' && !p.deletedAt && p.status === 'disponivel');
     const computedList = await getComputedPresences(db, matchId);
-    const matchAlerts = (db.reserveAlerts || []).filter((a: any) => a.matchId === matchId);
+
+    // Fresh read straight from Postgres, not db.reserveAlerts (which may be stale from this
+    // request's own readDb() call taken before another request's summon already ran).
+    const { data: freshAlertRows, error: freshAlertsErr } = await getSupabaseClient()
+      .from('reserve_queue_alerts').select('*').eq('match_id', matchId);
+    if (freshAlertsErr) console.error('[summonReserves] Erro ao reler reserve_queue_alerts:', freshAlertsErr.message);
+    const matchAlerts = (freshAlertRows || []).map((r: any) => ({
+      id: r.id,
+      matchId: r.match_id,
+      suggestedReservePlayerId: r.suggested_reserve_player_id,
+      playerId: r.player_id,
+      status: r.status,
+      createdAt: r.created_at,
+      cleared: r.cleared
+    }));
+    db.reserveAlerts = [
+      ...(db.reserveAlerts || []).filter((a: any) => a.matchId !== matchId),
+      ...matchAlerts
+    ];
     const currentReservesOrder = db.reservesOrder || [];
 
     const pendingAlertPlayerIds = new Set(
@@ -432,6 +475,19 @@ async function startServer() {
       };
       db.reserveAlerts.push(alertObj);
       summoned.push(nextPlayer);
+
+      // Persist immediately (not just via caller's later writeDb) so the next queued call
+      // for this match, once the lock releases, reads this row back from Postgres.
+      const { error: insertErr } = await getSupabaseClient().from('reserve_queue_alerts').insert({
+        id: alertObj.id,
+        match_id: alertObj.matchId,
+        suggested_reserve_player_id: alertObj.suggestedReservePlayerId,
+        player_id: alertObj.playerId,
+        status: alertObj.status,
+        created_at: alertObj.createdAt,
+        cleared: alertObj.cleared
+      });
+      if (insertErr) console.error('[summonReserves] Erro ao inserir reserve_queue_alerts:', insertErr.message);
 
       notify(db, {
         category: 'partida',
@@ -5392,16 +5448,23 @@ async function startServer() {
       const activeConvocationObjs = matchAlerts
         .filter((a: any) => a.status === 'aguardando_resposta' && !a.cleared)
         .sort((a: any, b: any) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-      const activeConvocations = activeConvocationObjs.map((a: any) => {
-        const pObj = db.players.find((p: any) => p.id === (a.suggestedReservePlayerId || a.playerId));
-        return {
+      // Dedupe by player: a same-player duplicate row can only exist as stale data from
+      // before the summonReservesForMatch race fix - keep the earliest (list is already sorted).
+      const seenConvocationPlayerIds = new Set<string>();
+      const activeConvocations = activeConvocationObjs.reduce((acc: any[], a: any) => {
+        const playerId = a.suggestedReservePlayerId || a.playerId;
+        if (seenConvocationPlayerIds.has(playerId)) return acc;
+        seenConvocationPlayerIds.add(playerId);
+        const pObj = db.players.find((p: any) => p.id === playerId);
+        acc.push({
           id: a.id,
-          playerId: pObj ? pObj.id : (a.suggestedReservePlayerId || a.playerId),
+          playerId: pObj ? pObj.id : playerId,
           playerName: pObj ? pObj.name : 'Jogador Desconhecido',
           status: 'aguardando_resposta',
           createdAt: a.createdAt
-        };
-      });
+        });
+        return acc;
+      }, []);
       const activeConvocationPlayerIds = new Set(activeConvocations.map((c: any) => c.playerId));
       // Kept for backward compatibility with older clients - most recent active convocation
       const activeConvocation = activeConvocations[0] || null;

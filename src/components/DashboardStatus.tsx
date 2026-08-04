@@ -1055,8 +1055,12 @@ export default function DashboardStatus({
   const confirmedPlayers = [...presences.filter(p => p.presenceStatus === 'confirmado')].sort(sortPlayersByPositionAndName);
   const cancelPlayers = [...presences.filter(p => p.presenceStatus === 'cancelado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
   const unconfirmedPlayers = [...presences.filter(p => p.presenceStatus === 'nao_confirmado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
+  // Reserves currently convoked (awaiting response) - moved from FR (Fila de Reservas)
+  // into LC (Lista de Chamada): a player is either FR or LC, never both.
+  const awaitingReservePlayers = [...presences.filter(p => p.presenceStatus === 'aguardando_resposta')].sort(sortPlayersByPositionAndName);
 
   const sortedPresencesForList = [
+    ...awaitingReservePlayers,
     ...confirmedPlayers,
     ...unconfirmedPlayers,
     ...cancelPlayers
@@ -2529,7 +2533,7 @@ export default function DashboardStatus({
         case 'confirmados':
           return sortedPresencesForList.filter(p => p.presenceStatus === 'confirmado');
         case 'pendentes':
-          return sortedPresencesForList.filter(p => p.presenceStatus === 'nao_confirmado');
+          return sortedPresencesForList.filter(p => p.presenceStatus === 'nao_confirmado' || p.presenceStatus === 'aguardando_resposta');
         case 'cancelados':
           return sortedPresencesForList.filter(p => p.presenceStatus === 'cancelado');
         case 'todos':
@@ -2766,7 +2770,14 @@ export default function DashboardStatus({
                           ? { text: 'Confirmado', textClass: 'text-emerald-400', badge: 'bg-emerald-500/5 border-emerald-500/15' }
                           : p.presenceStatus === 'cancelado'
                             ? { text: 'Cancelado', textClass: 'text-rose-400', badge: 'bg-rose-500/5 border-rose-500/15' }
-                            : { text: 'Pendente', textClass: 'text-amber-400', badge: 'bg-amber-500/5 border-amber-500/15' };
+                            : p.presenceStatus === 'aguardando_resposta'
+                              ? { text: 'Aguardando Resposta', textClass: 'text-indigo-400', badge: 'bg-indigo-500/10 border-indigo-500/25 animate-pulse' }
+                              : { text: 'Pendente', textClass: 'text-amber-400', badge: 'bg-amber-500/5 border-amber-500/15' };
+
+                        const activeConvocationId = p.presenceStatus === 'aguardando_resposta'
+                          ? (reserveQueue?.activeConvocations || []).find((c: any) => c.playerId === p.playerId)?.id
+                          : undefined;
+                        const isMyConvocation = p.presenceStatus === 'aguardando_resposta' && resolvedPlayerId === p.playerId;
 
                         return (
                           <div 
@@ -2797,9 +2808,26 @@ export default function DashboardStatus({
                               </div>
                             </div>
 
-                            {/* Right actions: admin manually override, or standard user badge */}
+                            {/* Right actions: reserve's own convocation RSVP, admin manual override, or standard user badge */}
                             <div className="flex items-center gap-2">
-                              {isAdmin && matchState === 'CONFIRMACOES_ABERTAS' ? (
+                              {isMyConvocation && activeConvocationId ? (
+                                <div className="flex gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRespondReserveConvocation(activeConvocationId, 'confirmado')}
+                                    className="bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black py-1.5 px-3 rounded-lg text-[9px] uppercase cursor-pointer shadow-lg shadow-indigo-500/10 transition-all active:scale-95"
+                                  >
+                                    Aceitar Vaga
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRespondReserveConvocation(activeConvocationId, 'recusado')}
+                                    className="bg-zinc-950 hover:bg-zinc-900 text-rose-400 font-black py-1.5 px-3 rounded-lg text-[9px] uppercase border border-zinc-850 cursor-pointer transition-all active:scale-95"
+                                  >
+                                    Recusar
+                                  </button>
+                                </div>
+                              ) : isAdmin && matchState === 'CONFIRMACOES_ABERTAS' ? (
                                 <div className="flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-wider font-black">
                                   <button
                                     type="button"
@@ -2863,61 +2891,8 @@ export default function DashboardStatus({
               </div>
 
             <div className="space-y-3">
-              {/* Active convocations (highest priority) - one card per reserve currently awaiting response */}
-              {(reserveQueue?.activeConvocations && reserveQueue.activeConvocations.length > 0
-                ? reserveQueue.activeConvocations
-                : (reserveQueue?.activeConvocation ? [reserveQueue.activeConvocation] : [])
-              ).map((convPlayer) => {
-                const playerObj = players.find(p => p.id === convPlayer.playerId);
-                const isMyConvocation = resolvedPlayerId === convPlayer.playerId;
-
-                return (
-                  <div
-                    key={convPlayer.id}
-                    className="p-4 rounded-xl border border-indigo-500/35 bg-gradient-to-br from-indigo-950/15 via-zinc-950/90 to-indigo-950/5 font-mono text-xs space-y-3.5 shadow-[0_0_15px_rgba(99,102,241,0.05)] animate-pulse"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <span className="text-[8px] font-black bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded uppercase tracking-wider block w-fit">
-                          Convocação Ativa
-                        </span>
-                        <span className="text-white font-sans font-black text-xs block">{convPlayer.playerName}</span>
-                      </div>
-                      <span className="text-[9px] text-indigo-400 font-bold bg-indigo-950/80 px-2 py-0.5 rounded-md border border-indigo-900/50">
-                        {playerObj ? POSITION_LABELS[playerObj.primaryPosition as keyof typeof POSITION_LABELS] : 'Jogador'}
-                      </span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-[10px] text-indigo-400 font-bold">
-                        <span className="flex items-center gap-1">⚡ Vaga Disponível:</span>
-                        <span className="bg-amber-500/10 border border-amber-500/20 text-amber-400 px-2 py-0.5 rounded text-[8.5px] font-black uppercase">Aguardando</span>
-                      </div>
-
-                      {/* Quick athlete RSVP in case it's them */}
-                      {isMyConvocation && (
-                        <div className="flex gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => handleRespondReserveConvocation(convPlayer.id, 'confirmado')}
-                            className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-black py-2 rounded-lg text-[10px] uppercase cursor-pointer shadow-lg shadow-indigo-500/10 transition-all active:scale-95"
-                          >
-                            Aceitar Vaga
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleRespondReserveConvocation(convPlayer.id, 'recusado')}
-                            className="flex-1 bg-zinc-950 hover:bg-zinc-900 text-rose-400 font-black py-2 rounded-lg text-[10px] uppercase border border-zinc-850 cursor-pointer transition-all active:scale-95"
-                          >
-                            Recusar
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
+              {/* Convoked reserves (aguardando_resposta) live in Lista de Chamada, not here -
+                  a player is either FR (below) or LC, never both. */}
               {/* Waiting list queue */}
               {reserveQueue?.queue && reserveQueue.queue.length > 0 ? (
                 <>
@@ -2973,13 +2948,11 @@ export default function DashboardStatus({
                   )}
                 </>
               ) : (
-                !(reserveQueue?.activeConvocations?.length) && !reserveQueue?.activeConvocation && (
-                  <div className="text-center py-6 bg-zinc-950/20 rounded-xl border border-dashed border-zinc-900/60">
-                    <p className="text-zinc-500 italic text-[11px] font-sans font-bold">
-                      Nenhum atleta na fila de reservas.
-                    </p>
-                  </div>
-                )
+                <div className="text-center py-6 bg-zinc-950/20 rounded-xl border border-dashed border-zinc-900/60">
+                  <p className="text-zinc-500 italic text-[11px] font-sans font-bold">
+                    Nenhum atleta na fila de reservas.
+                  </p>
+                </div>
               )}
             </div>
           </div>
