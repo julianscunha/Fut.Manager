@@ -1,14 +1,62 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981"/>
-      <stop offset="100%" stop-color="#059669"/>
+      <stop offset="0%" stop-color="#0f2b22"/>
+      <stop offset="100%" stop-color="#0a0f0d"/>
     </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#b91c1c"/>
+      <stop offset="45%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+    <radialGradient id="ballGrad" cx="38%" cy="35%" r="70%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d8dfdc"/>
+    </radialGradient>
   </defs>
-  <path d="M256 26 L426 92 L426 198 C426 318 256 448 256 448 C256 448 86 318 86 198 L86 92 Z" fill="url(#shieldGrad)" stroke="#047857" stroke-width="16"/>
-  <circle cx="256" cy="182" r="64" fill="none" stroke="#0a0f0d" stroke-width="12"/>
-  <circle cx="256" cy="182" r="40" fill="none" stroke="#0a0f0d" stroke-width="9"/>
-  <path d="M256 142 L256 182 L282 212" fill="none" stroke="#0a0f0d" stroke-width="9" stroke-linecap="round"/>
-  <path d="M230 212 L256 182 L282 212" fill="none" stroke="#0a0f0d" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="256" cy="182" r="8" fill="#0a0f0d"/>
+
+  <!-- Shield silhouette (backdrop/frame), single solid tone, bold and simple -->
+  <path d="M256 58 L392 106 L392 214 C392 322 256 416 256 416 C256 416 120 322 120 214 L120 106 Z"
+        fill="url(#shieldGrad)" stroke="#10b981" stroke-width="10" stroke-linejoin="round"/>
+
+  <!-- Flames behind/around the ball -->
+  <path d="M256 200
+           C232 180 224 150 236 118
+           C240 148 254 158 262 142
+           C268 168 292 176 292 206
+           C292 224 280 236 266 240
+           C276 226 270 210 256 200 Z"
+        fill="url(#flameGrad)"/>
+  <path d="M330 236
+           C316 214 316 190 332 168
+           C330 190 342 198 350 186
+           C354 206 370 216 366 240
+           C363 256 350 264 338 262
+           C348 252 344 240 330 236 Z"
+        fill="url(#flameGrad)"/>
+  <path d="M182 236
+           C168 214 168 190 184 168
+           C182 190 194 198 202 186
+           C206 206 222 216 218 240
+           C215 256 202 264 190 262
+           C200 252 196 240 182 236 Z"
+        fill="url(#flameGrad)"/>
+
+  <!-- Soccer ball, overlapping the shield, focal detail -->
+  <circle cx="256" cy="288" r="86" fill="url(#ballGrad)" stroke="#0a0f0d" stroke-width="6"/>
+
+  <!-- Center pentagon, evenly spaced (5x72deg) -->
+  <path d="M256 250 L284.5 270.7 L273.6 304.3 L238.4 304.3 L227.5 270.7 Z" fill="#0a0f0d"/>
+
+  <!-- Seams from each pentagon vertex out to the rim -->
+  <path d="M256 250 L256 202 M284.5 270.7 L330.2 255.9 M273.6 304.3 L301.9 343.1 M238.4 304.3 L210.1 343.1 M227.5 270.7 L181.8 255.9"
+        fill="none" stroke="#0a0f0d" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- Hexagon-corner forks at each rim seam, mirrored 5x -->
+  <path d="M256 202 L220.5 203.9 M256 202 L291.5 203.9
+           M330.2 255.9 L317.4 222.7 M330.2 255.9 L339.4 290.2
+           M301.9 343.1 L329.5 320.7 M301.9 343.1 L272 362.5
+           M210.1 343.1 L182.5 320.7 M210.1 343.1 L240 362.5
+           M181.8 255.9 L194.6 222.7 M181.8 255.9 L172.6 290.2"
+        fill="none" stroke="#0a0f0d" stroke-width="5" stroke-linecap="round"/>
 </svg>
