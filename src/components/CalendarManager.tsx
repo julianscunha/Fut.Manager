@@ -1409,6 +1409,12 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
                                         </span>
                                       );
                                     case 'fechada':
+                                      return (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+                                          Lista Fechada
+                                        </span>
+                                      );
                                     case 'sorteada':
                                       return (
                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase">

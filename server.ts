@@ -6285,7 +6285,7 @@ async function startServer() {
       const todayStr = new Date().toISOString().split('T')[0];
       // Filter matches that are scheduled or confirming starting from today
       const upcoming = db.matches
-        .filter(m => (m.status === 'agendada' || m.status === 'confirmando') && m.date >= todayStr)
+        .filter(m => ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status) && m.date >= todayStr)
         .sort((a, b) => a.date.localeCompare(b.date));
 
       if (upcoming.length > 0) {
@@ -6300,7 +6300,7 @@ async function startServer() {
 
       // Fallback: If no future matches exist, check any upcoming matches regardless of date
       const anyUpcoming = db.matches
-        .filter(m => m.status === 'agendada' || m.status === 'confirmando')
+        .filter(m => ['agendada', 'confirmando', 'aguardando_reservas', 'fechada', 'sorteada'].includes(m.status))
         .sort((a, b) => a.date.localeCompare(b.date));
 
       if (anyUpcoming.length > 0) {

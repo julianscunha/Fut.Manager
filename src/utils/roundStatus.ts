@@ -39,7 +39,7 @@ export function getRoundStatus(
       ? 'FINISHED'
       : (nextMatch?.status === 'sorteada'
         ? 'DRAWN'
-        : (isClosed || nextMatch?.status === 'fechada'
+        : (isClosed || nextMatch?.status === 'fechada' || nextMatch?.status === 'aguardando_reservas'
           ? 'CLOSED'
           : 'CONFIRMING'));
 
