@@ -1773,7 +1773,7 @@ export default function DashboardStatus({
                   <span className="text-[10px] font-mono font-black text-red-500 uppercase tracking-widest block">🏟️ DIA DE RACHA</span>
                   <h3 className="text-white font-display font-extrabold text-sm uppercase tracking-wider">{`HOJE TEM ${appName.toUpperCase()}!`}</h3>
                   <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-                    A rodada acontece hoje às <span className="text-white font-extrabold font-mono">{matchDateObj.time || '19:30'}</span> na <span className="text-emerald-400 font-extrabold">{matchDateObj.location || 'Quadra Principal'}</span>. Chegue no horário para garantir o início das partidas!
+                    A rodada acontece hoje às <span className="text-white font-extrabold font-mono">{matchDateObj.time || '19:30'}</span> na <span className="text-emerald-400 font-extrabold">{matchDateObj.location || 'Quadra Principal'}</span>. Chegue antes do horário para garantir o início das partidas!
                   </p>
                 </div>
               </div>
