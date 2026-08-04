@@ -1018,14 +1018,14 @@ export default function DashboardStatus({
 
     if (nextMatch.status === 'agendada') return 1;
 
-    if (nextMatch.status === 'confirmando' || nextMatch.status === 'aguardando_reservas') {
+    if (nextMatch.status === 'confirmando') {
       if (roundStatus.vacancies > 0 && roundStatus.vacancies <= 3) {
         return 3; // Lista Quase Completa
       }
       return 2; // Confirmações Abertas
     }
 
-    if (nextMatch.status === 'fechada' || roundStatus.isClosed) {
+    if (nextMatch.status === 'fechada' || nextMatch.status === 'aguardando_reservas' || roundStatus.isClosed) {
       if (nextMatch.status !== 'sorteada' && nextMatch.status !== 'encerrada') {
         return 4; // Lista Fechada
       }
