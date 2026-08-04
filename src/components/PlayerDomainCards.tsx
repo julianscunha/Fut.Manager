@@ -563,7 +563,7 @@ export const PlayerComparisonCard: React.FC<PlayerComparisonCardProps> = ({
   }
 
   // Calculate percentiles
-  const currentOvr = rachaStats?.overall || player.metrics?.overall || 3.5;
+  const currentOvr = rachaStats?.overall || 3.5;
   const currentWins = rachaStats?.vitorias || 0;
 
   const totalPlayers = allPlayersStats.length;

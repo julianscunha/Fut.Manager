@@ -860,7 +860,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                 <button
                   type="button"
                   onClick={handleGenerateDraw}
-                  disabled={loading || confirmedPlayers.length === 0 || selectedMatch?.status === 'cancelada' || (activeDraw && activeDraw.redrawCount !== undefined && activeDraw.redrawCount >= 2)}
+                  disabled={loading || confirmedPlayers.length === 0 || (activeDraw && activeDraw.redrawCount !== undefined && activeDraw.redrawCount >= 2)}
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-850 disabled:text-zinc-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-400" />

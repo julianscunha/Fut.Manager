@@ -337,6 +337,13 @@ export interface MuralPost {
   isDeleted?: boolean; // Soft delete flag
 }
 
+export interface MuralCategory {
+  id: string;
+  name: string;
+  color?: string;
+  order?: number;
+}
+
 export type NotificationCategory = 'partida' | 'evento' | 'sistema' | 'financeiro' | 'sorteio' | 'jogador';
 
 export interface Notification {

@@ -245,7 +245,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   };
 
   // Save changes to parameters in Finance module
-  const handleSaveRecurrentFinConfig = async (e: React.FormEvent) => {
+  const handleSaveRecurrentFinConfig = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fee = (e.currentTarget.elements.namedItem('monthlyFee') as HTMLInputElement).value;
     const rule = (e.currentTarget.elements.namedItem('chargeDateRule') as HTMLSelectElement).value;
