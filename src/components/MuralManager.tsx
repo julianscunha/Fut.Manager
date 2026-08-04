@@ -976,7 +976,7 @@ ${shareUrl}`;
           </div>
           <button
             onClick={() => setErrorMsg('')}
-            className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
             title="Fechar"
           >
             <X className="w-4 h-4" />
@@ -992,7 +992,7 @@ ${shareUrl}`;
           </div>
           <button
             onClick={() => setSuccessMsg('')}
-            className="p-1 text-[#4ade80] hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-[#4ade80] hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
             title="Fechar"
           >
             <X className="w-4 h-4" />
@@ -1832,7 +1832,7 @@ ${shareUrl}`;
 
                 <button
                   onClick={() => setSelectedPost(null)}
-                  className="p-1.5 rounded-lg border border-zinc-855 text-zinc-400 hover:bg-zinc-900 hover:text-white transition"
+                  className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg border border-zinc-855 text-zinc-400 hover:bg-zinc-900 hover:text-white transition"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2008,7 +2008,7 @@ ${shareUrl}`;
                 <button
                   type="button"
                   onClick={() => { setIsUploadOpen(false); resetUploadForm(); }}
-                  className="p-1.5 rounded-lg border border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white transition"
+                  className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg border border-zinc-850 text-zinc-400 hover:bg-zinc-900 hover:text-white transition"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -2110,7 +2110,7 @@ ${shareUrl}`;
                           <button
                             type="button"
                             onClick={() => setUploadItems(prev => prev.filter(x => x.id !== item.id))}
-                            className="p-1 hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 rounded transition min-h-[30px]"
+                            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 rounded transition"
                             title="Remover"
                           >
                             <X className="w-3.5 h-3.5" />
@@ -2303,7 +2303,13 @@ ${shareUrl}`;
               
               <div className="pb-3 border-b border-zinc-900 flex items-center justify-between text-white font-display font-extrabold text-sm uppercase tracking-wider mb-4">
                 <span>Editar Informações</span>
-                <X className="w-4 h-4 cursor-pointer text-zinc-400" onClick={() => { setIsEditOpen(false); setPostToEdit(null); }} />
+                <button
+                  type="button"
+                  onClick={() => { setIsEditOpen(false); setPostToEdit(null); }}
+                  className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center rounded-lg hover:bg-zinc-900 text-zinc-400 hover:text-white transition cursor-pointer -mr-2.5"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
               <form onSubmit={handleEditSubmit} className="space-y-4 font-mono text-xs text-zinc-300">

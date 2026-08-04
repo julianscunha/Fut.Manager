@@ -346,7 +346,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
           </div>
           <button
             onClick={() => setError('')}
-            className="p-1 text-rose-450 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-rose-450 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
             title="Fechar"
           >
             <X className="w-4 h-4" />
@@ -362,7 +362,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
           </div>
           <button
             onClick={() => setSuccessMsg('')}
-            className="p-1 text-emerald-400 hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-emerald-400 hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
             title="Fechar"
           >
             <X className="w-4 h-4" />
@@ -636,7 +636,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
                   </div>
                   <button 
                     onClick={() => setEditingUser(null)}
-                    className="p-1 text-zinc-500 hover:text-white rounded hover:bg-zinc-900 cursor-pointer"
+                    className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center text-zinc-500 hover:text-white rounded hover:bg-zinc-900 cursor-pointer"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -854,7 +854,7 @@ export default function UserApprovalList({ currentUser }: UserApprovalListProps)
               </div>
               <button 
                 onClick={() => setApprovingUser(null)}
-                className="p-1.5 text-zinc-600 hover:text-white rounded bg-zinc-950 hover:bg-zinc-900 transition cursor-pointer"
+                className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center text-zinc-600 hover:text-white rounded bg-zinc-950 hover:bg-zinc-900 transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>

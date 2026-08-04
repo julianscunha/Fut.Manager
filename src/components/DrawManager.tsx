@@ -1031,17 +1031,17 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                                   </div>
  
                                   {/* Right side move button or info */}
-                                  <div className="flex items-center gap-1.5 font-mono">
+                                  <div className="flex items-center gap-2.5 font-mono">
                                     <span className="font-bold text-[10.5px] text-zinc-400">
                                       {overall}
                                     </span>
                                     {isEditor && (
                                       isCap ? (
-                                        <div 
-                                          className="p-1 text-zinc-600 rounded bg-zinc-950/40 border border-zinc-900/30 cursor-not-allowed"
+                                        <div
+                                          className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center text-zinc-600 rounded-md bg-zinc-950/40 border border-zinc-900/30 cursor-not-allowed"
                                           title="Capitães estão travados no time. Remova a função de capitão para poder movê-lo."
                                         >
-                                          <Lock className="w-3 h-3 text-zinc-500" />
+                                          <Lock className="w-3.5 h-3.5 text-zinc-500" />
                                         </div>
                                       ) : (
                                         <button
@@ -1052,10 +1052,10 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                                               setSelectedPlayerToMove({ playerId: p.id, currentTeam: team.name });
                                             }
                                           }}
-                                          className="p-1 text-zinc-500 hover:text-white rounded-md bg-zinc-900 border border-zinc-850 transition cursor-pointer"
+                                          className="p-2.5 min-h-[40px] min-w-[40px] flex items-center justify-center text-zinc-500 hover:text-white rounded-md bg-zinc-900 border border-zinc-850 transition cursor-pointer"
                                           title="Mover Jogador"
                                         >
-                                          <ArrowLeftRight className="w-3 h-3 text-emerald-500" />
+                                          <ArrowLeftRight className="w-3.5 h-3.5 text-emerald-500" />
                                         </button>
                                       )
                                     )}

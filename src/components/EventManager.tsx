@@ -777,7 +777,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                               <button 
                                 type="button"
                                 onClick={() => changeRsvpCount(evt.id, true, false)}
-                                className="w-6 h-6 rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-xs"
+                                className="w-9 h-9 flex items-center justify-center rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-sm"
                               >
                                 -
                               </button>
@@ -785,7 +785,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                               <button 
                                 type="button"
                                 onClick={() => changeRsvpCount(evt.id, true, true)}
-                                className="w-6 h-6 rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-xs"
+                                className="w-9 h-9 flex items-center justify-center rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-sm"
                               >
                                 +
                               </button>
@@ -799,7 +799,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                               <button 
                                 type="button"
                                 onClick={() => changeRsvpCount(evt.id, false, false)}
-                                className="w-6 h-6 rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-xs"
+                                className="w-9 h-9 flex items-center justify-center rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-sm"
                               >
                                 -
                               </button>
@@ -807,7 +807,7 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                               <button 
                                 type="button"
                                 onClick={() => changeRsvpCount(evt.id, false, true)}
-                                className="w-6 h-6 rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-xs"
+                                className="w-9 h-9 flex items-center justify-center rounded bg-zinc-900 text-zinc-400 hover:text-white hover:bg-zinc-800 font-bold text-sm"
                               >
                                 +
                               </button>
@@ -1353,7 +1353,10 @@ export default function EventManager({ currentUser }: EventManagerProps) {
                   Nenhum jogador se inscreveu neste evento até o momento.
                 </div>
               ) : (
-                <div className="overflow-x-auto rounded-xl border border-zinc-900">
+                <div
+                  className="overflow-x-auto rounded-xl border border-zinc-900"
+                  style={{ WebkitMaskImage: 'linear-gradient(to right, black 95%, transparent 100%)', maskImage: 'linear-gradient(to right, black 95%, transparent 100%)' }}
+                >
                   <table className="w-full text-left font-mono text-xs border-collapse">
                     <thead>
                       <tr className="bg-zinc-950 text-zinc-500 border-b border-zinc-900">

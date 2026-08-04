@@ -2798,7 +2798,7 @@ export default function DashboardStatus({
                         key={tab}
                         type="button"
                         onClick={() => setRosterFilter(tab)}
-                        className={`py-2 rounded-lg font-mono font-black text-[9.5px] uppercase tracking-wider cursor-pointer transition-all duration-150 active:scale-[0.95] ${
+                        className={`py-2 min-h-[44px] rounded-lg font-mono font-black text-[9.5px] uppercase tracking-wider cursor-pointer transition-all duration-150 active:scale-[0.95] ${
                           rosterFilter === tab
                             ? 'bg-zinc-800 text-white shadow-md border border-zinc-700/60'
                             : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/30'

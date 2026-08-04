@@ -1255,7 +1255,10 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                 </div>
 
                 {/* FILTROS DE CATEGORIAS */}
-                <div className="flex gap-1 overflow-x-auto pb-1.5 select-none no-scrollbar flex-shrink-0">
+                <div
+                  className="flex gap-1 overflow-x-auto pb-1.5 select-none no-scrollbar flex-shrink-0"
+                  style={{ WebkitMaskImage: 'linear-gradient(to right, black 90%, transparent 100%)', maskImage: 'linear-gradient(to right, black 90%, transparent 100%)' }}
+                >
                   {categoriesList.map((cat) => (
                     <button
                       key={cat.id}
@@ -1279,7 +1282,10 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                 </div>
 
                 {/* MEDAL GALLERY COMPONENT */}
-                <div className="flex overflow-x-auto gap-2 py-1 select-none no-scrollbar w-full flex-nowrap md:grid md:grid-cols-4 md:gap-2 md:overflow-visible flex-shrink-0 min-h-[50px]">
+                <div
+                  className="flex overflow-x-auto gap-2 py-1 select-none no-scrollbar w-full flex-nowrap md:grid md:grid-cols-4 md:gap-2 md:overflow-visible flex-shrink-0 min-h-[50px]"
+                  style={{ WebkitMaskImage: 'linear-gradient(to right, black 92%, transparent 100%)', maskImage: 'linear-gradient(to right, black 92%, transparent 100%)' }}
+                >
                   {filteredBadges.map((badge) => {
                     const isSel = selectedBadge?.id === badge.id;
                     const isUnlocked = badge.status === 'Conquistado';
@@ -1480,14 +1486,14 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
 
             {/* Action 2: Share / Edit Admin */}
             {canEdit ? (
-              <div className="flex-1 flex gap-1 h-9">
+              <div className="flex-1 flex gap-2 h-11">
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     onEdit(player);
                   }}
-                  className="flex-1 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-9 shadow"
+                  className="flex-1 py-1.5 bg-zinc-900 hover:bg-zinc-850 text-zinc-300 hover:text-white rounded-xl border border-zinc-800 hover:border-zinc-750 transition text-[10px] font-bold font-mono flex items-center justify-center gap-1 cursor-pointer h-11 shadow"
                 >
                   <Edit2 className="w-2.5 h-2.5 text-zinc-450" />
                   <span>Editar</span>
@@ -1499,7 +1505,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
                       e.stopPropagation();
                       onInactivate(player.id);
                     }}
-                    className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-9 w-9"
+                    className="p-1.5 bg-rose-955/15 hover:bg-rose-955/35 border border-rose-500/15 hover:border-rose-500/35 text-rose-455 rounded-xl transition-all text-[10px] flex items-center justify-center cursor-pointer h-11 w-11"
                     title="Inativar Jogador"
                   >
                     <Trash2 className="w-3.5 h-3.5" />

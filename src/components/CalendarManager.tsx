@@ -983,7 +983,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
           </div>
           <button
             onClick={() => setSuccessMsg('')}
-            className="p-1 text-emerald-400 hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-emerald-400 hover:text-white hover:bg-emerald-500/10 rounded transition cursor-pointer"
             title="Fechar"
           >
             <X className="w-4 h-4" />
@@ -999,7 +999,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
           </div>
           <button
             onClick={() => setErrorMsg('')}
-            className="p-1 text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
+            className="p-2 min-h-[36px] min-w-[36px] flex items-center justify-center text-rose-400 hover:text-white hover:bg-rose-500/10 rounded transition cursor-pointer"
             title="Fechar"
           >
             <X className="w-4 h-4" />

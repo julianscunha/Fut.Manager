@@ -784,7 +784,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="p-1.5 border border-zinc-800 hover:bg-zinc-800/80 text-zinc-400 hover:text-white rounded-lg transition min-h-[38px] min-w-[38px] flex items-center justify-center cursor-pointer"
+                  className="p-1.5 border border-zinc-800 hover:bg-zinc-800/80 text-zinc-400 hover:text-white rounded-lg transition min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                   title="Fechar Menu"
                 >
                   <X className="w-4.5 h-4.5" />

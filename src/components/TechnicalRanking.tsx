@@ -882,22 +882,22 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                 </div>
 
                 {/* Search and Season selectors */}
-                <div className="flex items-center gap-3 w-full md:w-auto md:max-w-md">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full md:w-auto md:max-w-md">
                   <div className="relative flex-1">
                     <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input 
+                    <input
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Buscar atleta pelo nome..."
-                      className="bg-zinc-950 border border-zinc-850 rounded-xl pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:border-emerald-500/50 w-full transition"
+                      className="bg-zinc-950 border border-zinc-850 rounded-xl pl-9 pr-3 py-2 min-h-[40px] text-xs text-white focus:outline-none focus:border-emerald-500/50 w-full transition"
                     />
                   </div>
-                  
+
                   <select
                     value={selectedSeason}
                     onChange={(e) => setSelectedSeason(e.target.value)}
-                    className="bg-zinc-950 border border-zinc-850 rounded-xl px-2.5 py-1.5 text-zinc-300 focus:outline-none cursor-pointer text-xs shrink-0 max-w-[140px]"
+                    className="bg-zinc-950 border border-zinc-850 rounded-xl px-2.5 py-2 min-h-[40px] text-zinc-300 focus:outline-none cursor-pointer text-xs shrink-0 sm:max-w-[140px]"
                   >
                     <option value="active">Temporada Ativa</option>
                     <option value="all">Histórico Geral</option>
