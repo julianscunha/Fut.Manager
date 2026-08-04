@@ -1764,17 +1764,63 @@ export default function DashboardStatus({
 
           {/* STATE 6: Dia do Jogo (Prontidão Total) */}
           {activeStateNum === 6 && (
-            <div className="space-y-4 text-center py-4 animate-fadeIn">
-              <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-400 animate-pulse">
-                <Calendar className="w-6 h-6 text-red-400" />
+            <div className="space-y-4 py-4 animate-fadeIn">
+              <div className="text-center space-y-4">
+                <div className="w-12 h-12 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto text-red-400 animate-pulse">
+                  <Calendar className="w-6 h-6 text-red-400" />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono font-black text-red-500 uppercase tracking-widest block">🏟️ DIA DE RACHA</span>
+                  <h3 className="text-white font-display font-extrabold text-sm uppercase tracking-wider">{`HOJE TEM ${appName.toUpperCase()}!`}</h3>
+                  <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
+                    A rodada acontece hoje às <span className="text-white font-extrabold font-mono">{matchDateObj.time || '19:30'}</span> na <span className="text-emerald-400 font-extrabold">{matchDateObj.location || 'Quadra Principal'}</span>. Chegue no horário para garantir o início das partidas!
+                  </p>
+                </div>
               </div>
-              <div className="space-y-1">
-                <span className="text-[10px] font-mono font-black text-red-500 uppercase tracking-widest block">🏟️ DIA DE RACHA</span>
-                <h3 className="text-white font-display font-extrabold text-sm uppercase tracking-wider">{`HOJE TEM ${appName.toUpperCase()}!`}</h3>
-                <p className="text-xs text-zinc-400 max-w-md mx-auto leading-relaxed">
-                  A rodada acontece hoje às <span className="text-white font-extrabold font-mono">{matchDateObj.time || '19:30'}</span> na <span className="text-emerald-400 font-extrabold">{matchDateObj.location || 'Quadra Principal'}</span>. Chegue no horário para garantir o início das partidas!
-                </p>
-              </div>
+
+              {/* Ainda dá tempo de confirmar/declinar presença antes da lista fechar */}
+              {nextMatch && !['fechada', 'sorteada', 'encerrada', 'cancelada'].includes(nextMatch.status) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 border-t border-zinc-900/60 mt-2">
+                  {currentUserCategory === 'reserva' && !areReservesReleased ? (
+                    <div className="col-span-full flex flex-col items-center justify-center gap-2 py-4 bg-zinc-950/40 border border-zinc-900 rounded-xl">
+                      <UserPlus className="w-5 h-5 text-zinc-600" />
+                      <p className="text-[11px] text-zinc-500 font-mono font-black uppercase tracking-wider text-center">
+                        Aguardando convocação do administrador
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        disabled={actionLoading}
+                        onClick={() => handleRsvpHolder('confirmado')}
+                        className={`flex items-center justify-center gap-2.5 h-13 rounded-xl border font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer ${
+                          isConfirmed
+                            ? 'bg-gradient-to-r from-emerald-600 to-emerald-500 border-emerald-500/40 text-white shadow-[0_4px_20px_-2px_rgba(16,185,129,0.3)]'
+                            : 'bg-zinc-950 hover:bg-emerald-950/30 border-zinc-850 hover:border-emerald-500/40 text-emerald-400 hover:text-emerald-350'
+                        }`}
+                      >
+                        <Check className="w-5 h-5" />
+                        {actionLoading ? 'Gravando...' : isConfirmed ? 'Confirmado! (Alterar)' : 'Confirmar Presença (Vou Jogar)'}
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={actionLoading}
+                        onClick={() => handleRsvpHolder('cancelado')}
+                        className={`flex items-center justify-center gap-2.5 h-13 rounded-xl border font-mono font-black text-xs uppercase tracking-wider transition-all duration-300 active:scale-[0.98] cursor-pointer ${
+                          isCancelled
+                            ? 'bg-gradient-to-r from-rose-950 to-rose-900/85 border-rose-500/40 text-rose-400 shadow-[0_4px_20px_-2px_rgba(244,63,94,0.15)]'
+                            : 'bg-zinc-950 hover:bg-rose-950/10 border-zinc-850 hover:border-rose-500/30 text-zinc-400 hover:text-rose-400'
+                        }`}
+                      >
+                        <X className="w-5 h-5" />
+                        {actionLoading ? 'Gravando...' : isCancelled ? 'Ausente! (Alterar)' : 'Declarar Ausência (Não Vou)'}
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
