@@ -5620,9 +5620,17 @@ async function startServer() {
       const pId = alert.suggestedReservePlayerId || alert.playerId;
       const player = db.players.find((p: any) => p.id === pId);
 
-      // Mark alert solved
-      db.reserveAlerts[alertIndex].status = status;
-      db.reserveAlerts[alertIndex].cleared = true;
+      // Mark alert solved - also clears any duplicate uncleared alerts for the same
+      // player+match (can happen from a race before summonReservesForMatch was made
+      // idempotent), so a lingering duplicate never keeps the reserve stuck showing
+      // "Aguardando Resposta" after they've already answered.
+      db.reserveAlerts = db.reserveAlerts.map((a: any) =>
+        a.matchId === matchId &&
+        (a.suggestedReservePlayerId === pId || a.playerId === pId) &&
+        a.status === 'aguardando_resposta' && !a.cleared
+          ? { ...a, status, cleared: true }
+          : a
+      );
 
       // Update physical presence inside db.presences
       if (status === 'confirmado') {

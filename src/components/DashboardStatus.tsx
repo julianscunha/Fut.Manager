@@ -974,31 +974,6 @@ export default function DashboardStatus({
 
     window.open(`https://wa.me/?text=${escapedMsg}`, '_blank');
   };
-  // Aggregate stats from matching list
-  const POSITION_ORDER = ['goleiro', 'zagueiro', 'volante', 'meio_campo', 'atacante'];
-
-  const sortPlayersByPositionAndName = (p1: any, p2: any) => {
-    const pl1 = players.find((pl: any) => pl.id === p1.playerId);
-    const pl2 = players.find((pl: any) => pl.id === p2.playerId);
-
-    const pos1 = pl1 ? pl1.primaryPosition : (p1.primaryPosition || '');
-    const pos2 = pl2 ? pl2.primaryPosition : (p2.primaryPosition || '');
-
-    const idx1 = POSITION_ORDER.indexOf(pos1);
-    const idx2 = POSITION_ORDER.indexOf(pos2);
-
-    const val1 = idx1 !== -1 ? idx1 : 999;
-    const val2 = idx2 !== -1 ? idx2 : 999;
-
-    if (val1 !== val2) {
-      return val1 - val2;
-    }
-
-    const name1 = (p1.name || '').toLowerCase().trim();
-    const name2 = (p2.name || '').toLowerCase().trim();
-    return name1.localeCompare(name2, 'pt-BR');
-  };
-
   // Call the central helper function for the round status source of truth
   const roundStatus = getRoundStatus(nextMatch, presences, reserveQueue, players);
 
@@ -1051,6 +1026,30 @@ export default function DashboardStatus({
   const simWinsRed = latestResult?.winsRed ?? 3;
   const simWinsGreen = latestResult?.winsGreen ?? 4;
   const simChampions = latestResult?.champions ?? ['Azul'];
+
+  const POSITION_ORDER = ['goleiro', 'zagueiro', 'volante', 'meio_campo', 'atacante'];
+
+  const sortPlayersByPositionAndName = (p1: any, p2: any) => {
+    const pl1 = players.find((pl: any) => pl.id === p1.playerId);
+    const pl2 = players.find((pl: any) => pl.id === p2.playerId);
+
+    const pos1 = pl1 ? pl1.primaryPosition : (p1.primaryPosition || '');
+    const pos2 = pl2 ? pl2.primaryPosition : (p2.primaryPosition || '');
+
+    const idx1 = POSITION_ORDER.indexOf(pos1);
+    const idx2 = POSITION_ORDER.indexOf(pos2);
+
+    const val1 = idx1 !== -1 ? idx1 : 999;
+    const val2 = idx2 !== -1 ? idx2 : 999;
+
+    if (val1 !== val2) {
+      return val1 - val2;
+    }
+
+    const name1 = (p1.name || '').toLowerCase().trim();
+    const name2 = (p2.name || '').toLowerCase().trim();
+    return name1.localeCompare(name2, 'pt-BR');
+  };
 
   const confirmedPlayers = [...presences.filter(p => p.presenceStatus === 'confirmado')].sort(sortPlayersByPositionAndName);
   const cancelPlayers = [...presences.filter(p => p.presenceStatus === 'cancelado' && p.category !== 'reserva')].sort(sortPlayersByPositionAndName);
@@ -2803,11 +2802,8 @@ export default function DashboardStatus({
                                     {playerObj ? POSITION_LABELS[playerObj.primaryPosition as keyof typeof POSITION_LABELS] : 'Jogador'}
                                   </span>
                                   <span>•</span>
-                                  <span className="bg-zinc-900/60 px-1.5 py-0.5 rounded border border-zinc-850">
-                                    OVR {(() => {
-                                      const sum = summaries.find((s: any) => s.playerId === playerObj?.id);
-                                      return sum ? sum.overall.toFixed(1) : '3.5';
-                                    })()}
+                                  <span className={`px-1.5 py-0.5 rounded border ${p.category === 'reserva' ? 'bg-indigo-500/10 border-indigo-500/25 text-indigo-400' : 'bg-zinc-900/60 border-zinc-850'}`}>
+                                    {p.category === 'reserva' ? 'Reserva' : 'Mensalista'}
                                   </span>
                                 </div>
                               </div>
