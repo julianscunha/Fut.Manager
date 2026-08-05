@@ -1159,143 +1159,148 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
 
       {/* TAB 4: RECURRENCE FINANCE CONFIGS (CONFIGURAR MENSALIDADE) */}
       {!loading && activeTab === 'config' && isAdmin && (
-        <div className="max-w-xl bg-[#09090b] p-5 rounded-xl border border-zinc-900 font-mono text-xs space-y-5 animate-fadeIn">
+        <div className="bg-[#09090b] p-5 rounded-xl border border-zinc-900 font-mono text-xs space-y-5 animate-fadeIn">
           <div className="flex items-center gap-2 pb-3 border-b border-zinc-900/60">
             <Sliders className="w-4 h-4 text-emerald-400" />
             <h3 className="font-display font-medium text-white text-sm">Parâmetros Financeiros do Grupo</h3>
           </div>
 
-          {/* Status Atual do Grupo */}
-          <div className="grid grid-cols-3 gap-2.5">
-            <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
-              <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Mensalidade Atual</span>
-              <span className="text-sm font-extrabold text-emerald-400 font-sans">
-                R$ {parseFloat(financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100).toFixed(2)}
-              </span>
-            </div>
-            <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
-              <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Cobrança Gerada</span>
-              <span className="text-[10px] font-bold text-zinc-300">
-                {(financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule) === 'ultimo_jogo' 
-                  ? 'Último Jogo' 
-                  : 'Primeiro Jogo'}
-              </span>
-            </div>
-            <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
-              <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Limite Mensalistas</span>
-              <span className="text-sm font-extrabold text-white font-sans">
-                {monthlyFeeLimitVal} atletas
-              </span>
-            </div>
-          </div>
-
-          {/* Indicador de Capacidade de Mensalistas */}
-          <div className="border border-zinc-900 rounded-xl p-3 flex items-center justify-between gap-3 bg-[#0d0d0f] transition">
-            <div className="flex items-center gap-2.5">
-              <Users className="w-4 h-4 text-zinc-400" />
-              <div>
-                <span className="text-[10px] text-zinc-400 uppercase font-bold block">Mensalistas pagantes ativos</span>
-              </div>
-            </div>
-            <div className="text-right">
-              <span className="text-base font-extrabold font-sans text-white">
-                {activeMensalistasCount} <span className="text-zinc-600 text-xs font-normal font-sans">/ {monthlyFeeLimitVal}</span>
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40">
-            <h4 className="font-display font-semibold text-white text-xs uppercase mb-3 text-emerald-400">Alterar Mensalidade / Regras</h4>
-            <form onSubmit={handleSaveRecurrentFinConfig} className="space-y-4">
-              
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Novo Valor (R$)</label>
-                  <input
-                    type="number"
-                    name="monthlyFee"
-                    required
-                    min="1"
-                    step="0.01"
-                    defaultValue={financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100}
-                    placeholder="Exemplo: 100"
-                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
-                  />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+            {/* COLUNA ESQUERDA: status atual + formulário de ajuste */}
+            <div className="space-y-5">
+              {/* Status Atual do Grupo */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Mensalidade Atual</span>
+                  <span className="text-sm font-extrabold text-emerald-400 font-sans">
+                    R$ {parseFloat(financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100).toFixed(2)}
+                  </span>
                 </div>
-
-                <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Data de Vigência</label>
-                  <input
-                    type="date"
-                    name="effectiveDate"
-                    required
-                    value={financeEffectiveDate}
-                    onChange={(e) => setFinanceEffectiveDate(e.target.value)}
-                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
-                  />
+                <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Cobrança Gerada</span>
+                  <span className="text-[10px] font-bold text-zinc-300">
+                    {(financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule) === 'ultimo_jogo'
+                      ? 'Último Jogo'
+                      : 'Primeiro Jogo'}
+                  </span>
+                </div>
+                <div className="bg-[#141416] border border-zinc-900 rounded-lg p-3">
+                  <span className="text-[9px] text-zinc-500 uppercase font-bold block mb-1">Limite Mensalistas</span>
+                  <span className="text-sm font-extrabold text-white font-sans">
+                    {monthlyFeeLimitVal} atletas
+                  </span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Qtd Máxima de Mensalistas</label>
-                  <input
-                    type="number"
-                    name="maxMensalistas"
-                    required
-                    min="1"
-                    defaultValue={financeConfig?.maxMensalistas ?? recurrentConfig?.maxMensalistas ?? 12}
-                    placeholder="Exemplo: 12"
-                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
-                  />
+              {/* Indicador de Capacidade de Mensalistas */}
+              <div className="border border-zinc-900 rounded-xl p-3 flex items-center justify-between gap-3 bg-[#0d0d0f] transition">
+                <div className="flex items-center gap-2.5">
+                  <Users className="w-4 h-4 text-zinc-400" />
+                  <div>
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold block">Mensalistas pagantes ativos</span>
+                  </div>
                 </div>
+                <div className="text-right">
+                  <span className="text-base font-extrabold font-sans text-white">
+                    {activeMensalistasCount} <span className="text-zinc-600 text-xs font-normal font-sans">/ {monthlyFeeLimitVal}</span>
+                  </span>
+                </div>
+              </div>
 
-                <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Forma de Geração (Gatilho)</label>
-                  <select
-                    name="chargeDateRule"
-                    defaultValue={financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule ?? 'primeiro_jogo'}
-                    className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none cursor-pointer font-sans"
+              <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40">
+                <h4 className="font-display font-semibold text-white text-xs uppercase mb-3 text-emerald-400">Alterar Mensalidade / Regras</h4>
+                <form onSubmit={handleSaveRecurrentFinConfig} className="space-y-4">
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Novo Valor (R$)</label>
+                      <input
+                        type="number"
+                        name="monthlyFee"
+                        required
+                        min="1"
+                        step="0.01"
+                        defaultValue={financeConfig?.monthlyFee ?? recurrentConfig.monthlyFee ?? 100}
+                        placeholder="Exemplo: 100"
+                        className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Data de Vigência</label>
+                      <input
+                        type="date"
+                        name="effectiveDate"
+                        required
+                        value={financeEffectiveDate}
+                        onChange={(e) => setFinanceEffectiveDate(e.target.value)}
+                        className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Qtd Máxima de Mensalistas</label>
+                      <input
+                        type="number"
+                        name="maxMensalistas"
+                        required
+                        min="1"
+                        defaultValue={financeConfig?.maxMensalistas ?? recurrentConfig?.maxMensalistas ?? 12}
+                        placeholder="Exemplo: 12"
+                        className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Forma de Geração (Gatilho)</label>
+                      <select
+                        name="chargeDateRule"
+                        defaultValue={financeConfig?.chargeDateRule ?? recurrentConfig.chargeDateRule ?? 'primeiro_jogo'}
+                        className="w-full bg-[#1c1c1e] text-zinc-300 border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none cursor-pointer font-sans"
+                      >
+                        <option value="primeiro_jogo">No Primeiro Jogo do Mês</option>
+                        <option value="ultimo_jogo">No Último Jogo do Mês</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Aluguel Mensal da Quadra (R$)</label>
+                    <input
+                      type="number"
+                      name="courtRentAmount"
+                      min="0"
+                      step="0.01"
+                      defaultValue={financeConfig?.courtRentAmount ?? ''}
+                      placeholder="Deixe em branco para não descontar"
+                      className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                    />
+                    <span className="text-[9px] text-zinc-650 block leading-relaxed">
+                      Descontado automaticamente do caixa do racha na mesma competência em que a mensalidade dos jogadores é gerada.
+                    </span>
+                  </div>
+
+                  <div className="space-y-1">
+                    <span className="text-[9px] text-zinc-650 mt-1 block leading-normal leading-relaxed">
+                      As parcelas dos mensalistas serão geradas de forma prospectiva quando os rachas ocorrerem. Alterações de valor não afetam cobranças já geradas em meses anteriores.
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={actionLoading}
+                    className="w-full bg-[#10b981] hover:bg-emerald-500 disabled:opacity-40 text-zinc-950 font-extrabold rounded-lg py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer font-mono"
                   >
-                    <option value="primeiro_jogo">No Primeiro Jogo do Mês</option>
-                    <option value="ultimo_jogo">No Último Jogo do Mês</option>
-                  </select>
-                </div>
+                    {actionLoading ? 'Processando...' : 'Aplicar Reajuste / Salvar Parâmetros'}
+                  </button>
+                </form>
               </div>
+            </div>
 
-              <div className="space-y-1">
-                <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Aluguel Mensal da Quadra (R$)</label>
-                <input
-                  type="number"
-                  name="courtRentAmount"
-                  min="0"
-                  step="0.01"
-                  defaultValue={financeConfig?.courtRentAmount ?? ''}
-                  placeholder="Deixe em branco para não descontar"
-                  className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
-                />
-                <span className="text-[9px] text-zinc-650 block leading-relaxed">
-                  Descontado automaticamente do caixa do racha na mesma competência em que a mensalidade dos jogadores é gerada.
-                </span>
-              </div>
-
-              <div className="space-y-1">
-                <span className="text-[9px] text-zinc-650 mt-1 block leading-normal leading-relaxed">
-                  As parcelas dos mensalistas serão geradas de forma prospectiva quando os rachas ocorrerem. Alterações de valor não afetam cobranças já geradas em meses anteriores.
-                </span>
-              </div>
-
-              <button
-                type="submit"
-                disabled={actionLoading}
-                className="w-full bg-[#10b981] hover:bg-emerald-500 disabled:opacity-40 text-zinc-950 font-extrabold rounded-lg py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer font-mono"
-              >
-                {actionLoading ? 'Processando...' : 'Aplicar Reajuste / Salvar Parâmetros'}
-              </button>
-            </form>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* COLUNA DIREITA: histórico + caixa do racha + despesas */}
+            <div className="space-y-5">
             {/* Histórico Permanente de Mensalidades */}
             <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
               <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
@@ -1348,7 +1353,6 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                 </span>
               </div>
             </div>
-          </div>
 
           {/* Lançar despesa manual (bola, colete, churrasco etc) */}
           <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40">
@@ -1428,6 +1432,8 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
                   })}
               </div>
             )}
+          </div>
+            </div>
           </div>
         </div>
       )}
