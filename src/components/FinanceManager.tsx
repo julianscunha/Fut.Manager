@@ -1295,56 +1295,58 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
             </form>
           </div>
 
-          {/* Histórico Permanente de Mensalidades */}
-          <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
-            <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
-              <History className="w-3.5 h-3.5 text-zinc-400" />
-              <h4 className="font-display font-medium text-white text-xs uppercase">Histórico de Reajustes</h4>
-            </div>
-            
-            {financeConfig?.history && financeConfig.history.length > 0 ? (
-              <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {[...financeConfig.history]
-                  .sort((a: any, b: any) => b.date.localeCompare(a.date))
-                  .map((h: any, i: number) => {
-                    const parts = h.date.split('-');
-                    const formattedDate = parts.length === 3 
-                      ? `${parts[2]}/${parts[1]}/${parts[0]}`
-                      : h.date;
-                    return (
-                      <div key={i} className="flex items-center justify-between p-2.5 bg-zinc-950 rounded border border-zinc-900 font-mono text-[11px]">
-                        <span className="text-zinc-400">Vigência: <strong className="text-zinc-300">{formattedDate}</strong></span>
-                        <span className="text-emerald-400 font-bold">R$ {parseFloat(h.amount).toFixed(2)}</span>
-                      </div>
-                    );
-                  })}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Histórico Permanente de Mensalidades */}
+            <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
+              <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
+                <History className="w-3.5 h-3.5 text-zinc-400" />
+                <h4 className="font-display font-medium text-white text-xs uppercase">Histórico de Reajustes</h4>
               </div>
-            ) : (
-              <p className="text-[10px] text-zinc-600 italic">Nenhum reajuste ou alteração registrada no histórico.</p>
-            )}
-          </div>
 
-          {/* Saldo do Caixa do Racha */}
-          <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
-            <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
-              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-              <h4 className="font-display font-medium text-white text-xs uppercase">Caixa do Racha</h4>
+              {financeConfig?.history && financeConfig.history.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                  {[...financeConfig.history]
+                    .sort((a: any, b: any) => b.date.localeCompare(a.date))
+                    .map((h: any, i: number) => {
+                      const parts = h.date.split('-');
+                      const formattedDate = parts.length === 3
+                        ? `${parts[2]}/${parts[1]}/${parts[0]}`
+                        : h.date;
+                      return (
+                        <div key={i} className="flex items-center justify-between p-2.5 bg-zinc-950 rounded border border-zinc-900 font-mono text-[11px]">
+                          <span className="text-zinc-400">Vigência: <strong className="text-zinc-300">{formattedDate}</strong></span>
+                          <span className="text-emerald-400 font-bold">R$ {parseFloat(h.amount).toFixed(2)}</span>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : (
+                <p className="text-[10px] text-zinc-600 italic">Nenhum reajuste ou alteração registrada no histórico.</p>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-2 text-center mb-3">
-              <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-900">
-                <span className="text-[9px] text-emerald-400 uppercase block font-bold">Entradas (mensalidades + churrasco)</span>
-                <span className="text-white font-mono font-black text-sm block mt-1">R$ {(health.totalReceived + health.totalEventIncome).toFixed(2)}</span>
+
+            {/* Saldo do Caixa do Racha */}
+            <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
+              <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
+                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+                <h4 className="font-display font-medium text-white text-xs uppercase">Caixa do Racha</h4>
               </div>
-              <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-900">
-                <span className="text-[9px] text-rose-400 uppercase block font-bold">Despesas (aluguel + manuais)</span>
-                <span className="text-white font-mono font-black text-sm block mt-1">R$ {health.totalExpenses.toFixed(2)}</span>
+              <div className="grid grid-cols-2 gap-2 text-center mb-3">
+                <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-900">
+                  <span className="text-[9px] text-emerald-400 uppercase block font-bold">Entradas (mensalidades + churrasco)</span>
+                  <span className="text-white font-mono font-black text-sm block mt-1">R$ {(health.totalReceived + health.totalEventIncome).toFixed(2)}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-900">
+                  <span className="text-[9px] text-rose-400 uppercase block font-bold">Despesas (aluguel + manuais)</span>
+                  <span className="text-white font-mono font-black text-sm block mt-1">R$ {health.totalExpenses.toFixed(2)}</span>
+                </div>
               </div>
-            </div>
-            <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between">
-              <span className="text-[10px] text-zinc-400 uppercase font-bold">Saldo Líquido</span>
-              <span className={`font-mono font-black text-base ${health.treasuryBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                R$ {health.treasuryBalance.toFixed(2)}
-              </span>
+              <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between">
+                <span className="text-[10px] text-zinc-400 uppercase font-bold">Saldo Líquido</span>
+                <span className={`font-mono font-black text-base ${health.treasuryBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  R$ {health.treasuryBalance.toFixed(2)}
+                </span>
+              </div>
             </div>
           </div>
 
