@@ -59,8 +59,16 @@ export function runSmartDraw({
 
   // If we have goalkeepers and not sharing:
   if (!isSharedGoalkeepers && goalkeepers.length > 0) {
-    // Sort goalkeepers by overall to balance them across teams
-    const sortedGks = [...goalkeepers].sort((a, b) => (playerOveralls[b.id] || 3.5) - (playerOveralls[a.id] || 3.5));
+    // Sort goalkeepers so the 3 real goal slots go to keepers with no usable
+    // secondary position first; keepers who also play another position are
+    // held back to fill the overflow (outfield) slot instead of duplicating
+    // the goalkeeper role on a team. Ties broken by overall.
+    const sortedGks = [...goalkeepers].sort((a, b) => {
+      const aHasSecondary = (a.secondaryPositions || []).length > 0;
+      const bHasSecondary = (b.secondaryPositions || []).length > 0;
+      if (aHasSecondary !== bHasSecondary) return aHasSecondary ? 1 : -1;
+      return (playerOveralls[b.id] || 3.5) - (playerOveralls[a.id] || 3.5);
+    });
 
     // Distribute goalkeepers: Azul, Vermelho, Verde (only 3 teams, only 3 goalkeeper slots)
     if (sortedGks[0]) assignedGks.Azul = sortedGks[0].id;
