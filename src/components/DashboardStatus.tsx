@@ -218,6 +218,23 @@ export default function DashboardStatus({
     }
   }, [nextMatch?.id, nextMatch?.evaluationsReleased]);
 
+  // Companheiros já avaliados nesta rodada (some do "Avalie seus companheiros" assim que avaliado).
+  // Evaluations não têm matchId (upsert por evaluatorUserId+targetPlayerId), então isso é
+  // controlado localmente por rodada via localStorage, não pelo registro em si.
+  const [evaluatedTeammateIds, setEvaluatedTeammateIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    if (nextMatch?.id) {
+      try {
+        const stored = JSON.parse(localStorage.getItem('evaluated_teammates_' + nextMatch.id) || '[]');
+        setEvaluatedTeammateIds(new Set(stored));
+      } catch {
+        setEvaluatedTeammateIds(new Set());
+      }
+    } else {
+      setEvaluatedTeammateIds(new Set());
+    }
+  }, [nextMatch?.id]);
+
   useEffect(() => {
     if (highlightPosts.length <= 1) return;
     const timer = setInterval(() => {
@@ -1911,14 +1928,17 @@ export default function DashboardStatus({
                   const curPlayer = players.find(p => p.id === currentUser?.playerId || (p.email && currentUser?.email && p.email.toLowerCase().trim() === currentUser?.email.toLowerCase().trim()));
                   const userTeam = matchDraw?.teams?.find((t: any) => t.playerIds.includes(curPlayer?.id));
                   
-                  const teammates = userTeam 
+                  const teammates = (userTeam
                     ? players.filter(p => userTeam.playerIds.includes(p.id) && p.id !== curPlayer?.id)
-                    : players.filter(p => (matchDraw?.teams?.flatMap((t: any) => t.playerIds) || []).includes(p.id) && p.id !== curPlayer?.id);
+                    : players.filter(p => (matchDraw?.teams?.flatMap((t: any) => t.playerIds) || []).includes(p.id) && p.id !== curPlayer?.id)
+                  ).filter(p => !evaluatedTeammateIds.has(p.id));
 
                   if (teammates.length === 0) {
                     return (
                       <div className="text-center py-6 text-zinc-500 text-xs italic font-mono">
-                        Nenhum companheiro de equipe encontrado para avaliação.
+                        {evaluatedTeammateIds.size > 0
+                          ? 'Você já avaliou todos os seus companheiros de equipe nesta rodada. 🎉'
+                          : 'Nenhum companheiro de equipe encontrado para avaliação.'}
                       </div>
                     );
                   }
@@ -1978,6 +1998,12 @@ export default function DashboardStatus({
               onClose={() => setEvaluatingPlayer(null)}
               onEvaluationSaved={(msg) => {
                 setSuccessMsg(msg || 'Avaliação técnica atualizada com sucesso!');
+                if (nextMatch?.id && evaluatingPlayer) {
+                  const updated = new Set(evaluatedTeammateIds);
+                  updated.add(evaluatingPlayer.id);
+                  setEvaluatedTeammateIds(updated);
+                  localStorage.setItem('evaluated_teammates_' + nextMatch.id, JSON.stringify([...updated]));
+                }
                 setEvaluatingPlayer(null);
                 loadDashboardData();
               }}

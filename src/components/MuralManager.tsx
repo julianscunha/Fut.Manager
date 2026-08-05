@@ -2926,10 +2926,14 @@ ${shareUrl}`;
             ) : (
               <div className="space-y-6 max-w-3xl mx-auto">
                 {(() => {
+                  // Rodadas concluídas/canceladas vão para o final, para as próximas
+                  // rodadas relevantes ficarem sempre visíveis primeiro na paginação.
+                  const isFinishedRound = (m: any) => m.status === 'encerrada' || m.status === 'cancelada';
                   const sortedMatches = [...fullMatches].sort((a, b) => {
-                    const createdDiff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
-                    if (createdDiff !== 0) return createdDiff;
-                    return a.date.localeCompare(b.date);
+                    const aFinished = isFinishedRound(a);
+                    const bFinished = isFinishedRound(b);
+                    if (aFinished !== bFinished) return aFinished ? 1 : -1;
+                    return b.date.localeCompare(a.date);
                   });
 
                   const itemsPerPage = 5;
