@@ -857,12 +857,12 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
     <div
       id={`player-card-${player.id}`}
       onClick={() => onSelect?.(player)}
-      className={`relative w-full h-[495px] select-none transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
+      className={`relative w-full min-h-[495px] select-none transition-all duration-300 cursor-pointer hover:scale-[1.01] active:scale-[0.99] ${
         isSoftDeleted ? 'opacity-65 grayscale' : ''
       }`}
     >
       <div
-        className={`w-full h-full rounded-2xl border bg-gradient-to-b ${rarityTheme.bgGradient} ${rarityTheme.borderColor} ${rarityTheme.cardGlow} p-4 flex flex-col justify-between overflow-hidden relative shadow-2xl`}
+        className={`w-full min-h-full rounded-2xl border bg-gradient-to-b ${rarityTheme.bgGradient} ${rarityTheme.borderColor} ${rarityTheme.cardGlow} p-4 flex flex-col justify-between overflow-hidden relative shadow-2xl`}
       >
         {/* Favorite Team color accent top bar */}
         <div
@@ -880,7 +880,7 @@ export default function PlayerCard({ player, currentUser, onEdit, onInactivate, 
         {/* ========================================== */}
         {/* FACE CARD CONTENT CONTAINER               */}
         {/* ========================================== */}
-        <div className="flex-1 flex flex-col overflow-hidden justify-start pt-1.5 w-full">
+        <div className="flex-1 flex flex-col justify-start pt-1.5 w-full">
           
           {/* FACE 1: CARD PRINCIPAL */}
           {faceIndex === 0 && (
