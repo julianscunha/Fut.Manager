@@ -1,6 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
-import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, Notification, NotificationPreferences, FinanceConfig } from '../src/types';
+import { Player, User, PlayerEvaluation, PlayerHistoryEntry, Season, Match, Presence, RecurrentConfig, ReserveQueueAlert, DuoAffinity, TrioAffinity, TeamDraw, MatchResult, Bill, PaymentRecord, CompetenceConfig, CategoryTransition, GrupalEvent, EventParticipant, EventBill, MuralPost, MuralCategory, Notification, NotificationPreferences, FinanceConfig, Expense } from '../src/types';
 
 interface DatabaseSchema {
   users: User[];
@@ -22,6 +22,7 @@ interface DatabaseSchema {
   results: MatchResult[];
   bills: Bill[];
   payments: PaymentRecord[];
+  expenses: Expense[];
   competences: CompetenceConfig[];
   categoryTransitions: CategoryTransition[];
   events: GrupalEvent[];
@@ -124,6 +125,7 @@ const GENERIC_TABLES: TableConfig[] = [
   { table: 'reserve_queue_alerts', dbKey: 'reserveAlerts', pk: ['id'] },
   { table: 'bills', dbKey: 'bills', pk: ['id'] },
   { table: 'payments', dbKey: 'payments', pk: ['id'] },
+  { table: 'expenses', dbKey: 'expenses', pk: ['id'] },
   { table: 'competences', dbKey: 'competences', pk: ['competence'] },
   { table: 'eventos', dbKey: 'events', pk: ['id'] },
   { table: 'event_participants', dbKey: 'eventParticipants', pk: ['id'] },
@@ -275,7 +277,7 @@ async function writeBlobTable(table: string, items: any[]): Promise<void> {
 const ALL_DB_KEYS: (keyof DatabaseSchema)[] = [
   'users', 'passwords', 'passwordResetTokens', 'players', 'evaluations', 'evaluationHistory',
   'seasons', 'matches', 'presences', 'reservesOrder', 'recurrentConfig', 'financeConfig',
-  'reserveAlerts', 'draws', 'duoAffinities', 'trioAffinities', 'results', 'bills', 'payments',
+  'reserveAlerts', 'draws', 'duoAffinities', 'trioAffinities', 'results', 'bills', 'payments', 'expenses',
   'competences', 'categoryTransitions', 'events', 'eventParticipants', 'eventBills',
   'muralPosts', 'muralCategories', 'notifications',
   'notificationPreferences', 'userAudits', 'deadlineAudits'
@@ -419,6 +421,26 @@ function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
         if (compIndex >= 0) db.competences[compIndex] = compData;
         else db.competences.push(compData);
         updated = true;
+
+        // Lança a despesa do aluguel da quadra na mesma competência/data em que a
+        // mensalidade dos jogadores é gerada, para o caixa refletir o desconto real.
+        const rentAmount = db.financeConfig.courtRentAmount;
+        if (rentAmount && rentAmount > 0) {
+          db.expenses = db.expenses || [];
+          const rentAlreadyLaunched = db.expenses.some((e) => e.category === 'aluguel' && e.competence === compKey);
+          if (!rentAlreadyLaunched) {
+            db.expenses.push({
+              id: 'expense-aluguel-' + compKey.replace('/', '-'),
+              category: 'aluguel',
+              description: 'Aluguel da quadra',
+              amount: rentAmount,
+              competence: compKey,
+              date: chargeMatchDate,
+              createdAt: new Date().toISOString()
+            });
+            updated = true;
+          }
+        }
       }
     }
   }

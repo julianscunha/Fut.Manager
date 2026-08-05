@@ -3092,6 +3092,13 @@ export default function DashboardStatus({
                     <span className="text-amber-400 font-mono font-black text-[13px] block">R$ {Math.round(finData?.health?.totalPending || 0)}</span>
                   </div>
                 </div>
+                {/* Saldo líquido: entradas (mensalidade + churrasco) - despesas (aluguel + manuais) */}
+                <div className="flex items-center justify-between p-2.5 rounded-lg bg-zinc-900/35 border border-zinc-900/50 mt-1">
+                  <span className="text-[9px] text-zinc-400 uppercase font-sans font-bold">Saldo do Caixa</span>
+                  <span className={`font-mono font-black text-[13px] ${(finData?.health?.treasuryBalance ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    R$ {Math.round(finData?.health?.treasuryBalance || 0)}
+                  </span>
+                </div>
               </div>
             </div>
 

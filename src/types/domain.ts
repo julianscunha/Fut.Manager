@@ -219,6 +219,18 @@ export interface FinanceConfig {
   history: FinanceHistoryEntry[];
   effectiveDate?: string; // YYYY-MM-DD (vigencia atual)
   maxMensalistas?: number;
+  courtRentAmount?: number; // valor mensal do aluguel da quadra, descontado do caixa na mesma data de geração da mensalidade
+}
+
+export interface Expense {
+  id: string;
+  category: 'aluguel' | 'manual';
+  description: string;
+  amount: number;
+  competence?: string; // "MM/YYYY", só para category === 'aluguel' (evita duplicar o lançamento no mês)
+  date: string; // YYYY-MM-DD
+  createdBy?: string; // userId de quem lançou (só manual)
+  createdAt: string; // ISO timestamp
 }
 
 export interface Bill {

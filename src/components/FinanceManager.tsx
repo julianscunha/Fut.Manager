@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Player, Bill, PaymentRecord, RecurrentConfig } from '../types';
+import { User, Player, Bill, PaymentRecord, RecurrentConfig, Expense } from '../types';
 import { authFetch } from '../lib/authFetch';
 import { 
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,
@@ -23,8 +23,14 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   const [recurrentConfig, setRecurrentConfig] = useState<Partial<RecurrentConfig>>({});
   const [financeConfig, setFinanceConfig] = useState<any>(null);
   const [financeEffectiveDate, setFinanceEffectiveDate] = useState('');
-  const [health, setHealth] = useState({ totalExpected: 0, totalReceived: 0, totalPending: 0 });
+  const [health, setHealth] = useState({ totalExpected: 0, totalReceived: 0, totalPending: 0, totalEventIncome: 0, totalExpenses: 0, treasuryBalance: 0 });
   const [players, setPlayers] = useState<Player[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+
+  // Manual expense form state
+  const [newExpenseDescription, setNewExpenseDescription] = useState('');
+  const [newExpenseAmount, setNewExpenseAmount] = useState('');
+  const [newExpenseDate, setNewExpenseDate] = useState('');
   
   // UI views and tabs
   const [activeTab, setActiveTab] = useState<'my' | 'admin_overview' | 'ledger' | 'config'>('my');
@@ -75,6 +81,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       const compVal = `${m}/${y}`;
       setNewBillCompetence(compVal);
       setNewBillDueDate(`${y}-${m}-${d}`);
+      setNewExpenseDate(`${y}-${m}-${d}`);
     } catch (e) {
       setTodayStr('2026-06-05');
     }
@@ -99,7 +106,8 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
       
       setBills(data.bills || []);
       setPayments(data.payments || []);
-      setHealth(data.health || { totalExpected: 0, totalReceived: 0, totalPending: 0 });
+      setExpenses(data.expenses || []);
+      setHealth(data.health || { totalExpected: 0, totalReceived: 0, totalPending: 0, totalEventIncome: 0, totalExpenses: 0, treasuryBalance: 0 });
       setRecurrentConfig(data.recurrentConfig || {});
       setFinanceConfig(data.financeConfig || null);
       setFinanceEffectiveDate(resolveEffectiveDate(data.financeConfig));
@@ -244,12 +252,76 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
     });
   };
 
+  // Launch a manual club expense (e.g. bola, colete)
+  const handleCreateExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExpenseDescription.trim() || !newExpenseAmount) {
+      setErrorMsg('Descrição e valor da despesa são obrigatórios.');
+      return;
+    }
+
+    setActionLoading(true);
+    setErrorMsg('');
+    setSuccessMsg('');
+    try {
+      const res = await authFetch('/api/finances/expenses', {
+        method: 'POST',
+        body: JSON.stringify({
+          description: newExpenseDescription.trim(),
+          amount: parseFloat(newExpenseAmount),
+          date: newExpenseDate
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Falha ao lançar despesa.');
+
+      setSuccessMsg('Despesa lançada e descontada do caixa do racha!');
+      setNewExpenseDescription('');
+      setNewExpenseAmount('');
+      await fetchFinanceData();
+      setTimeout(() => setSuccessMsg(''), 4000);
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Erro de comunicação.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeleteExpense = (expenseId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Excluir Despesa',
+      message: 'Deseja realmente excluir permanentemente este lançamento de despesa?',
+      confirmText: 'Sim, Excluir',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setActionLoading(true);
+        setErrorMsg('');
+        setSuccessMsg('');
+        try {
+          const res = await authFetch(`/api/finances/expenses/${expenseId}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || 'Falha ao remover despesa.');
+
+          setSuccessMsg('Despesa removida do caixa do racha!');
+          await fetchFinanceData();
+          setTimeout(() => setSuccessMsg(''), 4000);
+        } catch (err: any) {
+          setErrorMsg(err.message || 'Erro de conexão.');
+        } finally {
+          setActionLoading(false);
+        }
+      }
+    });
+  };
+
   // Save changes to parameters in Finance module
   const handleSaveRecurrentFinConfig = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fee = (e.currentTarget.elements.namedItem('monthlyFee') as HTMLInputElement).value;
     const rule = (e.currentTarget.elements.namedItem('chargeDateRule') as HTMLSelectElement).value;
     const maxMensalistas = (e.currentTarget.elements.namedItem('maxMensalistas') as HTMLInputElement).value;
+    const courtRentAmount = (e.currentTarget.elements.namedItem('courtRentAmount') as HTMLInputElement).value;
 
     setActionLoading(true);
     setErrorMsg('');
@@ -262,7 +334,8 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
           monthlyFee: parseFloat(fee),
           chargeDateRule: rule,
           effectiveDate: financeEffectiveDate,
-          maxMensalistas: parseInt(maxMensalistas)
+          maxMensalistas: parseInt(maxMensalistas),
+          courtRentAmount: courtRentAmount === '' ? undefined : parseFloat(courtRentAmount)
         })
       });
 
@@ -1191,6 +1264,22 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
               </div>
 
               <div className="space-y-1">
+                <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Aluguel Mensal da Quadra (R$)</label>
+                <input
+                  type="number"
+                  name="courtRentAmount"
+                  min="0"
+                  step="0.01"
+                  defaultValue={financeConfig?.courtRentAmount ?? ''}
+                  placeholder="Deixe em branco para não descontar"
+                  className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500 font-sans"
+                />
+                <span className="text-[9px] text-zinc-650 block leading-relaxed">
+                  Descontado automaticamente do caixa do racha na mesma competência em que a mensalidade dos jogadores é gerada.
+                </span>
+              </div>
+
+              <div className="space-y-1">
                 <span className="text-[9px] text-zinc-650 mt-1 block leading-normal leading-relaxed">
                   As parcelas dos mensalistas serão geradas de forma prospectiva quando os rachas ocorrerem. Alterações de valor não afetam cobranças já geradas em meses anteriores.
                 </span>
@@ -1232,6 +1321,110 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
               </div>
             ) : (
               <p className="text-[10px] text-zinc-600 italic">Nenhum reajuste ou alteração registrada no histórico.</p>
+            )}
+          </div>
+
+          {/* Saldo do Caixa do Racha */}
+          <div className="bg-[#121214] p-4 rounded-xl border border-zinc-900">
+            <div className="flex items-center gap-2 mb-3 border-b border-zinc-900 pb-2">
+              <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
+              <h4 className="font-display font-medium text-white text-xs uppercase">Caixa do Racha</h4>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-center mb-3">
+              <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-900">
+                <span className="text-[9px] text-emerald-400 uppercase block font-bold">Entradas (mensalidades + churrasco)</span>
+                <span className="text-white font-mono font-black text-sm block mt-1">R$ {(health.totalReceived + health.totalEventIncome).toFixed(2)}</span>
+              </div>
+              <div className="p-2.5 rounded-lg bg-zinc-950 border border-zinc-900">
+                <span className="text-[9px] text-rose-400 uppercase block font-bold">Despesas (aluguel + manuais)</span>
+                <span className="text-white font-mono font-black text-sm block mt-1">R$ {health.totalExpenses.toFixed(2)}</span>
+              </div>
+            </div>
+            <div className="p-3 rounded-lg bg-emerald-500/5 border border-emerald-500/20 flex items-center justify-between">
+              <span className="text-[10px] text-zinc-400 uppercase font-bold">Saldo Líquido</span>
+              <span className={`font-mono font-black text-base ${health.treasuryBalance >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                R$ {health.treasuryBalance.toFixed(2)}
+              </span>
+            </div>
+          </div>
+
+          {/* Lançar despesa manual (bola, colete, churrasco etc) */}
+          <div className="bg-zinc-950 p-4 rounded-xl border border-zinc-900/40">
+            <h4 className="font-display font-semibold text-white text-xs uppercase mb-3 text-rose-400">Lançar Despesa do Racha</h4>
+            <form onSubmit={handleCreateExpense} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Descrição</label>
+                  <input
+                    type="text"
+                    value={newExpenseDescription}
+                    onChange={(e) => setNewExpenseDescription(e.target.value)}
+                    placeholder="Ex: Compra de bola"
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-500 font-sans"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Valor (R$)</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={newExpenseAmount}
+                    onChange={(e) => setNewExpenseAmount(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-500 font-sans"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[9px] text-zinc-500 uppercase block font-bold font-mono">Data</label>
+                <input
+                  type="date"
+                  value={newExpenseDate}
+                  onChange={(e) => setNewExpenseDate(e.target.value)}
+                  className="w-full bg-[#1c1c1e] text-white border border-zinc-850 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-rose-500 font-sans"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={actionLoading}
+                className="w-full bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-extrabold rounded-lg py-2 uppercase tracking-wider text-[11px] block transition cursor-pointer font-mono"
+              >
+                {actionLoading ? 'Processando...' : 'Lançar Despesa'}
+              </button>
+            </form>
+
+            {expenses.length > 0 && (
+              <div className="space-y-1.5 mt-4 max-h-52 overflow-y-auto pr-1">
+                {[...expenses]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .map((exp) => {
+                    const parts = exp.date.split('-');
+                    const formattedDate = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : exp.date;
+                    return (
+                      <div key={exp.id} className="flex items-center justify-between p-2.5 bg-zinc-950 rounded border border-zinc-900 font-mono text-[11px]">
+                        <div className="min-w-0">
+                          <span className="text-zinc-300 font-bold truncate block">{exp.description}</span>
+                          <span className="text-zinc-500 text-[9px]">
+                            {formattedDate} {exp.category === 'aluguel' && '· Aluguel automático'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-rose-400 font-bold">R$ {exp.amount.toFixed(2)}</span>
+                          {exp.category === 'manual' && (
+                            <button
+                              onClick={() => handleDeleteExpense(exp.id)}
+                              className="text-zinc-600 hover:text-rose-400 transition cursor-pointer"
+                              title="Excluir despesa"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
             )}
           </div>
         </div>

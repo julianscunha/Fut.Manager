@@ -5818,10 +5818,21 @@ async function startServer() {
       const totalReceived = db.bills.filter(b => b.status === 'pago').reduce((sum, b) => sum + b.amount, 0);
       const totalPending = db.bills.filter(b => b.status === 'pendente').reduce((sum, b) => sum + b.amount, 0);
 
+      // Caixa do racha: mensalidades pagas + arrecadação de churrasco - despesas (aluguel + manuais)
+      const churrascoEventIds = new Set((db.events || []).filter(e => e.type === 'churrasco').map(e => e.id));
+      const totalEventIncome = (db.eventBills || [])
+        .filter(eb => eb.status === 'pago' && churrascoEventIds.has(eb.eventId))
+        .reduce((sum, eb) => sum + eb.amount, 0);
+      const totalExpenses = (db.expenses || []).reduce((sum, e) => sum + e.amount, 0);
+      const treasuryBalance = totalReceived + totalEventIncome - totalExpenses;
+
       const health = {
         totalExpected,
         totalReceived,
-        totalPending
+        totalPending,
+        totalEventIncome,
+        totalExpenses,
+        treasuryBalance
       };
 
       // Find players for lookup & filter inactive ones
@@ -5835,6 +5846,7 @@ async function startServer() {
           bills: db.bills,
           payments: db.payments,
           competences: db.competences,
+          expenses: db.expenses || [],
           recurrentConfig: db.recurrentConfig,
           financeConfig: db.financeConfig,
           health,
@@ -5899,7 +5911,7 @@ async function startServer() {
 
   app.post('/api/finances/config', async (req, res) => {
     try {
-      const { monthlyFee, chargeDateRule, effectiveDate, maxMensalistas } = req.body;
+      const { monthlyFee, chargeDateRule, effectiveDate, maxMensalistas, courtRentAmount } = req.body;
       const db = await readDb();
 
       if (!db.financeConfig) {
@@ -5929,10 +5941,20 @@ async function startServer() {
 
       const targetEffectiveDate = effectiveDate || new Date().toISOString().split('T')[0];
 
+      let parsedRent: number | undefined = db.financeConfig.courtRentAmount;
+      if (courtRentAmount !== undefined && courtRentAmount !== null && courtRentAmount !== '') {
+        const rentValue = parseFloat(courtRentAmount);
+        if (isNaN(rentValue) || rentValue < 0) {
+          return res.status(400).json({ error: 'Valor do aluguel da quadra inválido.' });
+        }
+        parsedRent = rentValue;
+      }
+
       db.financeConfig.maxMensalistas = parsedMax;
       db.financeConfig.monthlyFee = newFee;
       db.financeConfig.chargeDateRule = chargeDateRule;
       db.financeConfig.effectiveDate = targetEffectiveDate;
+      db.financeConfig.courtRentAmount = parsedRent;
 
       // Sempre garante que o histórico reflita a data de vigência correta com o valor atual
       const existingIdx = db.financeConfig.history.findIndex(h => h.date === targetEffectiveDate);
@@ -5977,6 +5999,67 @@ async function startServer() {
     } catch (err) {
       console.error('[API POST /api/finances/config]', err);
       return res.status(500).json({ error: 'Erro ao salvar configuração financeira.' });
+    }
+  });
+
+  // Despesas manuais do caixa do racha (ex: bola, colete). Aluguel é lançado
+  // automaticamente por generateMonthlyBillingsIfNeeded, não por aqui.
+  app.post('/api/finances/expenses', async (req, res) => {
+    try {
+      const db = await readDb();
+      const requestingUser = await getAuthenticatedUser(req, db);
+      if (!requestingUser || (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar')) {
+        return res.status(401).json({ error: 'Não autorizado.' });
+      }
+
+      const { description, amount, date } = req.body;
+      const parsedAmount = parseFloat(amount);
+      if (!description || typeof description !== 'string' || !description.trim()) {
+        return res.status(400).json({ error: 'Descrição da despesa é obrigatória.' });
+      }
+      if (isNaN(parsedAmount) || parsedAmount <= 0) {
+        return res.status(400).json({ error: 'Valor da despesa inválido.' });
+      }
+
+      const expense = {
+        id: 'expense-manual-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
+        category: 'manual' as const,
+        description: description.trim(),
+        amount: parsedAmount,
+        date: date || new Date().toISOString().split('T')[0],
+        createdBy: requestingUser.id,
+        createdAt: new Date().toISOString()
+      };
+
+      db.expenses = db.expenses || [];
+      db.expenses.push(expense);
+      await writeDb(db);
+      return res.json(expense);
+    } catch (err) {
+      console.error('[API POST /api/finances/expenses]', err);
+      return res.status(500).json({ error: 'Erro ao lançar despesa.' });
+    }
+  });
+
+  app.delete('/api/finances/expenses/:id', async (req, res) => {
+    try {
+      const db = await readDb();
+      const requestingUser = await getAuthenticatedUser(req, db);
+      if (!requestingUser || (requestingUser.role !== 'admin' && requestingUser.role !== 'auxiliar')) {
+        return res.status(401).json({ error: 'Não autorizado.' });
+      }
+
+      const { id } = req.params;
+      const idx = (db.expenses || []).findIndex((e) => e.id === id);
+      if (idx === -1) {
+        return res.status(404).json({ error: 'Despesa não encontrada.' });
+      }
+      db.expenses.splice(idx, 1);
+      await writeDb(db);
+      return res.json({ message: 'Despesa removida.' });
+    } catch (err) {
+      console.error('[API DELETE /api/finances/expenses/:id]', err);
+      return res.status(500).json({ error: 'Erro ao remover despesa.' });
     }
   });
 
