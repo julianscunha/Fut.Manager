@@ -378,6 +378,27 @@ function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
     const compKey = `${parts[1]}/${parts[0]}`;
 
     if (todayStr >= chargeMatchDate) {
+      // Independente de a mensalidade já ter sido gerada antes (ex: admin configurou o
+      // aluguel depois do dia de cobrança do mês), garante que a despesa do aluguel exista
+      // para esta competência assim que houver um valor configurado.
+      const rentAmount = db.financeConfig.courtRentAmount;
+      if (rentAmount && rentAmount > 0) {
+        db.expenses = db.expenses || [];
+        const rentAlreadyLaunched = db.expenses.some((e) => e.category === 'aluguel' && e.competence === compKey);
+        if (!rentAlreadyLaunched) {
+          db.expenses.push({
+            id: 'expense-aluguel-' + compKey.replace('/', '-'),
+            category: 'aluguel',
+            description: 'Aluguel da quadra',
+            amount: rentAmount,
+            competence: compKey,
+            date: chargeMatchDate,
+            createdAt: new Date().toISOString()
+          });
+          updated = true;
+        }
+      }
+
       const alreadyGenerated = db.competences.some((c) => c.competence === compKey && c.generated);
       if (!alreadyGenerated) {
         let eligiblePlayers = db.players.filter((p) => !p.deletedAt && p.category === 'mensalista' && p.primaryPosition !== 'goleiro');
@@ -421,26 +442,6 @@ function generateMonthlyBillingsIfNeeded(db: DatabaseSchema): boolean {
         if (compIndex >= 0) db.competences[compIndex] = compData;
         else db.competences.push(compData);
         updated = true;
-
-        // Lança a despesa do aluguel da quadra na mesma competência/data em que a
-        // mensalidade dos jogadores é gerada, para o caixa refletir o desconto real.
-        const rentAmount = db.financeConfig.courtRentAmount;
-        if (rentAmount && rentAmount > 0) {
-          db.expenses = db.expenses || [];
-          const rentAlreadyLaunched = db.expenses.some((e) => e.category === 'aluguel' && e.competence === compKey);
-          if (!rentAlreadyLaunched) {
-            db.expenses.push({
-              id: 'expense-aluguel-' + compKey.replace('/', '-'),
-              category: 'aluguel',
-              description: 'Aluguel da quadra',
-              amount: rentAmount,
-              competence: compKey,
-              date: chargeMatchDate,
-              createdAt: new Date().toISOString()
-            });
-            updated = true;
-          }
-        }
       }
     }
   }
