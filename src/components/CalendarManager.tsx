@@ -1326,16 +1326,16 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
             });
 
             // Rodadas concluídas/canceladas vão para o final da lista, para a próxima
-            // rodada relevante (agendada/confirmando/fechada/sorteada) ficar sempre visível
-            // no topo. Dentro de cada bloco, ordena por data+hora mais recente primeiro.
+            // rodada relevante ficar sempre visível no topo. Ordenação original
+            // (createdAt/time) preservada dentro de cada bloco, sem mudar o critério.
             const isFinishedRound = (m: any) => m.status === 'encerrada' || m.status === 'cancelada';
             const sortedMatches = [...matchesWithRound].sort((a, b) => {
               const aFinished = isFinishedRound(a);
               const bFinished = isFinishedRound(b);
               if (aFinished !== bFinished) return aFinished ? 1 : -1;
 
-              const dateDiff = new Date(b.date).getTime() - new Date(a.date).getTime();
-              if (dateDiff !== 0) return dateDiff;
+              const createdDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+              if (createdDiff !== 0) return createdDiff;
               return b.time.localeCompare(a.time);
             });
 
