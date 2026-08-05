@@ -352,20 +352,20 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
           const isDown = player.currentStreak === 0 && player.presences > 1;
           if (isUp) {
             return (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-                <ArrowUp className="w-2.5 h-2.5" /> subir
+              <span className="inline-flex items-center justify-center w-6 h-6 text-emerald-400 bg-emerald-500/10 rounded-full border border-emerald-500/20" title="Em ascensão">
+                <ArrowUp className="w-3.5 h-3.5" />
               </span>
             );
           } else if (isDown) {
             return (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded-full border border-rose-500/20">
-                <ArrowDown className="w-2.5 h-2.5" /> cair
+              <span className="inline-flex items-center justify-center w-6 h-6 text-rose-400 bg-rose-500/10 rounded-full border border-rose-500/20" title="Em queda">
+                <ArrowDown className="w-3.5 h-3.5" />
               </span>
             );
           } else {
             return (
-              <span className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold text-zinc-400 bg-zinc-800/50 px-2 py-0.5 rounded-full border border-zinc-700/30">
-                <Minus className="w-2.5 h-2.5" /> manter
+              <span className="inline-flex items-center justify-center w-6 h-6 text-zinc-500 bg-zinc-800/50 rounded-full border border-zinc-700/30" title="Estável">
+                <Minus className="w-3.5 h-3.5" />
               </span>
             );
           }
