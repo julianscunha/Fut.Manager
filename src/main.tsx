@@ -2,7 +2,6 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AppConfigProvider } from './contexts/AppConfigContext';
-import { AuthProvider } from './contexts/AuthContext';
 import './index.css';
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -14,9 +13,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppConfigProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <App />
     </AppConfigProvider>
   </StrictMode>,
 );
