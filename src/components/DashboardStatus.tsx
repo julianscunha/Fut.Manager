@@ -376,9 +376,18 @@ export default function DashboardStatus({
           }
           return ['agendada', 'confirmando', 'fechada', 'sorteada'].includes(m.status);
         });
-        // Since matches is sorted by date ascending, the first active match is the closest to today chronologically
-        let targetMatch = activeMatches.length > 0 ? activeMatches[0] : null;
-        
+
+        // Uma partida encerrada permanece MATCH_FINISHED (não ARCHIVED) até o admin
+        // arquivar manualmente - nesse intervalo ela tem prioridade sobre a próxima
+        // partida futura já agendada, para exibir a fase de avaliação pós-jogo em vez
+        // de pular direto pro "standby" da rodada seguinte.
+        const pendingFinished = matches.filter((m: any) => m.status === 'encerrada' && m.lifecycleState !== 'ARCHIVED');
+
+        // Since matches is sorted by date ascending, the last one is the most recent
+        let targetMatch = pendingFinished.length > 0
+          ? pendingFinished[pendingFinished.length - 1]
+          : (activeMatches.length > 0 ? activeMatches[0] : null);
+
         if (!targetMatch) {
           // Fallback to the latest match overall, if it is 'encerrada'
           const endedMatches = matches.filter((m: any) => m.status === 'encerrada');
@@ -386,7 +395,7 @@ export default function DashboardStatus({
             targetMatch = endedMatches[endedMatches.length - 1];
           }
         }
-        
+
         setNextMatch(targetMatch);
 
         // Fetch draw details if match exists (unconditionally, to verify if there's any active draw)
