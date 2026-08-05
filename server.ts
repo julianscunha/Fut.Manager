@@ -728,7 +728,7 @@ async function startServer() {
         db.notifications.push({
           id: createdKey,
           category: 'financeiro',
-          title: 'ðŸ’° Nova Cobrança Gerada',
+          title: '💰 Nova Cobrança Gerada',
           message: `Foi gerada uma cobrança de mensalidade de R$ ${bill.amount.toFixed(2)} referente à competência ${bill.competence} para o jogador ${pName}.`,
           status: 'nao_lida',
           createdAt: new Date().toISOString(),
@@ -744,7 +744,7 @@ async function startServer() {
           db.notifications.push({
             id: overdueKey,
             category: 'financeiro',
-            title: 'ðŸš¨ Cobrança Vencida',
+            title: '🚨 Cobrança Vencida',
             message: `Sua mensalidade de R$ ${bill.amount.toFixed(2)} (${bill.competence}) venceu em ${bill.dueDate.split('-').reverse().join('/')}.`,
             status: 'nao_lida',
             createdAt: new Date().toISOString(),
@@ -798,7 +798,7 @@ async function startServer() {
               db.notifications.push({
                 id: key2h,
                 category: 'partida',
-                title: 'ðŸš¨ Últimas Horas de Confirmação',
+                title: '🚨 Últimas Horas de Confirmação',
                 message: 'Últimas horas para confirmação.',
                 status: 'nao_lida',
                 createdAt: new Date().toISOString(),
@@ -1441,7 +1441,7 @@ async function startServer() {
 
       notify(db, {
         category: 'jogador',
-        title: 'ðŸŽ‰ Cadastro Aprovado!',
+        title: '🎉 Cadastro Aprovado!',
         message: `Seu cadastro no ${APP_NAME} foi aprovado como ${chosenRole === 'admin' ? 'Administrador' : chosenRole === 'auxiliar' ? 'Auxiliar' : 'Jogador'}. Seja bem-vindo ao grupo!`,
         targetUserId: userId,
         actionUrl: 'players'
@@ -2237,7 +2237,7 @@ async function startServer() {
       if (existingPlayer.status === 'lesionado' && updateData.status === 'disponivel') {
         notify(db, {
           category: 'jogador',
-          title: 'ðŸ’ª Lesão Encerrada!',
+          title: '💪 Lesão Encerrada!',
           message: `Ótimas notícias! O jogador ${existingPlayer.name} encerrou sua lesão e está novamente à disposição do grupo!`,
           targetUserId: 'all',
           actionUrl: 'players'
@@ -3110,7 +3110,7 @@ async function startServer() {
         }
         notify(db, {
           category: 'partida',
-          title: 'ðŸ”„ Partida Reaberta',
+          title: '🔄 Partida Reaberta',
           message: `A partida do dia ${updatedMatch.date.split('-').reverse().join('/')} foi reaberta por um administrador.`,
           actionUrl: 'calendar',
           matchId: updatedMatch.id
@@ -3533,7 +3533,7 @@ async function startServer() {
 
       notify(db, {
         category: 'evento',
-        title: 'ðŸŽ‰ Novo Evento Criado',
+        title: '🎉 Novo Evento Criado',
         message: `O evento "${newEvent.name}" foi agendado para o dia ${newEvent.date.split('-').reverse().join('/')} às ${newEvent.time} na localidade ${newEvent.location}.`,
         actionUrl: 'mural',
         eventId: newEvent.id
@@ -4419,7 +4419,7 @@ async function startServer() {
 
       notify(db, {
         category: 'sorteio',
-        title: 'ðŸŽ² Times Sorteados!',
+        title: '🎲 Times Sorteados!',
         message: `O sorteio dos times da rodada do dia ${match.date.split('-').reverse().join('/')} foi realizado. Venha ver se ficou equilibrado!`,
         actionUrl: 'calendar',
         matchId
@@ -4428,7 +4428,7 @@ async function startServer() {
       if (captainsConfigured) {
         notify(db, {
           category: 'sorteio',
-          title: 'ðŸ‘‘ Capitães Definidos',
+          title: '👑 Capitães Definidos',
           message: `Os capitães da rodada do dia ${match.date.split('-').reverse().join('/')} foram eixos e escalados nos times.`,
           actionUrl: 'calendar',
           matchId
@@ -5172,19 +5172,19 @@ async function startServer() {
 - **Participantes:** ${participantsCount} jogadores
 
 ### ⚽ Placar Geral
-- **ðŸ”µ Time Azul:** ${winsBlue} vitórias
-- **ðŸ”´ Time Vermelho:** ${winsRed} vitórias
-- **ðŸŸ¢ Time Verde:** ${winsGreen} vitórias
+- **🔵 Time Azul:** ${winsBlue} vitórias
+- **🔴 Time Vermelho:** ${winsRed} vitórias
+- **🟢 Time Verde:** ${winsGreen} vitórias
 
 ### 🏆 Campeões da Rodada
 - ${champions.length > 0 ? champions.map(c => `Time ${c}`).join(' & ') : 'Empate'}
 
 ### 👥 Escalação das Equipes
-- **ðŸ”µ Time Azul:** ${blueTeamPlayers}
-- **ðŸ”´ Time Vermelho:** ${redTeamPlayers}
-- **ðŸŸ¢ Time Verde:** ${greenTeamPlayers}
+- **🔵 Time Azul:** ${blueTeamPlayers}
+- **🔴 Time Vermelho:** ${redTeamPlayers}
+- **🟢 Time Verde:** ${greenTeamPlayers}
 
-### ðŸ“Š Estat­sticas do Momento
+### 📊 Estatísticas do Momento
 - **Melhor Dupla Atual:** ${melhorDupla}
 - **Melhor Trio Atual:** ${melhorTrio}
 - **L­der de Vitórias:** ${liderVitorias}
@@ -6128,7 +6128,7 @@ async function startServer() {
       const targetPlayerName = targetPlayer ? targetPlayer.name : 'Jogador';
       notify(db, {
         category: 'financeiro',
-        title: 'ðŸ’° Nova Cobrança Gerada',
+        title: '💰 Nova Cobrança Gerada',
         message: `Foi gerada uma cobrança manual no valor de R$ ${newBill.amount.toFixed(2)} (${newBill.competence}) para o jogador ${targetPlayerName}.`,
         targetUserId: newBill.playerId,
         actionUrl: 'finance'
