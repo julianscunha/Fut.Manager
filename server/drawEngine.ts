@@ -18,6 +18,13 @@ function getDuoAffinity(playerA: string, playerB: string, duoAffinities: DuoAffi
   return record ? record.count : 0;
 }
 
+// Returns the subset of overflowPositions relevant to a team's roster, or
+// undefined if none of the team's players has a draw-only position override.
+function pickOverflowPositions(pids: string[], overflowPositions: Record<string, PlayerPosition>): Record<string, PlayerPosition> | undefined {
+  const entries = pids.filter(id => overflowPositions[id]).map(id => [id, overflowPositions[id]] as const);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 // Helper to get trio affinity count
 function getTrioAffinity(p1: string, p2: string, p3: string, trioAffinities: TrioAffinity[]): number {
   const sorted = [p1, p2, p3].sort();
@@ -56,6 +63,8 @@ export function runSmartDraw({
   let fieldPlayers = confirmedPlayers.filter(p => p.primaryPosition !== 'goleiro');
 
   let assignedGks: Record<string, string | null> = { Azul: null, Vermelho: null, Verde: null };
+  // Draw-only position override for overflow goalkeepers (playerId -> position played this draw)
+  const overflowGkPositions: Record<string, PlayerPosition> = {};
 
   // If we have goalkeepers and not sharing:
   if (!isSharedGoalkeepers && goalkeepers.length > 0) {
@@ -79,6 +88,9 @@ export function runSmartDraw({
     // secondary position, instead of vanishing from the draw entirely.
     const overflowGks = sortedGks.slice(3);
     fieldPlayers = [...fieldPlayers, ...overflowGks];
+    overflowGks.forEach(p => {
+      overflowGkPositions[p.id] = (p.secondaryPositions || [])[0] || p.primaryPosition;
+    });
   }
 
   // Pre-arrange captains if any -> Deprecated: Captain selection is purely administrative and visual, having zero impact on balance
@@ -238,9 +250,9 @@ export function runSmartDraw({
 
       bestDraw = {
         teams: [
-          { name: 'Azul', captainPlayerId: captains.Azul && teamBluePlayers.includes(captains.Azul) ? captains.Azul : undefined, playerIds: teamBluePlayers },
-          { name: 'Vermelho', captainPlayerId: captains.Vermelho && teamRedPlayers.includes(captains.Vermelho) ? captains.Vermelho : undefined, playerIds: teamRedPlayers },
-          { name: 'Verde', captainPlayerId: captains.Verde && teamGreenPlayers.includes(captains.Verde) ? captains.Verde : undefined, playerIds: teamGreenPlayers }
+          { name: 'Azul', captainPlayerId: captains.Azul && teamBluePlayers.includes(captains.Azul) ? captains.Azul : undefined, playerIds: teamBluePlayers, playerPositions: pickOverflowPositions(teamBluePlayers, overflowGkPositions) },
+          { name: 'Vermelho', captainPlayerId: captains.Vermelho && teamRedPlayers.includes(captains.Vermelho) ? captains.Vermelho : undefined, playerIds: teamRedPlayers, playerPositions: pickOverflowPositions(teamRedPlayers, overflowGkPositions) },
+          { name: 'Verde', captainPlayerId: captains.Verde && teamGreenPlayers.includes(captains.Verde) ? captains.Verde : undefined, playerIds: teamGreenPlayers, playerPositions: pickOverflowPositions(teamGreenPlayers, overflowGkPositions) }
         ],
         overallBlue: bRounded,
         overallRed: rRounded,
@@ -299,9 +311,9 @@ export function runSmartDraw({
 
     bestDraw = {
       teams: [
-        { name: 'Azul', captainPlayerId: captains.Azul && listBlue.includes(captains.Azul) ? captains.Azul : undefined, playerIds: listBlue },
-        { name: 'Vermelho', captainPlayerId: captains.Vermelho && listRed.includes(captains.Vermelho) ? captains.Vermelho : undefined, playerIds: listRed },
-        { name: 'Verde', captainPlayerId: captains.Verde && listGreen.includes(captains.Verde) ? captains.Verde : undefined, playerIds: listGreen }
+        { name: 'Azul', captainPlayerId: captains.Azul && listBlue.includes(captains.Azul) ? captains.Azul : undefined, playerIds: listBlue, playerPositions: pickOverflowPositions(listBlue, overflowGkPositions) },
+        { name: 'Vermelho', captainPlayerId: captains.Vermelho && listRed.includes(captains.Vermelho) ? captains.Vermelho : undefined, playerIds: listRed, playerPositions: pickOverflowPositions(listRed, overflowGkPositions) },
+        { name: 'Verde', captainPlayerId: captains.Verde && listGreen.includes(captains.Verde) ? captains.Verde : undefined, playerIds: listGreen, playerPositions: pickOverflowPositions(listGreen, overflowGkPositions) }
       ],
       overallBlue: bRounded,
       overallRed: rRounded,

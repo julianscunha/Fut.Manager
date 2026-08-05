@@ -979,7 +979,12 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                               const overall = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
                               const isCap = captainsConfigured && (team.captainPlayerId === p.id || captains[team.name] === p.id);
                               
-                              const assignment = tacticalAssignments[p.id] || { position: p.primaryPosition, isAdapted: false };
+                              // Overflow goalkeepers get an authoritative position from the draw
+                              // engine itself (server-side decision), overriding the local heuristic.
+                              const overridePos = team.playerPositions?.[p.id];
+                              const assignment = overridePos
+                                ? { position: overridePos, isAdapted: true }
+                                : (tacticalAssignments[p.id] || { position: p.primaryPosition, isAdapted: false });
                               const assignedPos = assignment.position;
                               const isAdapted = assignment.isAdapted;
 

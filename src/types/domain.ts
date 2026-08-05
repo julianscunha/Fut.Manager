@@ -171,6 +171,10 @@ export interface DrawTeam {
   name: 'Azul' | 'Vermelho' | 'Verde';
   captainPlayerId?: string;
   playerIds: string[];
+  // Per-draw position override: only set for players fielded out of their
+  // registered primaryPosition for this specific draw (e.g. an overflow
+  // goalkeeper playing as attacker via their secondary position).
+  playerPositions?: Record<string, PlayerPosition>;
 }
 
 export interface TeamDraw {
