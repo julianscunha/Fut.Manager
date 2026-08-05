@@ -53,7 +53,7 @@ export function runSmartDraw({
 } {
   // 1. Separate goalkeepers and field players
   const goalkeepers = confirmedPlayers.filter(p => p.primaryPosition === 'goleiro');
-  const fieldPlayers = confirmedPlayers.filter(p => p.primaryPosition !== 'goleiro');
+  let fieldPlayers = confirmedPlayers.filter(p => p.primaryPosition !== 'goleiro');
 
   let assignedGks: Record<string, string | null> = { Azul: null, Vermelho: null, Verde: null };
 
@@ -61,11 +61,16 @@ export function runSmartDraw({
   if (!isSharedGoalkeepers && goalkeepers.length > 0) {
     // Sort goalkeepers by overall to balance them across teams
     const sortedGks = [...goalkeepers].sort((a, b) => (playerOveralls[b.id] || 3.5) - (playerOveralls[a.id] || 3.5));
-    
-    // Distribute goalkeepers: Azul, Vermelho, Verde
+
+    // Distribute goalkeepers: Azul, Vermelho, Verde (only 3 teams, only 3 goalkeeper slots)
     if (sortedGks[0]) assignedGks.Azul = sortedGks[0].id;
     if (sortedGks[1]) assignedGks.Vermelho = sortedGks[1].id;
     if (sortedGks[2]) assignedGks.Verde = sortedGks[2].id;
+
+    // Goalkeepers beyond the 3 team slots play out as field players via their
+    // secondary position, instead of vanishing from the draw entirely.
+    const overflowGks = sortedGks.slice(3);
+    fieldPlayers = [...fieldPlayers, ...overflowGks];
   }
 
   // Pre-arrange captains if any -> Deprecated: Captain selection is purely administrative and visual, having zero impact on balance
