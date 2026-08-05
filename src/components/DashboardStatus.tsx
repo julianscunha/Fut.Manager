@@ -3352,7 +3352,7 @@ export default function DashboardStatus({
                     <span className="text-[9px] text-purple-400 uppercase tracking-wider font-black block">🚀 Trio Forte</span>
                     <div className="text-white text-[10px] font-black mt-1 truncate font-sans">
                       {stats && stats.trios && stats.trios.length > 0 ? (
-                        <span>{stats.trios[0].playerAName.split(' ')[0]} + {stats.trios[0].playerBName.split(' ')[0]}</span>
+                        <span>{stats.trios[0].playerAName.split(' ')[0]} + {stats.trios[0].playerBName.split(' ')[0]} + {stats.trios[0].playerCName.split(' ')[0]}</span>
                       ) : (
                         <span>Sem dados</span>
                       )}
