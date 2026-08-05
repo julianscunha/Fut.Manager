@@ -5912,7 +5912,6 @@ async function startServer() {
   app.post('/api/finances/config', async (req, res) => {
     try {
       const { monthlyFee, chargeDateRule, effectiveDate, maxMensalistas, courtRentAmount } = req.body;
-      console.log('[DEBUG /api/finances/config] courtRentAmount recebido:', JSON.stringify(courtRentAmount), typeof courtRentAmount);
       const db = await readDb();
 
       if (!db.financeConfig) {
@@ -5956,7 +5955,6 @@ async function startServer() {
       db.financeConfig.chargeDateRule = chargeDateRule;
       db.financeConfig.effectiveDate = targetEffectiveDate;
       db.financeConfig.courtRentAmount = parsedRent;
-      console.log('[DEBUG /api/finances/config] parsedRent aplicado:', parsedRent, '-> db.financeConfig:', JSON.stringify(db.financeConfig));
 
       // Sempre garante que o histórico reflita a data de vigência correta com o valor atual
       const existingIdx = db.financeConfig.history.findIndex(h => h.date === targetEffectiveDate);

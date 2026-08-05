@@ -245,7 +245,12 @@ async function readSingleton(table: string, fixedId: string): Promise<any | null
 async function writeSingleton(table: string, fixedId: string, obj: any): Promise<void> {
   const row = { id: fixedId, ...objToRow(obj || {}) };
   const { error } = await getSupabase().from(table).upsert(row, { onConflict: 'id' });
-  if (error) console.error(`[DB] Erro ao salvar ${table}:`, error.message);
+  if (error) {
+    console.error(`[DB] Erro ao salvar ${table}:`, error.message);
+    // Antes esse erro só ia pro console e o writeDb()/rota seguiam como se tivesse
+    // salvado - o cliente recebia 200 mesmo com a escrita falhando de verdade no banco.
+    throw new Error(`Erro ao salvar ${table}: ${error.message}`);
+  }
 }
 
 async function readBlobTable(table: string): Promise<any[]> {
