@@ -2654,6 +2654,12 @@ export default function DashboardStatus({
                     : defaultColorConfig;
 
                   const assignments = computeTacticalAssignments(teamPlayers);
+                  // Overflow goalkeepers get an authoritative position from the draw
+                  // engine itself (server-side decision), overriding the local heuristic.
+                  teamPlayers.forEach((p: any) => {
+                    const overridePos = team.playerPositions?.[p.id];
+                    if (overridePos) assignments[p.id] = { position: overridePos, isAdapted: true };
+                  });
                   const gks = teamPlayers.filter(p => assignments[p.id]?.position === 'goleiro');
                   const defs = teamPlayers.filter(p => assignments[p.id]?.position === 'zagueiro');
                   const mids = teamPlayers.filter(p => ['volante', 'meio_campo'].includes(assignments[p.id]?.position));

@@ -484,7 +484,10 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
 
       sortedTeamPlayers.forEach((p) => {
         const isCap = captainsConfigured && (t.captainPlayerId === p.id || captains[t.name] === p.id);
-        const assignment = tacticalAssignments[p.id] || { position: p.primaryPosition, isAdapted: false };
+        const overridePos = t.playerPositions?.[p.id];
+        const assignment = overridePos
+          ? { position: overridePos, isAdapted: true }
+          : (tacticalAssignments[p.id] || { position: p.primaryPosition, isAdapted: false });
         const labelPos = getAbbreviation(assignment.position);
         const isAdapted = assignment.isAdapted;
         const points = playerOveralls[p.id] ? playerOveralls[p.id].toFixed(1) : '3.5';
