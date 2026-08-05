@@ -235,6 +235,17 @@ export default function DashboardStatus({
     }
   }, [nextMatch?.id]);
 
+  // "Concluir Minhas Avaliações": precisa persistir por rodada (localStorage), senão um
+  // refresh recalcula o estado do zero e o bloco volta pro estado anterior com o botão.
+  const [evaluationsConcluded, setEvaluationsConcluded] = useState(false);
+  useEffect(() => {
+    if (nextMatch?.id) {
+      setEvaluationsConcluded(localStorage.getItem('evaluations_concluded_' + nextMatch.id) === 'true');
+    } else {
+      setEvaluationsConcluded(false);
+    }
+  }, [nextMatch?.id]);
+
   useEffect(() => {
     if (highlightPosts.length <= 1) return;
     const timer = setInterval(() => {
@@ -1039,6 +1050,9 @@ export default function DashboardStatus({
     if (nextMatch.status === 'encerrada') {
       if (nextMatch.lifecycleState === 'ARCHIVED') {
         return 10;
+      }
+      if (evaluationsConcluded) {
+        return 9; // Usuário já concluiu suas avaliações desta rodada
       }
       return 8; // Default to Avaliações Abertas for testing UX
     }
@@ -1979,7 +1993,10 @@ export default function DashboardStatus({
                 <button
                   type="button"
                   onClick={() => {
-                    setSimulatedState(9);
+                    if (nextMatch?.id) {
+                      localStorage.setItem('evaluations_concluded_' + nextMatch.id, 'true');
+                      setEvaluationsConcluded(true);
+                    }
                   }}
                   className="flex-1 h-11.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white font-mono font-black text-xs uppercase tracking-wider border border-zinc-800 hover:border-zinc-700 transition cursor-pointer flex items-center justify-center gap-1.5 shadow"
                 >
