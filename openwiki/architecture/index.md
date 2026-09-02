@@ -7,3 +7,4 @@
 - [players](players.md)
 - [Implementação de Progressive Web App (PWA)](pwa.md) - Visão geral da configuração do PWA para suporte móvel, incluindo manifesto, service worker e integração com o front‑end React.
 - [Hardening de Segurança Operacional](security.md)
+- [Classificação Técnica e Ranking do Racha](technical-ranking.md) - Documenta o componente TechnicalRanking.tsx que exibe rankings, estatísticas e o novo item "Jogos Vencidos" na Classificação Detalhada.
