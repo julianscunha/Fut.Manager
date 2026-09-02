@@ -1613,7 +1613,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
                                   <DetailPresences matchId={item.id} players={players} />
                                 )}
                                 {activeDetailTab === 'teams' && (
-                                  <DetailTeams matchId={item.id} players={players} />
+                                  <DetailTeams matchId={item.id} players={players} matchResult={matchResult} />
                                 )}
                                 {activeDetailTab === 'result' && (
                                   <DetailResult matchId={item.id} matchResult={matchResult} />
@@ -2445,7 +2445,7 @@ function DetailPresences({ matchId, players }: { matchId: string; players: Playe
   );
 }
 
-function DetailTeams({ matchId, players }: { matchId: string; players: Player[] }) {
+function DetailTeams({ matchId, players, matchResult }: { matchId: string; players: Player[]; matchResult?: any }) {
   const [draw, setDraw] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -2514,12 +2514,18 @@ function DetailTeams({ matchId, players }: { matchId: string; players: Player[] 
           const title = isBlue ? '🔵 Equipe A (Azul)' : isRed ? '🔴 Equipe B (Vermelho)' : '🟢 Equipe C (Verde)';
           const bgHeader = isBlue ? 'bg-blue-600/10 border-blue-500/20 text-blue-400' : isRed ? 'bg-rose-600/10 border-rose-500/20 text-rose-400' : 'bg-emerald-600/10 border-emerald-500/20 text-emerald-400';
           const overall = isBlue ? draw.overallBlue : isRed ? draw.overallRed : draw.overallGreen;
+          const teamWins = matchResult
+            ? (isBlue ? matchResult.winsBlue : isRed ? matchResult.winsRed : matchResult.winsGreen)
+            : undefined;
 
           return (
             <div key={team.name} className="bg-zinc-950/40 border border-zinc-900 rounded-xl overflow-hidden">
               <div className={`px-3 py-2 border-b flex items-center justify-between font-bold ${bgHeader}`}>
                 <span>{title}</span>
-                {overall && <span className="text-[10px] font-mono bg-zinc-950 px-1.5 py-0.5 rounded text-white border border-zinc-850">OVR {Math.round(overall)}</span>}
+                <div className="flex items-center gap-1.5">
+                  {teamWins !== undefined && <span className="text-[10px] font-mono bg-zinc-950 px-1.5 py-0.5 rounded text-white border border-zinc-850">{teamWins}V</span>}
+                  {!!overall && <span className="text-[10px] font-mono bg-zinc-950 px-1.5 py-0.5 rounded text-white border border-zinc-850">OVR {Math.round(overall)}</span>}
+                </div>
               </div>
               <div className="p-2.5 space-y-1.5">
                 {team.playerIds.map((pid: string) => {
