@@ -171,13 +171,23 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
     const keyPresences = indivs.length > 0 ? [...indivs].sort((a, b) => b.presences - a.presences)[0] : null;
 
     // Highest Winrate (Aproveitamento) - Needs at least 1 game
-    const keyWinrate = indivs.length > 0 
+    const keyWinrate = indivs.length > 0
       ? indivs.filter((p: any) => p.presences > 0).sort((a: any, b: any) => {
           if (b.aproveitamento !== a.aproveitamento) {
             return b.aproveitamento - a.aproveitamento;
           }
           return b.vitorias - a.vitorias;
-        })[0] 
+        })[0]
+      : null;
+
+    // Lowest Winrate (Aproveitamento) - "Perna de Pau", precisa de ao menos 1 presença
+    const keyWorstWinrate = indivs.length > 0
+      ? indivs.filter((p: any) => p.presences > 0).sort((a: any, b: any) => {
+          if (a.aproveitamento !== b.aproveitamento) {
+            return a.aproveitamento - b.aproveitamento;
+          }
+          return a.vitorias - b.vitorias;
+        })[0]
       : null;
 
     // Best Goalkeeper
@@ -192,14 +202,20 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
     // Best Trio
     const keyTrio = trios.length > 0 ? trios[0] : null;
 
+    // Most Individual Game Wins (soma de jogos vencidos dentro das rodadas, mesmo sem
+    // ser campeão do dia) - pode ser um jogador diferente do #1 do ranking geral.
+    const keyGameWins = indivs.length > 0 ? [...indivs].sort((a, b) => b.vitoriasJogos - a.vitoriasJogos)[0] : null;
+
     return {
       keyWins,
       keyPresences,
       keyWinrate,
+      keyWorstWinrate,
       keyKeeper,
       keyStreak,
       keyDuo,
-      keyTrio
+      keyTrio,
+      keyGameWins
     };
   };
 
@@ -1602,6 +1618,34 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                 </div>
               )}
 
+              {/* FIGURINHA 1.5: MAIOR NUMERO DE JOGOS GANHOS (mesmo sem ser campeão do dia) */}
+              {accolades.keyGameWins && (
+                <div className="bg-gradient-to-b from-orange-600/25 via-zinc-950 to-zinc-950 p-5 rounded-2xl border-2 border-orange-500/40 relative shadow-xl text-center flex flex-col items-center justify-between min-h-[300px] overflow-hidden group hover:border-orange-500 transition duration-300">
+                  <div className="absolute top-2 right-2 text-[8px] font-bold font-mono text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded uppercase">Consistente</div>
+
+                  <div className="space-y-2 mt-4">
+                    <Zap className="w-8 h-8 text-orange-400 mx-auto" />
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest block font-mono">⚡ MAIS JOGOS VENCIDOS</span>
+
+                    <div className="relative mt-2">
+                      <div className="w-20 h-20 rounded-full border-2 border-orange-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg group-hover:scale-105 transition">
+                        <img src={getPlayerAvatarUrl(accolades.keyGameWins)} alt={accolades.keyGameWins.name} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-orange-500 text-zinc-950 font-black px-2.5 py-0.5 rounded-full text-[10px] font-mono shadow uppercase">
+                        {accolades.keyGameWins.vitoriasJogos} Jogos V.
+                      </span>
+                    </div>
+
+                    <h4 className="text-white font-black text-sm pt-2 truncate max-w-[160px]">{accolades.keyGameWins.name}</h4>
+                    <p className="text-[10px] text-zinc-550 lowercase font-mono">Pontua mesmo sem ser campeão do dia</p>
+                  </div>
+
+                  <div className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg p-2 mt-4 text-[10.5px] font-mono text-zinc-400">
+                     Apenas <span className="text-orange-400 font-extrabold">{accolades.keyGameWins.vitorias} rodadas</span> como campeão do dia ({accolades.keyGameWins.presences} presenças)
+                  </div>
+                </div>
+              )}
+
               {/* FIGURINHA 2: ONIPRESENTE (MAIS PRESENÇAS) */}
               {accolades.keyPresences && (
                 <div className="bg-gradient-to-b from-sky-600/25 via-zinc-950 to-zinc-950 p-5 rounded-2xl border-2 border-sky-500/40 relative shadow-xl text-center flex flex-col items-center justify-between min-h-[300px] overflow-hidden group hover:border-sky-500 transition duration-300">
@@ -1654,6 +1698,34 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                   <div className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg p-2 mt-4 text-[10.5px] font-mono text-zinc-400">
                      Venceu <span className="text-emerald-400 font-extrabold">{accolades.keyWinrate.vitorias} de {accolades.keyWinrate.presences}</span> partidas.
+                  </div>
+                </div>
+              )}
+
+              {/* FIGURINHA 3.5: PERNA DE PAU (PIOR APROVEITAMENTO EM PARTIDAS) */}
+              {accolades.keyWorstWinrate && (
+                <div className="bg-gradient-to-b from-slate-600/25 via-zinc-950 to-zinc-950 p-5 rounded-2xl border-2 border-slate-500/40 relative shadow-xl text-center flex flex-col items-center justify-between min-h-[300px] overflow-hidden group hover:border-slate-500 transition duration-300">
+                  <div className="absolute top-2 right-2 text-[8px] font-bold font-mono text-slate-400 bg-slate-500/10 border border-slate-500/20 px-1.5 py-0.5 rounded uppercase">Perna de Pau</div>
+
+                  <div className="space-y-2 mt-4">
+                    <ArrowDown className="w-8 h-8 text-slate-400 mx-auto" />
+                    <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest block font-mono">🦵 PERNA DE PAU</span>
+
+                    <div className="relative mt-2">
+                      <div className="w-20 h-20 rounded-full border-2 border-slate-500/60 overflow-hidden bg-zinc-900 mx-auto shadow-lg grayscale group-hover:scale-105 transition">
+                        <img src={getPlayerAvatarUrl(accolades.keyWorstWinrate)} alt={accolades.keyWorstWinrate.name} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 bg-slate-500 text-zinc-950 font-black px-2.5 py-0.5 rounded-full text-[10.5px] font-mono shadow uppercase">
+                        {accolades.keyWorstWinrate.aproveitamento}% Aprov
+                      </span>
+                    </div>
+
+                    <h4 className="text-white font-black text-sm pt-2 truncate max-w-[160px]">{accolades.keyWorstWinrate.name}</h4>
+                    <p className="text-[10px] text-zinc-550 lowercase font-mono">Entra em campo, mas o placar não ajuda</p>
+                  </div>
+
+                  <div className="w-full bg-zinc-900/60 border border-zinc-800 rounded-lg p-2 mt-4 text-[10.5px] font-mono text-zinc-400">
+                     Venceu <span className="text-slate-400 font-extrabold">{accolades.keyWorstWinrate.vitorias} de {accolades.keyWorstWinrate.presences}</span> partidas.
                   </div>
                 </div>
               )}
