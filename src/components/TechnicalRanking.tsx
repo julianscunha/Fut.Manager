@@ -1719,7 +1719,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                     <Users className="w-8 h-8 text-teal-400 mx-auto" />
                     <span className="text-[10px] text-zinc-400 uppercase font-bold tracking-widest block font-mono">👥 DUPLA INVENCÍVEL</span>
 
-                    <h4 className="text-white font-black text-xs leading-relaxed pt-4 line-clamp-2">
+                    <h4 className="text-white font-black text-xs leading-relaxed pt-4 line-clamp-3">
                       {accolades.keyDuo.playerAName} <br />
                       <span className="text-teal-400 font-normal">e</span> <br />
                       {accolades.keyDuo.playerBName}
