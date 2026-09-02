@@ -29,7 +29,7 @@ import {
   BookOpen,
   History
 } from 'lucide-react';
-import { User, MuralPost } from '../types';
+import { User, MuralPost } from '../types/domain';
 import CommunicationCenter from './CommunicationCenter';
 import { useAppConfig } from '../contexts/AppConfigContext';
 

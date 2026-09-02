@@ -23,14 +23,14 @@ const footLabel = (foot?: string): string => {
   if (foot === 'Ambidestro') return 'Ambidestro ⚡🦶';
   return 'Destro 🦶';
 };
-import { 
-  Player, 
-  POSITION_LABELS, 
-  CATEGORY_LABELS, 
-  STATUS_LABELS, 
-  LINE_ATTRIBUTES, 
+import { Player } from '../types/domain';
+import {
+  POSITION_LABELS,
+  CATEGORY_LABELS,
+  STATUS_LABELS,
+  LINE_ATTRIBUTES,
   GOALKEEPER_ATTRIBUTES
-} from '../types';
+} from '../types/ui';
 import { SportsCard, SportsBadge } from './UI';
 import { ClubShield } from './PlayerCard';
 

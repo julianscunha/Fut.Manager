@@ -6,7 +6,8 @@ import {
   Download, FileText, CheckCircle2, AlertTriangle, AlertCircle, RefreshCw,
   ChevronDown, ChevronUp, Baby, User as UserIcon
 } from 'lucide-react';
-import { User, GrupalEvent, GrupalEventType, GrupalEventStatus, CATEGORY_LABELS, PlayerCategory } from '../types';
+import { User, GrupalEvent, GrupalEventType, GrupalEventStatus, PlayerCategory } from '../types/domain';
+import { CATEGORY_LABELS } from '../types/ui';
 import { useAppConfig } from '../contexts/AppConfigContext';
 import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 

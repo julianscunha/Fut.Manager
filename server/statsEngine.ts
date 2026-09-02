@@ -1,4 +1,4 @@
-import { Player, Match, Presence, MatchResult, Season, PlayerStats, DuoAffinity, TrioAffinity } from '../src/types';
+import { Player, Match, Presence, MatchResult, Season, PlayerStats, DuoAffinity, TrioAffinity } from '../src/types/domain';
 
 function computePlayerMetrics(playerId: string, playerPosition: string, evaluations: any[] = []) {
   const playerEvals = evaluations.filter(e => e.targetPlayerId === playerId);

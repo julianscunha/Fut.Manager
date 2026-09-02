@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { motion } from 'motion/react';
-import { User, Season, Match, MatchStatus, Player } from '../types';
+import { User, Season, Match, MatchStatus, Player } from '../types/domain';
 import { 
   Calendar, Clock, MapPin, Plus, Trash2, Edit, Check, Play, RefreshCw,
   Sliders, AlertTriangle, ArrowUp, ArrowDown, ShieldAlert, CheckCircle2,

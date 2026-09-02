@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
-import { Player, PlayerPosition, PlayerCategory, PlayerStatus, FAVORITE_TEAMS, POSITION_LABELS } from '../types';
+import { Player, PlayerPosition, PlayerCategory, PlayerStatus } from '../types/domain';
+import { FAVORITE_TEAMS, POSITION_LABELS } from '../types/ui';
 import { X, Heart, Settings, Save, Phone, FileText } from 'lucide-react';
 
 interface PlayerFormProps {

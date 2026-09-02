@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Player, POSITION_LABELS } from '../types';
+import { User, Player } from '../types/domain';
+import { POSITION_LABELS } from '../types/ui';
 import { authFetch } from '../lib/authFetch';
 import { getAchievementsForPlayer } from '../utils/achievements';
 import { getRoundStatus } from '../utils/roundStatus';

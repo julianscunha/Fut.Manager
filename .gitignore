@@ -16,7 +16,6 @@ Thumbs.db
 # .claude/skills são symlinks pra .agents/skills/ (aqui viram cópias no Windows) —
 # regenerados via `npx skills add supabase/agent-skills`, não precisam ser versionados.
 .claude/
-.agents/
 
 # Config local do Kilo Code (MCP, plugin graphify) — específica da máquina do dev.
 .kilo/

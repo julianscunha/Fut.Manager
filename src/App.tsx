@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, Player } from './types';
+import { User, Player } from './types/domain';
 import AuthScreens from './components/AuthScreens';
 import { authFetch } from './lib/authFetch';
 import { BrandName, useAppConfig } from './contexts/AppConfigContext';

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { User, UserRole, UserStatus, PlayerCategory, PlayerPosition } from '../types';
+import { User, UserRole, UserStatus, PlayerCategory, PlayerPosition } from '../types/domain';
 import { 
   Check, X, Users, AlertCircle, Sparkles, 
   Search, Filter, Edit2, History, UserCheck, RefreshCw, UserCog, CheckCircle2, ArrowRight, Phone, Award

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Player, Bill, PaymentRecord, RecurrentConfig, Expense } from '../types';
+import { User, Player, Bill, PaymentRecord, RecurrentConfig, Expense } from '../types/domain';
 import { authFetch } from '../lib/authFetch';
 import { 
   CreditCard, ShieldAlert, CheckCircle2, AlertCircle, FileText, Download,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
 import { useAppConfig } from '../contexts/AppConfigContext';
-import { Match, Player, DrawTeam, TeamDraw } from '../types';
+import { Match, Player, DrawTeam, TeamDraw } from '../types/domain';
 import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 import { 
   Users, 

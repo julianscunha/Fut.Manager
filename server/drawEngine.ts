@@ -1,4 +1,4 @@
-import { Player, TeamDraw, DrawTeam, DuoAffinity, TrioAffinity, PlayerPosition } from '../src/types';
+import { Player, TeamDraw, DrawTeam, DuoAffinity, TrioAffinity, PlayerPosition } from '../src/types/domain';
 
 // Helper to check if a position represents a defender
 function isDefender(pos: PlayerPosition): boolean {

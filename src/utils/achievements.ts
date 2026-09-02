@@ -1,4 +1,4 @@
-import { Player, PlayerStats } from '../types';
+import { Player, PlayerStats } from '../types/domain';
 
 export interface Achievement {
   id: string;

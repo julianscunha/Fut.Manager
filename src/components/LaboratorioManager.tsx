@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { User, POSITION_LABELS } from '../types';
+import { User } from '../types/domain';
+import { POSITION_LABELS } from '../types/ui';
 import { useAppConfig } from '../contexts/AppConfigContext';
 import { 
   Zap, 

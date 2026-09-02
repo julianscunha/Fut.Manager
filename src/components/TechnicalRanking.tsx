@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { authFetch } from '../lib/authFetch';
-import { Player, User, POSITION_LABELS, FAVORITE_TEAMS } from '../types';
+import { Player, User } from '../types/domain';
+import { POSITION_LABELS, FAVORITE_TEAMS } from '../types/ui';
 import { 
   Award, Trophy, Sparkles, RefreshCw, Star, Shield, 
   Users, Users2, Flame, Calendar, Activity, Zap, Compass,

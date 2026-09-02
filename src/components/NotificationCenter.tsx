@@ -12,7 +12,7 @@ import {
   UserPlus, 
   Dice5 
 } from 'lucide-react';
-import { Notification, NotificationCategory, NotificationPreferences } from '../types';
+import { Notification, NotificationCategory, NotificationPreferences } from '../types/domain';
 
 interface NotificationCenterProps {
   currentUser: {

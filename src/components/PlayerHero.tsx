@@ -15,7 +15,8 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
-import { Player, POSITION_LABELS, CATEGORY_LABELS, STATUS_LABELS } from '../types';
+import { Player } from '../types/domain';
+import { POSITION_LABELS, CATEGORY_LABELS, STATUS_LABELS } from '../types/ui';
 import { ClubShield } from './PlayerCard';
 import { SportsBadge, SportsIndicator, VISUAL_TOKENS } from './UI';
 import { getPlayerAvatarUrl } from '../utils/playerAvatar';

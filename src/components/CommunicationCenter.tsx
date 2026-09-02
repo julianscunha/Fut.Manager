@@ -20,7 +20,7 @@ import {
   User,
   RotateCcw
 } from 'lucide-react';
-import { User as UserType, MuralPost, Match } from '../types';
+import { User as UserType, MuralPost, Match } from '../types/domain';
 
 interface CommunicationCenterProps {
   currentUser: UserType | null;

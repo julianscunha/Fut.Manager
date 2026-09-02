@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { authFetch } from '../lib/authFetch';
-import { Player, User, LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, FAVORITE_TEAMS } from '../types';
+import { Player, User } from '../types/domain';
+import { LINE_ATTRIBUTES, GOALKEEPER_ATTRIBUTES, FAVORITE_TEAMS } from '../types/ui';
 import { X, Award, Check, Info, AlertTriangle, ArrowLeft, Star } from 'lucide-react';
 import { getPlayerAvatarUrl } from '../utils/playerAvatar';
 

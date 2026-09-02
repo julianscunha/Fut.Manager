@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Shield, KeyRound, AlertCircle, Sparkles, LogIn, ArrowLeft, Send, CheckCircle2, X } from 'lucide-react';
-import { User } from '../types';
+import { User } from '../types/domain';
 import { BrandName } from '../contexts/AppConfigContext';
 
 interface AuthScreensProps {
