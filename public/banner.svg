@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" role="img" aria-label="Fut.Manager">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a0f0d"/>
+      <stop offset="100%" stop-color="#0f2b22"/>
+    </linearGradient>
+    <linearGradient id="shieldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f2b22"/>
+      <stop offset="100%" stop-color="#0a0f0d"/>
+    </linearGradient>
+    <linearGradient id="flameGrad" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#b91c1c"/>
+      <stop offset="50%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#fbbf24"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgGrad)"/>
+  <circle cx="1080" cy="40" r="180" fill="#10b981" opacity="0.06"/>
+  <circle cx="60" cy="270" r="140" fill="#10b981" opacity="0.05"/>
+
+  <g transform="translate(90,70) scale(2.4)">
+    <path d="M32 6 L50 14 L50 27 C50 41 32 52 32 52 C32 52 14 41 14 27 L14 14 Z"
+          fill="url(#shieldGrad)" stroke="#10b981" stroke-width="1.5" stroke-linejoin="round"/>
+    <path d="M32 22 C27 18 26 12 29 6 C29 13 33 15 34 11 C36 17 41 19 41 26 C41 31 37 34 33 34 C36 30 35 25 32 22 Z"
+          fill="url(#flameGrad)"/>
+    <circle cx="32" cy="36" r="11" fill="#ffffff" stroke="#0a0f0d" stroke-width="1"/>
+    <path d="M32 30 L37 33 L35 39 L29 39 L27 33 Z" fill="#0a0f0d"/>
+  </g>
+
+  <text x="330" y="150" font-family="Segoe UI, Arial, sans-serif" font-size="64" font-weight="700" fill="#f5f7f6">Fut.Manager</text>
+  <text x="332" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="24" fill="#9ca8a3">O cockpit completo para quem administra um racha</text>
+</svg>

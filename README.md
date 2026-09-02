@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/banner.svg" alt="Fut.Manager" width="100%">
+</p>
+
 # ⚽ Fut.Manager
 
 **O cockpit completo para quem administra um racha.** Mensalistas, reservas, sorteio de times equilibrado, financeiro, mural social e ranking técnico — tudo em um só lugar, pensado para ser usado no campo, pelo celular, minutos antes da bola rolar.
@@ -98,7 +102,7 @@ Para quem for trabalhar no código com o Claude Code, veja também o [`CLAUDE.md
 
 ## 🤝 Contribuindo
 
-Issues e pull requests são bem-vindos. Antes de abrir um PR grande, abra uma issue descrevendo a mudança proposta.
+Issues e pull requests são bem-vindos! Veja o [guia de contribuição](CONTRIBUTING.md) para setup local, convenções de código e como abrir um PR.
 
 ## 📄 Licença
 
