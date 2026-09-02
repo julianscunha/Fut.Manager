@@ -545,6 +545,7 @@ async function startServer() {
     for (const m of db.matches) {
       const oldStatus = m.status;
       const oldLifecycle = m.lifecycleState;
+      let autoCancelledNow = false;
 
       // Determine computed state
       let computedLifecycle = oldLifecycle || 'SCHEDULED';
@@ -602,7 +603,27 @@ async function startServer() {
             const { matchDateTime } = getMatchDeadlineInfo(m, closeMatchDeadlineDays);
             const isStartingSoon = new Date() >= new Date(matchDateTime.getTime() - 5 * 60 * 1000);
 
-            if (confirmedCount >= limit || isStartingSoon) {
+            // Cancelamento automático: passado o horário real do jogo (não os 5min de
+            // antecedência do fechamento de lista), sem jogadores suficientes para pelo
+            // menos 2 times (5 por time), a partida nunca vai rolar - cancela sozinha em
+            // vez de ficar presa em CHECKIN_CLOSED esperando um admin decidir manualmente.
+            const MIN_PLAYERS_FOR_TWO_TEAMS = 10;
+            const isPastKickoff = new Date() >= matchDateTime;
+
+            if (isPastKickoff && confirmedCount < MIN_PLAYERS_FOR_TWO_TEAMS) {
+              computedLifecycle = 'ARCHIVED';
+              autoCancelledNow = true;
+              if (oldStatus !== 'cancelada') {
+                notify(db, {
+                  category: 'partida',
+                  title: '❌ Partida Cancelada Automaticamente',
+                  message: `A partida do dia ${m.date.split('-').reverse().join('/')} foi cancelada automaticamente por falta de jogadores suficientes (${confirmedCount} confirmados, mínimo de ${MIN_PLAYERS_FOR_TWO_TEAMS} para 2 times).`,
+                  actionUrl: 'calendar',
+                  matchId: m.id
+                });
+                mutated = true;
+              }
+            } else if (confirmedCount >= limit || isStartingSoon) {
               computedLifecycle = 'CHECKIN_CLOSED';
             } else {
               const hasAnyDeclarations = computedList.some((p: any) => p.presenceStatus === 'confirmado' || (p.presenceStatus === 'cancelado' && p.category !== 'reserva'));
@@ -641,7 +662,7 @@ async function startServer() {
       // Sync the old text status with computedLifecycle to guarantee backward-compatibility
       let targetStatus = m.status;
       if (computedLifecycle === 'ARCHIVED') {
-        targetStatus = oldStatus === 'cancelada' ? 'cancelada' : 'encerrada';
+        targetStatus = (oldStatus === 'cancelada' || autoCancelledNow) ? 'cancelada' : 'encerrada';
       } else if (computedLifecycle === 'MATCH_FINISHED') {
         targetStatus = 'encerrada';
       } else if (computedLifecycle === 'DRAW_COMPLETED') {
