@@ -32,7 +32,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
   const [rankingSubTab, setRankingSubTab] = useState<'overall' | 'racha' | 'hall'>('racha');
   
   // Specific Racha Subtab nested view: 'individual' | 'goalkeepers' | 'affinities' | 'streaks'
-  const [rachaViewMode, setRachaViewMode] = useState<'individual' | 'goalkeepers' | 'affinities' | 'streaks'>('individual');
+  const [rachaViewMode, setRachaViewMode] = useState<'individual' | 'goalkeepers' | 'affinities' | 'streaks' | 'gameWins'>('individual');
 
   // Premium category filtering for sport-themed roster
   const [filterCategory, setFilterCategory] = useState<'all' | 'mensalista' | 'reserva' | 'goleiro'>('all');
@@ -975,6 +975,16 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                   >
                     Sequências 🔥
                   </button>
+                  <button
+                    onClick={() => setRachaViewMode('gameWins')}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all duration-200 cursor-pointer ${
+                      rachaViewMode === 'gameWins'
+                        ? 'bg-zinc-900 text-white'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                    }`}
+                  >
+                    Jogos Vencidos
+                  </button>
                 </div>
               </div>
 
@@ -1050,7 +1060,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                           {/* Football Statistics Block */}
                           <div className="flex items-center justify-between md:justify-end gap-6 border-t border-zinc-900/40 md:border-t-0 pt-3 md:pt-0">
-                            <div className="grid grid-cols-4 gap-4 md:gap-6 text-center font-mono">
+                            <div className="grid grid-cols-3 gap-4 md:gap-6 text-center font-mono">
                               <div>
                                 <span className="block text-[8px] text-zinc-650 uppercase">Partidas</span>
                                 <span className="text-xs font-bold text-zinc-300">{player.presences}</span>
@@ -1058,10 +1068,6 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               <div>
                                 <span className="block text-[8px] text-emerald-500 uppercase">Vitórias</span>
                                 <span className="text-xs font-bold text-emerald-400">{player.vitorias}</span>
-                              </div>
-                              <div title="Soma dos jogos vencidos dentro de cada rodada, mesmo quando o time não foi campeão do dia">
-                                <span className="block text-[8px] text-amber-500 uppercase">Jogos V.</span>
-                                <span className="text-xs font-bold text-amber-400">{player.vitoriasJogos}</span>
                               </div>
                               <div>
                                 <span className="block text-[8px] text-sky-500 uppercase">Aproveit.</span>
@@ -1269,6 +1275,54 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                             <div className="bg-purple-500/5 p-2 rounded-lg border border-purple-500/10">
                               <span className="block text-[8px] text-purple-400 uppercase">👑 Máx Histórica</span>
                               <span className="text-xs font-bold text-purple-400">{player.maxStreak}V</span>
+                            </div>
+                          </div>
+
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+
+              {/* JOGOS VENCIDOS (soma de jogos individuais ganhos, mesmo sem ser campeão do dia) */}
+              {rachaViewMode === 'gameWins' && (
+                <div className="space-y-3 animate-fadeIn" id="section-game-wins">
+                  {[...(rachaStats?.individual || [])]
+                    .sort((a, b) => b.vitoriasJogos - a.vitoriasJogos || b.aproveitamento - a.aproveitamento)
+                    .map((player: any, idx: number) => {
+                      const ovr = getPlayerOvr(player.playerId);
+                      return (
+                        <div
+                          key={player.playerId}
+                          className="bg-zinc-950/30 border border-zinc-900/60 rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.01] hover:border-zinc-800"
+                        >
+                          <div className="flex items-center gap-4 min-w-0">
+                            <div className="w-8 text-center font-mono text-sm font-black text-zinc-500 shrink-0">
+                              #{idx + 1}
+                            </div>
+
+                            <div className="w-11 h-11 rounded-full border border-zinc-800 overflow-hidden bg-zinc-900 shrink-0">
+                              <img src={getPlayerAvatarUrl(player)} alt={player.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            </div>
+
+                            <div className="min-w-0">
+                              <h5 className="font-sans font-extrabold text-sm text-white truncate">{player.name}</h5>
+                              <div className="text-[10px] text-zinc-500 font-mono uppercase tracking-wider mt-1 flex items-center gap-1.5">
+                                <span className="text-emerald-500 font-bold">{POSITION_LABELS[player.primaryPosition]}</span>
+                                <span>•</span>
+                                <span>{ovr.toFixed(1)} OVR</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3 md:gap-6 text-center font-mono min-w-[200px]">
+                            <div className="bg-orange-500/5 p-2 rounded-lg border border-orange-500/10" title="Soma dos jogos vencidos dentro de cada rodada, mesmo quando o time não foi campeão do dia">
+                              <span className="block text-[8px] text-orange-500 uppercase">⚡ Jogos Vencidos</span>
+                              <span className="text-xs font-bold text-orange-400">{player.vitoriasJogos}</span>
+                            </div>
+                            <div className="bg-zinc-900/50 p-2 rounded-lg border border-zinc-800">
+                              <span className="block text-[8px] text-zinc-500 uppercase">🏆 Rodadas Campeão</span>
+                              <span className="text-xs font-bold text-zinc-300">{player.vitorias}</span>
                             </div>
                           </div>
 
