@@ -1034,7 +1034,7 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
 
                           {/* Football Statistics Block */}
                           <div className="flex items-center justify-between md:justify-end gap-6 border-t border-zinc-900/40 md:border-t-0 pt-3 md:pt-0">
-                            <div className="grid grid-cols-3 gap-4 md:gap-6 text-center font-mono">
+                            <div className="grid grid-cols-4 gap-4 md:gap-6 text-center font-mono">
                               <div>
                                 <span className="block text-[8px] text-zinc-650 uppercase">Partidas</span>
                                 <span className="text-xs font-bold text-zinc-300">{player.presences}</span>
@@ -1042,6 +1042,10 @@ export default function TechnicalRanking({ players, currentUser }: TechnicalRank
                               <div>
                                 <span className="block text-[8px] text-emerald-500 uppercase">Vitórias</span>
                                 <span className="text-xs font-bold text-emerald-400">{player.vitorias}</span>
+                              </div>
+                              <div title="Soma dos jogos vencidos dentro de cada rodada, mesmo quando o time não foi campeão do dia">
+                                <span className="block text-[8px] text-amber-500 uppercase">Jogos V.</span>
+                                <span className="text-xs font-bold text-amber-400">{player.vitoriasJogos}</span>
                               </div>
                               <div>
                                 <span className="block text-[8px] text-sky-500 uppercase">Aproveit.</span>

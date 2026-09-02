@@ -144,6 +144,10 @@ export interface PlayerStats {
   derrotas: number;
   empates: number;
   aproveitamento: number; // percentage (vitorias / presences * 100)
+  // Soma dos jogos (rodízio dentro de cada rodada) vencidos pelo time do jogador,
+  // mesmo em rodadas onde o time não foi o campeão do dia. Diferente de `vitorias`,
+  // que conta no máximo 1 por rodada (só quando o time é campeão).
+  vitoriasJogos: number;
   currentStreak: number;
   maxStreak: number;
   ovr?: number;

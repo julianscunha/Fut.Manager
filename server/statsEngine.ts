@@ -143,6 +143,9 @@ export function computeStatsForSeason({
   const lossCountMap: Record<string, number> = {};
   const drawCountMap: Record<string, number> = {};
   const presenceCountMap: Record<string, number> = {};
+  // Soma dos jogos individuais vencidos (winsBlue/winsRed/winsGreen do time do jogador),
+  // ao contrário de winCountMap que so conta 1 por rodada quando o time e campeao do dia.
+  const gameWinCountMap: Record<string, number> = {};
 
   activePlayers.forEach(p => {
     currentStreakMap[p.id] = 0;
@@ -151,6 +154,7 @@ export function computeStatsForSeason({
     lossCountMap[p.id] = 0;
     drawCountMap[p.id] = 0;
     presenceCountMap[p.id] = 0;
+    gameWinCountMap[p.id] = 0;
   });
 
   // For Duos
@@ -212,9 +216,11 @@ export function computeStatsForSeason({
         } else {
           draw = true;
         }
+        // Goleiro compartilhado jogou pelos 3 times: soma os jogos vencidos por todos.
+        gameWinCountMap[player.id] += (resObj.winsBlue || 0) + (resObj.winsRed || 0) + (resObj.winsGreen || 0);
       } else {
-        const teamNameOfPlayer = blueTeamPlayerIds.has(player.id) ? 'Azul' : 
-                                 redTeamPlayerIds.has(player.id) ? 'Vermelho' : 
+        const teamNameOfPlayer = blueTeamPlayerIds.has(player.id) ? 'Azul' :
+                                 redTeamPlayerIds.has(player.id) ? 'Vermelho' :
                                  greenTeamPlayerIds.has(player.id) ? 'Verde' : null;
         if (teamNameOfPlayer) {
           if (champTeams.length === 0 || champTeams.length > 1) {
@@ -224,6 +230,11 @@ export function computeStatsForSeason({
           } else {
             lost = true;
           }
+
+          const teamGameWins = teamNameOfPlayer === 'Azul' ? resObj.winsBlue :
+                               teamNameOfPlayer === 'Vermelho' ? resObj.winsRed :
+                               resObj.winsGreen;
+          gameWinCountMap[player.id] += teamGameWins || 0;
         }
       }
 
@@ -299,6 +310,7 @@ export function computeStatsForSeason({
       derrotas,
       empates,
       aproveitamento,
+      vitoriasJogos: gameWinCountMap[p.id] || 0,
       currentStreak: currentStreakMap[p.id] || 0,
       maxStreak: maxStreakMap[p.id] || 0,
       ovr,
