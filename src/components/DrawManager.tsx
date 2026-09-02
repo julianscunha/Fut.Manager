@@ -121,6 +121,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
   const [captainsConfigured, setCaptainsConfigured] = useState(false);
   const [captains, setCaptains] = useState<Record<string, string>>({ Azul: '', Vermelho: '', Verde: '' });
   const [isSharedGoalkeepers, setIsSharedGoalkeepers] = useState(false);
+  const [twoTeamsOnly, setTwoTeamsOnly] = useState(false);
 
   // Active Draw state
   const [activeDraw, setActiveDraw] = useState<TeamDraw | null>(null);
@@ -178,6 +179,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         setCaptainsConfigured(false);
         setCaptains({ Azul: '', Vermelho: '', Verde: '' });
         setIsSharedGoalkeepers(false);
+        setTwoTeamsOnly(false);
       } else {
         fetchConfirmedPlayers(selectedMatch.id);
         fetchActiveDraw(selectedMatch.id);
@@ -265,6 +267,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         setActiveDraw(draw);
         setCaptainsConfigured(draw.captainsConfigured);
         setIsSharedGoalkeepers(draw.isSharedGoalkeepers);
+        setTwoTeamsOnly(!!draw.twoTeamsOnly);
         
         // Populate captains
         const caps: Record<string, string> = { Azul: '', Vermelho: '', Verde: '' };
@@ -295,7 +298,8 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
         body: JSON.stringify({
           captainsConfigured,
           captains,
-          isSharedGoalkeepers
+          isSharedGoalkeepers,
+          twoTeamsOnly
         })
       });
 
@@ -471,7 +475,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
     text += `📍 Local: ${selectedMatch.location}\n\n`;
     text += `Diferença Técnica: ${activeDraw.maxDifference.toFixed(1)}\n\n`;
 
-    activeDraw.teams.forEach((t) => {
+    activeDraw.teams.filter(t => !activeDraw.twoTeamsOnly || t.name !== 'Verde').forEach((t) => {
       const teamOverall = t.name === 'Azul' ? activeDraw.overallBlue : t.name === 'Vermelho' ? activeDraw.overallRed : activeDraw.overallGreen;
       // Use color circle depending on team name
       const colorIcon = t.name === 'Azul' ? '🔵' : t.name === 'Vermelho' ? '🔴' : '🟢';
@@ -777,6 +781,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                     </select>
                   </div>
 
+                  {!twoTeamsOnly && (
                   <div className="space-y-1">
                     <label className="text-[10px] text-zinc-500 font-black block">CAPITÃO VERDE</label>
                     <select
@@ -820,6 +825,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                       })()}
                     </select>
                   </div>
+                  )}
                 </div>
               )}
 
@@ -834,6 +840,21 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                   checked={isSharedGoalkeepers}
                   disabled={selectedMatch?.status === 'sorteada' && (!activeDraw || (activeDraw.redrawCount || 0) >= 2)}
                   onChange={(e) => setIsSharedGoalkeepers(e.target.checked)}
+                  className="accent-emerald-500 h-3.5 w-3.5"
+                />
+              </div>
+
+              {/* Two-teams-only setting */}
+              <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col">
+                  <span className="text-xs font-bold text-zinc-400">Sorteio · Apenas 2 Times</span>
+                  <span className="text-[9px] text-zinc-650">Ignora o time Verde; distribui todos entre Azul e Vermelho</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={twoTeamsOnly}
+                  disabled={selectedMatch?.status === 'sorteada' && (!activeDraw || (activeDraw.redrawCount || 0) >= 2)}
+                  onChange={(e) => setTwoTeamsOnly(e.target.checked)}
                   className="accent-emerald-500 h-3.5 w-3.5"
                 />
               </div>
@@ -867,7 +888,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                   className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-zinc-850 disabled:text-zinc-600 disabled:opacity-50 text-white font-black text-xs uppercase tracking-wider rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-400" />
-                  <span>{activeDraw ? 'Sortear Novamente' : 'Realizar Sorteio'}</span>
+                  <span>{activeDraw ? 'Sortear Novamente' : (twoTeamsOnly ? 'Sortear · 2 Times' : 'Realizar Sorteio')}</span>
                 </button>
               ) : (
                 <div className="p-3 bg-zinc-900/60 border border-zinc-850 text-zinc-400 text-[10.5px] rounded-lg leading-relaxed text-center font-mono">
@@ -915,7 +936,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
             <div className="space-y-6">
               
               {/* Balance metrics widget bar */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-[#111815] p-3 rounded-xl border border-emerald-950/20">
+              <div className={`grid grid-cols-1 ${activeDraw.twoTeamsOnly ? 'md:grid-cols-3' : 'md:grid-cols-4'} gap-3 bg-[#111815] p-3 rounded-xl border border-emerald-950/20`}>
                 <div className="p-3 bg-zinc-950/50 rounded-lg border border-zinc-90 w-full text-center">
                   <span className="text-[10px] text-zinc-500 uppercase font-bold font-mono">Diferença Técnica</span>
                   <div className="flex items-center justify-center gap-1.5 mt-1">
@@ -936,15 +957,17 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                   <p className="text-lg font-black text-[#f87171] mt-1 font-mono">{activeDraw.overallRed.toFixed(1)}</p>
                 </div>
 
+                {!activeDraw.twoTeamsOnly && (
                 <div className="p-3 bg-zinc-950/50 rounded-lg border border-zinc-90 w-full text-center">
                   <span className="text-[10px] text-[#22c55e] uppercase font-bold font-mono">Overall Equipe C</span>
                   <p className="text-lg font-black text-[#4ade80] mt-1 font-mono">{activeDraw.overallGreen.toFixed(1)}</p>
                 </div>
+                )}
               </div>
 
-              {/* The three actual squads */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {activeDraw.teams.map((team) => {
+              {/* The actual squads (Verde omitted in modo 2 times) */}
+              <div className={`grid grid-cols-1 ${activeDraw.twoTeamsOnly ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
+                {activeDraw.teams.filter(t => !activeDraw.twoTeamsOnly || t.name !== 'Verde').map((team) => {
                   const teamColor = team.name === 'Azul' ? 'border-blue-600 bg-blue-950/2' : team.name === 'Vermelho' ? 'border-red-600 bg-red-950/2' : 'border-emerald-600 bg-emerald-950/2';
                   const teamHeaderColor = team.name === 'Azul' ? 'bg-blue-600/10 text-blue-400 border-blue-900/30' : team.name === 'Vermelho' ? 'bg-red-600/10 text-red-400 border-red-900/30' : 'bg-emerald-600/10 text-emerald-400 border-emerald-900/30';
                   
@@ -1080,7 +1103,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                         <div className="mt-4 p-2 bg-zinc-950 rounded-lg border border-emerald-950/30 text-[10px] space-y-1.5">
                           <p className="font-bold text-zinc-400">Mudar "{getPlayerName(selectedPlayerToMove.playerId)}" para:</p>
                           <div className="flex gap-2.5">
-                            {['Azul', 'Vermelho', 'Verde'].map((tName) => {
+                            {['Azul', 'Vermelho', 'Verde'].filter(t => !activeDraw.twoTeamsOnly || t !== 'Verde').map((tName) => {
                               if (tName === team.name) return null;
                               return (
                                 <button
@@ -1136,7 +1159,7 @@ export default function DrawManager({ currentUser }: DrawManagerProps) {
                   className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-black text-white uppercase rounded-xl transition cursor-pointer flex items-center gap-1.5"
                 >
                   <Sparkles className="w-4 h-4" />
-                  <span>Realizar Sorteio Técnico</span>
+                  <span>{twoTeamsOnly ? 'Realizar Sorteio · 2 Times' : 'Realizar Sorteio Técnico'}</span>
                 </button>
               ) : (
                 <p className="text-[10px] text-zinc-600 italic">Sorteios devem ser acionados por Administradores ou Auxiliares.</p>

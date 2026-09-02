@@ -4311,7 +4311,7 @@ async function startServer() {
    app.post('/api/matches/:matchId/draw', async (req, res) => {
     try {
       const { matchId } = req.params;
-      const { captainsConfigured, captains, isSharedGoalkeepers, responsibleName } = req.body;
+      const { captainsConfigured, captains, isSharedGoalkeepers, twoTeamsOnly, responsibleName } = req.body;
 
       const db = await readDb();
       const match = db.matches.find(m => m.id === matchId);
@@ -4372,7 +4372,8 @@ async function startServer() {
         duoAffinities: db.duoAffinities || [],
         trioAffinities: db.trioAffinities || [],
         captains: captainsConfigured ? captains : {},
-        isSharedGoalkeepers: !!isSharedGoalkeepers
+        isSharedGoalkeepers: !!isSharedGoalkeepers,
+        twoTeamsOnly: !!twoTeamsOnly
       });
 
       // Assemble final Draw object
@@ -4386,6 +4387,7 @@ async function startServer() {
         overallGreen: drawResult.overallGreen,
         maxDifference: drawResult.maxDifference,
         isSharedGoalkeepers: !!isSharedGoalkeepers,
+        twoTeamsOnly: !!twoTeamsOnly,
         captainsConfigured: !!captainsConfigured,
         redrawCount
       };

@@ -191,6 +191,8 @@ export interface TeamDraw {
   affinitiesRecorded?: boolean;
   winsRecorded?: boolean;
   redrawCount?: number;
+  // Quando true, o sorteio distribui apenas entre Azul/Vermelho (Verde fica vazio de propósito).
+  twoTeamsOnly?: boolean;
 }
 
 export interface MatchResult {

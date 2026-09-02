@@ -43,7 +43,8 @@ export function runSmartDraw({
   duoAffinities,
   trioAffinities,
   captains = {}, // e.g., { Azul?: string, Vermelho?: string, Verde?: string }
-  isSharedGoalkeepers = false
+  isSharedGoalkeepers = false,
+  twoTeamsOnly = false
 }: {
   confirmedPlayers: Player[];
   playerOveralls: Record<string, number>;
@@ -51,6 +52,7 @@ export function runSmartDraw({
   trioAffinities: TrioAffinity[];
   captains?: { Azul?: string; Vermelho?: string; Verde?: string };
   isSharedGoalkeepers?: boolean;
+  twoTeamsOnly?: boolean;
 }): {
   teams: DrawTeam[];
   overallBlue: number;
@@ -80,13 +82,15 @@ export function runSmartDraw({
     });
 
     // Distribute goalkeepers: Azul, Vermelho, Verde (only 3 teams, only 3 goalkeeper slots)
+    // No modo twoTeamsOnly, Verde não existe: seu slot de goleiro nunca é usado.
+    const gkSlotCount = twoTeamsOnly ? 2 : 3;
     if (sortedGks[0]) assignedGks.Azul = sortedGks[0].id;
     if (sortedGks[1]) assignedGks.Vermelho = sortedGks[1].id;
-    if (sortedGks[2]) assignedGks.Verde = sortedGks[2].id;
+    if (!twoTeamsOnly && sortedGks[2]) assignedGks.Verde = sortedGks[2].id;
 
-    // Goalkeepers beyond the 3 team slots play out as field players via their
+    // Goalkeepers beyond the team slots play out as field players via their
     // secondary position, instead of vanishing from the draw entirely.
-    const overflowGks = sortedGks.slice(3);
+    const overflowGks = sortedGks.slice(gkSlotCount);
     fieldPlayers = [...fieldPlayers, ...overflowGks];
     overflowGks.forEach(p => {
       overflowGkPositions[p.id] = (p.secondaryPositions || [])[0] || p.primaryPosition;
@@ -138,7 +142,7 @@ export function runSmartDraw({
       // Let's just distribute them sequentially to the team with the smallest size.
       const bLen = teamBluePlayers.length;
       const rLen = teamRedPlayers.length;
-      const gLen = teamGreenPlayers.length;
+      const gLen = twoTeamsOnly ? Infinity : teamGreenPlayers.length;
 
       if (bLen <= rLen && bLen <= gLen) {
         teamBluePlayers.push(p.id);
@@ -200,10 +204,10 @@ export function runSmartDraw({
 
     const bOverall = bCount > 0 ? (bSum / bCount) : 3.5;
     const rOverall = rCount > 0 ? (rSum / rCount) : 3.5;
-    const gOverall = gCount > 0 ? (gSum / gCount) : 3.5;
+    const gOverall = twoTeamsOnly ? 0 : (gCount > 0 ? (gSum / gCount) : 3.5);
 
-    const maxRating = Math.max(bOverall, rOverall, gOverall);
-    const minRating = Math.min(bOverall, rOverall, gOverall);
+    const maxRating = twoTeamsOnly ? Math.max(bOverall, rOverall) : Math.max(bOverall, rOverall, gOverall);
+    const minRating = twoTeamsOnly ? Math.min(bOverall, rOverall) : Math.min(bOverall, rOverall, gOverall);
     const diff = maxRating - minRating;
 
     // Skip if difference is too large (we want difference <= 0.6 ideally, if not we fall back to lowest available)
@@ -244,8 +248,8 @@ export function runSmartDraw({
       const bRounded = Math.round(bOverall * 10) / 10;
       const rRounded = Math.round(rOverall * 10) / 10;
       const gRounded = Math.round(gOverall * 10) / 10;
-      const maxRounded = Math.max(bRounded, rRounded, gRounded);
-      const minRounded = Math.min(bRounded, rRounded, gRounded);
+      const maxRounded = twoTeamsOnly ? Math.max(bRounded, rRounded) : Math.max(bRounded, rRounded, gRounded);
+      const minRounded = twoTeamsOnly ? Math.min(bRounded, rRounded) : Math.min(bRounded, rRounded, gRounded);
       const diffRounded = Math.round((maxRounded - minRounded) * 10) / 10;
 
       bestDraw = {
@@ -271,12 +275,16 @@ export function runSmartDraw({
     if (!isSharedGoalkeepers) {
       if (assignedGks.Azul) listBlue.push(assignedGks.Azul);
       if (assignedGks.Vermelho) listRed.push(assignedGks.Vermelho);
-      if (assignedGks.Verde) listGreen.push(assignedGks.Verde);
+      if (!twoTeamsOnly && assignedGks.Verde) listGreen.push(assignedGks.Verde);
     }
 
     // Simply distribute Remaining players round-robin sorted by rating (excluding captains pre-seeding as it was deprecated to safeguard balancing and goalkeeper duplication)
     const sortedField = [...remainingField].sort((a,b) => (playerOveralls[b.id] || 3.5) - (playerOveralls[a.id] || 3.5));
     sortedField.forEach((p, idx) => {
+      if (twoTeamsOnly) {
+        (idx % 2 === 0 ? listBlue : listRed).push(p.id);
+        return;
+      }
       const mode = idx % 3;
       if (mode === 0) listBlue.push(p.id);
       else if (mode === 1) listRed.push(p.id);
@@ -300,13 +308,13 @@ export function runSmartDraw({
 
     const bOverall = bCount > 0 ? (bSum / bCount) : 3.5;
     const rOverall = rCount > 0 ? (rSum / rCount) : 3.5;
-    const gOverall = gCount > 0 ? (gSum / gCount) : 3.5;
+    const gOverall = twoTeamsOnly ? 0 : (gCount > 0 ? (gSum / gCount) : 3.5);
 
     const bRounded = Math.round(bOverall * 10) / 10;
     const rRounded = Math.round(rOverall * 10) / 10;
     const gRounded = Math.round(gOverall * 10) / 10;
-    const maxRounded = Math.max(bRounded, rRounded, gRounded);
-    const minRounded = Math.min(bRounded, rRounded, gRounded);
+    const maxRounded = twoTeamsOnly ? Math.max(bRounded, rRounded) : Math.max(bRounded, rRounded, gRounded);
+    const minRounded = twoTeamsOnly ? Math.min(bRounded, rRounded) : Math.min(bRounded, rRounded, gRounded);
     const diffRounded = Math.round((maxRounded - minRounded) * 10) / 10;
 
     bestDraw = {
