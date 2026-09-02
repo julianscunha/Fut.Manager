@@ -406,10 +406,11 @@ export default function DashboardStatus({
           return ['agendada', 'confirmando', 'fechada', 'sorteada'].includes(m.status);
         });
 
-        // Uma partida encerrada permanece MATCH_FINISHED (não ARCHIVED) até o admin
-        // arquivar manualmente - nesse intervalo ela tem prioridade sobre a próxima
-        // partida futura já agendada, para exibir a fase de avaliação pós-jogo em vez
-        // de pular direto pro "standby" da rodada seguinte.
+        // Uma partida encerrada permanece MATCH_FINISHED (não ARCHIVED) por até 2 dias
+        // corridos após a data do jogo (auto-arquivamento em syncMatchStatuses no
+        // server.ts), ou até o admin arquivar manualmente antes disso - nesse intervalo
+        // ela tem prioridade sobre a próxima partida futura já agendada, para exibir a
+        // fase de avaliação pós-jogo em vez de pular direto pro "standby" da rodada seguinte.
         const pendingFinished = matches.filter((m: any) => m.status === 'encerrada' && m.lifecycleState !== 'ARCHIVED');
 
         // Since matches is sorted by date ascending, the last one is the most recent

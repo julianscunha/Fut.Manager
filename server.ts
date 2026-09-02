@@ -556,15 +556,22 @@ async function startServer() {
         }
       }
 
+      // Ciclo de avaliação pós-jogo dura no máximo 2 dias corridos a partir da data da
+      // partida; passado isso, arquiva automaticamente (equivalente ao admin clicar em
+      // "Arquivar") para a rodada seguinte assumir o card de status sem depender de ação manual.
+      const EVALUATION_WINDOW_DAYS = 2;
+      const daysSinceMatch = (Date.now() - new Date(m.date + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24);
+      const isEvaluationWindowExpired = daysSinceMatch >= EVALUATION_WINDOW_DAYS;
+
       // If it was already archived or if it was marked as cancelled, it's ARCHIVED
       if (computedLifecycle === 'ARCHIVED' || oldStatus === 'cancelada') {
         computedLifecycle = 'ARCHIVED';
       } else if (computedLifecycle === 'MATCH_FINISHED' || oldStatus === 'encerrada') {
-        computedLifecycle = 'MATCH_FINISHED';
+        computedLifecycle = isEvaluationWindowExpired ? 'ARCHIVED' : 'MATCH_FINISHED';
       } else {
         const hasResults = (db.results || []).some((r: any) => r.matchId === m.id);
         if (hasResults) {
-          computedLifecycle = 'MATCH_FINISHED';
+          computedLifecycle = isEvaluationWindowExpired ? 'ARCHIVED' : 'MATCH_FINISHED';
         } else {
           const matchDraw = (db.draws || []).find((d: any) => d.matchId === m.id);
           if (matchDraw || oldStatus === 'sorteada') {
