@@ -23,6 +23,7 @@ npm run dev
 ### Principais Conceitos
 - **Arquitetura**: O sistema é uma aplicação full-stack única (Node/Express + React). Veja a [Visão Geral da Arquitetura](/openwiki/architecture.md).
     - **Lógica de Jogadores**: Gestão de posições primárias e secundárias para escalações. Veja [/openwiki/architecture/players.md](/openwiki/architecture/players.md).
+    - **Classificação Técnica**: Ranking do racha, notas técnicas e o novo item "Jogos Vencidos". Veja [/openwiki/architecture/technical-ranking.md](/openwiki/architecture/technical-ranking.md).
     - **Gestão de Usuários**: Fluxo de aprovação e onboarding. Veja [/openwiki/guide/user-management.md](/openwiki/guide/user-management.md).
 - **Home Dinâmica**: O sistema usa uma "Home Dinâmica" que reage ao ciclo do racha. Veja detalhes em [`/openwiki/architecture/home-dynamic.md`](/openwiki/architecture/home-dynamic.md) e [`/openwiki/architecture/composer.md`](/openwiki/architecture/composer.md).
 - **Operações**: O deploy é feito no Render conectado ao Supabase. Consulte [`/openwiki/operations/deploy-guide.md`](/openwiki/operations/deploy-guide.md) e [`/openwiki/operations/deploy-checklist.md`](/openwiki/operations/deploy-checklist.md).
