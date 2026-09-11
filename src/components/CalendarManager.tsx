@@ -113,6 +113,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
   const [results, setResults] = useState<any[]>([]);
   const [showDeleteConfirmId, setShowDeleteConfirmId] = useState<string | null>(null);
   const [showResultFormId, setShowResultFormId] = useState<string | null>(null);
+  const [isEditingResult, setIsEditingResult] = useState(false);
   const [winsBlue, setWinsBlue] = useState('0');
   const [winsRed, setWinsRed] = useState('0');
   const [winsGreen, setWinsGreen] = useState('0');
@@ -452,7 +453,7 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
     setErrorMsg('');
     try {
       const response = await authFetch(`/api/matches/${matchId}/results`, {
-        method: 'POST',
+        method: isEditingResult ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           winsBlue: parseInt(winsBlue) || 0,
@@ -465,7 +466,8 @@ export default function CalendarManager({ currentUser, simulatedState = null, se
         throw new Error(data.error || 'Erro ao salvar os resultados.');
       }
       setShowResultFormId(null);
-      triggerFeedback('Resultado do racha e estatísticas de jogo gravados com sucesso!');
+      setIsEditingResult(false);
+      triggerFeedback(isEditingResult ? 'Placar corrigido com sucesso!' : 'Resultado do racha e estatísticas de jogo gravados com sucesso!');
       await fetchAllData();
     } catch (err: any) {
       setErrorMsg(err.message || 'Falha ao registrar placar.');
@@ -1745,6 +1747,22 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
                                             Compartilhar Resultado
                                           </button>
                                         )}
+
+                                        {item.status === 'encerrada' && matchResult && (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setWinsBlue(String(matchResult.winsBlue));
+                                              setWinsRed(String(matchResult.winsRed));
+                                              setWinsGreen(String(matchResult.winsGreen));
+                                              setIsEditingResult(true);
+                                              setShowResultFormId(item.id);
+                                            }}
+                                            className="bg-amber-600 hover:bg-amber-500 text-white font-mono font-bold text-[9px] px-3 py-1.5 rounded-lg uppercase cursor-pointer transition inline-flex items-center gap-1"
+                                          >
+                                            Editar Resultado
+                                          </button>
+                                        )}
                                       </div>
                                       
                                       {/* Active operational matches redirect to Cockpit */}
@@ -1767,10 +1785,12 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
                         {showResultFormId === item.id && (
                           <div className="p-4 bg-zinc-950/80 border border-emerald-500/30 rounded-xl space-y-3 font-mono text-xs mt-2">
                             <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
-                              <span className="font-bold text-white uppercase text-[10px] text-emerald-400">🏆 Registrar Placar do Racha</span>
-                              <button 
-                                type="button" 
-                                onClick={() => setShowResultFormId(null)}
+                              <span className="font-bold text-white uppercase text-[10px] text-emerald-400">
+                                {isEditingResult ? '✏️ Editar Placar do Racha' : '🏆 Registrar Placar do Racha'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => { setShowResultFormId(null); setIsEditingResult(false); }}
                                 className="text-zinc-500 hover:text-white"
                               >
                                 Fechar [X]
@@ -1818,7 +1838,7 @@ Acesse o sistema *${appName}* para verificar estatísticas atualizadas! \u26BD`;
                               disabled={actionLoading}
                               className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold text-[10px] uppercase py-2.5 rounded-lg cursor-pointer transition shadow"
                             >
-                              Salvar e Encerrar a Rodada
+                              {isEditingResult ? 'Salvar Correção do Placar' : 'Salvar e Encerrar a Rodada'}
                             </button>
                           </div>
                         )}

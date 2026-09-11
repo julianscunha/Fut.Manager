@@ -456,7 +456,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   // Filtered bills shown in the admin ledger list view
   const filteredLedgerBills = bills.filter(b => {
     const player = players.find(p => p.id === b.playerId);
-    const matchesSearch = !searchPlayerQuery || (player?.name.toLowerCase().includes(searchPlayerQuery.toLowerCase()) || false);
+    const matchesSearch = !searchPlayerQuery || (player?.name?.toLowerCase().includes(searchPlayerQuery.toLowerCase()) || false);
     const matchesComp = filterCompetence === 'all' || b.competence === filterCompetence;
     const matchesStatus = filterStatus === 'all' || b.status === filterStatus;
     return matchesSearch && matchesComp && matchesStatus;
@@ -469,7 +469,7 @@ export default function FinanceManager({ currentUser }: FinanceManagerProps) {
   // Personal user bills count
   const myBills = bills.filter(b => {
     const p = players.find(p => p.id === b.playerId);
-    return p && p.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim();
+    return p?.email && p.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim();
   }).sort((a, b) => b.dueDate.localeCompare(a.dueDate));
 
   const myPendingTotal = myBills.filter(b => b.status === 'pendente').reduce((sum, b) => sum + b.amount, 0);

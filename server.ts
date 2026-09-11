@@ -4922,6 +4922,46 @@ async function startServer() {
     }
   });
 
+  // Correção pontual do placar de uma partida já encerrada: apenas ajusta os números e o campeão,
+  // sem repetir efeitos colaterais (afinidades, sequências de vitórias, post automático no mural).
+  app.put('/api/matches/:matchId/results', async (req, res) => {
+    try {
+      const { matchId } = req.params;
+      const { winsBlue, winsRed, winsGreen } = req.body;
+
+      if (winsBlue === undefined || winsRed === undefined || winsGreen === undefined) {
+        return res.status(400).json({ error: 'É necessário preencher as vitórias de todas as equipes.' });
+      }
+
+      const db = await readDb();
+      db.results = db.results || [];
+      const result = db.results.find(r => r.matchId === matchId);
+      if (!result) {
+        return res.status(404).json({ error: 'Esta partida ainda não possui resultado registrado.' });
+      }
+
+      const wb = parseInt(winsBlue) || 0;
+      const wr = parseInt(winsRed) || 0;
+      const wg = parseInt(winsGreen) || 0;
+      const maxWins = Math.max(wb, wr, wg);
+      const champions: ('Azul' | 'Vermelho' | 'Verde')[] = [];
+      if (wb === maxWins) champions.push('Azul');
+      if (wr === maxWins) champions.push('Vermelho');
+      if (wg === maxWins) champions.push('Verde');
+
+      result.winsBlue = wb;
+      result.winsRed = wr;
+      result.winsGreen = wg;
+      result.champions = champions;
+
+      await writeDb(db);
+      return res.json(result);
+    } catch (error: any) {
+      console.error('Erro ao corrigir resultado da partida:', error);
+      return res.status(500).json({ error: 'Erro ao corrigir o resultado da partida.' });
+    }
+  });
+
   app.post('/api/matches/:matchId/results', async (req, res) => {
     try {
       const { matchId } = req.params;
