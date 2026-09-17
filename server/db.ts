@@ -84,16 +84,7 @@ function rowToObj(row: Record<string, any>, overrides: Record<string, string> = 
   for (const [k, v] of Object.entries(row)) {
     if (v === null) continue; // omite campos ausentes, igual ao comportamento do JSON antigo
     const camelKey = reverseOverrides[k] || toCamel(k);
-    // Desserializa automaticamente strings JSON (campos TEXT que armazenam JSON)
-    if (typeof v === 'string' && (v.startsWith('[') || v.startsWith('{'))) {
-      try {
-        obj[camelKey] = JSON.parse(v);
-      } catch {
-        obj[camelKey] = v;
-      }
-    } else {
-      obj[camelKey] = v;
-    }
+    obj[camelKey] = v;
   }
   return obj;
 }
@@ -103,12 +94,7 @@ function objToRow(obj: Record<string, any>, overrides: Record<string, string> = 
   for (const [k, v] of Object.entries(obj)) {
     if (v === undefined) continue;
     const snakeKey = overrides[k] || toSnake(k);
-    // Serializa arrays e objetos em JSON se forem armazenados como TEXT
-    if ((Array.isArray(v) || (typeof v === 'object' && v !== null)) && typeof v !== 'string') {
-      row[snakeKey] = JSON.stringify(v);
-    } else {
-      row[snakeKey] = v;
-    }
+    row[snakeKey] = v;
   }
   return row;
 }
