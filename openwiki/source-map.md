@@ -1,17 +1,9 @@
 ---
 type: Referência
 title: Mapa de Origem do Repositório
-openwiki_generated: true
----
-
-<okf_front_matter>
----
-type: Referência
-title: Mapa de Origem do Repositório
 description: Uma visão geral guiada da organização principal do código-fonte dentro do repositório.
 tags: [source-code, organization, navigation]
 ---
-</okf_front_matter>
 
 # Mapa de Origem do Repositório
 
@@ -30,10 +22,5 @@ Este mapa descreve os principais diretórios e arquivos do repositório.
     - `email-templates/`: Modelos de e-mail transacionais.
     - `avatarProvider.ts`: Geração de avatares com IA.
     - `auth.ts`: Autenticação (bcrypt + JWT).
-- `server.ts`: Ponto de entrada inicial do Express e orquestração de roteamento.
-    - `/api/auth/*`: Registro, login, recuperação de senha.
-    - `/api/users/*`: Gerenciamento de usuários por administrador (aprovar/rejeitar/vincular).
-    - `/api/players/*`: Gerenciamento de perfil de atletas.
-    - `/api/matches/*`: Agendamento de partidas e gerenciamento de presença.
-- `/data/`: Ativos de dados estáticos.
+- `server.ts`: Ponto de entrada do Express — API REST centralizada (`/api/*`) em arquivo único, sem roteamento modularizado.
 - `/openwiki/`: Documentação do projeto organizada por categoria (arquitetura, operações, design, guias).
