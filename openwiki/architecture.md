@@ -18,8 +18,10 @@ Toda a lógica de API (`/api/*`) reside em `server.ts`. O backend não utiliza r
 ## Persistência (`server/db.ts`)
 A persistência utiliza o **Supabase (@supabase/supabase-js)** para interagir com o Postgres.
 - Não há arquivo JSON local; toda a operação ocorre no banco.
+- Colunas JSON (`teams`, `ratings`, `history`, etc.) são `jsonb` nativas no Postgres — o cliente já desserializa automaticamente para objeto/array JavaScript.
 - O mapeamento entre `snake_case` (DB) e `camelCase` (Code) é genérico, facilitando a manutenção e a sincronização de dados.
 - Não utiliza chaves estrangeiras (FKs); a integridade referencial é gerenciada em nível de código (aplicação).
+- O sistema utiliza snapshots baseados em JSON nativo (`captureSnapshot`) e mutações baseadas em objetos em memória (`writeDb`) para detectar mudanças e evitar reescritas desnecessárias de dados.
 
 ## Autenticação (`server/auth.ts`)
 O sistema utiliza um esquema de autenticação própria (bcrypt + JWT), e **não** o Supabase Auth.
