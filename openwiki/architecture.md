@@ -20,6 +20,7 @@ A persistência utiliza o **Supabase (@supabase/supabase-js)** para interagir co
 - Não há arquivo JSON local; toda a operação ocorre no banco.
 - O mapeamento entre `snake_case` (DB) e `camelCase` (Code) é genérico, facilitando a manutenção e a sincronização de dados.
 - Não utiliza chaves estrangeiras (FKs); a integridade referencial é gerenciada em nível de código (aplicação).
+- Campos com tipo **jsonb** nativo (ex.: `teams`, `ratings`, `history`, `results`): são persistidos e lidos como objetos/arrays JS diretamente — os mapeadores `objToRow`/`rowToObj` **não** devem aplicar `JSON.stringify`/`JSON.parse`. Uma serialização manual causava *double-encoding* (o Supabase já desserializa `jsonb` automaticamente); foi revertida no commit `49b4eda`.
 
 ## Autenticação (`server/auth.ts`)
 O sistema utiliza um esquema de autenticação própria (bcrypt + JWT), e **não** o Supabase Auth.
