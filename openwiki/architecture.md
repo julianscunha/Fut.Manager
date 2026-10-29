@@ -18,7 +18,8 @@ Toda a lógica de API (`/api/*`) reside em `server.ts`. O backend não utiliza r
 ## Persistência (`server/db.ts`)
 A persistência utiliza o **Supabase (@supabase/supabase-js)** para interagir com o Postgres.
 - Não há arquivo JSON local; toda a operação ocorre no banco.
-- O mapeamento entre `snake_case` (DB) e `camelCase` (Code) é genérico, facilitando a manutenção e a sincronização de dados.
+- As colunas JSON (`teams`, `ratings`, `history`, etc.) são **jsonb nativo no Postgres**. O Supabase desserializa jsonb automaticamente para array/objeto JS — não há necessidade de `JSON.parse` ou `JSON.stringify` manuais.
+- O mapeamento entre `snake_case` (DB) e `camelCase` (Code) é genérico, facilitando a manutenção e a sincronização de dados. As funções `rowToObj` e `objToRow` em `server/db.ts` apenas realizam esse mapeamento de nomenclatura, sem serialização de JSON.
 - Não utiliza chaves estrangeiras (FKs); a integridade referencial é gerenciada em nível de código (aplicação).
 
 ## Autenticação (`server/auth.ts`)
