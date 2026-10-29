@@ -24,6 +24,17 @@ Resumo executivo do estado atual do sistema Fut.Manager:
 
 Lista cronológica de entregas técnicas e correções de governança.
 
+### 2026-09-17
+**Correção de Persistência: Remoção de Serialização Manual de JSON**
+
+- Correção do bug `'o.teams.map is not a function'` no fluxo de sorteio.
+- A causa raiz: o fix anterior (84a44d8) partiu de premissa errada — as colunas JSON já são `jsonb` nativo no Postgres, não TEXT.
+- O Supabase já desserializa `jsonb` automaticamente para array/objeto JS; a serialização manual com `JSON.stringify()` causava *double-encoding* ao escrever, armazenando um wrapper incorreto na coluna.
+- Correção (revert): remoção da serialização manual em `objToRow`/`rowToObj` em `server/db.ts`. O mapeamento snake_case/camelCase permanece genérico.
+- Correção aplicada diretamente no banco via SQL no draw do dia 15/9.
+
+Arquivos alterados: `server/db.ts`.
+
 ### 2026-07-31
 **Limpeza de Storage, Destaque da Semana com Carrossel, Correção de Avatares, Templates de E-mail e Documentação**
 
