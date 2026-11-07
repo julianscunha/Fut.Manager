@@ -65,5 +65,24 @@ A aplicação React utiliza:
 - **Estatísticas**: Cálculos dinâmicos em `server/statsEngine.ts`, recalculados por temporada.
 - **Avatares/Cards**: `server/avatarProvider.ts` gerencia integração com IA (OpenRouter ou Gemini).
 - **Uploads**: Armazenamento via Supabase Storage (bucket `Uploads`, público).
+- **Integração com Banco Genérico**: Todas as entidades de negócio (users, players, evaluations, draws, finance, notifications, mural posts, etc.) são manipuladas através do mesmo `server/db.ts` usando `readDb`/`writeDb`. A captura de snapshot (`captureSnapshot`/`snapshotMap`) evita reescrita desnecessária de tabelas inteiras quando mudanças são limitadas a poucas tabelas.
+
+Para documentação detalhada de deploy e operações, ver `operations/deploy-guide.md` e `operations/deploy-checklist.md`.s componentes migrados até agora. Ao usar, importar via aliases `@api/*`/`@contexts/*` (ver `tsconfig.json`).
+- **`src/components/ErrorBoundary.tsx`**: recuperação de erro em nível de componente, alternativa ao hard-reload que `authFetch` dispara em respostas 401.
+- **Contextos**: o nome do sistema (brand) é gerenciado dinamicamente via `AppConfigContext`, evitando hardcoding de nomes de grupos.
+
+### Migrando um componente de `authFetch` para `apiClient` (opcional)
+1. Trocar `authFetch(...)` por `apiClient.get/post/put/patch/delete<T>(...)` — já retorna o corpo tipado, sem `.json()` manual.
+2. Tratar erros como `ApiError` em vez de depender do reload automático em 401.
+3. Rodar `npm run lint` para conferir os imports.
+4. Testar login/logout e o fluxo do componente manualmente.
+
+`AuthProvider` já está montado na raiz do app (`src/main.tsx`) — não precisa adicionar de novo.
+
+## Visão Geral técnica
+- **Motor de Sorteio**: Algoritmo Monte Carlo (`server/drawEngine.ts`) para times equilibrados (`runSmartDraw`).
+- **Estatísticas**: Cálculos dinâmicos em `server/statsEngine.ts`, recalculados por temporada.
+- **Avatares/Cards**: `server/avatarProvider.ts` gerencia integração com IA (OpenRouter ou Gemini).
+- **Uploads**: Armazenamento via Supabase Storage (bucket `Uploads`, público).
 
 Para documentação detalhada de deploy e operações, ver `operations/deploy-guide.md` e `operations/deploy-checklist.md`.
