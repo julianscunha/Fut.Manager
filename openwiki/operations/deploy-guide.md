@@ -21,17 +21,17 @@ Este documento descreve a arquitetura de produção já implementada no reposit�
 1. Acesse [https://supabase.com](https://supabase.com) e faça login (ou crie uma conta gratuita).
 2. Clique em **"New project"**.
 3. Preencha:
-   - **Project name**: `fut-manager` (ou nome à sua escolha)
-   - **Database password**: gere uma senha forte (usada só internamente pelo Supabase; você não vai precisar dela diretamente, já que o app fala com o Supabase via API/service role, não via conexão Postgres direta)
+   - **Project name**: `fut-manager` (ou nome à sua escolha).
+   - **Database password**: gere uma senha forte (usada só internamente pelo Supabase; você não vai precisar dela diretamente, já que o app fala com o Supabase via API/service role, não via conexão Postgres direta).
    - **Region**: a mesma região do seu serviço Render (ver Passo 5.2) — não necessariamente a mais próxima fisicamente de você. Toda leitura/escrita do app passa pelo backend no Render, então o que importa é a latência Render↔Supabase, não a latência usuário↔Supabase. Ex.: se o Render vai rodar em `Virginia (US East)` (a região do Render mais próxima do Brasil, já que o Render não tem região na América do Sul), escolha `East US (North Virginia)` aqui também.
-   - **Pricing plan**: Free
+   - **Pricing plan**: Free.
 4. Clique em **"Create new project"** e aguarde ~2 minutos.
 
 ### Passo 1.2: Configurar variáveis de ambiente no dashboard Supabase
 
 1. Em **Settings → API**, guarde:
-   - **Project URL** (ex: `https://xxxxxxxxxxxxx.supabase.co`) → vai virar `SUPABASE_URL`
-   - **Project Ref** → para referência futura
+   - **Project URL** (ex: `https://xxxxxxxxxxxxx.supabase.co`) → vai virar `SUPABASE_URL`.
+   - **Project Ref** → para referência futura.
 2. Não há necessidade de habilitar o Supabase Auth — o sistema usa autenticação própria (bcrypt + JWT).
 
 ### Passo 1.3: Criar Storage bucket para uploads
@@ -39,8 +39,8 @@ Este documento descreve a arquitetura de produção já implementada no reposit�
 1. No dashboard, clique em **"Storage"** (aba esquerda).
 2. Clique em **"Create a new bucket"**.
 3. Preencha:
-   - **Bucket name**: `Uploads` (exatamente assim, com U maiúsculo — o nome é case-sensitive e precisa bater com `supabase.storage.from('Uploads')` em `server.ts`)
-   - **Public bucket**: ✅ **Sim** (as URLs de foto/mídia geradas precisam ser públicas)
+   - **Bucket name**: `Uploads` (exatamente assim, com U maiúsculo — o nome é case-sensitive e precisa bater com `supabase.storage.from('Uploads')` em `server.ts`).
+   - **Public bucket**: ✅ **Sim** (as URLs de foto/mídia geradas precisam ser públicas).
 4. Clique em **"Create bucket"**.
 
 > Este projeto **não usa o Supabase Auth hospedado** (o sistema de login com usuários/UUID próprios do Supabase). A autenticação é feita por conta própria (bcrypt + JWT — ver [Hardening de Segurança](../architecture/security.md)), para preservar o esquema de IDs `TEXT` (`user-admin`, `player-admin`, etc.) que o app já usa em todo lugar. Não há nenhum passo de "Habilitar Auth" a fazer no dashboard do Supabase.
@@ -55,9 +55,9 @@ No dashboard, clique em **"SQL Editor"** → **"New query"**.
 
 ### Passo 2.2: Criar as tabelas
 
-Este schema espelha campo a campo as interfaces em `src/types.ts`. Cole e rode no SQL Editor:
+Este schema espelha campo a campo as interfaces em `src/types/domain.ts` e `src/types/ui.ts`. Cole e rode no SQL Editor:
 
-> **Nota:** O schema completo (31 tabelas) é espelhado em `src/types.ts` — consulte esse arquivo para a lista atualizada de campos e restrições. O schema abaixo cobre as tabelas essenciais (users, passwords, players, seasons, matches, presences, draws).
+> **Nota:** O schema completo (31 tabelas) é espelhado em `src/types/domain.ts` e `src/types/ui.ts` — consulte esses arquivos para a lista atualizada de campos e restrições. O schema abaixo cobre as tabelas essenciais (users, passwords, players, seasons, matches, presences, draws).
 
 ### Passo 2.3: Inserir dados padrão
 
@@ -118,47 +118,3 @@ O projeto deve ter um `Dockerfile` na raiz que contemple:
 - Build do frontend + API.
 - Exposição da porta configurada (padrão: 3000).
 - Comando de inicialização (`npm start`).
-
-### Passo 4.2: Criar serviço no Render
-
-1. Acesse [Render Dashboard](https://dashboard.render.com).
-2. Clique em **"New"** → **"Web Service"**.
-3. Conecte seu repositório GitHub.
-4. Configure:
-   - **Name**: `fut-manager` (ou seu nome).
-   - **Region**: `Oregon (US West)` ou a região mais próxima da sua localização.
-   - **Branch**: `main`.
-   - **Build Command**: `npm run build` (ou `npm install && npm run build`).
-   - **Start Command**: `npm start` (ou o comando que inicia o servidor Node.js após o build).
-   - **Instance Type**: Free ou Basic (conforme previsão de tráfego).
-   - **Environment Variables** (adicione no painel do Render, não no repo):
-     - `SUPABASE_URL` = (mesmo valor do `.env.local`)
-     - `SUPABASE_SERVICE_ROLE_KEY` = (mesmo valor do `.env.local`)
-     - `JWT_SECRET` = (mesmo valor do `.env.local`)
-     - `ALLOWED_ORIGINS` = `https://seu-dominio-no-render.onrender.com` (adicione `http://localhost:3000` para desenvolvimento)
-     - `OPENROUTER_API_KEY` = (sua chave)
-
-### Passo 4.3: Deploy e verificação
-
-Após o deploy, acesse a URL gerada pelo Render e verifique:
-
-- Frontend carrega sem erros.
-- Login com `[EMAIL]` / `admin` retorna token JWT.
-- Rotas públicas (`/api/auth/login`, `/api/mural/public-posts`, `/api/public/next-match`) funcionam sem token.
-- Rotas protegidas exigem `Authorization: Bearer <token>`.
-
-### Passo 4.4: Commit e push do `Dockerfile`
-
-O `Dockerfile` deve estar presente na raiz e commitado no repositório, junto com todas as mudanças de migração, antes do deploy:
-
-```bash
-git add .
-git commit -m "chore: migrate to Supabase + Render with security hardening"
-git push origin main
-```
-
----
-
-## Relacionamentos
-
-Este documento depende do [Relatório de Auditoria](../architecture/audit-report.md) (que descreve os problemas de persistência e autenticação que motivaram esta arquitetura) e do [Hardening de Segurança](../architecture/security.md) (que explica as correções de autenticação e CORS presentes no deploy). Para um checklist detalhado pré-deploy, consulte o [Checklist de Deploy](./deploy-checklist.md).

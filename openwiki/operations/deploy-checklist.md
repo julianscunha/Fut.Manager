@@ -13,8 +13,8 @@ Este checklist reflete os itens comprovados no plano de migração e garante que
 - [ ] Crie projeto Supabase (nome, password, região, plano gratuito).
 - [ ] Anote `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`.
 - [ ] Crie bucket `Uploads` com visibilidade pública.
-- [ ] Reteve `/scripts/post-install.sql` no projeto e execute no SQL Editor.
-- [ ] Certifique que a configuração do schema corresponde a `src/types.ts`.
+- [ ] Rode o script SQL do schema no projeto (via SQL Editor do Supabase).
+- [ ] Certifique que a configuração do schema corresponde a `src/types/domain.ts` e `src/types/ui.ts`.
 - [ ] Inicie migrações de usuário/padrão (admin, jogadores, temporadas).
 
 ## 2. Pré-Deploy - Render / Docker
@@ -38,10 +38,3 @@ Este checklist reflete os itens comprovados no plano de migração e garante que
 ## 4. Pós-Deploy
 - [ ] Verifique rotas públicas: `/api/auth/login`, `/api/visuais/*`.
 - [ ] Confirme que rotas protegidas exigem token JWT.
-- [ ] Valide que uploads de imagens funcionam com o bucket `Uploads`.
-- [ ] Execute testes de interceptação de tempo de resposta usando curl.
-- [ ] Avalie logs do Render para verificação de erros.
-
----
-
-*Este checklist foi extraído e sintetizado do documento de auditoria (Auditoria - Hardening de Segurança) e confirma o alinhamento com o plano de migração de infraestrutura.*

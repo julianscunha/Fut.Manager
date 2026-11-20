@@ -1,13 +1,13 @@
 ---
 type: Architecture
 title: Visão Geral da Arquitetura
-description: Visão geral da arquitetura do Fut.Manager, cobrindo o backend Node/Express, persistência Postgres e frontend React.
+description: Visão geral da arquitetura do Fut.Manager, cobrindo o backend Node/Express, persistência Postgres via Supabase e frontend React.
 tags: [architecture, backend, frontend, database]
 ---
 
 # Visão Geral da Arquitetura
 
-O Fut.Manager é uma aplicação full-stack executada em um único processo **Node/Express**, utilizando uma arquitetura baseada em API REST para comunicação entre o frontend React e a persistência Postgres.
+O Fut.Manager é uma aplicação full-stack executada em um único processo **Node/Express**, utilizando uma arquitetura baseada em API REST para comunicação entre o frontend React e a persistência Postgres via Supabase.
 
 ## Core Backend (`server.ts`)
 Toda a lógica de API (`/api/*`) reside em `server.ts`. O backend não utiliza roteamento modularizado; as rotas são definidas centralmente, facilitando a busca por endpoints ao procurar pelos métodos `app.get`, `app.post`, etc.
@@ -22,7 +22,7 @@ A persistência utiliza o **Supabase (@supabase/supabase-js)** para interagir co
 - Não utiliza chaves estrangeiras (FKs); a integridade referencial é gerenciada em nível de código (aplicação).
 
 ## Autenticação (`server/auth.ts`)
-O sistema utiliza um esquema de autenticação própria (bcrypt + JWT), e **não** o Supabase Auth.
+O sistema utiliza um esquema de autenticação próprio (bcrypt + JWT), e **não** o Supabase Auth.
 - Isso preserva o uso de IDs do tipo `TEXT` em todo o sistema.
 - JWTs são assinados com `JWT_SECRET`.
 - A verificação de usuários autenticados ocorre em `getAuthenticatedUser`, via header `Authorization: Bearer <token>`.
@@ -46,19 +46,9 @@ Todos os templates utilizam um sistema baseado em HTML/CSS consistente (`server/
 
 ## Frontend (`src/`)
 A aplicação React utiliza:
-- **`src/types/domain.ts`** (entidades de negócio) e **`src/types/ui.ts`** (labels, cores, pesos de atributos): fonte da verdade para tipos, compartilhada entre cliente e servidor. `src/types.ts` (raiz) e `src/types/index.ts` são barrels de compatibilidade que reexportam os dois — não adicionar tipos novos ali.
-- **`src/lib/authFetch.ts`**: wrapper padrão para todas as chamadas `fetch` ao backend. **A maioria das chamadas autenticadas passa por aqui**, garantindo a injeção correta do JWT.
-- **`src/api/client.ts`** (`apiClient`) e **`src/contexts/AuthContext.tsx`** (`useAuth`): infraestrutura mais nova (cliente HTTP tipado + estado de auth via contexto), criada como alternativa ao `authFetch` + leitura direta de `localStorage`, mas ainda **opt-in** — poucos componentes migrados até agora. Ao usar, importar via aliases `@api/*`/`@contexts/*` (ver `tsconfig.json`).
-- **`src/components/ErrorBoundary.tsx`**: recuperação de erro em nível de componente, alternativa ao hard-reload que `authFetch` dispara em respostas 401.
+- **`src/types/domain.ts`** (entidades de negócio) e **`src/types/ui.ts`** (labels, cores, pesos de atributos): fonte da verdade para tipos, compartilhada entre cliente e servidor. `server.ts` e `server/*.ts` importam diretamente de `../src/types/domain` e `../src/types/ui`.
+- **`src/lib/authFetch.ts`**: wrapper padrão para todas as chamadas `fetch` ao backend. **Todas as chamadas autenticadas passam por aqui**, garantindo a injeção correta do JWT.
 - **Contextos**: o nome do sistema (brand) é gerenciado dinamicamente via `AppConfigContext`, evitando hardcoding de nomes de grupos.
-
-### Migrando um componente de `authFetch` para `apiClient` (opcional)
-1. Trocar `authFetch(...)` por `apiClient.get/post/put/patch/delete<T>(...)` — já retorna o corpo tipado, sem `.json()` manual.
-2. Tratar erros como `ApiError` em vez de depender do reload automático em 401.
-3. Rodar `npm run lint` para conferir os imports.
-4. Testar login/logout e o fluxo do componente manualmente.
-
-`AuthProvider` já está montado na raiz do app (`src/main.tsx`) — não precisa adicionar de novo.
 
 ## Visão Geral técnica
 - **Motor de Sorteio**: Algoritmo Monte Carlo (`server/drawEngine.ts`) para times equilibrados (`runSmartDraw`).
