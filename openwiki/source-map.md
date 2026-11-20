@@ -1,17 +1,9 @@
 ---
 type: Referência
 title: Mapa de Origem do Repositório
-openwiki_generated: true
----
-
-<okf_front_matter>
----
-type: Referência
-title: Mapa de Origem do Repositório
 description: Uma visão geral guiada da organização principal do código-fonte dentro do repositório.
 tags: [source-code, organization, navigation]
 ---
-</okf_front_matter>
 
 # Mapa de Origem do Repositório
 

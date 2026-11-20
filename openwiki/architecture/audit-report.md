@@ -1,13 +1,13 @@
 ---
 type: Relatório Técnico de Auditoria
 title: Relatório de Auditoria Operacional e UX
-description: Documento consolidado que detalha a análise de arquitetura, lógica estatística, segurança e UX, servindo como base para as correções implementadas no sistema.
+description: Documento consolidado que detalha a análise de arquitetura, fluxos funcionais, lógica estatística, regras financeiras, comportamento mobile e segurança do sistema Fut.Manager.
 tags: [audit, architecture, quality-assurance]
 ---
 
 # Relatório de Auditoria Operacional e UX — Fut.Manager
 
-Este documento consolida as análises de arquitetura, fluxos funcionais, lógica matemática de estatística, regras financeiras, comportamento mobile e segurança do sistema **Fut.Manager**.
+Este documento consolida as análises de arquitetura, fluxos funcionais, lógica matemática de estatística, regras financeiras, comportamento mobile e segurança do sistema Fut.Manager.
 
 ## 📅 Resumo Geral da Auditoria
 
@@ -59,37 +59,22 @@ Este documento consolida as análises de arquitetura, fluxos funcionais, lógica
 *   **Classificação:** Ordenação por Vitórias $\rightarrow$ Aproveitamento (%) $\rightarrow$ Volume de Presenças.
 *   **Duplas/Trios:** Computado dinamicamente no backend para gerar o "Hall da Fama" de combinações.
 
-### 10. Financeiro (Mensalistas, Goleiros e Reservas)
+### 13. Financeiro (Mensalistas, Goleiros e Reservas)
 *   **Regras de Cobrança:** Goleiros (`mensalista_goleiro`) e reservas não são cobrados pelo motor de cobrança automática.
 *   **Segregação Visual:** Distinção clara entre faturas privadas (atleta) e painel administrativo.
 
-### 11. Eventos Sociais (Isenções de Churrasco)
+### 14. Eventos Sociais (Isenções de Churrasco)
 *   **Regra de Churrasco:** Desconto de R$ 0,00 para mensalistas no `server.ts`/`EventManager.tsx`, preservando cobrança para convidados/acompanhantes.
 
-### 12. Mural, Mídias e Exibições na Inicial
+### 15. Mural, Mídias e Exibições na Inicial
 *   **Integração:** Publicações exibidas por data e prioridade, sem sobrecarga de repetição na Home.
 
-### 13. Responsividade e Performance (Mobile First)
+### 16. Responsividade e Performance (Mobile First)
 *   **Ajustes de Viewport:**
     *   **320px (iPhone SE):** Margens compactas e tabelas convertidas em cards empilháveis.
     *   **Touch Targets:** Padronização global via CSS (`min-height: 44px`) para dispositivos com `pointer: coarse`.
 *   **Limpeza de Legado:** Remoção de ~400 linhas de código morto/órfão e componentes de teste não utilizados.
 
-### 14. Migração de Hospedagem: Supabase + Render
+### 17. Migração de Hospedagem: Supabase + Render
 *   **Mudança de Paradigma:** Transição de `data/database.json` para Postgres (Supabase) com Storage para mídia.
 *   **Arquitetura:** Backend único no Render (Docker) integrando frontend e API.
-
-### 15. Hardening de Segurança (Correções Críticas)
-*   **Autenticação:** Substituição de `x-user-id` por JWT assinado (`Authorization: Bearer <token>`).
-*   **Senhas:** Implementação de `bcryptjs` (10 rounds).
-*   **Vazamento de Dados:** Proteção de rotas `/api/users` e outras rotas de negócio via middleware global.
-*   **Proteção de Upload:** Validação por magic bytes e limite de tamanho.
-*   **DoS/Rate Limiting:** Implementação de `express-rate-limit` e atualização de dependências (`file-type`).
-
-### 16. Validação de Geração de Avatar com IA
-*   **Correção de Race Condition:** Processamento de avatar agora ocorre após o `await writeDb(db)` para garantir persistência do jogador.
-*   **Constraint de E-mail:** Normalização de e-mails vazios para `NULL` para evitar conflitos de `UNIQUE` no Postgres.
-*   **Provedores:** Suporte a Gemini (Google) e OpenRouter (fallback para OpenAI/GPT-image).
-
----
-*Este documento serve como registro técnico das melhorias e correções implementadas durante a fase de transição para produção.*
