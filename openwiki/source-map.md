@@ -1,17 +1,9 @@
 ---
 type: Referência
 title: Mapa de Origem do Repositório
-openwiki_generated: true
----
-
-<okf_front_matter>
----
-type: Referência
-title: Mapa de Origem do Repositório
 description: Uma visão geral guiada da organização principal do código-fonte dentro do repositório.
 tags: [source-code, organization, navigation]
 ---
-</okf_front_matter>
 
 # Mapa de Origem do Repositório
 
@@ -26,6 +18,7 @@ Este mapa descreve os principais diretórios e arquivos do repositório.
     - `/src/utils/`: Utilitários compartilhados.
     - `App.tsx`: Ponto de entrada principal do aplicativo e configuração de roteamento.
 - `/server/`: Lógica de negócios modular do lado do servidor.
+    - `db.ts`: Camada de persistência genérica (conversão `snake_case` ↔ `camelCase`, leitura/escrita nas tabelas do Postgres, dirty tracking, cache de leitura).
     - `email.ts`: Serviço de e-mail (integração com TurboSMTP).
     - `email-templates/`: Modelos de e-mail transacionais.
     - `avatarProvider.ts`: Geração de avatares com IA.
@@ -35,5 +28,4 @@ Este mapa descreve os principais diretórios e arquivos do repositório.
     - `/api/users/*`: Gerenciamento de usuários por administrador (aprovar/rejeitar/vincular).
     - `/api/players/*`: Gerenciamento de perfil de atletas.
     - `/api/matches/*`: Agendamento de partidas e gerenciamento de presença.
-- `/data/`: Ativos de dados estáticos.
 - `/openwiki/`: Documentação do projeto organizada por categoria (arquitetura, operações, design, guias).
